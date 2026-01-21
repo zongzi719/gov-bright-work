@@ -102,23 +102,27 @@ const RoleManagement = () => {
     resetForm();
   };
 
-  const handleSubmit = async () => {
-    if (!formData.name.trim() || !formData.label.trim()) {
-      toast.error("请填写角色标识和角色名称");
-      return;
-    }
+  // 自动生成角色标识
+  const generateRoleName = (label: string): string => {
+    // 生成时间戳后缀确保唯一性
+    const timestamp = Date.now().toString(36);
+    // 如果是纯中文，使用 role_ 前缀
+    const base = label.replace(/[^a-zA-Z0-9]/g, '') || 'role';
+    return `${base.toLowerCase()}_${timestamp}`;
+  };
 
-    // 验证角色标识格式（只允许字母、数字、下划线）
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(formData.name)) {
-      toast.error("角色标识只能包含字母、数字和下划线，且必须以字母或下划线开头");
+  const handleSubmit = async () => {
+    if (!formData.label.trim()) {
+      toast.error("请填写角色名称");
       return;
     }
 
     if (editingRole) {
-      // 系统角色只能修改名称和描述
-      const updateData = editingRole.is_system
-        ? { label: formData.label, description: formData.description || null }
-        : { name: formData.name, label: formData.label, description: formData.description || null };
+      // 系统角色只能修改名称和描述，自定义角色也不允许修改标识
+      const updateData = { 
+        label: formData.label, 
+        description: formData.description || null 
+      };
 
       const { error } = await supabase
         .from("roles")
@@ -132,10 +136,12 @@ const RoleManagement = () => {
       toast.success("角色已更新");
     } else {
       const maxSortOrder = Math.max(...roles.map(r => r.sort_order), 0);
+      const roleName = generateRoleName(formData.label);
+      
       const { error } = await supabase
         .from("roles")
         .insert({
-          name: formData.name,
+          name: roleName,
           label: formData.label,
           description: formData.description || null,
           is_system: false,
@@ -144,7 +150,7 @@ const RoleManagement = () => {
 
       if (error) {
         if (error.code === "23505") {
-          toast.error("角色标识已存在");
+          toast.error("角色标识已存在，请重试");
         } else {
           toast.error("创建角色失败");
         }
@@ -204,19 +210,6 @@ const RoleManagement = () => {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">角色标识 *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="如: department_manager"
-                  disabled={editingRole?.is_system}
-                />
-                {editingRole?.is_system && (
-                  <p className="text-xs text-muted-foreground">系统角色的标识不可修改</p>
-                )}
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="label">角色名称 *</Label>
                 <Input
                   id="label"
@@ -224,6 +217,9 @@ const RoleManagement = () => {
                   onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                   placeholder="如: 部门经理"
                 />
+                {!editingRole && (
+                  <p className="text-xs text-muted-foreground">角色标识将根据名称自动生成</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">角色描述</Label>
@@ -254,7 +250,7 @@ const RoleManagement = () => {
               <TableHead className="w-[150px]">角色标识</TableHead>
               <TableHead className="w-[150px]">角色名称</TableHead>
               <TableHead>角色描述</TableHead>
-              <TableHead className="w-[100px]">角色分类</TableHead>
+              <TableHead className="w-[120px] whitespace-nowrap">角色分类</TableHead>
               <TableHead className="w-[120px]">操作</TableHead>
             </TableRow>
           </TableHeader>
