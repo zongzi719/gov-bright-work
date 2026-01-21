@@ -55,6 +55,24 @@ interface Organization {
   phone: string | null;
 }
 
+type ContactStatus = 'on_duty' | 'out' | 'leave' | 'business_trip' | 'meeting';
+
+const statusLabels: Record<ContactStatus, string> = {
+  on_duty: '在职',
+  out: '外出',
+  leave: '请假',
+  business_trip: '出差',
+  meeting: '开会',
+};
+
+const statusColors: Record<ContactStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  on_duty: 'default',
+  out: 'secondary',
+  leave: 'destructive',
+  business_trip: 'outline',
+  meeting: 'secondary',
+};
+
 interface Contact {
   id: string;
   organization_id: string;
@@ -67,6 +85,8 @@ interface Contact {
   office_location: string | null;
   sort_order: number;
   is_active: boolean;
+  status: ContactStatus;
+  status_note: string | null;
   organization?: Organization;
 }
 
@@ -107,6 +127,8 @@ const ContactManagement = () => {
     office_location: "",
     sort_order: 0,
     is_active: true,
+    status: "on_duty" as ContactStatus,
+    status_note: "",
   });
 
   // 导入对话框
@@ -248,6 +270,8 @@ const ContactManagement = () => {
       office_location: contactFormData.office_location || null,
       sort_order: contactFormData.sort_order,
       is_active: contactFormData.is_active,
+      status: contactFormData.status,
+      status_note: contactFormData.status_note || null,
     };
 
     if (editingContact) {
@@ -288,6 +312,8 @@ const ContactManagement = () => {
       office_location: contact.office_location || "",
       sort_order: contact.sort_order,
       is_active: contact.is_active,
+      status: contact.status || "on_duty",
+      status_note: contact.status_note || "",
     });
     setContactDialogOpen(true);
   };
@@ -318,6 +344,8 @@ const ContactManagement = () => {
       office_location: "",
       sort_order: 0,
       is_active: true,
+      status: "on_duty",
+      status_note: "",
     });
     setContactDialogOpen(false);
   };
@@ -635,6 +663,36 @@ const ContactManagement = () => {
                             }
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label>人员状态</Label>
+                          <Select
+                            value={contactFormData.status}
+                            onValueChange={(value: ContactStatus) =>
+                              setContactFormData({ ...contactFormData, status: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择状态" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="on_duty">在职</SelectItem>
+                              <SelectItem value="out">外出</SelectItem>
+                              <SelectItem value="leave">请假</SelectItem>
+                              <SelectItem value="business_trip">出差</SelectItem>
+                              <SelectItem value="meeting">开会</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2 col-span-2">
+                          <Label>状态备注</Label>
+                          <Input
+                            value={contactFormData.status_note}
+                            onChange={(e) =>
+                              setContactFormData({ ...contactFormData, status_note: e.target.value })
+                            }
+                            placeholder="如：请假至1月25日、出差北京等"
+                          />
+                        </div>
                         <div className="flex items-center gap-2 pt-6">
                           <Switch
                             checked={contactFormData.is_active}
@@ -704,9 +762,16 @@ const ContactManagement = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={contact.is_active ? "default" : "secondary"}>
-                            {contact.is_active ? "启用" : "禁用"}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={statusColors[contact.status]}>
+                              {statusLabels[contact.status]}
+                            </Badge>
+                            {contact.status_note && (
+                              <span className="text-xs text-muted-foreground">
+                                {contact.status_note}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
