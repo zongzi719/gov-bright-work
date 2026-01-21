@@ -1,11 +1,31 @@
 import { LogOut, Bell } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 const Header = () => {
+  const navigate = useNavigate();
   const today = new Date();
   const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
   const dateString = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 星期${weekDays[today.getDay()]}`;
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "退出失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "已退出登录",
+      });
+      navigate("/admin/login");
+    }
+  };
 
   return (
     <header className="bg-header-gradient shadow-header sticky top-0 z-50">
@@ -53,6 +73,7 @@ const Header = () => {
             variant="ghost" 
             size="sm" 
             className="text-white/90 hover:text-white hover:bg-white/10 gap-1.5"
+            onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">退出</span>
