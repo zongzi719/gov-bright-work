@@ -138,7 +138,7 @@ const RoleManagement = () => {
       const maxSortOrder = Math.max(...roles.map(r => r.sort_order), 0);
       const roleName = generateRoleName(formData.label);
       
-      const { error } = await supabase
+      const { data: newRole, error } = await supabase
         .from("roles")
         .insert({
           name: roleName,
@@ -146,7 +146,9 @@ const RoleManagement = () => {
           description: formData.description || null,
           is_system: false,
           sort_order: maxSortOrder + 1,
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         if (error.code === "23505") {
@@ -156,11 +158,50 @@ const RoleManagement = () => {
         }
         return;
       }
+
+      // 自动初始化权限配置记录
+      if (newRole) {
+        await initializeRolePermissions(roleName);
+      }
+      
       toast.success("角色已创建");
     }
 
     handleCloseDialog();
     fetchRoles();
+  };
+
+  // 初始化角色权限配置
+  const initializeRolePermissions = async (roleName: string) => {
+    // 定义默认模块列表
+    const defaultModules = [
+      { name: 'notices', label: '通知公告' },
+      { name: 'contacts', label: '通讯录' },
+      { name: 'absence', label: '考勤管理' },
+      { name: 'supplies', label: '办公用品' },
+      { name: 'menus', label: '食堂菜单' },
+      { name: 'banners', label: '轮播图' },
+    ];
+
+    const permissionRecords = defaultModules.map(module => ({
+      role: roleName,
+      module_name: module.name,
+      module_label: module.label,
+      can_create: false,
+      can_read: true,
+      can_update: false,
+      can_delete: false,
+      data_scope: 'self' as const,
+    }));
+
+    const { error } = await supabase
+      .from("role_permissions")
+      .insert(permissionRecords);
+
+    if (error) {
+      console.error("初始化权限配置失败:", error);
+      // 不阻止角色创建，只记录错误
+    }
   };
 
   const handleDelete = async (role: Role) => {
