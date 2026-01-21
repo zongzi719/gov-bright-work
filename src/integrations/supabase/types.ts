@@ -24,6 +24,7 @@ export type Database = {
           created_at: string
           end_time: string | null
           id: string
+          leave_type: Database["public"]["Enums"]["leave_type"] | null
           notes: string | null
           reason: string
           start_time: string
@@ -40,6 +41,7 @@ export type Database = {
           created_at?: string
           end_time?: string | null
           id?: string
+          leave_type?: Database["public"]["Enums"]["leave_type"] | null
           notes?: string | null
           reason: string
           start_time: string
@@ -56,6 +58,7 @@ export type Database = {
           created_at?: string
           end_time?: string | null
           id?: string
+          leave_type?: Database["public"]["Enums"]["leave_type"] | null
           notes?: string | null
           reason?: string
           start_time?: string
@@ -191,6 +194,56 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_balances: {
+        Row: {
+          annual_leave_total: number
+          annual_leave_used: number
+          contact_id: string
+          created_at: string
+          id: string
+          personal_leave_total: number
+          personal_leave_used: number
+          sick_leave_total: number
+          sick_leave_used: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          annual_leave_total?: number
+          annual_leave_used?: number
+          contact_id: string
+          created_at?: string
+          id?: string
+          personal_leave_total?: number
+          personal_leave_used?: number
+          sick_leave_total?: number
+          sick_leave_used?: number
+          updated_at?: string
+          year?: number
+        }
+        Update: {
+          annual_leave_total?: number
+          annual_leave_used?: number
+          contact_id?: string
+          created_at?: string
+          id?: string
+          personal_leave_total?: number
+          personal_leave_used?: number
+          sick_leave_total?: number
+          sick_leave_used?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_balances_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -449,6 +502,7 @@ export type Database = {
       absence_type: "out" | "leave" | "business_trip" | "meeting"
       app_role: "admin" | "user"
       contact_status: "on_duty" | "out" | "leave" | "business_trip" | "meeting"
+      leave_type: "annual" | "sick" | "personal"
       purchase_status: "pending" | "approved" | "rejected" | "completed"
       requisition_status: "pending" | "approved" | "rejected" | "completed"
     }
@@ -588,6 +642,7 @@ export const Constants = {
       absence_type: ["out", "leave", "business_trip", "meeting"],
       app_role: ["admin", "user"],
       contact_status: ["on_duty", "out", "leave", "business_trip", "meeting"],
+      leave_type: ["annual", "sick", "personal"],
       purchase_status: ["pending", "approved", "rejected", "completed"],
       requisition_status: ["pending", "approved", "rejected", "completed"],
     },

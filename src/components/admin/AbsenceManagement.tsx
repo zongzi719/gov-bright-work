@@ -48,7 +48,7 @@ import {
   UserCheck,
 } from "lucide-react";
 
-type AbsenceType = "out" | "leave";
+type AbsenceType = "out" | "leave" | "business_trip";
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
 interface Contact {
@@ -79,11 +79,13 @@ interface AbsenceRecord {
 
 const typeLabels: Record<AbsenceType, string> = {
   out: "外出",
+  business_trip: "出差",
   leave: "请假",
 };
 
 const typeColors: Record<AbsenceType, string> = {
   out: "bg-blue-100 text-blue-800",
+  business_trip: "bg-purple-100 text-purple-800",
   leave: "bg-orange-100 text-orange-800",
 };
 
@@ -215,7 +217,7 @@ const AbsenceManagement = () => {
   const updateContactStatus = async (contactId: string, type: AbsenceType) => {
     await supabase
       .from("contacts")
-      .update({ status: type as "out" | "leave" })
+      .update({ status: type as "out" | "leave" | "business_trip" })
       .eq("id", contactId);
   };
 
@@ -376,6 +378,7 @@ const AbsenceManagement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="out">外出</SelectItem>
+                    <SelectItem value="business_trip">出差</SelectItem>
                     <SelectItem value="leave">请假</SelectItem>
                   </SelectContent>
                 </Select>
@@ -507,6 +510,7 @@ const AbsenceManagement = () => {
             <SelectContent>
               <SelectItem value="all">全部类型</SelectItem>
               <SelectItem value="out">外出</SelectItem>
+              <SelectItem value="business_trip">出差</SelectItem>
               <SelectItem value="leave">请假</SelectItem>
             </SelectContent>
           </Select>
