@@ -2,95 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* 政府一体化工作平台设计系统 - 党建红/中国风主题 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* 核心政务红色系 */
+    --background: 220 14% 96%;
+    --foreground: 0 0% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* 党建红/中国红 */
+    --primary: 354 73% 43%;
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 354 73% 35%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* 荣耀金/香槟金 */
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 15%;
+    --accent-light: 43 96% 56%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 0 0% 25%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 0 0% 45%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 220 13% 88%;
+    --input: 220 13% 91%;
+    --ring: 354 73% 43%;
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
 
+    /* 自定义政务变量 */
+    --gov-red: 354 73% 43%;
+    --gov-red-dark: 354 73% 35%;
+    --gov-red-light: 354 73% 95%;
+    --gov-gold: 38 92% 50%;
+    --gov-gold-light: 43 96% 70%;
+    --gov-gray: 220 14% 96%;
+    --gov-text: 0 0% 25%;
+
+    /* 渐变 */
+    --gradient-header: linear-gradient(135deg, hsl(354 73% 35%) 0%, hsl(354 73% 43%) 50%, hsl(354 65% 48%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(43 96% 56%) 100%);
+    
+    /* 阴影 */
+    --shadow-card: 0 2px 8px -2px hsla(0, 0%, 0%, 0.08), 0 4px 16px -4px hsla(0, 0%, 0%, 0.06);
+    --shadow-card-hover: 0 8px 24px -6px hsla(0, 0%, 0%, 0.12), 0 12px 32px -8px hsla(0, 0%, 0%, 0.1);
+    --shadow-header: 0 2px 12px -2px hsla(354, 73%, 35%, 0.3);
+
+    /* 侧边栏 */
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
+    --sidebar-primary: 354 73% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 354 73% 95%;
+    --sidebar-accent-foreground: 354 73% 35%;
     --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 354 73% 43%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --background: 0 0% 10%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 354 73% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 354 73% 50%;
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 354 73% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 354 73% 50%;
   }
 }
 
@@ -100,6 +107,132 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "Helvetica Neue", sans-serif;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  /* 政务卡片样式 */
+  .gov-card {
+    @apply bg-card rounded-md shadow-[var(--shadow-card)] transition-all duration-300;
+  }
+
+  .gov-card:hover {
+    @apply shadow-[var(--shadow-card-hover)];
+    transform: translateY(-2px);
+  }
+
+  /* 卡片标题红色竖线装饰 */
+  .gov-card-title {
+    @apply relative pl-3 text-lg font-bold text-foreground;
+  }
+
+  .gov-card-title::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-full;
+  }
+
+  /* 金色强调文字 */
+  .gov-gold-text {
+    @apply text-accent font-semibold;
+  }
+
+  /* 红色徽章 */
+  .gov-badge {
+    @apply inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-medium text-primary-foreground bg-primary rounded-full;
+  }
+
+  /* 状态圆点 */
+  .status-dot {
+    @apply w-2.5 h-2.5 rounded-full flex-shrink-0;
+  }
+
+  .status-dot-urgent {
+    @apply bg-primary animate-pulse;
+  }
+
+  .status-dot-normal {
+    @apply bg-accent;
+  }
+
+  .status-dot-done {
+    @apply bg-muted-foreground;
+  }
+
+  /* 单点登录应用图标 */
+  .app-icon {
+    @apply flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-card cursor-pointer transition-all duration-200;
+  }
+
+  .app-icon:hover {
+    @apply border-primary bg-primary/5 shadow-md;
+    transform: translateY(-2px);
+  }
+
+  .app-icon-box {
+    @apply w-14 h-14 flex items-center justify-center rounded-lg text-xl font-bold text-primary-foreground;
+  }
+
+  /* 日历样式 */
+  .calendar-day {
+    @apply w-8 h-8 flex items-center justify-center text-sm rounded-md cursor-pointer transition-colors;
+  }
+
+  .calendar-day:hover {
+    @apply bg-muted;
+  }
+
+  .calendar-day-today {
+    @apply bg-primary text-primary-foreground font-bold;
+  }
+
+  .calendar-day-event {
+    @apply relative;
+  }
+
+  .calendar-day-event::after {
+    content: '';
+    @apply absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent rounded-full;
+  }
+
+  /* 菜谱Tab */
+  .menu-tab {
+    @apply px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer;
+  }
+
+  .menu-tab-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .menu-tab-inactive {
+    @apply text-muted-foreground hover:bg-muted;
+  }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* 轮播图渐变遮罩 */
+.carousel-overlay {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 40%, transparent 100%);
 }
