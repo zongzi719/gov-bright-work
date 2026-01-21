@@ -15,8 +15,9 @@ const Index = () => {
 
       {/* 主体内容区域 */}
       <main className="max-w-[1920px] mx-auto p-6 space-y-6">
-        {/* 轮播图Banner */}
+        {/* 轮播图Banner - 已注释
         <BannerCarousel />
+        */}
 
         {/* 三栏布局 */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
