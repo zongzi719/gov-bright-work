@@ -18,15 +18,15 @@ const apps: AppItem[] = [
 
 const QuickLinks = () => {
   return (
-    <div className="gov-card">
+    <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border">
         <h2 className="gov-card-title">单点登录</h2>
       </div>
 
       {/* 应用网格 */}
-      <div className="p-5">
-        <div className="grid grid-cols-4 gap-4">
+      <div className="p-5 flex-1 flex items-center">
+        <div className="grid grid-cols-4 gap-4 w-full">
           {apps.map((app) => (
             <div key={app.id} className="app-icon">
               <div className={`app-icon-box ${app.color}`}>
