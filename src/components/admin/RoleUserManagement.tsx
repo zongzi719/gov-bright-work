@@ -25,24 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, UserCheck, Search, Check, ChevronsUpDown, RefreshCw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, Trash2, Users, UserCheck, RefreshCw, Search } from "lucide-react";
 
 interface UserRole {
   id: string;
@@ -65,12 +52,8 @@ interface Profile {
   display_name: string | null;
 }
 
-interface UserRoleWithProfile extends UserRole {
-  profile?: Profile;
-}
-
 const RoleUserManagement = () => {
-  const [userRoles, setUserRoles] = useState<UserRoleWithProfile[]>([]);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +61,6 @@ const RoleUserManagement = () => {
   const [selectedRole, setSelectedRole] = useState<string>("user");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [filterRole, setFilterRole] = useState<string>("all");
-  const [userSearchOpen, setUserSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -147,15 +129,6 @@ const RoleUserManagement = () => {
       p.email?.toLowerCase().includes(query) ||
       p.display_name?.toLowerCase().includes(query)
     );
-  };
-
-  const getSelectedUserDisplay = () => {
-    if (!selectedUserId) return "搜索并选择用户...";
-    const profile = getProfileByUserId(selectedUserId);
-    if (profile) {
-      return profile.display_name || profile.email || selectedUserId.substring(0, 8) + "...";
-    }
-    return selectedUserId.substring(0, 8) + "...";
   };
 
   const handleAddUserRole = async () => {
@@ -294,58 +267,34 @@ const RoleUserManagement = () => {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>选择用户 *</Label>
-                  <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={userSearchOpen}
-                        className="w-full justify-between"
-                      >
-                        <span className="truncate">{getSelectedUserDisplay()}</span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[350px] p-0" align="start">
-                      <Command>
-                        <CommandInput 
-                          placeholder="搜索用户邮箱或名称..." 
-                          value={searchQuery}
-                          onValueChange={setSearchQuery}
-                        />
-                        <CommandList>
-                          <CommandEmpty>未找到用户</CommandEmpty>
-                          <CommandGroup>
-                            {getFilteredProfiles().slice(0, 20).map((profile) => (
-                              <CommandItem
-                                key={profile.user_id}
-                                value={`${profile.email || ''} ${profile.display_name || ''}`}
-                                onSelect={() => {
-                                  setSelectedUserId(profile.user_id);
-                                  setUserSearchOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedUserId === profile.user_id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {profile.display_name || profile.email?.split('@')[0] || '未知用户'}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {profile.email || profile.user_id.substring(0, 8) + '...'}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="搜索用户邮箱或名称..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择用户" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {getFilteredProfiles().slice(0, 20).map((profile) => (
+                          <SelectItem key={profile.user_id} value={profile.user_id}>
+                            <div className="flex flex-col">
+                              <span>{profile.display_name || profile.email?.split('@')[0] || '未知用户'}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {profile.email || profile.user_id.substring(0, 8) + '...'}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     每个用户只能分配一个角色，如已有角色将被更新
                   </p>
