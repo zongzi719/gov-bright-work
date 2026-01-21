@@ -51,6 +51,7 @@ const NoticeManagement = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [filterDepartment, setFilterDepartment] = useState<string>("all");
   const [formData, setFormData] = useState({
     title: "",
     department: "",
@@ -63,16 +64,26 @@ const NoticeManagement = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    fetchNotices();
+  }, [filterDepartment]);
+
   const fetchData = async () => {
     await Promise.all([fetchNotices(), fetchOrganizations()]);
     setLoading(false);
   };
 
   const fetchNotices = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("notices")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (filterDepartment && filterDepartment !== "all") {
+      query = query.eq("department", filterDepartment);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast.error("获取通知公告失败");
@@ -165,7 +176,22 @@ const NoticeManagement = () => {
   return (
     <div className="gov-card">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-        <h2 className="gov-card-title">通知公告管理</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="gov-card-title">通知公告管理</h2>
+          <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+            <SelectTrigger className="w-40 h-8">
+              <SelectValue placeholder="筛选发布单位" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部单位</SelectItem>
+              {organizations.map((org) => (
+                <SelectItem key={org.id} value={org.name}>
+                  {org.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
