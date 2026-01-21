@@ -414,6 +414,48 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          can_create: boolean | null
+          can_delete: boolean | null
+          can_read: boolean | null
+          can_update: boolean | null
+          created_at: string | null
+          data_scope: Database["public"]["Enums"]["data_scope"] | null
+          id: string
+          module_label: string
+          module_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_read?: boolean | null
+          can_update?: boolean | null
+          created_at?: string | null
+          data_scope?: Database["public"]["Enums"]["data_scope"] | null
+          id?: string
+          module_label: string
+          module_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_read?: boolean | null
+          can_update?: boolean | null
+          created_at?: string | null
+          data_scope?: Database["public"]["Enums"]["data_scope"] | null
+          id?: string
+          module_label?: string
+          module_name?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       supply_requisitions: {
         Row: {
           approved_at: string | null
@@ -502,6 +544,7 @@ export type Database = {
       absence_type: "out" | "leave" | "business_trip" | "meeting"
       app_role: "admin" | "user"
       contact_status: "on_duty" | "out" | "leave" | "business_trip" | "meeting"
+      data_scope: "self" | "department" | "organization" | "all"
       leave_type: "annual" | "sick" | "personal"
       purchase_status: "pending" | "approved" | "rejected" | "completed"
       requisition_status: "pending" | "approved" | "rejected" | "completed"
@@ -642,6 +685,7 @@ export const Constants = {
       absence_type: ["out", "leave", "business_trip", "meeting"],
       app_role: ["admin", "user"],
       contact_status: ["on_duty", "out", "leave", "business_trip", "meeting"],
+      data_scope: ["self", "department", "organization", "all"],
       leave_type: ["annual", "sick", "personal"],
       purchase_status: ["pending", "approved", "rejected", "completed"],
       requisition_status: ["pending", "approved", "rejected", "completed"],
