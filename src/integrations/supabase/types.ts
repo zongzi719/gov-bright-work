@@ -228,6 +228,42 @@ export type Database = {
         }
         Relationships: []
       }
+      office_supplies: {
+        Row: {
+          created_at: string
+          current_stock: number
+          id: string
+          is_active: boolean
+          min_stock: number
+          name: string
+          specification: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_stock?: number
+          id?: string
+          is_active?: boolean
+          min_stock?: number
+          name: string
+          specification?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_stock?: number
+          id?: string
+          is_active?: boolean
+          min_stock?: number
+          name?: string
+          specification?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           address: string | null
@@ -271,6 +307,100 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          quantity: number
+          reason: string | null
+          requested_by: string
+          status: Database["public"]["Enums"]["purchase_status"]
+          supply_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          quantity: number
+          reason?: string | null
+          requested_by: string
+          status?: Database["public"]["Enums"]["purchase_status"]
+          supply_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          quantity?: number
+          reason?: string | null
+          requested_by?: string
+          status?: Database["public"]["Enums"]["purchase_status"]
+          supply_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requests_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "office_supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_requisitions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          quantity: number
+          requisition_by: string
+          status: Database["public"]["Enums"]["requisition_status"]
+          supply_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          quantity: number
+          requisition_by: string
+          status?: Database["public"]["Enums"]["requisition_status"]
+          supply_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          quantity?: number
+          requisition_by?: string
+          status?: Database["public"]["Enums"]["requisition_status"]
+          supply_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_requisitions_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "office_supplies"
             referencedColumns: ["id"]
           },
         ]
@@ -319,6 +449,8 @@ export type Database = {
       absence_type: "out" | "leave" | "business_trip" | "meeting"
       app_role: "admin" | "user"
       contact_status: "on_duty" | "out" | "leave" | "business_trip" | "meeting"
+      purchase_status: "pending" | "approved" | "rejected" | "completed"
+      requisition_status: "pending" | "approved" | "rejected" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -456,6 +588,8 @@ export const Constants = {
       absence_type: ["out", "leave", "business_trip", "meeting"],
       app_role: ["admin", "user"],
       contact_status: ["on_duty", "out", "leave", "business_trip", "meeting"],
+      purchase_status: ["pending", "approved", "rejected", "completed"],
+      requisition_status: ["pending", "approved", "rejected", "completed"],
     },
   },
 } as const

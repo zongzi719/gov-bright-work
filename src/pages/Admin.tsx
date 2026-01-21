@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
 import MenuManagement from "@/components/admin/MenuManagement";
 import ContactManagement from "@/components/admin/ContactManagement";
 import AbsenceManagement from "@/components/admin/AbsenceManagement";
+import SupplyManagement from "@/components/admin/SupplyManagement";
 
 const Admin = () => {
   const [loading, setLoading] = useState(true);
@@ -115,6 +116,10 @@ const Admin = () => {
               <CalendarClock className="w-4 h-4" />
               外出管理
             </TabsTrigger>
+            <TabsTrigger value="supplies" className="gap-2">
+              <Package className="w-4 h-4" />
+              办公用品
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="banners">
@@ -135,6 +140,10 @@ const Admin = () => {
 
           <TabsContent value="absence">
             <AbsenceManagement />
+          </TabsContent>
+
+          <TabsContent value="supplies">
+            <SupplyManagement />
           </TabsContent>
         </Tabs>
       </main>
