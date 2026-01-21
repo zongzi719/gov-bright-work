@@ -32,12 +32,10 @@ import { toast } from "sonner";
 import { Plus, Trash2, Users, UserCheck } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-
 interface UserRole {
   id: string;
   user_id: string;
-  role: AppRole;
+  role: string;
   created_at: string;
 }
 
@@ -53,7 +51,7 @@ const RoleUserManagement = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<AppRole>("user");
+  const [selectedRole, setSelectedRole] = useState<string>("user");
   const [userId, setUserId] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
 
@@ -94,7 +92,7 @@ const RoleUserManagement = () => {
     setRoles(data || []);
   };
 
-  const getRoleLabel = (roleName: AppRole): string => {
+  const getRoleLabel = (roleName: string): string => {
     const role = roles.find(r => r.name === roleName);
     return role?.label || roleName;
   };
@@ -165,9 +163,9 @@ const RoleUserManagement = () => {
     return userId.substring(0, 8) + "...";
   };
 
-  // 获取系统角色用于下拉选择（只能分配 admin 和 user）
-  const getSystemRoles = () => {
-    return roles.filter(r => r.is_system);
+  // 获取所有角色用于下拉选择（支持自定义角色）
+  const getAllRoles = () => {
+    return roles;
   };
 
   if (loading) {
@@ -188,7 +186,7 @@ const RoleUserManagement = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部角色</SelectItem>
-              {getSystemRoles().map(role => (
+              {getAllRoles().map(role => (
                 <SelectItem key={role.name} value={role.name}>
                   {role.label}
                 </SelectItem>
@@ -221,12 +219,12 @@ const RoleUserManagement = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">分配角色 *</Label>
-                  <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+                  <Select value={selectedRole} onValueChange={setSelectedRole}>
                     <SelectTrigger>
                       <SelectValue placeholder="选择角色" />
                     </SelectTrigger>
                     <SelectContent>
-                      {getSystemRoles().map(role => (
+                      {getAllRoles().map(role => (
                         <SelectItem key={role.name} value={role.name}>
                           {role.label}
                         </SelectItem>

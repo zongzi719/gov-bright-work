@@ -425,7 +425,7 @@ export type Database = {
           id: string
           module_label: string
           module_name: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           updated_at: string | null
         }
         Insert: {
@@ -438,7 +438,7 @@ export type Database = {
           id?: string
           module_label: string
           module_name: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           updated_at?: string | null
         }
         Update: {
@@ -451,10 +451,18 @@ export type Database = {
           id?: string
           module_label?: string
           module_name?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_fkey"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["name"]
+          },
+        ]
       }
       roles: {
         Row: {
@@ -540,22 +548,30 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_fkey"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["name"]
+          },
+        ]
       }
     }
     Views: {

@@ -23,12 +23,11 @@ import { toast } from "sonner";
 import { Lock, Save, RefreshCw } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
 type DataScope = Database["public"]["Enums"]["data_scope"];
 
 interface RolePermission {
   id: string;
-  role: AppRole;
+  role: string;
   module_name: string;
   module_label: string;
   can_create: boolean;
@@ -38,10 +37,12 @@ interface RolePermission {
   data_scope: DataScope;
 }
 
-const roleLabels: Record<AppRole, string> = {
-  admin: '管理员',
-  user: '普通用户',
-};
+interface Role {
+  id: string;
+  name: string;
+  label: string;
+  is_system: boolean;
+}
 
 const scopeLabels: Record<DataScope, string> = {
   self: '仅本人',
@@ -52,17 +53,37 @@ const scopeLabels: Record<DataScope, string> = {
 
 const PermissionManagement = () => {
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<AppRole>("admin");
+  const [selectedRole, setSelectedRole] = useState<string>("admin");
   const [modifiedPermissions, setModifiedPermissions] = useState<Record<string, Partial<RolePermission>>>({});
 
   useEffect(() => {
-    fetchPermissions();
+    fetchData();
   }, []);
 
-  const fetchPermissions = async () => {
+  const fetchData = async () => {
     setLoading(true);
+    await Promise.all([fetchPermissions(), fetchRoles()]);
+    setLoading(false);
+  };
+
+  const fetchRoles = async () => {
+    const { data, error } = await supabase
+      .from("roles")
+      .select("id, name, label, is_system")
+      .eq("is_active", true)
+      .order("sort_order");
+
+    if (error) {
+      toast.error("获取角色列表失败");
+      return;
+    }
+    setRoles(data || []);
+  };
+
+  const fetchPermissions = async () => {
     const { data, error } = await supabase
       .from("role_permissions")
       .select("*")
@@ -70,12 +91,15 @@ const PermissionManagement = () => {
 
     if (error) {
       toast.error("获取权限配置失败");
-      setLoading(false);
       return;
     }
     setPermissions(data || []);
     setModifiedPermissions({});
-    setLoading(false);
+  };
+
+  const getRoleLabel = (roleName: string): string => {
+    const role = roles.find(r => r.name === roleName);
+    return role?.label || roleName;
   };
 
   const handlePermissionChange = (
@@ -149,19 +173,22 @@ const PermissionManagement = () => {
           权限配置
         </CardTitle>
         <div className="flex items-center gap-2">
-          <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+          <Select value={selectedRole} onValueChange={setSelectedRole}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="选择角色" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="admin">管理员</SelectItem>
-              <SelectItem value="user">普通用户</SelectItem>
+              {roles.map(role => (
+                <SelectItem key={role.name} value={role.name}>
+                  {role.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button
             variant="outline"
             size="icon"
-            onClick={fetchPermissions}
+            onClick={fetchData}
             disabled={loading}
           >
             <RefreshCw className="w-4 h-4" />
@@ -179,7 +206,7 @@ const PermissionManagement = () => {
       <CardContent>
         <div className="mb-4">
           <Badge variant={selectedRole === 'admin' ? 'default' : 'secondary'} className="text-sm">
-            当前配置：{roleLabels[selectedRole]}
+            当前配置：{getRoleLabel(selectedRole)}
           </Badge>
           {hasModifications && (
             <Badge variant="outline" className="ml-2 text-sm text-orange-600">
