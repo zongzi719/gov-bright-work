@@ -70,9 +70,9 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-muted">
-      {/* 顶部导航 */}
-      <header className="bg-primary text-primary-foreground shadow-md">
+    <div className="h-screen bg-muted flex flex-col overflow-hidden">
+      {/* 顶部导航 - 固定 */}
+      <header className="bg-primary text-primary-foreground shadow-md flex-shrink-0">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary-foreground/20 rounded-lg flex items-center justify-center">
@@ -95,83 +95,93 @@ const Admin = () => {
         </div>
       </header>
 
-      {/* 主内容区 */}
-      <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="banners" className="space-y-6">
-          <TabsList className="bg-card border">
-            <TabsTrigger value="banners" className="gap-2">
-              <Image className="w-4 h-4" />
-              轮播图管理
-            </TabsTrigger>
-            <TabsTrigger value="notices" className="gap-2">
-              <Bell className="w-4 h-4" />
-              通知公告
-            </TabsTrigger>
-            <TabsTrigger value="menus" className="gap-2">
-              <Utensils className="w-4 h-4" />
-              食堂菜谱
-            </TabsTrigger>
-            <TabsTrigger value="contacts" className="gap-2">
-              <BookUser className="w-4 h-4" />
-              通讯录
-            </TabsTrigger>
-            <TabsTrigger value="absence" className="gap-2">
-              <CalendarClock className="w-4 h-4" />
-              外出管理
-            </TabsTrigger>
-            <TabsTrigger value="leave" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              假期管理
-            </TabsTrigger>
-            <TabsTrigger value="supplies" className="gap-2">
-              <Package className="w-4 h-4" />
-              办公用品
-            </TabsTrigger>
-            <TabsTrigger value="leader-schedule" className="gap-2">
-              <Star className="w-4 h-4" />
-              领导日程
-            </TabsTrigger>
-            <TabsTrigger value="system" className="gap-2">
-              <Settings className="w-4 h-4" />
-              系统管理
-            </TabsTrigger>
-          </TabsList>
+      {/* 主内容区 - 可滚动 */}
+      <main className="flex-1 overflow-hidden">
+        <Tabs defaultValue="banners" className="h-full flex flex-col">
+          {/* 菜单栏 - 固定 */}
+          <div className="bg-muted px-4 py-4 flex-shrink-0 border-b">
+            <div className="container mx-auto">
+              <TabsList className="bg-card border">
+                <TabsTrigger value="banners" className="gap-2">
+                  <Image className="w-4 h-4" />
+                  轮播图管理
+                </TabsTrigger>
+                <TabsTrigger value="notices" className="gap-2">
+                  <Bell className="w-4 h-4" />
+                  通知公告
+                </TabsTrigger>
+                <TabsTrigger value="menus" className="gap-2">
+                  <Utensils className="w-4 h-4" />
+                  食堂菜谱
+                </TabsTrigger>
+                <TabsTrigger value="contacts" className="gap-2">
+                  <BookUser className="w-4 h-4" />
+                  通讯录
+                </TabsTrigger>
+                <TabsTrigger value="absence" className="gap-2">
+                  <CalendarClock className="w-4 h-4" />
+                  外出管理
+                </TabsTrigger>
+                <TabsTrigger value="leave" className="gap-2">
+                  <Calendar className="w-4 h-4" />
+                  假期管理
+                </TabsTrigger>
+                <TabsTrigger value="supplies" className="gap-2">
+                  <Package className="w-4 h-4" />
+                  办公用品
+                </TabsTrigger>
+                <TabsTrigger value="leader-schedule" className="gap-2">
+                  <Star className="w-4 h-4" />
+                  领导日程
+                </TabsTrigger>
+                <TabsTrigger value="system" className="gap-2">
+                  <Settings className="w-4 h-4" />
+                  系统管理
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
-          <TabsContent value="banners">
-            <BannerManagement />
-          </TabsContent>
+          {/* 内容区 - 可滚动 */}
+          <div className="flex-1 overflow-auto">
+            <div className="container mx-auto px-4 py-6">
+              <TabsContent value="banners" className="mt-0">
+                <BannerManagement />
+              </TabsContent>
 
-          <TabsContent value="notices">
-            <NoticeManagement />
-          </TabsContent>
+              <TabsContent value="notices" className="mt-0">
+                <NoticeManagement />
+              </TabsContent>
 
-          <TabsContent value="menus">
-            <MenuManagement />
-          </TabsContent>
+              <TabsContent value="menus" className="mt-0">
+                <MenuManagement />
+              </TabsContent>
 
-          <TabsContent value="contacts">
-            <ContactManagement />
-          </TabsContent>
+              <TabsContent value="contacts" className="mt-0">
+                <ContactManagement />
+              </TabsContent>
 
-          <TabsContent value="absence">
-            <AbsenceManagement />
-          </TabsContent>
+              <TabsContent value="absence" className="mt-0">
+                <AbsenceManagement />
+              </TabsContent>
 
-          <TabsContent value="leave">
-            <LeaveBalanceManagement />
-          </TabsContent>
+              <TabsContent value="leave" className="mt-0">
+                <LeaveBalanceManagement />
+              </TabsContent>
 
-          <TabsContent value="supplies">
-            <SupplyManagement />
-          </TabsContent>
+              <TabsContent value="supplies" className="mt-0">
+                <SupplyManagement />
+              </TabsContent>
 
-          <TabsContent value="leader-schedule">
-            <LeaderScheduleManagement />
-          </TabsContent>
+              <TabsContent value="leader-schedule" className="mt-0">
+                <LeaderScheduleManagement />
+              </TabsContent>
 
-          <TabsContent value="system">
-            <SystemManagement />
-          </TabsContent>
+              <TabsContent value="system" className="mt-0">
+                <SystemManagement />
+              </TabsContent>
+            </div>
+          </div>
         </Tabs>
       </main>
     </div>
