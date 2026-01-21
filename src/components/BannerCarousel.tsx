@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight, Upload } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface BannerItem {
@@ -27,10 +27,9 @@ const defaultBanners: BannerItem[] = [
 ];
 
 const BannerCarousel = () => {
-  const [banners, setBanners] = useState<BannerItem[]>(defaultBanners);
+  const [banners] = useState<BannerItem[]>(defaultBanners);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 自动轮播
   useEffect(() => {
@@ -47,22 +46,6 @@ const BannerCarousel = () => {
 
   const goToNext = () => {
     setCurrentIndex((prev) => (prev + 1) % banners.length);
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newBanners = [...banners];
-        newBanners[currentIndex] = {
-          ...newBanners[currentIndex],
-          image: reader.result as string,
-        };
-        setBanners(newBanners);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   return (
@@ -113,26 +96,6 @@ const BannerCarousel = () => {
         onClick={goToNext}
       >
         <ChevronRight className="w-6 h-6" />
-      </Button>
-
-      {/* 更换图片按钮 */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleImageUpload}
-        accept="image/*"
-        className="hidden"
-      />
-      <Button
-        variant="secondary"
-        size="sm"
-        className={`absolute right-4 top-4 z-20 gap-1.5 bg-white/90 hover:bg-white text-foreground transition-opacity ${
-          isHovered ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <Upload className="w-4 h-4" />
-        更换图片
       </Button>
 
       {/* 底部指示器 */}
