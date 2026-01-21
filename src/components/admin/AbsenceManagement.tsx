@@ -48,7 +48,7 @@ import {
   UserCheck,
 } from "lucide-react";
 
-type AbsenceType = "out" | "leave" | "business_trip" | "meeting";
+type AbsenceType = "out" | "leave";
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
 interface Contact {
@@ -80,15 +80,11 @@ interface AbsenceRecord {
 const typeLabels: Record<AbsenceType, string> = {
   out: "外出",
   leave: "请假",
-  business_trip: "出差",
-  meeting: "会议",
 };
 
 const typeColors: Record<AbsenceType, string> = {
   out: "bg-blue-100 text-blue-800",
   leave: "bg-orange-100 text-orange-800",
-  business_trip: "bg-purple-100 text-purple-800",
-  meeting: "bg-green-100 text-green-800",
 };
 
 const statusLabels: Record<AbsenceStatus, string> = {
@@ -217,11 +213,9 @@ const AbsenceManagement = () => {
   };
 
   const updateContactStatus = async (contactId: string, type: AbsenceType) => {
-    // AbsenceType and contact_status enum share the same values except 'on_duty'
-    // The type is already compatible: 'out' | 'leave' | 'business_trip' | 'meeting'
     await supabase
       .from("contacts")
-      .update({ status: type as "out" | "leave" | "business_trip" | "meeting" })
+      .update({ status: type as "out" | "leave" })
       .eq("id", contactId);
   };
 
@@ -383,8 +377,6 @@ const AbsenceManagement = () => {
                   <SelectContent>
                     <SelectItem value="out">外出</SelectItem>
                     <SelectItem value="leave">请假</SelectItem>
-                    <SelectItem value="business_trip">出差</SelectItem>
-                    <SelectItem value="meeting">会议</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -516,8 +508,6 @@ const AbsenceManagement = () => {
               <SelectItem value="all">全部类型</SelectItem>
               <SelectItem value="out">外出</SelectItem>
               <SelectItem value="leave">请假</SelectItem>
-              <SelectItem value="business_trip">出差</SelectItem>
-              <SelectItem value="meeting">会议</SelectItem>
             </SelectContent>
           </Select>
           <Select
