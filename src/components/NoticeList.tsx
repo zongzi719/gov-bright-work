@@ -45,7 +45,7 @@ const notices: NoticeItem[] = [
 
 const NoticeList = () => {
   return (
-    <div className="gov-card">
+    <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-border">
         <h2 className="gov-card-title">通知公告</h2>
@@ -56,7 +56,7 @@ const NoticeList = () => {
       </div>
 
       {/* 通知列表 */}
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border flex-1 overflow-auto">
         {notices.map((notice) => (
           <div
             key={notice.id}

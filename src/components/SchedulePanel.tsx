@@ -31,13 +31,13 @@ const SchedulePanel = () => {
   const eventDays = [12, 15, 18]; // 有日程的日期
 
   return (
-    <div className="gov-card">
+    <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border">
         <h2 className="gov-card-title">日程管理</h2>
       </div>
 
-      <div className="p-5 space-y-5">
+      <div className="p-5 space-y-5 flex-1 overflow-auto">
         {/* 日历头部 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

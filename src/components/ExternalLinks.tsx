@@ -15,13 +15,13 @@ const links: LinkItem[] = [
 
 const ExternalLinks = () => {
   return (
-    <div className="gov-card">
+    <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border">
         <h2 className="gov-card-title">常用链接</h2>
       </div>
 
-      <div className="p-5 space-y-3">
+      <div className="p-5 space-y-3 flex-1 overflow-auto">
         {links.map((link) => (
           <a
             key={link.id}

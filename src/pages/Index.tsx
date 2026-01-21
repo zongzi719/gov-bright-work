@@ -22,21 +22,31 @@ const Index = () => {
         {/* 三栏布局 - 3:4:3 比例 */}
         <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 h-full">
           {/* 左侧：待办事项 - 30% */}
-          <div className="lg:col-span-3 overflow-auto">
+          <div className="lg:col-span-3 h-full">
             <TodoList />
           </div>
 
           {/* 中间：通知公告 + 单点登录 - 40% */}
-          <div className="lg:col-span-4 space-y-4 overflow-auto">
-            <NoticeList />
-            <QuickLinks />
+          <div className="lg:col-span-4 flex flex-col gap-4 h-full">
+            <div className="flex-[3]">
+              <NoticeList />
+            </div>
+            <div className="flex-[2]">
+              <QuickLinks />
+            </div>
           </div>
 
           {/* 右侧：日程管理 + 常用链接 + 食堂菜谱 - 30% */}
-          <div className="lg:col-span-3 space-y-4 overflow-auto">
-            <SchedulePanel />
-            <ExternalLinks />
-            <CanteenMenu />
+          <div className="lg:col-span-3 flex flex-col gap-4 h-full">
+            <div className="flex-[4]">
+              <SchedulePanel />
+            </div>
+            <div className="flex-[1]">
+              <ExternalLinks />
+            </div>
+            <div className="flex-[3]">
+              <CanteenMenu />
+            </div>
           </div>
         </div>
       </main>

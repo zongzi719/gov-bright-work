@@ -46,13 +46,13 @@ const CanteenMenu = () => {
   const currentMenu = weekMenu[activeDay];
 
   return (
-    <div className="gov-card">
+    <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border">
         <h2 className="gov-card-title">食堂每周菜谱</h2>
       </div>
 
-      <div className="p-5">
+      <div className="p-5 flex-1 overflow-auto">
         {/* 日期Tab */}
         <div className="flex gap-1.5 mb-5">
           {weekMenu.map((item, index) => (
