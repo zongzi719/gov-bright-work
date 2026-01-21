@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,8 +40,14 @@ interface Notice {
   created_at: string;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+}
+
 const NoticeManagement = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
@@ -47,8 +60,13 @@ const NoticeManagement = () => {
   });
 
   useEffect(() => {
-    fetchNotices();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    await Promise.all([fetchNotices(), fetchOrganizations()]);
+    setLoading(false);
+  };
 
   const fetchNotices = async () => {
     const { data, error } = await supabase
@@ -62,7 +80,20 @@ const NoticeManagement = () => {
     }
 
     setNotices(data || []);
-    setLoading(false);
+  };
+
+  const fetchOrganizations = async () => {
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("id, name")
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      toast.error("获取单位列表失败");
+      return;
+    }
+
+    setOrganizations(data || []);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,13 +193,21 @@ const NoticeManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="department">发布单位</Label>
-                <Input
-                  id="department"
+                <Select
                   value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  placeholder="请输入发布单位"
-                  required
-                />
+                  onValueChange={(value) => setFormData({ ...formData, department: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="请选择发布单位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.name}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="content">内容（可选）</Label>
@@ -219,11 +258,11 @@ const NoticeManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>标题</TableHead>
-                <TableHead className="w-24">发布单位</TableHead>
+                <TableHead className="w-28">发布单位</TableHead>
                 <TableHead className="w-24">发布日期</TableHead>
-                <TableHead className="w-16">置顶</TableHead>
+                <TableHead className="w-14">置顶</TableHead>
                 <TableHead className="w-16">状态</TableHead>
-                <TableHead className="w-24">操作</TableHead>
+                <TableHead className="w-20">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -232,13 +271,13 @@ const NoticeManagement = () => {
                   <TableCell className="font-medium">{notice.title}</TableCell>
                   <TableCell>{notice.department}</TableCell>
                   <TableCell>{new Date(notice.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {notice.is_pinned && (
-                      <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">置顶</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">置顶</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <span className={`text-xs px-2 py-1 rounded ${notice.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                  <TableCell className="whitespace-nowrap">
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${notice.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                       {notice.is_published ? "已发布" : "草稿"}
                     </span>
                   </TableCell>
