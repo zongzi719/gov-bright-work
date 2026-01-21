@@ -166,11 +166,11 @@
 
   /* 单点登录应用图标 */
   .app-icon {
-    @apply flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-card cursor-pointer transition-all duration-200;
+    @apply flex flex-col items-center gap-2 p-4 rounded-lg bg-card cursor-pointer transition-all duration-200;
   }
 
   .app-icon:hover {
-    @apply border-primary bg-primary/5 shadow-md;
+    @apply bg-primary/5 shadow-md;
     transform: translateY(-2px);
   }
 
