@@ -1,0 +1,284 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Lock, Save, RefreshCw } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
+type DataScope = Database["public"]["Enums"]["data_scope"];
+
+interface RolePermission {
+  id: string;
+  role: AppRole;
+  module_name: string;
+  module_label: string;
+  can_create: boolean;
+  can_read: boolean;
+  can_update: boolean;
+  can_delete: boolean;
+  data_scope: DataScope;
+}
+
+const roleLabels: Record<AppRole, string> = {
+  admin: '管理员',
+  user: '普通用户',
+};
+
+const scopeLabels: Record<DataScope, string> = {
+  self: '仅本人',
+  department: '本部门',
+  organization: '本单位',
+  all: '全部',
+};
+
+const PermissionManagement = () => {
+  const [permissions, setPermissions] = useState<RolePermission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<AppRole>("admin");
+  const [modifiedPermissions, setModifiedPermissions] = useState<Record<string, Partial<RolePermission>>>({});
+
+  useEffect(() => {
+    fetchPermissions();
+  }, []);
+
+  const fetchPermissions = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("role_permissions")
+      .select("*")
+      .order("module_name");
+
+    if (error) {
+      toast.error("获取权限配置失败");
+      setLoading(false);
+      return;
+    }
+    setPermissions(data || []);
+    setModifiedPermissions({});
+    setLoading(false);
+  };
+
+  const handlePermissionChange = (
+    permissionId: string,
+    field: keyof RolePermission,
+    value: boolean | DataScope
+  ) => {
+    setModifiedPermissions((prev) => ({
+      ...prev,
+      [permissionId]: {
+        ...prev[permissionId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const getPermissionValue = (permission: RolePermission, field: keyof RolePermission) => {
+    if (modifiedPermissions[permission.id]?.[field] !== undefined) {
+      return modifiedPermissions[permission.id][field];
+    }
+    return permission[field];
+  };
+
+  const handleSave = async () => {
+    const updates = Object.entries(modifiedPermissions);
+    if (updates.length === 0) {
+      toast.info("没有需要保存的修改");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      for (const [id, changes] of updates) {
+        const { error } = await supabase
+          .from("role_permissions")
+          .update(changes)
+          .eq("id", id);
+
+        if (error) {
+          toast.error(`保存权限失败: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+      }
+
+      toast.success("权限配置已保存");
+      await fetchPermissions();
+    } catch (error) {
+      toast.error("保存失败");
+    }
+
+    setSaving(false);
+  };
+
+  const getFilteredPermissions = () => {
+    return permissions.filter((p) => p.role === selectedRole);
+  };
+
+  const hasModifications = Object.keys(modifiedPermissions).length > 0;
+
+  if (loading) {
+    return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <Lock className="w-5 h-5" />
+          权限配置
+        </CardTitle>
+        <div className="flex items-center gap-2">
+          <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="选择角色" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">管理员</SelectItem>
+              <SelectItem value="user">普通用户</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={fetchPermissions}
+            disabled={loading}
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !hasModifications}
+            className="gap-2"
+          >
+            <Save className="w-4 h-4" />
+            保存修改
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4">
+          <Badge variant={selectedRole === 'admin' ? 'default' : 'secondary'} className="text-sm">
+            当前配置：{roleLabels[selectedRole]}
+          </Badge>
+          {hasModifications && (
+            <Badge variant="outline" className="ml-2 text-sm text-orange-600">
+              有未保存的修改
+            </Badge>
+          )}
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[150px]">模块</TableHead>
+              <TableHead className="w-[80px] text-center">新增</TableHead>
+              <TableHead className="w-[80px] text-center">查看</TableHead>
+              <TableHead className="w-[80px] text-center">编辑</TableHead>
+              <TableHead className="w-[80px] text-center">删除</TableHead>
+              <TableHead className="w-[150px]">数据范围</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {getFilteredPermissions().map((permission) => (
+              <TableRow key={permission.id}>
+                <TableCell className="font-medium">
+                  {permission.module_label}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Switch
+                    checked={getPermissionValue(permission, 'can_create') as boolean}
+                    onCheckedChange={(checked) =>
+                      handlePermissionChange(permission.id, 'can_create', checked)
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Switch
+                    checked={getPermissionValue(permission, 'can_read') as boolean}
+                    onCheckedChange={(checked) =>
+                      handlePermissionChange(permission.id, 'can_read', checked)
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Switch
+                    checked={getPermissionValue(permission, 'can_update') as boolean}
+                    onCheckedChange={(checked) =>
+                      handlePermissionChange(permission.id, 'can_update', checked)
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Switch
+                    checked={getPermissionValue(permission, 'can_delete') as boolean}
+                    onCheckedChange={(checked) =>
+                      handlePermissionChange(permission.id, 'can_delete', checked)
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={getPermissionValue(permission, 'data_scope') as DataScope}
+                    onValueChange={(value) =>
+                      handlePermissionChange(permission.id, 'data_scope', value as DataScope)
+                    }
+                  >
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="self">仅本人</SelectItem>
+                      <SelectItem value="department">本部门</SelectItem>
+                      <SelectItem value="organization">本单位</SelectItem>
+                      <SelectItem value="all">全部</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground space-y-2">
+          <p><strong>权限说明：</strong></p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>新增</strong>：是否允许创建新数据</li>
+            <li><strong>查看</strong>：是否允许查看数据列表</li>
+            <li><strong>编辑</strong>：是否允许修改已有数据</li>
+            <li><strong>删除</strong>：是否允许删除数据</li>
+          </ul>
+          <p className="mt-2"><strong>数据范围说明：</strong></p>
+          <ul className="list-disc list-inside space-y-1">
+            <li><strong>仅本人</strong>：只能操作自己创建的数据</li>
+            <li><strong>本部门</strong>：可以操作本部门所有人的数据</li>
+            <li><strong>本单位</strong>：可以操作本单位所有人的数据</li>
+            <li><strong>全部</strong>：可以操作所有数据</li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default PermissionManagement;
