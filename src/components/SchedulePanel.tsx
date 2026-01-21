@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 interface ScheduleItem {
@@ -80,20 +80,6 @@ const SchedulePanel = () => {
               </span>
             </div>
           ))}
-        </div>
-
-        {/* 快捷链接 */}
-        <div className="pt-4 border-t border-border">
-          <a
-            href="#"
-            className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-          >
-            <span className="px-2 py-0.5 bg-primary text-primary-foreground text-xs rounded font-medium">
-              人民网
-            </span>
-            人民网资料库
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
         </div>
       </div>
     </div>
