@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
@@ -13,6 +13,7 @@ import AbsenceManagement from "@/components/admin/AbsenceManagement";
 import LeaveBalanceManagement from "@/components/admin/LeaveBalanceManagement";
 import SupplyManagement from "@/components/admin/SupplyManagement";
 import SystemManagement from "@/components/admin/SystemManagement";
+import LeaderScheduleManagement from "@/components/admin/LeaderScheduleManagement";
 
 const Admin = () => {
   const [loading, setLoading] = useState(true);
@@ -126,6 +127,10 @@ const Admin = () => {
               <Package className="w-4 h-4" />
               办公用品
             </TabsTrigger>
+            <TabsTrigger value="leader-schedule" className="gap-2">
+              <Star className="w-4 h-4" />
+              领导日程
+            </TabsTrigger>
             <TabsTrigger value="system" className="gap-2">
               <Settings className="w-4 h-4" />
               系统管理
@@ -158,6 +163,10 @@ const Admin = () => {
 
           <TabsContent value="supplies">
             <SupplyManagement />
+          </TabsContent>
+
+          <TabsContent value="leader-schedule">
+            <LeaderScheduleManagement />
           </TabsContent>
 
           <TabsContent value="system">

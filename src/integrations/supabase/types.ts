@@ -198,6 +198,91 @@ export type Database = {
           },
         ]
       }
+      leader_schedule_permissions: {
+        Row: {
+          can_view_all: boolean
+          created_at: string
+          id: string
+          leader_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_view_all?: boolean
+          created_at?: string
+          id?: string
+          leader_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_view_all?: boolean
+          created_at?: string
+          id?: string
+          leader_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_schedule_permissions_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leader_schedules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          leader_id: string
+          location: string | null
+          notes: string | null
+          schedule_date: string
+          schedule_type: string
+          start_time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          leader_id: string
+          location?: string | null
+          notes?: string | null
+          schedule_date: string
+          schedule_type?: string
+          start_time: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          leader_id?: string
+          location?: string | null
+          notes?: string | null
+          schedule_date?: string
+          schedule_type?: string
+          start_time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_schedules_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_balances: {
         Row: {
           annual_leave_total: number
