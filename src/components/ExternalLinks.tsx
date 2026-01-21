@@ -1,11 +1,11 @@
 const ExternalLinks = () => {
   return (
-    <div className="bg-card rounded-md shadow-[var(--shadow-card)]">
+    <div className="bg-card rounded-md shadow-[var(--shadow-card)] border border-border">
       <a
         href="http://www.people.com.cn"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 px-5 py-4 hover:bg-muted/50 transition-colors group rounded-md"
+        className="flex items-center justify-center gap-3 px-5 py-4 transition-colors group rounded-md"
       >
         <span className="px-2.5 py-1 bg-primary text-primary-foreground text-sm rounded font-medium">
           人民网
