@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
 import MenuManagement from "@/components/admin/MenuManagement";
+import ContactManagement from "@/components/admin/ContactManagement";
 
 const Admin = () => {
   const [loading, setLoading] = useState(true);
@@ -105,6 +106,10 @@ const Admin = () => {
               <Utensils className="w-4 h-4" />
               食堂菜谱
             </TabsTrigger>
+            <TabsTrigger value="contacts" className="gap-2">
+              <BookUser className="w-4 h-4" />
+              通讯录
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="banners">
@@ -117,6 +122,10 @@ const Admin = () => {
 
           <TabsContent value="menus">
             <MenuManagement />
+          </TabsContent>
+
+          <TabsContent value="contacts">
+            <ContactManagement />
           </TabsContent>
         </Tabs>
       </main>
