@@ -5,6 +5,7 @@ import NoticeList from "@/components/NoticeList";
 import QuickLinks from "@/components/QuickLinks";
 import SchedulePanel from "@/components/SchedulePanel";
 import CanteenMenu from "@/components/CanteenMenu";
+import ExternalLinks from "@/components/ExternalLinks";
 
 const Index = () => {
   return (
@@ -30,9 +31,10 @@ const Index = () => {
             <QuickLinks />
           </div>
 
-          {/* 右侧：日程管理 + 食堂菜谱 - 25% */}
+          {/* 右侧：日程管理 + 常用链接 + 食堂菜谱 - 25% */}
           <div className="lg:col-span-1 space-y-6">
             <SchedulePanel />
+            <ExternalLinks />
             <CanteenMenu />
           </div>
         </div>
