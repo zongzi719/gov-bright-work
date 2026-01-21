@@ -777,16 +777,16 @@ const ContactManagement = () => {
                     <div className="space-y-2">
                       <Label>上级单位</Label>
                       <Select
-                        value={orgFormData.parent_id}
+                        value={orgFormData.parent_id || "none"}
                         onValueChange={(value) =>
-                          setOrgFormData({ ...orgFormData, parent_id: value })
+                          setOrgFormData({ ...orgFormData, parent_id: value === "none" ? "" : value })
                         }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="选择上级单位" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">无</SelectItem>
+                          <SelectItem value="none">无</SelectItem>
                           {organizations
                             .filter((o) => o.id !== editingOrg?.id)
                             .map((org) => (
