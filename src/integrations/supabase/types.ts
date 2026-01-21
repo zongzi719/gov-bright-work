@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      absence_records: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          contact_id: string
+          created_at: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          reason: string
+          start_time: string
+          status: Database["public"]["Enums"]["absence_status"]
+          type: Database["public"]["Enums"]["absence_type"]
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          contact_id: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          reason: string
+          start_time: string
+          status?: Database["public"]["Enums"]["absence_status"]
+          type: Database["public"]["Enums"]["absence_type"]
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          contact_id?: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          reason?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["absence_status"]
+          type?: Database["public"]["Enums"]["absence_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absence_records_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       banners: {
         Row: {
           created_at: string
@@ -251,6 +310,13 @@ export type Database = {
       }
     }
     Enums: {
+      absence_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "completed"
+        | "cancelled"
+      absence_type: "out" | "leave" | "business_trip" | "meeting"
       app_role: "admin" | "user"
       contact_status: "on_duty" | "out" | "leave" | "business_trip" | "meeting"
     }
@@ -380,6 +446,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      absence_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "completed",
+        "cancelled",
+      ],
+      absence_type: ["out", "leave", "business_trip", "meeting"],
       app_role: ["admin", "user"],
       contact_status: ["on_duty", "out", "leave", "business_trip", "meeting"],
     },
