@@ -28,23 +28,21 @@ const Index = () => {
 
           {/* 中间：通知公告 + 单点登录 - 40% */}
           <div className="lg:col-span-4 flex flex-col gap-4 h-full">
-            <div className="flex-[3]">
+            <div className="flex-1">
               <NoticeList />
             </div>
-            <div className="flex-[2]">
+            <div className="flex-1">
               <QuickLinks />
             </div>
           </div>
 
           {/* 右侧：日程管理 + 常用链接 + 食堂菜谱 - 30% */}
           <div className="lg:col-span-3 flex flex-col gap-4 h-full">
-            <div className="flex-[4]">
+            <div className="flex-1">
               <SchedulePanel />
             </div>
-            <div className="flex-[1]">
-              <ExternalLinks />
-            </div>
-            <div className="flex-[3]">
+            <ExternalLinks />
+            <div className="flex-1">
               <CanteenMenu />
             </div>
           </div>
