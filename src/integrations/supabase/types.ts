@@ -74,6 +74,62 @@ export type Database = {
         }
         Relationships: []
       }
+      contacts: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          mobile: string | null
+          name: string
+          office_location: string | null
+          organization_id: string
+          phone: string | null
+          position: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          mobile?: string | null
+          name: string
+          office_location?: string | null
+          organization_id: string
+          phone?: string | null
+          position?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          mobile?: string | null
+          name?: string
+          office_location?: string | null
+          organization_id?: string
+          phone?: string | null
+          position?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notices: {
         Row: {
           content: string | null
@@ -106,6 +162,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      organizations: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          level: number
+          name: string
+          parent_id: string | null
+          phone: string | null
+          short_name: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          name: string
+          parent_id?: string | null
+          phone?: string | null
+          short_name?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          name?: string
+          parent_id?: string | null
+          phone?: string | null
+          short_name?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
