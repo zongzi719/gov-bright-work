@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -285,67 +287,100 @@ const RoleManagement = () => {
         </Dialog>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[150px]">角色标识</TableHead>
-              <TableHead className="w-[150px]">角色名称</TableHead>
-              <TableHead>角色描述</TableHead>
-              <TableHead className="w-[120px] whitespace-nowrap">角色分类</TableHead>
-              <TableHead className="w-[120px]">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {roles.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  暂无角色数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              roles.map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell className="font-mono text-sm">{role.name}</TableCell>
-                  <TableCell className="font-medium">{role.label}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {role.description || "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={role.is_system ? "default" : "secondary"}>
-                      {role.is_system ? "系统角色" : "自定义角色"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(role)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      {!role.is_system && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(role)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <RoleTable roles={roles} onEdit={handleOpenDialog} onDelete={handleDelete} />
         <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground">
           <p>💡 提示：系统角色由系统预设，只能修改名称和描述，不能删除。自定义角色支持完整的增删改操作。</p>
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+// 抽取表格组件以支持分页
+const RoleTable = ({
+  roles,
+  onEdit,
+  onDelete,
+}: {
+  roles: Role[];
+  onEdit: (role: Role) => void;
+  onDelete: (role: Role) => void;
+}) => {
+  const pagination = usePagination(roles);
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[150px]">角色标识</TableHead>
+            <TableHead className="w-[150px]">角色名称</TableHead>
+            <TableHead>角色描述</TableHead>
+            <TableHead className="w-[120px] whitespace-nowrap">角色分类</TableHead>
+            <TableHead className="w-[120px]">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                暂无角色数据
+              </TableCell>
+            </TableRow>
+          ) : (
+            pagination.paginatedData.map((role) => (
+              <TableRow key={role.id}>
+                <TableCell className="font-mono text-sm">{role.name}</TableCell>
+                <TableCell className="font-medium">{role.label}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {role.description || "-"}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={role.is_system ? "default" : "secondary"}>
+                    {role.is_system ? "系统角色" : "自定义角色"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(role)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    {!role.is_system && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(role)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </>
   );
 };
 

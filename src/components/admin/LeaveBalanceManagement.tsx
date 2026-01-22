@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -491,105 +493,140 @@ const LeaveBalanceManagement = () => {
             暂无假期记录，请点击"批量初始化"为所有人员生成假期
           </div>
         ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>人员</TableHead>
-                  <TableHead>年假</TableHead>
-                  <TableHead>病假</TableHead>
-                  <TableHead>事假</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBalances.map((balance) => (
-                  <TableRow key={balance.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{balance.contacts?.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {balance.contacts?.organization?.name}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>已用 {balance.annual_leave_used} / {balance.annual_leave_total} 天</span>
-                          <Badge
-                            variant={
-                              balance.annual_leave_used >= balance.annual_leave_total
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            剩余 {balance.annual_leave_total - balance.annual_leave_used}
-                          </Badge>
-                        </div>
-                        <Progress
-                          value={getLeaveProgress(balance.annual_leave_used, balance.annual_leave_total)}
-                          className="h-2"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>已用 {balance.sick_leave_used} / {balance.sick_leave_total} 天</span>
-                          <Badge
-                            variant={
-                              balance.sick_leave_used >= balance.sick_leave_total
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            剩余 {balance.sick_leave_total - balance.sick_leave_used}
-                          </Badge>
-                        </div>
-                        <Progress
-                          value={getLeaveProgress(balance.sick_leave_used, balance.sick_leave_total)}
-                          className="h-2"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>已用 {balance.personal_leave_used} / {balance.personal_leave_total} 天</span>
-                          <Badge
-                            variant={
-                              balance.personal_leave_used >= balance.personal_leave_total
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            剩余 {balance.personal_leave_total - balance.personal_leave_used}
-                          </Badge>
-                        </div>
-                        <Progress
-                          value={getLeaveProgress(balance.personal_leave_used, balance.personal_leave_total)}
-                          className="h-2"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEdit(balance)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <LeaveBalanceTable
+            balances={filteredBalances}
+            onEdit={handleEdit}
+            getLeaveProgress={getLeaveProgress}
+          />
         )}
       </CardContent>
     </Card>
+  );
+};
+
+// 抽取表格组件以支持分页
+const LeaveBalanceTable = ({
+  balances,
+  onEdit,
+  getLeaveProgress,
+}: {
+  balances: LeaveBalance[];
+  onEdit: (balance: LeaveBalance) => void;
+  getLeaveProgress: (used: number, total: number) => number;
+}) => {
+  const pagination = usePagination(balances);
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>人员</TableHead>
+            <TableHead>年假</TableHead>
+            <TableHead>病假</TableHead>
+            <TableHead>事假</TableHead>
+            <TableHead className="text-right">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.map((balance) => (
+            <TableRow key={balance.id}>
+              <TableCell>
+                <div>
+                  <div className="font-medium">{balance.contacts?.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {balance.contacts?.organization?.name}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>已用 {balance.annual_leave_used} / {balance.annual_leave_total} 天</span>
+                    <Badge
+                      variant={
+                        balance.annual_leave_used >= balance.annual_leave_total
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      剩余 {balance.annual_leave_total - balance.annual_leave_used}
+                    </Badge>
+                  </div>
+                  <Progress
+                    value={getLeaveProgress(balance.annual_leave_used, balance.annual_leave_total)}
+                    className="h-2"
+                  />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>已用 {balance.sick_leave_used} / {balance.sick_leave_total} 天</span>
+                    <Badge
+                      variant={
+                        balance.sick_leave_used >= balance.sick_leave_total
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      剩余 {balance.sick_leave_total - balance.sick_leave_used}
+                    </Badge>
+                  </div>
+                  <Progress
+                    value={getLeaveProgress(balance.sick_leave_used, balance.sick_leave_total)}
+                    className="h-2"
+                  />
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>已用 {balance.personal_leave_used} / {balance.personal_leave_total} 天</span>
+                    <Badge
+                      variant={
+                        balance.personal_leave_used >= balance.personal_leave_total
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      剩余 {balance.personal_leave_total - balance.personal_leave_used}
+                    </Badge>
+                  </div>
+                  <Progress
+                    value={getLeaveProgress(balance.personal_leave_used, balance.personal_leave_total)}
+                    className="h-2"
+                  />
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onEdit(balance)}
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </div>
   );
 };
 

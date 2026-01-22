@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,50 +200,83 @@ const BannerManagement = () => {
         ) : banners.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">暂无轮播图</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-20">预览</TableHead>
-                <TableHead>标题</TableHead>
-                <TableHead className="w-20">排序</TableHead>
-                <TableHead className="w-20">状态</TableHead>
-                <TableHead className="w-24">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {banners.map((banner) => (
-                <TableRow key={banner.id}>
-                  <TableCell>
-                    <img
-                      src={banner.image_url}
-                      alt={banner.title}
-                      className="w-16 h-10 object-cover rounded"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{banner.title}</TableCell>
-                  <TableCell>{banner.sort_order}</TableCell>
-                  <TableCell>
-                    <span className={`text-xs px-2 py-1 rounded ${banner.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                      {banner.is_active ? "启用" : "禁用"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(banner)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(banner.id)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <BannerTable banners={banners} onEdit={handleEdit} onDelete={handleDelete} />
         )}
       </div>
     </div>
+  );
+};
+
+// 抽取表格组件以支持分页
+const BannerTable = ({ 
+  banners, 
+  onEdit, 
+  onDelete 
+}: { 
+  banners: Banner[]; 
+  onEdit: (banner: Banner) => void; 
+  onDelete: (id: string) => void; 
+}) => {
+  const pagination = usePagination(banners);
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-20">预览</TableHead>
+            <TableHead>标题</TableHead>
+            <TableHead className="w-20">排序</TableHead>
+            <TableHead className="w-20">状态</TableHead>
+            <TableHead className="w-24">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.map((banner) => (
+            <TableRow key={banner.id}>
+              <TableCell>
+                <img
+                  src={banner.image_url}
+                  alt={banner.title}
+                  className="w-16 h-10 object-cover rounded"
+                />
+              </TableCell>
+              <TableCell className="font-medium">{banner.title}</TableCell>
+              <TableCell>{banner.sort_order}</TableCell>
+              <TableCell>
+                <span className={`text-xs px-2 py-1 rounded ${banner.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                  {banner.is_active ? "启用" : "禁用"}
+                </span>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(banner)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => onDelete(banner.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </>
   );
 };
 

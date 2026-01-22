@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -215,77 +217,11 @@ const PermissionManagement = () => {
           )}
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[150px]">模块</TableHead>
-              <TableHead className="w-[80px] text-center">新增</TableHead>
-              <TableHead className="w-[80px] text-center">查看</TableHead>
-              <TableHead className="w-[80px] text-center">编辑</TableHead>
-              <TableHead className="w-[80px] text-center">删除</TableHead>
-              <TableHead className="w-[150px]">数据范围</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {getFilteredPermissions().map((permission) => (
-              <TableRow key={permission.id}>
-                <TableCell className="font-medium">
-                  {permission.module_label}
-                </TableCell>
-                <TableCell className="text-center">
-                  <Switch
-                    checked={getPermissionValue(permission, 'can_create') as boolean}
-                    onCheckedChange={(checked) =>
-                      handlePermissionChange(permission.id, 'can_create', checked)
-                    }
-                  />
-                </TableCell>
-                <TableCell className="text-center">
-                  <Switch
-                    checked={getPermissionValue(permission, 'can_read') as boolean}
-                    onCheckedChange={(checked) =>
-                      handlePermissionChange(permission.id, 'can_read', checked)
-                    }
-                  />
-                </TableCell>
-                <TableCell className="text-center">
-                  <Switch
-                    checked={getPermissionValue(permission, 'can_update') as boolean}
-                    onCheckedChange={(checked) =>
-                      handlePermissionChange(permission.id, 'can_update', checked)
-                    }
-                  />
-                </TableCell>
-                <TableCell className="text-center">
-                  <Switch
-                    checked={getPermissionValue(permission, 'can_delete') as boolean}
-                    onCheckedChange={(checked) =>
-                      handlePermissionChange(permission.id, 'can_delete', checked)
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={getPermissionValue(permission, 'data_scope') as DataScope}
-                    onValueChange={(value) =>
-                      handlePermissionChange(permission.id, 'data_scope', value as DataScope)
-                    }
-                  >
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="self">仅本人</SelectItem>
-                      <SelectItem value="department">本部门</SelectItem>
-                      <SelectItem value="organization">本单位</SelectItem>
-                      <SelectItem value="all">全部</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <PermissionTable
+          permissions={getFilteredPermissions()}
+          getPermissionValue={getPermissionValue}
+          handlePermissionChange={handlePermissionChange}
+        />
 
         <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground space-y-2">
           <p><strong>权限说明：</strong></p>
@@ -305,6 +241,109 @@ const PermissionManagement = () => {
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+// 抽取表格组件以支持分页
+const PermissionTable = ({
+  permissions,
+  getPermissionValue,
+  handlePermissionChange,
+}: {
+  permissions: RolePermission[];
+  getPermissionValue: (permission: RolePermission, field: keyof RolePermission) => string | boolean;
+  handlePermissionChange: (permissionId: string, field: keyof RolePermission, value: boolean | DataScope) => void;
+}) => {
+  const pagination = usePagination(permissions);
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[150px]">模块</TableHead>
+            <TableHead className="w-[80px] text-center">新增</TableHead>
+            <TableHead className="w-[80px] text-center">查看</TableHead>
+            <TableHead className="w-[80px] text-center">编辑</TableHead>
+            <TableHead className="w-[80px] text-center">删除</TableHead>
+            <TableHead className="w-[150px]">数据范围</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.map((permission) => (
+            <TableRow key={permission.id}>
+              <TableCell className="font-medium">
+                {permission.module_label}
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={getPermissionValue(permission, 'can_create') as boolean}
+                  onCheckedChange={(checked) =>
+                    handlePermissionChange(permission.id, 'can_create', checked)
+                  }
+                />
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={getPermissionValue(permission, 'can_read') as boolean}
+                  onCheckedChange={(checked) =>
+                    handlePermissionChange(permission.id, 'can_read', checked)
+                  }
+                />
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={getPermissionValue(permission, 'can_update') as boolean}
+                  onCheckedChange={(checked) =>
+                    handlePermissionChange(permission.id, 'can_update', checked)
+                  }
+                />
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={getPermissionValue(permission, 'can_delete') as boolean}
+                  onCheckedChange={(checked) =>
+                    handlePermissionChange(permission.id, 'can_delete', checked)
+                  }
+                />
+              </TableCell>
+              <TableCell>
+                <Select
+                  value={getPermissionValue(permission, 'data_scope') as DataScope}
+                  onValueChange={(value) =>
+                    handlePermissionChange(permission.id, 'data_scope', value as DataScope)
+                  }
+                >
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="self">仅本人</SelectItem>
+                    <SelectItem value="department">本部门</SelectItem>
+                    <SelectItem value="organization">本单位</SelectItem>
+                    <SelectItem value="all">全部</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </>
   );
 };
 
