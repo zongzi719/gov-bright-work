@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -538,120 +540,13 @@ const AbsenceManagement = () => {
         ) : filteredRecords.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">暂无记录</div>
         ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>人员</TableHead>
-                  <TableHead>类型</TableHead>
-                  <TableHead>事由</TableHead>
-                  <TableHead>时间</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{record.contacts?.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {record.contacts?.organization?.name}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={typeColors[record.type]} variant="secondary">
-                        {typeLabels[record.type]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-[200px] truncate" title={record.reason}>
-                        {record.reason}
-                      </div>
-                      {record.notes && (
-                        <div className="text-xs text-muted-foreground truncate">
-                          备注: {record.notes}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {format(new Date(record.start_time), "MM-dd HH:mm")}
-                        </div>
-                        {record.end_time && (
-                          <div className="text-muted-foreground">
-                            至 {format(new Date(record.end_time), "MM-dd HH:mm")}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[record.status]} variant="secondary">
-                        {statusLabels[record.status]}
-                      </Badge>
-                      {record.cancel_reason && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          取消原因: {record.cancel_reason}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {record.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              onClick={() => handleApprove(record.id)}
-                              title="批准"
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleReject(record.id)}
-                              title="拒绝"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        {record.status === "approved" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() => handleComplete(record.id)}
-                            title="销假"
-                          >
-                            <UserCheck className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {(record.status === "pending" || record.status === "approved") && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-gray-600 hover:text-gray-700"
-                            onClick={() => openCancelDialog(record.id)}
-                            title="取消"
-                          >
-                            取消
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <AbsenceRecordsTable
+            records={filteredRecords}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onComplete={handleComplete}
+            onCancel={openCancelDialog}
+          />
         )}
       </CardContent>
 
@@ -683,6 +578,154 @@ const AbsenceManagement = () => {
         </DialogContent>
       </Dialog>
     </Card>
+  );
+};
+
+// 抽取表格组件以支持分页
+const AbsenceRecordsTable = ({
+  records,
+  onApprove,
+  onReject,
+  onComplete,
+  onCancel,
+}: {
+  records: AbsenceRecord[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  onComplete: (id: string) => void;
+  onCancel: (id: string) => void;
+}) => {
+  const pagination = usePagination(records);
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>人员</TableHead>
+            <TableHead>类型</TableHead>
+            <TableHead>事由</TableHead>
+            <TableHead>时间</TableHead>
+            <TableHead>状态</TableHead>
+            <TableHead className="text-right">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.map((record) => (
+            <TableRow key={record.id}>
+              <TableCell>
+                <div>
+                  <div className="font-medium">{record.contacts?.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {record.contacts?.organization?.name}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge className={typeColors[record.type]} variant="secondary">
+                  {typeLabels[record.type]}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="max-w-[200px] truncate" title={record.reason}>
+                  {record.reason}
+                </div>
+                {record.notes && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    备注: {record.notes}
+                  </div>
+                )}
+              </TableCell>
+              <TableCell>
+                <div className="text-sm">
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {format(new Date(record.start_time), "MM-dd HH:mm")}
+                  </div>
+                  {record.end_time && (
+                    <div className="text-muted-foreground">
+                      至 {format(new Date(record.end_time), "MM-dd HH:mm")}
+                    </div>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge className={statusColors[record.status]} variant="secondary">
+                  {statusLabels[record.status]}
+                </Badge>
+                {record.cancel_reason && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    取消原因: {record.cancel_reason}
+                  </div>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-1">
+                  {record.status === "pending" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => onApprove(record.id)}
+                        title="批准"
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => onReject(record.id)}
+                        title="拒绝"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                  {record.status === "approved" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => onComplete(record.id)}
+                      title="销假"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {(record.status === "pending" || record.status === "approved") && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-gray-600 hover:text-gray-700"
+                      onClick={() => onCancel(record.id)}
+                      title="取消"
+                    >
+                      取消
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </div>
   );
 };
 

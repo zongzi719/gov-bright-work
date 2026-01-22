@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -720,81 +722,13 @@ const ContactManagement = () => {
                   暂无联系人数据
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>单位</TableHead>
-                      <TableHead>姓名</TableHead>
-                      <TableHead>职务</TableHead>
-                      <TableHead>部门</TableHead>
-                      <TableHead>办公电话</TableHead>
-                      <TableHead>手机</TableHead>
-                      <TableHead>状态</TableHead>
-                      <TableHead className="text-right">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredContacts().map((contact) => (
-                      <TableRow key={contact.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-1">
-                            <Building2 className="w-4 h-4 text-muted-foreground" />
-                            {contact.organization?.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>{contact.name}</TableCell>
-                        <TableCell>{contact.position || "-"}</TableCell>
-                        <TableCell>{contact.department || "-"}</TableCell>
-                        <TableCell>
-                          {contact.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-muted-foreground" />
-                              {contact.phone}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {contact.mobile && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-muted-foreground" />
-                              {contact.mobile}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <Badge variant={statusColors[contact.status]}>
-                              {statusLabels[contact.status]}
-                            </Badge>
-                            {contact.status_note && (
-                              <span className="text-xs text-muted-foreground">
-                                {contact.status_note}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditContact(contact)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteContact(contact.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ContactTable 
+                  contacts={getFilteredContacts()}
+                  statusLabels={statusLabels}
+                  statusColors={statusColors}
+                  onEdit={handleEditContact}
+                  onDelete={handleDeleteContact}
+                />
               )}
             </CardContent>
           </Card>
@@ -979,6 +913,117 @@ const ContactManagement = () => {
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+// 抽取表格组件以支持分页
+const ContactTable = ({
+  contacts,
+  statusLabels,
+  statusColors,
+  onEdit,
+  onDelete,
+}: {
+  contacts: Contact[];
+  statusLabels: Record<ContactStatus, string>;
+  statusColors: Record<ContactStatus, 'default' | 'secondary' | 'destructive' | 'outline'>;
+  onEdit: (contact: Contact) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const pagination = usePagination(contacts);
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>单位</TableHead>
+            <TableHead>姓名</TableHead>
+            <TableHead>职务</TableHead>
+            <TableHead>部门</TableHead>
+            <TableHead>办公电话</TableHead>
+            <TableHead>手机</TableHead>
+            <TableHead>状态</TableHead>
+            <TableHead className="text-right">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.map((contact) => (
+            <TableRow key={contact.id}>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-1">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  {contact.organization?.name}
+                </div>
+              </TableCell>
+              <TableCell>{contact.name}</TableCell>
+              <TableCell>{contact.position || "-"}</TableCell>
+              <TableCell>{contact.department || "-"}</TableCell>
+              <TableCell>
+                {contact.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-muted-foreground" />
+                    {contact.phone}
+                  </div>
+                )}
+              </TableCell>
+              <TableCell>
+                {contact.mobile && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-muted-foreground" />
+                    {contact.mobile}
+                  </div>
+                )}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-1">
+                  <Badge variant={statusColors[contact.status]}>
+                    {statusLabels[contact.status]}
+                  </Badge>
+                  {contact.status_note && (
+                    <span className="text-xs text-muted-foreground">
+                      {contact.status_note}
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(contact)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(contact.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </>
   );
 };
 

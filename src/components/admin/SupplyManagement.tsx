@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -677,78 +679,11 @@ const SupplyManagement = () => {
               </Dialog>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>用品名称</TableHead>
-                    <TableHead>规格</TableHead>
-                    <TableHead>单位</TableHead>
-                    <TableHead>当前库存</TableHead>
-                    <TableHead>库存警戒</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSupplies.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        暂无办公用品数据
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredSupplies.map((supply) => (
-                      <TableRow key={supply.id}>
-                        <TableCell className="font-medium">{supply.name}</TableCell>
-                        <TableCell>{supply.specification || "-"}</TableCell>
-                        <TableCell>{supply.unit}</TableCell>
-                        <TableCell>
-                          <span
-                            className={
-                              supply.current_stock <= supply.min_stock
-                                ? "text-red-600 font-medium"
-                                : ""
-                            }
-                          >
-                            {supply.current_stock}
-                          </span>
-                        </TableCell>
-                        <TableCell>{supply.min_stock}</TableCell>
-                        <TableCell>
-                          {supply.current_stock <= supply.min_stock ? (
-                            <Badge variant="destructive" className="gap-1">
-                              <AlertTriangle className="w-3 h-3" />
-                              库存不足
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">正常</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditSupply(supply)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeleteSupplyId(supply.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <SupplyTable 
+              supplies={filteredSupplies} 
+              onEdit={handleEditSupply} 
+              onDelete={setDeleteSupplyId}
+            />
           </TabsContent>
 
           {/* 采购需求管理 */}
@@ -1186,6 +1121,108 @@ const SupplyManagement = () => {
         </AlertDialog>
       </CardContent>
     </Card>
+  );
+};
+
+// 抽取表格组件以支持分页
+const SupplyTable = ({
+  supplies,
+  onEdit,
+  onDelete,
+}: {
+  supplies: OfficeSupply[];
+  onEdit: (supply: OfficeSupply) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const pagination = usePagination(supplies);
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>用品名称</TableHead>
+            <TableHead>规格</TableHead>
+            <TableHead>单位</TableHead>
+            <TableHead>当前库存</TableHead>
+            <TableHead>库存警戒</TableHead>
+            <TableHead>状态</TableHead>
+            <TableHead className="text-right">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                暂无办公用品数据
+              </TableCell>
+            </TableRow>
+          ) : (
+            pagination.paginatedData.map((supply) => (
+              <TableRow key={supply.id}>
+                <TableCell className="font-medium">{supply.name}</TableCell>
+                <TableCell>{supply.specification || "-"}</TableCell>
+                <TableCell>{supply.unit}</TableCell>
+                <TableCell>
+                  <span
+                    className={
+                      supply.current_stock <= supply.min_stock
+                        ? "text-destructive font-medium"
+                        : ""
+                    }
+                  >
+                    {supply.current_stock}
+                  </span>
+                </TableCell>
+                <TableCell>{supply.min_stock}</TableCell>
+                <TableCell>
+                  {supply.current_stock <= supply.min_stock ? (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      库存不足
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">正常</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(supply)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(supply.id)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </div>
   );
 };
 

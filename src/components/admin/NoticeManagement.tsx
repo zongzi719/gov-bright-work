@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePagination } from "@/hooks/use-pagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import TablePagination from "./TablePagination";
 
 interface Notice {
   id: string;
@@ -280,50 +283,83 @@ const NoticeManagement = () => {
         ) : notices.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">暂无通知公告</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>标题</TableHead>
-                <TableHead className="w-28">发布单位</TableHead>
-                <TableHead className="w-24">发布日期</TableHead>
-                <TableHead className="w-14">置顶</TableHead>
-                <TableHead className="w-16">状态</TableHead>
-                <TableHead className="w-20">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {notices.map((notice) => (
-                <TableRow key={notice.id}>
-                  <TableCell className="font-medium">{notice.title}</TableCell>
-                  <TableCell>{notice.department}</TableCell>
-                  <TableCell>{new Date(notice.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {notice.is_pinned && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">置顶</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${notice.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                      {notice.is_published ? "已发布" : "草稿"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(notice)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(notice.id)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <NoticeTable notices={notices} onEdit={handleEdit} onDelete={handleDelete} />
         )}
       </div>
     </div>
+  );
+};
+
+// 抽取表格组件以支持分页
+const NoticeTable = ({ 
+  notices, 
+  onEdit, 
+  onDelete 
+}: { 
+  notices: Notice[]; 
+  onEdit: (notice: Notice) => void; 
+  onDelete: (id: string) => void; 
+}) => {
+  const pagination = usePagination(notices);
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>标题</TableHead>
+            <TableHead className="w-28">发布单位</TableHead>
+            <TableHead className="w-24">发布日期</TableHead>
+            <TableHead className="w-14">置顶</TableHead>
+            <TableHead className="w-16">状态</TableHead>
+            <TableHead className="w-20">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.map((notice) => (
+            <TableRow key={notice.id}>
+              <TableCell className="font-medium">{notice.title}</TableCell>
+              <TableCell>{notice.department}</TableCell>
+              <TableCell>{new Date(notice.created_at).toLocaleDateString()}</TableCell>
+              <TableCell className="whitespace-nowrap">
+                {notice.is_pinned && (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">置顶</span>
+                )}
+              </TableCell>
+              <TableCell className="whitespace-nowrap">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${notice.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                  {notice.is_published ? "已发布" : "草稿"}
+                </span>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(notice)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => onDelete(notice.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </>
   );
 };
 

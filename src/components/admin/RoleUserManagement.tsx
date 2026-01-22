@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -328,58 +330,12 @@ const RoleUserManagement = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>用户名</TableHead>
-              <TableHead>邮箱</TableHead>
-              <TableHead>角色</TableHead>
-              <TableHead>分配时间</TableHead>
-              <TableHead className="w-[100px]">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {getFilteredUserRoles().length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              getFilteredUserRoles().map((ur) => {
-                const userDisplay = getUserDisplay(ur.user_id);
-                return (
-                  <TableRow key={ur.id}>
-                    <TableCell className="font-medium">
-                      {userDisplay.name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {userDisplay.email}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={ur.role === 'admin' ? 'default' : 'secondary'}>
-                        {getRoleLabel(ur.role)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(ur.created_at).toLocaleString('zh-CN')}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteRole(ur.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+        <UserRoleTable
+          userRoles={getFilteredUserRoles()}
+          getRoleLabel={getRoleLabel}
+          getUserDisplay={getUserDisplay}
+          onDelete={handleDeleteRole}
+        />
 
         <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground">
           <p className="flex items-center gap-2">
@@ -389,6 +345,92 @@ const RoleUserManagement = () => {
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+// 抽取表格组件以支持分页
+const UserRoleTable = ({
+  userRoles,
+  getRoleLabel,
+  getUserDisplay,
+  onDelete,
+}: {
+  userRoles: UserRole[];
+  getRoleLabel: (roleName: string) => string;
+  getUserDisplay: (userId: string) => { name: string; email: string };
+  onDelete: (id: string) => void;
+}) => {
+  const pagination = usePagination(userRoles);
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>用户名</TableHead>
+            <TableHead>邮箱</TableHead>
+            <TableHead>角色</TableHead>
+            <TableHead>分配时间</TableHead>
+            <TableHead className="w-[100px]">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pagination.paginatedData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                暂无数据
+              </TableCell>
+            </TableRow>
+          ) : (
+            pagination.paginatedData.map((ur) => {
+              const userDisplay = getUserDisplay(ur.user_id);
+              return (
+                <TableRow key={ur.id}>
+                  <TableCell className="font-medium">
+                    {userDisplay.name}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {userDisplay.email}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={ur.role === 'admin' ? 'default' : 'secondary'}>
+                      {getRoleLabel(ur.role)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(ur.created_at).toLocaleString('zh-CN')}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(ur.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+      <TablePagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        pageSize={pagination.pageSize}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        canGoNext={pagination.canGoNext}
+        canGoPrevious={pagination.canGoPrevious}
+        onPageChange={pagination.setCurrentPage}
+        onPageSizeChange={pagination.setPageSize}
+        goToNextPage={pagination.goToNextPage}
+        goToPreviousPage={pagination.goToPreviousPage}
+      />
+    </>
   );
 };
 
