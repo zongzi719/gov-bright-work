@@ -87,50 +87,49 @@ const TablePagination = ({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>每页显示</span>
+    <div className="flex items-center justify-end gap-6 py-3 text-sm">
+      <div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
         <Select
           value={pageSize.toString()}
           onValueChange={(value) => onPageSizeChange(Number(value))}
         >
-          <SelectTrigger className="w-[70px] h-8">
+          <SelectTrigger className="w-[60px] h-7 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="5">5</SelectItem>
             <SelectItem value="10">10</SelectItem>
             <SelectItem value="20">20</SelectItem>
             <SelectItem value="50">50</SelectItem>
+            <SelectItem value="100">100</SelectItem>
           </SelectContent>
         </Select>
-        <span>条</span>
-        <span className="mx-2">|</span>
+        <span>条/页</span>
+        <span className="text-muted-foreground/60">|</span>
         <span>
           第 {startIndex}-{endIndex} 条，共 {totalItems} 条
         </span>
       </div>
 
-      <Pagination>
-        <PaginationContent>
+      <Pagination className="mx-0 w-auto">
+        <PaginationContent className="gap-0">
           <PaginationItem>
             <PaginationPrevious
               onClick={goToPreviousPage}
-              className={!canGoPrevious ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              className={`h-8 px-2 ${!canGoPrevious ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
             />
           </PaginationItem>
 
           {getPageNumbers().map((page, index) =>
             page === "ellipsis" ? (
               <PaginationItem key={`ellipsis-${index}`}>
-                <PaginationEllipsis />
+                <PaginationEllipsis className="h-8 w-8" />
               </PaginationItem>
             ) : (
               <PaginationItem key={page}>
                 <PaginationLink
                   onClick={() => onPageChange(page)}
                   isActive={currentPage === page}
-                  className="cursor-pointer"
+                  className="cursor-pointer h-8 w-8"
                 >
                   {page}
                 </PaginationLink>
@@ -141,7 +140,7 @@ const TablePagination = ({
           <PaginationItem>
             <PaginationNext
               onClick={goToNextPage}
-              className={!canGoNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              className={`h-8 px-2 ${!canGoNext ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
             />
           </PaginationItem>
         </PaginationContent>

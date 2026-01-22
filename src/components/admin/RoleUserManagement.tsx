@@ -337,12 +337,6 @@ const RoleUserManagement = () => {
           onDelete={handleDeleteRole}
         />
 
-        <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground">
-          <p className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4" />
-            通过此功能可以为已注册的用户分配角色。每个用户只能拥有一个角色。
-          </p>
-        </div>
       </CardContent>
     </Card>
   );
