@@ -223,22 +223,6 @@ const PermissionManagement = () => {
           handlePermissionChange={handlePermissionChange}
         />
 
-        <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground space-y-2">
-          <p><strong>权限说明：</strong></p>
-          <ul className="list-disc list-inside space-y-1">
-            <li><strong>新增</strong>：是否允许创建新数据</li>
-            <li><strong>查看</strong>：是否允许查看数据列表</li>
-            <li><strong>编辑</strong>：是否允许修改已有数据</li>
-            <li><strong>删除</strong>：是否允许删除数据</li>
-          </ul>
-          <p className="mt-2"><strong>数据范围说明：</strong></p>
-          <ul className="list-disc list-inside space-y-1">
-            <li><strong>仅本人</strong>：只能操作自己创建的数据</li>
-            <li><strong>本部门</strong>：可以操作本部门所有人的数据</li>
-            <li><strong>本单位</strong>：可以操作本单位所有人的数据</li>
-            <li><strong>全部</strong>：可以操作所有数据</li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
   );

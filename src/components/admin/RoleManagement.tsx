@@ -234,10 +234,15 @@ const RoleManagement = () => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="w-5 h-5" />
-          角色列表
-        </CardTitle>
+        <div className="flex items-center gap-4">
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            角色列表
+          </CardTitle>
+          <span className="text-xs text-muted-foreground">
+            💡 系统角色仅可修改名称和描述
+          </span>
+        </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()}>
@@ -288,9 +293,6 @@ const RoleManagement = () => {
       </CardHeader>
       <CardContent>
         <RoleTable roles={roles} onEdit={handleOpenDialog} onDelete={handleDelete} />
-        <div className="mt-4 p-4 bg-muted rounded-lg text-sm text-muted-foreground">
-          <p>💡 提示：系统角色由系统预设，只能修改名称和描述，不能删除。自定义角色支持完整的增删改操作。</p>
-        </div>
       </CardContent>
     </Card>
   );
