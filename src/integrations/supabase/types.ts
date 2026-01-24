@@ -147,6 +147,7 @@ export type Database = {
           name: string
           office_location: string | null
           organization_id: string
+          password_hash: string
           phone: string | null
           position: string | null
           sort_order: number
@@ -164,6 +165,7 @@ export type Database = {
           name: string
           office_location?: string | null
           organization_id: string
+          password_hash?: string
           phone?: string | null
           position?: string | null
           sort_order?: number
@@ -181,6 +183,7 @@ export type Database = {
           name?: string
           office_location?: string | null
           organization_id?: string
+          password_hash?: string
           phone?: string | null
           position?: string | null
           sort_order?: number
