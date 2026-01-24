@@ -706,6 +706,97 @@ export type Database = {
           },
         ]
       }
+      todo_items: {
+        Row: {
+          action_url: string | null
+          assignee_id: string
+          business_id: string | null
+          business_type: Database["public"]["Enums"]["todo_business_type"]
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          initiator_id: string | null
+          priority: Database["public"]["Enums"]["todo_priority"]
+          process_notes: string | null
+          process_result: string | null
+          processed_at: string | null
+          processed_by: string | null
+          source: Database["public"]["Enums"]["todo_source"]
+          source_department: string | null
+          source_system: string | null
+          status: Database["public"]["Enums"]["todo_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_url?: string | null
+          assignee_id: string
+          business_id?: string | null
+          business_type: Database["public"]["Enums"]["todo_business_type"]
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          initiator_id?: string | null
+          priority?: Database["public"]["Enums"]["todo_priority"]
+          process_notes?: string | null
+          process_result?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          source?: Database["public"]["Enums"]["todo_source"]
+          source_department?: string | null
+          source_system?: string | null
+          status?: Database["public"]["Enums"]["todo_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_url?: string | null
+          assignee_id?: string
+          business_id?: string | null
+          business_type?: Database["public"]["Enums"]["todo_business_type"]
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          initiator_id?: string | null
+          priority?: Database["public"]["Enums"]["todo_priority"]
+          process_notes?: string | null
+          process_result?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          source?: Database["public"]["Enums"]["todo_source"]
+          source_department?: string | null
+          source_system?: string | null
+          status?: Database["public"]["Enums"]["todo_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todo_items_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "todo_items_initiator_id_fkey"
+            columns: ["initiator_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "todo_items_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -775,6 +866,20 @@ export type Database = {
       leave_type: "annual" | "sick" | "personal"
       purchase_status: "pending" | "approved" | "rejected" | "completed"
       requisition_status: "pending" | "approved" | "rejected" | "completed"
+      todo_business_type:
+        | "absence"
+        | "supply_requisition"
+        | "purchase_request"
+        | "external_approval"
+      todo_priority: "urgent" | "normal" | "low"
+      todo_source: "internal" | "external"
+      todo_status:
+        | "pending"
+        | "processing"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+        | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -916,6 +1021,22 @@ export const Constants = {
       leave_type: ["annual", "sick", "personal"],
       purchase_status: ["pending", "approved", "rejected", "completed"],
       requisition_status: ["pending", "approved", "rejected", "completed"],
+      todo_business_type: [
+        "absence",
+        "supply_requisition",
+        "purchase_request",
+        "external_approval",
+      ],
+      todo_priority: ["urgent", "normal", "low"],
+      todo_source: ["internal", "external"],
+      todo_status: [
+        "pending",
+        "processing",
+        "approved",
+        "rejected",
+        "cancelled",
+        "completed",
+      ],
     },
   },
 } as const
