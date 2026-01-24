@@ -612,6 +612,53 @@ export type Database = {
         }
         Relationships: []
       }
+      schedules: {
+        Row: {
+          contact_id: string
+          created_at: string
+          end_time: string
+          id: string
+          location: string | null
+          notes: string | null
+          schedule_date: string
+          start_time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          schedule_date: string
+          start_time: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          schedule_date?: string
+          start_time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supply_requisitions: {
         Row: {
           approved_at: string | null
