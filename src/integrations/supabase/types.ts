@@ -78,6 +78,7 @@ export type Database = {
       }
       approval_form_fields: {
         Row: {
+          col_span: number
           created_at: string
           default_value: string | null
           field_label: string
@@ -92,6 +93,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          col_span?: number
           created_at?: string
           default_value?: string | null
           field_label: string
@@ -106,6 +108,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          col_span?: number
           created_at?: string
           default_value?: string | null
           field_label?: string
