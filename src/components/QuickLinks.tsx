@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LogOut, Package, Star, CalendarIcon, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, CalendarIcon, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +13,6 @@ import { toast } from "sonner";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-
-interface Contact {
-  id: string;
-  name: string;
-  department: string | null;
-  organization?: { name: string } | null;
-}
 
 interface OfficeSupply {
   id: string;
@@ -49,8 +42,6 @@ interface LeaderSchedule {
   leader?: Leader;
 }
 
-type AbsenceType = "out" | "leave" | "business_trip";
-
 const scheduleTypeColors: Record<string, { bg: string; text: string; label: string }> = {
   internal_meeting: { bg: "bg-blue-600", text: "text-white", label: "内部会议" },
   party_activity: { bg: "bg-red-700", text: "text-white", label: "党政重要活动" },
@@ -75,11 +66,27 @@ const QuickLinks = () => {
 
   const currentUser = getCurrentUser();
 
-  // Absence Dialog State
-  const [absenceDialogOpen, setAbsenceDialogOpen] = useState(false);
-  const [absenceForm, setAbsenceForm] = useState({
-    contact_id: currentUser?.id || "",
-    type: "out" as AbsenceType,
+  // 出差申请 Dialog State
+  const [businessTripDialogOpen, setBusinessTripDialogOpen] = useState(false);
+  const [businessTripForm, setBusinessTripForm] = useState({
+    reason: "",
+    start_time: undefined as Date | undefined,
+    end_time: undefined as Date | undefined,
+    notes: "",
+  });
+
+  // 请假申请 Dialog State
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [leaveForm, setLeaveForm] = useState({
+    reason: "",
+    start_time: undefined as Date | undefined,
+    end_time: undefined as Date | undefined,
+    notes: "",
+  });
+
+  // 外出申请 Dialog State
+  const [outDialogOpen, setOutDialogOpen] = useState(false);
+  const [outForm, setOutForm] = useState({
     reason: "",
     start_time: undefined as Date | undefined,
     end_time: undefined as Date | undefined,
@@ -92,7 +99,6 @@ const QuickLinks = () => {
   const [supplyForm, setSupplyForm] = useState({
     supply_id: "",
     quantity: 1,
-    requisition_by: currentUser?.name || "",
   });
 
   // Purchase Request Dialog State
@@ -101,10 +107,9 @@ const QuickLinks = () => {
     supply_id: "",
     quantity: 1,
     reason: "",
-    requested_by: currentUser?.name || "",
   });
 
-  // Leader Schedule Dialog State (领导日程 - 仅查看)
+  // Leader Schedule Dialog State
   const [leaderScheduleDialogOpen, setLeaderScheduleDialogOpen] = useState(false);
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [leaderSchedules, setLeaderSchedules] = useState<LeaderSchedule[]>([]);
@@ -113,12 +118,9 @@ const QuickLinks = () => {
   );
   const [leaderScheduleLoading, setLeaderScheduleLoading] = useState(false);
 
-  // Week days array
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
-  // No longer needed - using current user directly
-
-  // Fetch supplies for requisition form
+  // Fetch supplies
   const fetchSupplies = async () => {
     const { data, error } = await supabase
       .from("office_supplies")
@@ -145,7 +147,7 @@ const QuickLinks = () => {
     }
   };
 
-  // Fetch leader schedules for current week
+  // Fetch leader schedules
   const fetchLeaderSchedules = async () => {
     setLeaderScheduleLoading(true);
     const weekEnd = addDays(currentWeekStart, 6);
@@ -163,7 +165,6 @@ const QuickLinks = () => {
     setLeaderScheduleLoading(false);
   };
 
-  // Get schedules for a specific leader and day
   const getSchedulesForLeaderAndDay = (leaderId: string, date: Date): LeaderSchedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
     return leaderSchedules.filter(
@@ -171,48 +172,88 @@ const QuickLinks = () => {
     );
   };
 
-  // Submit absence record
-  const handleAbsenceSubmit = async () => {
-    if (!absenceForm.contact_id || !absenceForm.reason || !absenceForm.start_time) {
+  // Submit handlers
+  const handleBusinessTripSubmit = async () => {
+    if (!currentUser?.id || !businessTripForm.reason || !businessTripForm.start_time) {
       toast.error("请填写必填项");
       return;
     }
 
     const { error } = await supabase.from("absence_records").insert({
-      contact_id: absenceForm.contact_id,
-      type: absenceForm.type,
-      reason: absenceForm.reason,
-      start_time: absenceForm.start_time.toISOString(),
-      end_time: absenceForm.end_time?.toISOString() || null,
-      notes: absenceForm.notes || null,
+      contact_id: currentUser.id,
+      type: "business_trip",
+      reason: businessTripForm.reason,
+      start_time: businessTripForm.start_time.toISOString(),
+      end_time: businessTripForm.end_time?.toISOString() || null,
+      notes: businessTripForm.notes || null,
       status: "pending",
     });
 
     if (error) {
-      toast.error("添加记录失败");
+      toast.error("提交失败");
       console.error(error);
     } else {
-      toast.success("外出记录已提交，等待审批");
-      setAbsenceDialogOpen(false);
-      setAbsenceForm({
-        contact_id: currentUser?.id || "",
-        type: "out",
-        reason: "",
-        start_time: undefined,
-        end_time: undefined,
-        notes: "",
-      });
+      toast.success("出差申请已提交，等待审批");
+      setBusinessTripDialogOpen(false);
+      setBusinessTripForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
     }
   };
 
-  // Submit supply requisition
+  const handleLeaveSubmit = async () => {
+    if (!currentUser?.id || !leaveForm.reason || !leaveForm.start_time) {
+      toast.error("请填写必填项");
+      return;
+    }
+
+    const { error } = await supabase.from("absence_records").insert({
+      contact_id: currentUser.id,
+      type: "leave",
+      reason: leaveForm.reason,
+      start_time: leaveForm.start_time.toISOString(),
+      end_time: leaveForm.end_time?.toISOString() || null,
+      notes: leaveForm.notes || null,
+      status: "pending",
+    });
+
+    if (error) {
+      toast.error("提交失败");
+      console.error(error);
+    } else {
+      toast.success("请假申请已提交，等待审批");
+      setLeaveDialogOpen(false);
+      setLeaveForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
+    }
+  };
+
+  const handleOutSubmit = async () => {
+    if (!currentUser?.id || !outForm.reason || !outForm.start_time) {
+      toast.error("请填写必填项");
+      return;
+    }
+
+    const { error } = await supabase.from("absence_records").insert({
+      contact_id: currentUser.id,
+      type: "out",
+      reason: outForm.reason,
+      start_time: outForm.start_time.toISOString(),
+      end_time: outForm.end_time?.toISOString() || null,
+      notes: outForm.notes || null,
+      status: "pending",
+    });
+
+    if (error) {
+      toast.error("提交失败");
+      console.error(error);
+    } else {
+      toast.success("外出申请已提交，等待审批");
+      setOutDialogOpen(false);
+      setOutForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
+    }
+  };
+
   const handleSupplySubmit = async () => {
     if (!supplyForm.supply_id) {
       toast.error("请选择办公用品");
-      return;
-    }
-    if (!supplyForm.requisition_by.trim()) {
-      toast.error("请输入领用人");
       return;
     }
     if (supplyForm.quantity < 1) {
@@ -229,7 +270,7 @@ const QuickLinks = () => {
     const { error } = await supabase.from("supply_requisitions").insert({
       supply_id: supplyForm.supply_id,
       quantity: supplyForm.quantity,
-      requisition_by: supplyForm.requisition_by.trim(),
+      requisition_by: currentUser?.name || "",
     });
 
     if (error) {
@@ -237,22 +278,13 @@ const QuickLinks = () => {
     } else {
       toast.success("领用申请已提交");
       setSupplyDialogOpen(false);
-      setSupplyForm({
-        supply_id: "",
-        quantity: 1,
-        requisition_by: currentUser?.name || "",
-      });
+      setSupplyForm({ supply_id: "", quantity: 1 });
     }
   };
 
-  // Submit purchase request
   const handlePurchaseSubmit = async () => {
     if (!purchaseForm.supply_id) {
       toast.error("请选择办公用品");
-      return;
-    }
-    if (!purchaseForm.requested_by.trim()) {
-      toast.error("请输入申请人");
       return;
     }
     if (purchaseForm.quantity < 1) {
@@ -264,7 +296,7 @@ const QuickLinks = () => {
       supply_id: purchaseForm.supply_id,
       quantity: purchaseForm.quantity,
       reason: purchaseForm.reason.trim() || null,
-      requested_by: purchaseForm.requested_by.trim(),
+      requested_by: currentUser?.name || "",
     });
 
     if (error) {
@@ -272,18 +304,8 @@ const QuickLinks = () => {
     } else {
       toast.success("采购申请已提交");
       setPurchaseDialogOpen(false);
-      setPurchaseForm({
-        supply_id: "",
-        quantity: 1,
-        reason: "",
-        requested_by: currentUser?.name || "",
-      });
+      setPurchaseForm({ supply_id: "", quantity: 1, reason: "" });
     }
-  };
-
-  // Open dialogs with data fetch
-  const openAbsenceDialog = () => {
-    setAbsenceDialogOpen(true);
   };
 
   const openSupplyDialog = () => {
@@ -301,18 +323,14 @@ const QuickLinks = () => {
     await Promise.all([fetchLeaders(), fetchLeaderSchedules()]);
   };
 
-  // Handle week navigation
-  const handlePrevWeek = async () => {
-    const newStart = subWeeks(currentWeekStart, 1);
-    setCurrentWeekStart(newStart);
+  const handlePrevWeek = () => {
+    setCurrentWeekStart(subWeeks(currentWeekStart, 1));
   };
 
-  const handleNextWeek = async () => {
-    const newStart = addWeeks(currentWeekStart, 1);
-    setCurrentWeekStart(newStart);
+  const handleNextWeek = () => {
+    setCurrentWeekStart(addWeeks(currentWeekStart, 1));
   };
 
-  // Fetch leader schedules when week changes
   useEffect(() => {
     if (leaderScheduleDialogOpen) {
       fetchLeaderSchedules();
@@ -322,37 +340,157 @@ const QuickLinks = () => {
   const modules = [
     {
       id: 1,
-      name: "外出申请",
-      shortName: "外",
+      name: "出差申请",
       color: "bg-primary",
-      icon: LogOut,
-      onClick: openAbsenceDialog,
+      icon: Briefcase,
+      onClick: () => setBusinessTripDialogOpen(true),
     },
     {
       id: 2,
+      name: "请假申请",
+      color: "bg-orange-500",
+      icon: CalendarOff,
+      onClick: () => setLeaveDialogOpen(true),
+    },
+    {
+      id: 3,
+      name: "外出申请",
+      color: "bg-purple-500",
+      icon: LogOutIcon,
+      onClick: () => setOutDialogOpen(true),
+    },
+    {
+      id: 4,
       name: "领用申请",
-      shortName: "领",
       color: "bg-emerald-500",
       icon: Package,
       onClick: openSupplyDialog,
     },
     {
-      id: 3,
+      id: 5,
       name: "采购申请",
-      shortName: "购",
       color: "bg-blue-500",
       icon: ShoppingCart,
       onClick: openPurchaseDialog,
     },
     {
-      id: 4,
+      id: 6,
       name: "领导日程",
-      shortName: "领",
       color: "bg-amber-500",
       icon: Star,
       onClick: openLeaderScheduleDialog,
     },
   ];
+
+  // Reusable absence form dialog component
+  const renderAbsenceDialog = (
+    open: boolean,
+    onOpenChange: (open: boolean) => void,
+    title: string,
+    form: { reason: string; start_time: Date | undefined; end_time: Date | undefined; notes: string },
+    setForm: React.Dispatch<React.SetStateAction<{ reason: string; start_time: Date | undefined; end_time: Date | undefined; notes: string }>>,
+    onSubmit: () => void
+  ) => (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>申请人</Label>
+            <Input value={currentUser?.name || ""} disabled className="bg-muted" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>事由 *</Label>
+            <Textarea
+              value={form.reason}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              placeholder="请输入事由"
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>开始时间 *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !form.start_time && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.start_time
+                      ? format(form.start_time, "yyyy-MM-dd", { locale: zhCN })
+                      : "选择日期"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={form.start_time}
+                    onSelect={(date) => setForm({ ...form, start_time: date })}
+                    locale={zhCN}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>结束时间</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !form.end_time && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.end_time
+                      ? format(form.end_time, "yyyy-MM-dd", { locale: zhCN })
+                      : "选择日期"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={form.end_time}
+                    onSelect={(date) => setForm({ ...form, end_time: date })}
+                    locale={zhCN}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>备注</Label>
+            <Input
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="可选备注"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              取消
+            </Button>
+            <Button onClick={onSubmit}>提交</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="gov-card h-full flex flex-col">
@@ -363,7 +501,7 @@ const QuickLinks = () => {
 
       {/* 模块网格 */}
       <div className="p-5 flex-1 flex items-center justify-center">
-        <div className="grid grid-cols-4 gap-4 w-full">
+        <div className="grid grid-cols-3 gap-4 w-full">
           {modules.map((module) => (
             <div
               key={module.id}
@@ -381,140 +519,35 @@ const QuickLinks = () => {
         </div>
       </div>
 
-      {/* 外出管理对话框 */}
-      <Dialog open={absenceDialogOpen} onOpenChange={setAbsenceDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>新增外出/请假记录</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>人员</Label>
-              <Input
-                value={currentUser?.name || ""}
-                disabled
-                className="bg-muted"
-              />
-            </div>
+      {/* 出差申请对话框 */}
+      {renderAbsenceDialog(
+        businessTripDialogOpen,
+        setBusinessTripDialogOpen,
+        "出差申请",
+        businessTripForm,
+        setBusinessTripForm,
+        handleBusinessTripSubmit
+      )}
 
-            <div className="space-y-2">
-              <Label>类型 *</Label>
-              <Select
-                value={absenceForm.type}
-                onValueChange={(value: AbsenceType) => setAbsenceForm({ ...absenceForm, type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="out">外出</SelectItem>
-                  <SelectItem value="business_trip">出差</SelectItem>
-                  <SelectItem value="leave">请假</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* 请假申请对话框 */}
+      {renderAbsenceDialog(
+        leaveDialogOpen,
+        setLeaveDialogOpen,
+        "请假申请",
+        leaveForm,
+        setLeaveForm,
+        handleLeaveSubmit
+      )}
 
-            <div className="space-y-2">
-              <Label>事由 *</Label>
-              <Textarea
-                value={absenceForm.reason}
-                onChange={(e) => setAbsenceForm({ ...absenceForm, reason: e.target.value })}
-                placeholder="请输入事由"
-                rows={2}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>开始时间 *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !absenceForm.start_time && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {absenceForm.start_time
-                        ? format(absenceForm.start_time, "yyyy-MM-dd", { locale: zhCN })
-                        : "选择日期"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={absenceForm.start_time}
-                      onSelect={(date) => setAbsenceForm({ ...absenceForm, start_time: date })}
-                      locale={zhCN}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>结束时间</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !absenceForm.end_time && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {absenceForm.end_time
-                        ? format(absenceForm.end_time, "yyyy-MM-dd", { locale: zhCN })
-                        : "选择日期"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={absenceForm.end_time}
-                      onSelect={(date) => setAbsenceForm({ ...absenceForm, end_time: date })}
-                      locale={zhCN}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>备注</Label>
-              <Input
-                value={absenceForm.notes}
-                onChange={(e) => setAbsenceForm({ ...absenceForm, notes: e.target.value })}
-                placeholder="可选备注"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAbsenceDialogOpen(false);
-                  setAbsenceForm({
-                    contact_id: currentUser?.id || "",
-                    type: "out",
-                    reason: "",
-                    start_time: undefined,
-                    end_time: undefined,
-                    notes: "",
-                  });
-                }}
-              >
-                取消
-              </Button>
-              <Button onClick={handleAbsenceSubmit}>提交</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* 外出申请对话框 */}
+      {renderAbsenceDialog(
+        outDialogOpen,
+        setOutDialogOpen,
+        "外出申请",
+        outForm,
+        setOutForm,
+        handleOutSubmit
+      )}
 
       {/* 办公用品领用对话框 */}
       <Dialog open={supplyDialogOpen} onOpenChange={setSupplyDialogOpen}>
@@ -556,11 +589,7 @@ const QuickLinks = () => {
               </div>
               <div className="space-y-2">
                 <Label>领用人</Label>
-                <Input
-                  value={currentUser?.name || ""}
-                  disabled
-                  className="bg-muted"
-                />
+                <Input value={currentUser?.name || ""} disabled className="bg-muted" />
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -613,11 +642,7 @@ const QuickLinks = () => {
               </div>
               <div className="space-y-2">
                 <Label>申请人</Label>
-                <Input
-                  value={currentUser?.name || ""}
-                  disabled
-                  className="bg-muted"
-                />
+                <Input value={currentUser?.name || ""} disabled className="bg-muted" />
               </div>
             </div>
             <div className="space-y-2">
@@ -639,7 +664,7 @@ const QuickLinks = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 领导日程查看对话框 - 仅查看，无新增 */}
+      {/* 领导日程查看对话框 */}
       <Dialog open={leaderScheduleDialogOpen} onOpenChange={setLeaderScheduleDialogOpen}>
         <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -664,17 +689,14 @@ const QuickLinks = () => {
           {leaderScheduleLoading ? (
             <div className="text-center py-8 text-muted-foreground">加载中...</div>
           ) : leaders.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              暂无领导数据
-            </div>
+            <div className="text-center py-8 text-muted-foreground">暂无领导数据</div>
           ) : (
-            /* 日程表格 */
             <div className="border rounded-lg overflow-hidden">
               {/* 表头 - 日期 */}
-              <div className="grid bg-red-800 text-white" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
-                <div className="p-2 border-r border-red-700 text-center font-medium">姓名</div>
+              <div className="grid bg-primary text-primary-foreground" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                <div className="p-2 border-r border-primary-foreground/20 text-center font-medium">姓名</div>
                 {weekDays.map((day, idx) => (
-                  <div key={idx} className="p-2 border-r border-red-700 last:border-r-0 text-center">
+                  <div key={idx} className="p-2 border-r border-primary-foreground/20 last:border-r-0 text-center">
                     <div className="font-medium">{weekDayNames[idx]}</div>
                     <div className="text-sm opacity-80">{format(day, "MM/dd")}</div>
                   </div>
@@ -702,13 +724,11 @@ const QuickLinks = () => {
                     const daySchedules = getSchedulesForLeaderAndDay(leader.id, day);
                     return (
                       <div key={dayIdx} className="relative border-r last:border-r-0 min-h-[60px] p-1">
-                        {/* 时间分隔线 */}
                         <div className="absolute inset-0 grid grid-cols-10">
                           {Array.from({ length: 10 }).map((_, i) => (
                             <div key={i} className="border-r border-dashed border-muted-foreground/20 last:border-r-0"></div>
                           ))}
                         </div>
-                        {/* 日程块 */}
                         <div className="relative z-10 space-y-1">
                           {daySchedules.map((schedule) => {
                             const colors = scheduleTypeColors[schedule.schedule_type] || scheduleTypeColors.internal_meeting;
