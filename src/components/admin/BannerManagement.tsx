@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Image } from "lucide-react";
 import { toast } from "sonner";
 
 interface Banner {
@@ -37,6 +37,8 @@ const BannerManagement = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     image_url: "",
     title: "",
@@ -127,6 +129,54 @@ const BannerManagement = () => {
     });
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.type.startsWith("image/")) {
+      toast.error("请选择图片文件");
+      return;
+    }
+
+    // 验证文件大小 (最大 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("图片大小不能超过5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `banners/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("banners")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // 获取公开URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("banners")
+        .getPublicUrl(filePath);
+
+      setFormData({ ...formData, image_url: publicUrl });
+      toast.success("图片上传成功");
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error("上传失败: " + error.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <div className="gov-card">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
@@ -147,13 +197,48 @@ const BannerManagement = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="image_url">图片地址</Label>
+                <Label>上传图片</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {uploading ? "上传中..." : "选择图片"}
+                  </Button>
+                  {formData.image_url && (
+                    <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                      已上传
+                    </span>
+                  )}
+                </div>
+                {formData.image_url && (
+                  <div className="mt-2 relative w-full h-32 bg-muted rounded-lg overflow-hidden">
+                    <img
+                      src={formData.image_url}
+                      alt="预览"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image_url">或输入图片地址</Label>
                 <Input
                   id="image_url"
                   value={formData.image_url}
                   onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                   placeholder="请输入图片URL"
-                  required
                 />
               </div>
               <div className="space-y-2">
