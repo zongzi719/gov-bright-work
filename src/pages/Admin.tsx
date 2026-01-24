@@ -3,15 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
 import MenuManagement from "@/components/admin/MenuManagement";
 import ContactManagement from "@/components/admin/ContactManagement";
-import BusinessTripManagement from "@/components/admin/BusinessTripManagement";
-import LeaveManagement from "@/components/admin/LeaveManagement";
-import OutManagement from "@/components/admin/OutManagement";
+import AbsenceManagement from "@/components/admin/AbsenceManagement";
 import LeaveBalanceManagement from "@/components/admin/LeaveBalanceManagement";
 import SupplyManagement from "@/components/admin/SupplyManagement";
 import SystemManagement from "@/components/admin/SystemManagement";
@@ -121,19 +119,11 @@ const Admin = () => {
                   <BookUser className="w-4 h-4" />
                   通讯录
                 </TabsTrigger>
-                <TabsTrigger value="business-trip" className="gap-2">
-                  <Briefcase className="w-4 h-4" />
-                  出差申请
+                <TabsTrigger value="absence" className="gap-2">
+                  <CalendarClock className="w-4 h-4" />
+                  外出管理
                 </TabsTrigger>
-                <TabsTrigger value="leave" className="gap-2">
-                  <CalendarOff className="w-4 h-4" />
-                  请假申请
-                </TabsTrigger>
-                <TabsTrigger value="out" className="gap-2">
-                  <LogOutIcon className="w-4 h-4" />
-                  外出申请
-                </TabsTrigger>
-                <TabsTrigger value="leave" className="gap-2">
+                <TabsTrigger value="leave-balance" className="gap-2">
                   <Calendar className="w-4 h-4" />
                   假期管理
                 </TabsTrigger>
@@ -180,19 +170,11 @@ const Admin = () => {
                 <ContactManagement />
               </TabsContent>
 
-              <TabsContent value="business-trip" className="mt-0">
-                <BusinessTripManagement />
+              <TabsContent value="absence" className="mt-0">
+                <AbsenceManagement />
               </TabsContent>
 
-              <TabsContent value="leave" className="mt-0">
-                <LeaveManagement />
-              </TabsContent>
-
-              <TabsContent value="out" className="mt-0">
-                <OutManagement />
-              </TabsContent>
-
-              <TabsContent value="leave" className="mt-0">
+              <TabsContent value="leave-balance" className="mt-0">
                 <LeaveBalanceManagement />
               </TabsContent>
 
