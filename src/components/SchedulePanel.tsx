@@ -221,9 +221,6 @@ const SchedulePanel = () => {
 
         {/* 选中日期的日程 */}
         <div className="space-y-2.5">
-          <div className="text-sm font-medium text-muted-foreground">
-            {format(selectedDate, "M月d日 EEEE", { locale: zhCN })}的日程
-          </div>
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
