@@ -261,12 +261,6 @@ const LeaderScheduleManagement = () => {
                 setDialogOpen(open);
                 if (!open) resetForm();
               }}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    添加日程
-                  </Button>
-                </DialogTrigger>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>{editingSchedule ? "编辑日程" : "添加日程"}</DialogTitle>

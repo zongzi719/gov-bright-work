@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LogOut, Package, Calendar, Plus, Eye } from "lucide-react";
+import { LogOut, Package, Calendar, Plus, CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, startOfWeek, addDays } from "date-fns";
+import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,7 @@ interface OfficeSupply {
   specification: string | null;
   unit: string;
   current_stock: number;
+  is_active: boolean;
 }
 
 interface Leader {
@@ -50,17 +51,13 @@ interface Schedule {
 
 type AbsenceType = "out" | "leave" | "business_trip";
 
-const absenceTypeLabels: Record<AbsenceType, string> = {
-  out: "外出",
-  leave: "请假",
-  business_trip: "出差",
+const scheduleTypeColors: Record<string, { bg: string; text: string; label: string }> = {
+  internal_meeting: { bg: "bg-blue-600", text: "text-white", label: "内部会议" },
+  party_activity: { bg: "bg-red-700", text: "text-white", label: "党政重要活动" },
+  research_trip: { bg: "bg-amber-500", text: "text-white", label: "调研/外出" },
 };
 
-const scheduleTypeLabels: Record<string, string> = {
-  internal_meeting: "内部会议",
-  party_activity: "党政活动",
-  research_trip: "调研/外出",
-};
+const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
 const QuickLinks = () => {
   // Absence Dialog State
@@ -70,8 +67,8 @@ const QuickLinks = () => {
     contact_id: "",
     type: "out" as AbsenceType,
     reason: "",
-    start_time: null as Date | null,
-    end_time: null as Date | null,
+    start_time: undefined as Date | undefined,
+    end_time: undefined as Date | undefined,
     notes: "",
   });
 
@@ -91,6 +88,10 @@ const QuickLinks = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => 
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+
+  // Week days array
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
   // Fetch contacts for absence form
   const fetchContacts = async () => {
@@ -118,23 +119,25 @@ const QuickLinks = () => {
     }
   };
 
-  // Fetch leaders and schedules
-  const fetchLeadersAndSchedules = async () => {
-    // Fetch leaders
-    const { data: leadersData } = await supabase
+  // Fetch leaders
+  const fetchLeaders = async () => {
+    const { data } = await supabase
       .from("contacts")
       .select("id, name, position")
       .eq("is_active", true)
-      .or("position.ilike.%主任%,position.ilike.%局长%,position.ilike.%书记%,position.ilike.%领导%")
+      .or("position.ilike.%长%,position.ilike.%书记%,position.ilike.%主任%,position.ilike.%处长%")
       .order("sort_order");
     
-    if (leadersData) {
-      setLeaders(leadersData);
+    if (data) {
+      setLeaders(data);
     }
+  };
 
-    // Fetch schedules for current week
+  // Fetch schedules for current week
+  const fetchSchedules = async () => {
+    setScheduleLoading(true);
     const weekEnd = addDays(currentWeekStart, 6);
-    const { data: schedulesData } = await supabase
+    const { data } = await supabase
       .from("leader_schedules")
       .select("*, leader:contacts(id, name, position)")
       .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
@@ -142,9 +145,18 @@ const QuickLinks = () => {
       .order("schedule_date")
       .order("start_time");
     
-    if (schedulesData) {
-      setSchedules(schedulesData as Schedule[]);
+    if (data) {
+      setSchedules(data as Schedule[]);
     }
+    setScheduleLoading(false);
+  };
+
+  // Get schedules for a specific leader and day
+  const getSchedulesForLeaderAndDay = (leaderId: string, date: Date): Schedule[] => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return schedules.filter(
+      (s) => s.leader_id === leaderId && s.schedule_date === dateStr
+    );
   };
 
   // Submit absence record
@@ -174,8 +186,8 @@ const QuickLinks = () => {
         contact_id: "",
         type: "out",
         reason: "",
-        start_time: null,
-        end_time: null,
+        start_time: undefined,
+        end_time: undefined,
         notes: "",
       });
     }
@@ -232,10 +244,28 @@ const QuickLinks = () => {
     setSupplyDialogOpen(true);
   };
 
-  const openScheduleDialog = () => {
-    fetchLeadersAndSchedules();
+  const openScheduleDialog = async () => {
     setScheduleDialogOpen(true);
+    await Promise.all([fetchLeaders(), fetchSchedules()]);
   };
+
+  // Handle week navigation
+  const handlePrevWeek = async () => {
+    const newStart = subWeeks(currentWeekStart, 1);
+    setCurrentWeekStart(newStart);
+  };
+
+  const handleNextWeek = async () => {
+    const newStart = addWeeks(currentWeekStart, 1);
+    setCurrentWeekStart(newStart);
+  };
+
+  // Fetch schedules when week changes
+  useEffect(() => {
+    if (scheduleDialogOpen) {
+      fetchSchedules();
+    }
+  }, [currentWeekStart, scheduleDialogOpen]);
 
   const modules = [
     {
@@ -291,29 +321,27 @@ const QuickLinks = () => {
         </div>
       </div>
 
-      {/* 外出管理对话框 */}
+      {/* 外出管理对话框 - 与后台一致 */}
       <Dialog open={absenceDialogOpen} onOpenChange={setAbsenceDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              新增外出记录
-            </DialogTitle>
+            <DialogTitle>新增外出/请假记录</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>人员 *</Label>
               <Select
                 value={absenceForm.contact_id}
-                onValueChange={(v) => setAbsenceForm({ ...absenceForm, contact_id: v })}
+                onValueChange={(value) => setAbsenceForm({ ...absenceForm, contact_id: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="选择人员" />
                 </SelectTrigger>
                 <SelectContent>
-                  {contacts.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} - {c.organization?.name || c.department}
+                  {contacts.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id}>
+                      {contact.name}
+                      {contact.organization?.name && ` - ${contact.organization.name}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -324,17 +352,15 @@ const QuickLinks = () => {
               <Label>类型 *</Label>
               <Select
                 value={absenceForm.type}
-                onValueChange={(v) => setAbsenceForm({ ...absenceForm, type: v as AbsenceType })}
+                onValueChange={(value: AbsenceType) => setAbsenceForm({ ...absenceForm, type: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(absenceTypeLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="out">外出</SelectItem>
+                  <SelectItem value="business_trip">出差</SelectItem>
+                  <SelectItem value="leave">请假</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -344,7 +370,7 @@ const QuickLinks = () => {
               <Textarea
                 value={absenceForm.reason}
                 onChange={(e) => setAbsenceForm({ ...absenceForm, reason: e.target.value })}
-                placeholder="请输入外出事由"
+                placeholder="请输入事由"
                 rows={2}
               />
             </div>
@@ -354,46 +380,85 @@ const QuickLinks = () => {
                 <Label>开始时间 *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !absenceForm.start_time && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
                       {absenceForm.start_time
-                        ? format(absenceForm.start_time, "MM/dd HH:mm")
-                        : "选择时间"}
+                        ? format(absenceForm.start_time, "yyyy-MM-dd", { locale: zhCN })
+                        : "选择日期"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
-                      selected={absenceForm.start_time || undefined}
-                      onSelect={(d) => setAbsenceForm({ ...absenceForm, start_time: d || null })}
+                      selected={absenceForm.start_time}
+                      onSelect={(date) => setAbsenceForm({ ...absenceForm, start_time: date })}
                       locale={zhCN}
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
               </div>
+
               <div className="space-y-2">
                 <Label>结束时间</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !absenceForm.end_time && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
                       {absenceForm.end_time
-                        ? format(absenceForm.end_time, "MM/dd HH:mm")
-                        : "选择时间"}
+                        ? format(absenceForm.end_time, "yyyy-MM-dd", { locale: zhCN })
+                        : "选择日期"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
-                      selected={absenceForm.end_time || undefined}
-                      onSelect={(d) => setAbsenceForm({ ...absenceForm, end_time: d || null })}
+                      selected={absenceForm.end_time}
+                      onSelect={(date) => setAbsenceForm({ ...absenceForm, end_time: date })}
                       locale={zhCN}
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setAbsenceDialogOpen(false)}>
+            <div className="space-y-2">
+              <Label>备注</Label>
+              <Input
+                value={absenceForm.notes}
+                onChange={(e) => setAbsenceForm({ ...absenceForm, notes: e.target.value })}
+                placeholder="可选备注"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAbsenceDialogOpen(false);
+                  setAbsenceForm({
+                    contact_id: "",
+                    type: "out",
+                    reason: "",
+                    start_time: undefined,
+                    end_time: undefined,
+                    notes: "",
+                  });
+                }}
+              >
                 取消
               </Button>
               <Button onClick={handleAbsenceSubmit}>提交</Button>
@@ -402,152 +467,156 @@ const QuickLinks = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 办公用品领用对话框 */}
+      {/* 办公用品领用对话框 - 与后台一致 */}
       <Dialog open={supplyDialogOpen} onOpenChange={setSupplyDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              领用办公用品
-            </DialogTitle>
+            <DialogTitle>新建领用申请</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>办公用品 *</Label>
               <Select
                 value={supplyForm.supply_id}
-                onValueChange={(v) => setSupplyForm({ ...supplyForm, supply_id: v })}
+                onValueChange={(value) => setSupplyForm({ ...supplyForm, supply_id: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择用品" />
+                  <SelectValue placeholder="选择办公用品" />
                 </SelectTrigger>
                 <SelectContent>
-                  {supplies.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} {s.specification ? `(${s.specification})` : ""} - 库存: {s.current_stock}{s.unit}
-                    </SelectItem>
-                  ))}
+                  {supplies
+                    .filter((s) => s.is_active && s.current_stock > 0)
+                    .map((supply) => (
+                      <SelectItem key={supply.id} value={supply.id}>
+                        {supply.name}
+                        {supply.specification ? ` (${supply.specification})` : ""} - 库存: {supply.current_stock}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label>数量 *</Label>
-              <Input
-                type="number"
-                min={1}
-                value={supplyForm.quantity}
-                onChange={(e) => setSupplyForm({ ...supplyForm, quantity: parseInt(e.target.value) || 1 })}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>领用数量 *</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={supplyForm.quantity}
+                  onChange={(e) => setSupplyForm({ ...supplyForm, quantity: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>领用人 *</Label>
+                <Input
+                  value={supplyForm.requisition_by}
+                  onChange={(e) => setSupplyForm({ ...supplyForm, requisition_by: e.target.value })}
+                  placeholder="输入领用人姓名"
+                />
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>领用人 *</Label>
-              <Input
-                value={supplyForm.requisition_by}
-                onChange={(e) => setSupplyForm({ ...supplyForm, requisition_by: e.target.value })}
-                placeholder="请输入领用人姓名"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setSupplyDialogOpen(false)}>
                 取消
               </Button>
-              <Button onClick={handleSupplySubmit}>提交</Button>
+              <Button onClick={handleSupplySubmit}>提交申请</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* 领导日程查看对话框 */}
+      {/* 领导日程查看对话框 - 与后台样式一致 */}
       <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5" />
-              领导日程 - {format(currentWeekStart, "M月d日", { locale: zhCN })} 至 {format(addDays(currentWeekStart, 6), "M月d日", { locale: zhCN })}
-            </DialogTitle>
+            <DialogTitle>领导日程</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            {/* Week Navigation */}
-            <div className="flex justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const newStart = addDays(currentWeekStart, -7);
-                  setCurrentWeekStart(newStart);
-                  setTimeout(fetchLeadersAndSchedules, 0);
-                }}
-              >
-                上一周
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const today = startOfWeek(new Date(), { weekStartsOn: 1 });
-                  setCurrentWeekStart(today);
-                  setTimeout(fetchLeadersAndSchedules, 0);
-                }}
-              >
-                本周
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const newStart = addDays(currentWeekStart, 7);
-                  setCurrentWeekStart(newStart);
-                  setTimeout(fetchLeadersAndSchedules, 0);
-                }}
-              >
-                下一周
-              </Button>
-            </div>
+          
+          {/* 周导航 - 与后台一致 */}
+          <div className="flex items-center justify-between mb-4 px-2">
+            <Button variant="ghost" size="sm" onClick={handlePrevWeek}>
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              上一周
+            </Button>
+            <span className="font-medium">
+              {format(currentWeekStart, "yyyy年MM月dd日", { locale: zhCN })} - {format(addDays(currentWeekStart, 6), "MM月dd日", { locale: zhCN })}
+            </span>
+            <Button variant="ghost" size="sm" onClick={handleNextWeek}>
+              下一周
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
 
-            {/* Schedule List */}
-            {schedules.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                本周暂无日程安排
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {schedules.map((schedule) => (
-                  <div
-                    key={schedule.id}
-                    className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{schedule.leader?.name}</span>
-                          <span className={cn(
-                            "px-2 py-0.5 text-xs rounded-full",
-                            schedule.schedule_type === "party_activity" 
-                              ? "bg-red-100 text-red-700"
-                              : schedule.schedule_type === "research_trip"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
-                          )}>
-                            {scheduleTypeLabels[schedule.schedule_type] || schedule.schedule_type}
-                          </span>
-                        </div>
-                        <div className="text-sm font-medium text-foreground">
-                          {schedule.title}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(schedule.schedule_date), "M月d日 EEEE", { locale: zhCN })} {schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}
-                          {schedule.location && ` · ${schedule.location}`}
-                        </div>
-                      </div>
-                    </div>
+          {scheduleLoading ? (
+            <div className="text-center py-8 text-muted-foreground">加载中...</div>
+          ) : leaders.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              暂无领导数据
+            </div>
+          ) : (
+            /* 日程表格 - 与后台一致 */
+            <div className="border rounded-lg overflow-hidden">
+              {/* 表头 - 日期 */}
+              <div className="grid bg-red-800 text-white" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                <div className="p-2 border-r border-red-700 text-center font-medium">姓名</div>
+                {weekDays.map((day, idx) => (
+                  <div key={idx} className="p-2 border-r border-red-700 last:border-r-0 text-center">
+                    <div className="font-medium">{weekDayNames[idx]}</div>
+                    <div className="text-sm opacity-80">{format(day, "MM/dd")}</div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+
+              {/* 表头 - 上午/下午 */}
+              <div className="grid bg-muted border-b" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                <div className="p-1 border-r text-center text-xs text-muted-foreground"></div>
+                {weekDays.map((_, idx) => (
+                  <div key={idx} className="grid grid-cols-2 border-r last:border-r-0">
+                    <div className="p-1 text-center text-xs border-r">上午</div>
+                    <div className="p-1 text-center text-xs">下午</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 领导日程行 */}
+              {leaders.map((leader) => (
+                <div key={leader.id} className="grid border-b last:border-b-0" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                  <div className="p-2 border-r bg-muted/50 flex items-center justify-center">
+                    <span className="font-medium text-sm">{leader.name}</span>
+                  </div>
+                  {weekDays.map((day, dayIdx) => {
+                    const daySchedules = getSchedulesForLeaderAndDay(leader.id, day);
+                    return (
+                      <div key={dayIdx} className="relative border-r last:border-r-0 min-h-[60px] p-1">
+                        {/* 时间分隔线 */}
+                        <div className="absolute inset-0 grid grid-cols-10">
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <div key={i} className="border-r border-dashed border-muted-foreground/20 last:border-r-0"></div>
+                          ))}
+                        </div>
+                        {/* 日程块 */}
+                        <div className="relative z-10 space-y-1">
+                          {daySchedules.map((schedule) => {
+                            const colors = scheduleTypeColors[schedule.schedule_type] || scheduleTypeColors.internal_meeting;
+                            return (
+                              <div
+                                key={schedule.id}
+                                className={`${colors.bg} ${colors.text} rounded px-1 py-0.5 text-xs`}
+                              >
+                                <div className="font-medium truncate">{schedule.title}</div>
+                                <div className="opacity-80 text-[10px]">
+                                  {schedule.start_time.slice(0, 5)}-{schedule.end_time.slice(0, 5)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -926,12 +926,6 @@ const SupplyManagement = () => {
                 open={requisitionDialogOpen}
                 onOpenChange={setRequisitionDialogOpen}
               >
-                <DialogTrigger asChild>
-                  <Button onClick={handleAddRequisition}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    新建领用申请
-                  </Button>
-                </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>新建领用申请</DialogTitle>
