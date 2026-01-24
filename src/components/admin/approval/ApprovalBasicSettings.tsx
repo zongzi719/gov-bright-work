@@ -28,6 +28,7 @@ interface ApprovalTemplate {
   description: string | null;
   icon: string;
   business_type: string;
+  category: string;
   is_active: boolean;
   created_at: string;
 }
@@ -39,14 +40,9 @@ interface ApprovalBasicSettingsProps {
   onTemplateUpdated: (template: ApprovalTemplate) => void;
 }
 
-const iconOptions = [
-  { value: "📋", label: "📋 表单" },
-  { value: "🚗", label: "🚗 出差" },
-  { value: "📦", label: "📦 物品" },
-  { value: "💰", label: "💰 采购" },
-  { value: "📝", label: "📝 申请" },
-  { value: "🏖️", label: "🏖️ 请假" },
-  { value: "🔧", label: "🔧 维修" },
+const categoryOptions = [
+  { value: "外出管理", label: "外出管理" },
+  { value: "办公用品", label: "办公用品" },
 ];
 
 const ApprovalBasicSettings = ({ 
@@ -59,8 +55,7 @@ const ApprovalBasicSettings = ({
     name: "",
     code: "",
     description: "",
-    icon: "📋",
-    business_type: "absence",
+    category: "外出管理",
     is_active: true,
   });
   const [saving, setSaving] = useState(false);
@@ -71,8 +66,7 @@ const ApprovalBasicSettings = ({
         name: template.name,
         code: template.code,
         description: template.description || "",
-        icon: template.icon,
-        business_type: template.business_type,
+        category: template.category || "外出管理",
         is_active: template.is_active,
       });
     } else {
@@ -80,8 +74,7 @@ const ApprovalBasicSettings = ({
         name: "",
         code: "",
         description: "",
-        icon: "📋",
-        business_type: "absence",
+        category: "外出管理",
         is_active: true,
       });
     }
@@ -107,8 +100,7 @@ const ApprovalBasicSettings = ({
         .update({
           name: formData.name,
           description: formData.description,
-          icon: formData.icon,
-          business_type: formData.business_type,
+          category: formData.category,
           is_active: formData.is_active,
         })
         .eq("id", template.id)
@@ -131,8 +123,7 @@ const ApprovalBasicSettings = ({
           name: formData.name,
           code,
           description: formData.description,
-          icon: formData.icon,
-          business_type: formData.business_type,
+          category: formData.category,
           is_active: formData.is_active,
         })
         .select()
@@ -181,33 +172,35 @@ const ApprovalBasicSettings = ({
         <CardDescription>配置审批模板的基本信息</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-4 gap-4">
-          <div className="col-span-1">
-            <Label>图标</Label>
-            <Select
-              value={formData.icon}
-              onValueChange={(value) => setFormData({ ...formData, icon: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {iconOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="col-span-3">
-            <Label>审批名称 *</Label>
-            <Input
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="如：出差申请、物品领用"
-            />
-          </div>
+        <div>
+          <Label>审批名称 *</Label>
+          <Input
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="如：出差申请、物品领用"
+          />
+        </div>
+
+        <div>
+          <Label>分组</Label>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => setFormData({ ...formData, category: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground mt-1">
+            选择该审批模板所属的功能分组
+          </p>
         </div>
 
         {template && (
@@ -227,23 +220,6 @@ const ApprovalBasicSettings = ({
           </div>
         )}
 
-        <div>
-          <Label>业务类型</Label>
-          <Select
-            value={formData.business_type}
-            onValueChange={(value) => setFormData({ ...formData, business_type: value })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="absence">外出/请假</SelectItem>
-              <SelectItem value="supply_requisition">物品领用</SelectItem>
-              <SelectItem value="purchase_request">采购申请</SelectItem>
-              <SelectItem value="external_approval">外部审批</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
         <div>
           <Label>描述</Label>

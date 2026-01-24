@@ -186,6 +186,7 @@ export type Database = {
           auto_approve_timeout: number | null
           business_type: string
           callback_url: string | null
+          category: string
           code: string
           created_at: string
           description: string | null
@@ -203,6 +204,7 @@ export type Database = {
           auto_approve_timeout?: number | null
           business_type?: string
           callback_url?: string | null
+          category?: string
           code: string
           created_at?: string
           description?: string | null
@@ -220,6 +222,7 @@ export type Database = {
           auto_approve_timeout?: number | null
           business_type?: string
           callback_url?: string | null
+          category?: string
           code?: string
           created_at?: string
           description?: string | null

@@ -27,6 +27,7 @@ interface ApprovalTemplate {
   description: string | null;
   icon: string;
   business_type: string;
+  category: string;
   is_active: boolean;
   created_at: string;
 }
