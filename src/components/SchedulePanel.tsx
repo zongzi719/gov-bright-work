@@ -52,6 +52,7 @@ const SchedulePanel = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // 当前选中的日期
   const [formData, setFormData] = useState({
     contact_id: currentUser?.id || "",
     title: "",
@@ -112,8 +113,18 @@ const SchedulePanel = () => {
     return format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
   };
 
-  // 获取今日日程
-  const todaySchedules = getSchedulesForDay(today);
+  // 检查是否是选中的日期
+  const isSelected = (date: Date): boolean => {
+    return format(date, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+  };
+
+  // 获取选中日期的日程
+  const selectedDateSchedules = getSchedulesForDay(selectedDate);
+
+  // 点击日期
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+  };
 
   // 周导航
   const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 2));
@@ -196,23 +207,29 @@ const SchedulePanel = () => {
           {weekDays.map((day) => (
             <div
               key={format(day, "yyyy-MM-dd")}
-              className={`calendar-day ${
-                isToday(day) ? "calendar-day-today" : ""
-              } ${hasSchedule(day) && !isToday(day) ? "calendar-day-event" : ""}`}
+              onClick={() => handleDateClick(day)}
+              className={`calendar-day cursor-pointer transition-all ${
+                isSelected(day) ? "ring-2 ring-primary ring-offset-1" : ""
+              } ${isToday(day) ? "calendar-day-today" : ""} ${
+                hasSchedule(day) && !isToday(day) && !isSelected(day) ? "calendar-day-event" : ""
+              }`}
             >
               {format(day, "d")}
             </div>
           ))}
         </div>
 
-        {/* 今日日程 */}
+        {/* 选中日期的日程 */}
         <div className="space-y-2.5">
+          <div className="text-sm font-medium text-muted-foreground">
+            {format(selectedDate, "M月d日 EEEE", { locale: zhCN })}的日程
+          </div>
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
-          ) : todaySchedules.length === 0 ? (
-            <div className="text-sm text-muted-foreground text-center py-4">今日暂无日程</div>
+          ) : selectedDateSchedules.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-4">该日暂无日程</div>
           ) : (
-            todaySchedules.map((item) => (
+            selectedDateSchedules.map((item) => (
               <div key={item.id} className="flex items-start gap-3 text-sm">
                 <span className="text-primary font-medium w-12 flex-shrink-0">
                   {item.start_time.slice(0, 5)}
