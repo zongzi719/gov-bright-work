@@ -37,10 +37,10 @@ interface FormField {
   field_type: string;
   field_name: string;
   field_label: string;
-  placeholder: string;
+  placeholder: string | null;
   is_required: boolean;
   sort_order: number;
-  options: string[];
+  field_options: string[] | null;
 }
 
 const fieldTypeConfig = {
@@ -86,7 +86,7 @@ const ApprovalFormDesign = () => {
 
   const fetchTemplates = async () => {
     const { data, error } = await supabase
-      .from("approval_templates")
+      .from("approval_templates" as any)
       .select("id, name, code, icon")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
@@ -95,16 +95,16 @@ const ApprovalFormDesign = () => {
       toast.error("获取模板列表失败");
       return;
     }
-    setTemplates(data || []);
+    setTemplates((data as unknown as ApprovalTemplate[]) || []);
     if (data && data.length > 0) {
-      setSelectedTemplateId(data[0].id);
+      setSelectedTemplateId((data as unknown as ApprovalTemplate[])[0].id);
     }
     setLoading(false);
   };
 
   const fetchFields = async () => {
     const { data, error } = await supabase
-      .from("approval_form_fields")
+      .from("approval_form_fields" as any)
       .select("*")
       .eq("template_id", selectedTemplateId)
       .order("sort_order", { ascending: true });
@@ -113,7 +113,7 @@ const ApprovalFormDesign = () => {
       toast.error("获取表单字段失败");
       return;
     }
-    setFields(data || []);
+    setFields((data as unknown as FormField[]) || []);
   };
 
   const handleOpenFieldDialog = (field?: FormField) => {
@@ -125,7 +125,7 @@ const ApprovalFormDesign = () => {
         field_label: field.field_label,
         placeholder: field.placeholder || "",
         is_required: field.is_required,
-        options: field.options || [],
+        options: field.field_options || [],
       });
     } else {
       setEditingField(null);
@@ -162,7 +162,7 @@ const ApprovalFormDesign = () => {
     });
   };
 
-  const generateFieldName = (label: string) => {
+  const generateFieldName = () => {
     return `field_${Date.now().toString(36)}`;
   };
 
@@ -178,17 +178,17 @@ const ApprovalFormDesign = () => {
       return;
     }
 
-    const fieldName = fieldForm.field_name || generateFieldName(fieldForm.field_label);
+    const fieldName = fieldForm.field_name || generateFieldName();
 
     if (editingField) {
       const { error } = await supabase
-        .from("approval_form_fields")
+        .from("approval_form_fields" as any)
         .update({
           field_type: fieldForm.field_type,
           field_label: fieldForm.field_label,
           placeholder: fieldForm.placeholder,
           is_required: fieldForm.is_required,
-          options: fieldForm.options,
+          field_options: fieldForm.options,
         })
         .eq("id", editingField.id);
 
@@ -201,7 +201,7 @@ const ApprovalFormDesign = () => {
       const maxOrder = fields.length > 0 ? Math.max(...fields.map(f => f.sort_order)) : 0;
       
       const { error } = await supabase
-        .from("approval_form_fields")
+        .from("approval_form_fields" as any)
         .insert({
           template_id: selectedTemplateId,
           field_type: fieldForm.field_type,
@@ -209,7 +209,7 @@ const ApprovalFormDesign = () => {
           field_label: fieldForm.field_label,
           placeholder: fieldForm.placeholder,
           is_required: fieldForm.is_required,
-          options: fieldForm.options,
+          field_options: fieldForm.options,
           sort_order: maxOrder + 1,
         });
 
@@ -228,7 +228,7 @@ const ApprovalFormDesign = () => {
     if (!confirm("确定要删除这个字段吗？")) return;
 
     const { error } = await supabase
-      .from("approval_form_fields")
+      .from("approval_form_fields" as any)
       .delete()
       .eq("id", id);
 

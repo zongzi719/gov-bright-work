@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
@@ -15,6 +15,7 @@ import SupplyManagement from "@/components/admin/SupplyManagement";
 import SystemManagement from "@/components/admin/SystemManagement";
 import LeaderScheduleManagement from "@/components/admin/LeaderScheduleManagement";
 import ScheduleManagement from "@/components/admin/ScheduleManagement";
+import ApprovalSettings from "@/components/admin/ApprovalSettings";
 
 const Admin = () => {
   const [loading, setLoading] = useState(true);
@@ -139,6 +140,10 @@ const Admin = () => {
                   <Star className="w-4 h-4" />
                   领导日程
                 </TabsTrigger>
+                <TabsTrigger value="approval" className="gap-2">
+                  <ClipboardCheck className="w-4 h-4" />
+                  审批设置
+                </TabsTrigger>
                 <TabsTrigger value="system" className="gap-2">
                   <Settings className="w-4 h-4" />
                   系统管理
@@ -184,6 +189,10 @@ const Admin = () => {
 
               <TabsContent value="leader-schedule" className="mt-0">
                 <LeaderScheduleManagement />
+              </TabsContent>
+
+              <TabsContent value="approval" className="mt-0">
+                <ApprovalSettings />
               </TabsContent>
 
               <TabsContent value="system" className="mt-0">

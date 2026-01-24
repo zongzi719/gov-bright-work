@@ -76,6 +76,160 @@ export type Database = {
           },
         ]
       }
+      approval_form_fields: {
+        Row: {
+          created_at: string
+          default_value: string | null
+          field_label: string
+          field_name: string
+          field_options: Json | null
+          field_type: string
+          id: string
+          is_required: boolean
+          placeholder: string | null
+          sort_order: number
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_value?: string | null
+          field_label: string
+          field_name: string
+          field_options?: Json | null
+          field_type: string
+          id?: string
+          is_required?: boolean
+          placeholder?: string | null
+          sort_order?: number
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_value?: string | null
+          field_label?: string
+          field_name?: string
+          field_options?: Json | null
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          placeholder?: string | null
+          sort_order?: number
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_form_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "approval_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_nodes: {
+        Row: {
+          approver_ids: string[] | null
+          approver_type: string
+          condition_expression: Json | null
+          created_at: string
+          id: string
+          node_name: string
+          node_type: string
+          sort_order: number
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          approver_ids?: string[] | null
+          approver_type?: string
+          condition_expression?: Json | null
+          created_at?: string
+          id?: string
+          node_name: string
+          node_type?: string
+          sort_order?: number
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          approver_ids?: string[] | null
+          approver_type?: string
+          condition_expression?: Json | null
+          created_at?: string
+          id?: string
+          node_name?: string
+          node_type?: string
+          sort_order?: number
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_nodes_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "approval_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_templates: {
+        Row: {
+          allow_transfer: boolean
+          allow_withdraw: boolean
+          auto_approve_timeout: number | null
+          business_type: string
+          callback_url: string | null
+          code: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          notify_approver: boolean
+          notify_initiator: boolean
+          updated_at: string
+        }
+        Insert: {
+          allow_transfer?: boolean
+          allow_withdraw?: boolean
+          auto_approve_timeout?: number | null
+          business_type?: string
+          callback_url?: string | null
+          code: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notify_approver?: boolean
+          notify_initiator?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allow_transfer?: boolean
+          allow_withdraw?: boolean
+          auto_approve_timeout?: number | null
+          business_type?: string
+          callback_url?: string | null
+          code?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notify_approver?: boolean
+          notify_initiator?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           created_at: string

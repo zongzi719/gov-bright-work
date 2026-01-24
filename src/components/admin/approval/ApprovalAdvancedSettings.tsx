@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
   Webhook,
@@ -30,8 +28,8 @@ interface ApprovalTemplate {
   auto_approve_timeout: number | null;
   allow_withdraw: boolean;
   allow_transfer: boolean;
-  notify_on_approve: boolean;
-  notify_on_reject: boolean;
+  notify_initiator: boolean;
+  notify_approver: boolean;
 }
 
 const ApprovalAdvancedSettings = () => {
@@ -54,8 +52,8 @@ const ApprovalAdvancedSettings = () => {
           auto_approve_timeout: template.auto_approve_timeout || 0,
           allow_withdraw: template.allow_withdraw ?? true,
           allow_transfer: template.allow_transfer ?? false,
-          notify_on_approve: template.notify_on_approve ?? true,
-          notify_on_reject: template.notify_on_reject ?? true,
+          notify_initiator: template.notify_initiator ?? true,
+          notify_approver: template.notify_approver ?? true,
         });
       }
     }
@@ -63,7 +61,7 @@ const ApprovalAdvancedSettings = () => {
 
   const fetchTemplates = async () => {
     const { data, error } = await supabase
-      .from("approval_templates")
+      .from("approval_templates" as any)
       .select("*")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
@@ -72,9 +70,9 @@ const ApprovalAdvancedSettings = () => {
       toast.error("获取模板列表失败");
       return;
     }
-    setTemplates(data || []);
+    setTemplates((data as unknown as ApprovalTemplate[]) || []);
     if (data && data.length > 0) {
-      setSelectedTemplateId(data[0].id);
+      setSelectedTemplateId((data as unknown as ApprovalTemplate[])[0].id);
     }
     setLoading(false);
   };
@@ -84,14 +82,14 @@ const ApprovalAdvancedSettings = () => {
 
     setSaving(true);
     const { error } = await supabase
-      .from("approval_templates")
+      .from("approval_templates" as any)
       .update({
         callback_url: settings.callback_url || null,
         auto_approve_timeout: settings.auto_approve_timeout || null,
         allow_withdraw: settings.allow_withdraw,
         allow_transfer: settings.allow_transfer,
-        notify_on_approve: settings.notify_on_approve,
-        notify_on_reject: settings.notify_on_reject,
+        notify_initiator: settings.notify_initiator,
+        notify_approver: settings.notify_approver,
       })
       .eq("id", selectedTemplateId);
 
@@ -218,8 +216,8 @@ const ApprovalAdvancedSettings = () => {
                 <p className="text-xs text-muted-foreground">审批完成后发送通知</p>
               </div>
               <Switch
-                checked={settings.notify_on_approve ?? true}
-                onCheckedChange={(checked) => setSettings({ ...settings, notify_on_approve: checked })}
+                checked={settings.notify_initiator ?? true}
+                onCheckedChange={(checked) => setSettings({ ...settings, notify_initiator: checked })}
               />
             </div>
 
@@ -227,12 +225,12 @@ const ApprovalAdvancedSettings = () => {
 
             <div className="flex items-center justify-between">
               <div>
-                <Label>审批拒绝时通知申请人</Label>
-                <p className="text-xs text-muted-foreground">审批被拒绝后发送通知</p>
+                <Label>有新审批时通知审批人</Label>
+                <p className="text-xs text-muted-foreground">有待审批事项时发送通知</p>
               </div>
               <Switch
-                checked={settings.notify_on_reject ?? true}
-                onCheckedChange={(checked) => setSettings({ ...settings, notify_on_reject: checked })}
+                checked={settings.notify_approver ?? true}
+                onCheckedChange={(checked) => setSettings({ ...settings, notify_approver: checked })}
               />
             </div>
           </CardContent>
