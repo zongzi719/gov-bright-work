@@ -20,16 +20,10 @@ import {
   List, 
   CheckSquare,
   CircleDot,
-  DollarSign
+  DollarSign,
+  Edit
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface ApprovalTemplate {
-  id: string;
-  name: string;
-  code: string;
-  icon: string;
-}
 
 interface FormField {
   id: string;
@@ -41,6 +35,10 @@ interface FormField {
   is_required: boolean;
   sort_order: number;
   field_options: string[] | null;
+}
+
+interface ApprovalFormDesignProps {
+  templateId: string;
 }
 
 const fieldTypeConfig = {
@@ -56,9 +54,7 @@ const fieldTypeConfig = {
   checkbox: { icon: CheckSquare, label: "多选框", placeholder: "请选择" },
 };
 
-const ApprovalFormDesign = () => {
-  const [templates, setTemplates] = useState<ApprovalTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+const ApprovalFormDesign = ({ templateId }: ApprovalFormDesignProps) => {
   const [fields, setFields] = useState<FormField[]>([]);
   const [loading, setLoading] = useState(true);
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false);
@@ -75,45 +71,24 @@ const ApprovalFormDesign = () => {
   const [optionInput, setOptionInput] = useState("");
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  useEffect(() => {
-    if (selectedTemplateId) {
-      fetchFields();
-    }
-  }, [selectedTemplateId]);
-
-  const fetchTemplates = async () => {
-    const { data, error } = await supabase
-      .from("approval_templates" as any)
-      .select("id, name, code, icon")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("获取模板列表失败");
-      return;
-    }
-    setTemplates((data as unknown as ApprovalTemplate[]) || []);
-    if (data && data.length > 0) {
-      setSelectedTemplateId((data as unknown as ApprovalTemplate[])[0].id);
-    }
-    setLoading(false);
-  };
+    fetchFields();
+  }, [templateId]);
 
   const fetchFields = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from("approval_form_fields" as any)
       .select("*")
-      .eq("template_id", selectedTemplateId)
+      .eq("template_id", templateId)
       .order("sort_order", { ascending: true });
 
     if (error) {
       toast.error("获取表单字段失败");
+      setLoading(false);
       return;
     }
     setFields((data as unknown as FormField[]) || []);
+    setLoading(false);
   };
 
   const handleOpenFieldDialog = (field?: FormField) => {
@@ -203,7 +178,7 @@ const ApprovalFormDesign = () => {
       const { error } = await supabase
         .from("approval_form_fields" as any)
         .insert({
-          template_id: selectedTemplateId,
+          template_id: templateId,
           field_type: fieldForm.field_type,
           field_name: fieldName,
           field_label: fieldForm.field_label,
@@ -240,47 +215,12 @@ const ApprovalFormDesign = () => {
     fetchFields();
   };
 
-  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
-
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
   }
 
-  if (templates.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          请先在"基础设置"中创建审批模板
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>表单设计</CardTitle>
-              <CardDescription>为审批模板设计表单字段，支持多种控件类型</CardDescription>
-            </div>
-            <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="选择审批模板" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.icon} {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-      </Card>
-
       <div className="grid grid-cols-3 gap-6">
         {/* 控件库 */}
         <Card>
@@ -318,10 +258,8 @@ const ApprovalFormDesign = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  {selectedTemplate?.icon} {selectedTemplate?.name}
-                </CardTitle>
-                <CardDescription>表单字段列表</CardDescription>
+                <CardTitle className="text-base">表单字段</CardTitle>
+                <CardDescription>拖拽调整顺序，点击编辑</CardDescription>
               </div>
               <Button size="sm" onClick={() => handleOpenFieldDialog()}>
                 <Plus className="w-4 h-4 mr-1" />
@@ -364,7 +302,7 @@ const ApprovalFormDesign = () => {
                           className="h-8 w-8"
                           onClick={() => handleOpenFieldDialog(field)}
                         >
-                          <Type className="w-4 h-4" />
+                          <Edit className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"

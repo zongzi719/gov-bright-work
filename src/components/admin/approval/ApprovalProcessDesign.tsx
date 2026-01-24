@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { 
   Plus, 
   User, 
-  Users, 
   GitBranch, 
   ArrowDown,
   Trash2,
@@ -19,13 +18,6 @@ import {
   Mail
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface ApprovalTemplate {
-  id: string;
-  name: string;
-  code: string;
-  icon: string;
-}
 
 interface ApprovalNode {
   id: string;
@@ -45,6 +37,10 @@ interface Contact {
   position: string | null;
 }
 
+interface ApprovalProcessDesignProps {
+  templateId: string;
+}
+
 const nodeTypeConfig = {
   approver: { icon: UserCheck, label: "审批人", color: "bg-blue-100 text-blue-700 border-blue-200" },
   cc: { icon: Mail, label: "抄送人", color: "bg-green-100 text-green-700 border-green-200" },
@@ -58,9 +54,7 @@ const approverTypeLabels: Record<string, string> = {
   department_head: "部门负责人",
 };
 
-const ApprovalProcessDesign = () => {
-  const [templates, setTemplates] = useState<ApprovalTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   const [nodes, setNodes] = useState<ApprovalNode[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,33 +69,9 @@ const ApprovalProcessDesign = () => {
   });
 
   useEffect(() => {
-    fetchTemplates();
+    fetchNodes();
     fetchContacts();
-  }, []);
-
-  useEffect(() => {
-    if (selectedTemplateId) {
-      fetchNodes();
-    }
-  }, [selectedTemplateId]);
-
-  const fetchTemplates = async () => {
-    const { data, error } = await supabase
-      .from("approval_templates" as any)
-      .select("id, name, code, icon")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("获取模板列表失败");
-      return;
-    }
-    setTemplates((data as unknown as ApprovalTemplate[]) || []);
-    if (data && data.length > 0) {
-      setSelectedTemplateId((data as unknown as ApprovalTemplate[])[0].id);
-    }
-    setLoading(false);
-  };
+  }, [templateId]);
 
   const fetchContacts = async () => {
     const { data } = await supabase
@@ -113,17 +83,20 @@ const ApprovalProcessDesign = () => {
   };
 
   const fetchNodes = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from("approval_nodes" as any)
       .select("*")
-      .eq("template_id", selectedTemplateId)
+      .eq("template_id", templateId)
       .order("sort_order", { ascending: true });
 
     if (error) {
       toast.error("获取流程节点失败");
+      setLoading(false);
       return;
     }
     setNodes((data as unknown as ApprovalNode[]) || []);
+    setLoading(false);
   };
 
   const handleOpenNodeDialog = (node?: ApprovalNode) => {
@@ -180,7 +153,7 @@ const ApprovalProcessDesign = () => {
       const { error } = await supabase
         .from("approval_nodes" as any)
         .insert({
-          template_id: selectedTemplateId,
+          template_id: templateId,
           node_type: nodeForm.node_type,
           node_name: nodeForm.node_name,
           approver_type: nodeForm.approver_type,
@@ -234,47 +207,12 @@ const ApprovalProcessDesign = () => {
     return contact?.name || id;
   };
 
-  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
-
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
   }
 
-  if (templates.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          请先在"基础设置"中创建审批模板
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>流程设计</CardTitle>
-              <CardDescription>设计审批流程的节点和审批人</CardDescription>
-            </div>
-            <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="选择审批模板" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.icon} {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-      </Card>
-
       <div className="grid grid-cols-4 gap-6">
         {/* 节点类型 */}
         <Card>
@@ -312,10 +250,8 @@ const ApprovalProcessDesign = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  {selectedTemplate?.icon} {selectedTemplate?.name}
-                </CardTitle>
-                <CardDescription>审批流程节点</CardDescription>
+                <CardTitle className="text-base">审批流程</CardTitle>
+                <CardDescription>配置审批节点和审批人</CardDescription>
               </div>
               <Button size="sm" onClick={() => handleOpenNodeDialog()}>
                 <Plus className="w-4 h-4 mr-1" />

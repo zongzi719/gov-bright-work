@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { 
   Webhook,
@@ -32,54 +31,55 @@ interface ApprovalTemplate {
   notify_approver: boolean;
 }
 
-const ApprovalAdvancedSettings = () => {
-  const [templates, setTemplates] = useState<ApprovalTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
-  const [settings, setSettings] = useState<Partial<ApprovalTemplate>>({});
+interface ApprovalAdvancedSettingsProps {
+  templateId: string;
+}
+
+const ApprovalAdvancedSettings = ({ templateId }: ApprovalAdvancedSettingsProps) => {
+  const [template, setTemplate] = useState<ApprovalTemplate | null>(null);
+  const [settings, setSettings] = useState({
+    callback_url: "",
+    auto_approve_timeout: 0,
+    allow_withdraw: true,
+    allow_transfer: false,
+    notify_initiator: true,
+    notify_approver: true,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    fetchTemplate();
+  }, [templateId]);
 
-  useEffect(() => {
-    if (selectedTemplateId) {
-      const template = templates.find(t => t.id === selectedTemplateId);
-      if (template) {
-        setSettings({
-          callback_url: template.callback_url || "",
-          auto_approve_timeout: template.auto_approve_timeout || 0,
-          allow_withdraw: template.allow_withdraw ?? true,
-          allow_transfer: template.allow_transfer ?? false,
-          notify_initiator: template.notify_initiator ?? true,
-          notify_approver: template.notify_approver ?? true,
-        });
-      }
-    }
-  }, [selectedTemplateId, templates]);
-
-  const fetchTemplates = async () => {
+  const fetchTemplate = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from("approval_templates" as any)
       .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+      .eq("id", templateId)
+      .single();
 
     if (error) {
-      toast.error("获取模板列表失败");
+      toast.error("获取模板信息失败");
+      setLoading(false);
       return;
     }
-    setTemplates((data as unknown as ApprovalTemplate[]) || []);
-    if (data && data.length > 0) {
-      setSelectedTemplateId((data as unknown as ApprovalTemplate[])[0].id);
-    }
+    
+    const templateData = data as unknown as ApprovalTemplate;
+    setTemplate(templateData);
+    setSettings({
+      callback_url: templateData.callback_url || "",
+      auto_approve_timeout: templateData.auto_approve_timeout || 0,
+      allow_withdraw: templateData.allow_withdraw ?? true,
+      allow_transfer: templateData.allow_transfer ?? false,
+      notify_initiator: templateData.notify_initiator ?? true,
+      notify_approver: templateData.notify_approver ?? true,
+    });
     setLoading(false);
   };
 
   const handleSave = async () => {
-    if (!selectedTemplateId) return;
-
     setSaving(true);
     const { error } = await supabase
       .from("approval_templates" as any)
@@ -91,20 +91,17 @@ const ApprovalAdvancedSettings = () => {
         notify_initiator: settings.notify_initiator,
         notify_approver: settings.notify_approver,
       })
-      .eq("id", selectedTemplateId);
+      .eq("id", templateId);
 
     if (error) {
       toast.error("保存失败");
     } else {
       toast.success("设置已保存");
-      fetchTemplates();
     }
     setSaving(false);
   };
-
-  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
   
-  const apiEndpoint = `${window.location.origin}/api/approval/webhook/${selectedTemplate?.code || "PROCESS_CODE"}`;
+  const apiEndpoint = `${window.location.origin}/api/approval/webhook/${template?.code || "PROCESS_CODE"}`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -115,46 +112,14 @@ const ApprovalAdvancedSettings = () => {
     return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
   }
 
-  if (templates.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          请先在"基础设置"中创建审批模板
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>高级设置</CardTitle>
-              <CardDescription>配置审批流程的高级功能和回调</CardDescription>
-            </div>
-            <div className="flex items-center gap-4">
-              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="选择审批模板" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.icon} {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleSave} disabled={saving}>
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? "保存中..." : "保存设置"}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving}>
+          <Save className="w-4 h-4 mr-2" />
+          {saving ? "保存中..." : "保存设置"}
+        </Button>
+      </div>
 
       <div className="grid grid-cols-2 gap-6">
         {/* 回调设置 */}
@@ -170,7 +135,7 @@ const ApprovalAdvancedSettings = () => {
             <div>
               <Label>回调地址 (Callback URL)</Label>
               <Input
-                value={settings.callback_url || ""}
+                value={settings.callback_url}
                 onChange={(e) => setSettings({ ...settings, callback_url: e.target.value })}
                 placeholder="https://your-server.com/api/callback"
               />
@@ -216,7 +181,7 @@ const ApprovalAdvancedSettings = () => {
                 <p className="text-xs text-muted-foreground">审批完成后发送通知</p>
               </div>
               <Switch
-                checked={settings.notify_initiator ?? true}
+                checked={settings.notify_initiator}
                 onCheckedChange={(checked) => setSettings({ ...settings, notify_initiator: checked })}
               />
             </div>
@@ -229,7 +194,7 @@ const ApprovalAdvancedSettings = () => {
                 <p className="text-xs text-muted-foreground">有待审批事项时发送通知</p>
               </div>
               <Switch
-                checked={settings.notify_approver ?? true}
+                checked={settings.notify_approver}
                 onCheckedChange={(checked) => setSettings({ ...settings, notify_approver: checked })}
               />
             </div>
@@ -252,7 +217,7 @@ const ApprovalAdvancedSettings = () => {
                 <p className="text-xs text-muted-foreground">申请人可以撤回待审批的申请</p>
               </div>
               <Switch
-                checked={settings.allow_withdraw ?? true}
+                checked={settings.allow_withdraw}
                 onCheckedChange={(checked) => setSettings({ ...settings, allow_withdraw: checked })}
               />
             </div>
@@ -265,7 +230,7 @@ const ApprovalAdvancedSettings = () => {
                 <p className="text-xs text-muted-foreground">审批人可以将审批转交给其他人</p>
               </div>
               <Switch
-                checked={settings.allow_transfer ?? false}
+                checked={settings.allow_transfer}
                 onCheckedChange={(checked) => setSettings({ ...settings, allow_transfer: checked })}
               />
             </div>
@@ -299,7 +264,7 @@ const ApprovalAdvancedSettings = () => {
               </p>
             </div>
 
-            {(settings.auto_approve_timeout ?? 0) > 0 && (
+            {settings.auto_approve_timeout > 0 && (
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                 <RefreshCw className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">
@@ -328,7 +293,7 @@ Content-Type: application/json
 
 {
   "event": "approval_completed", // 或 "approval_rejected", "approval_withdrawn"
-  "process_code": "${selectedTemplate?.code || "PROCESS_CODE"}",
+  "process_code": "${template?.code || "PROCESS_CODE"}",
   "business_id": "业务数据ID",
   "status": "approved", // 或 "rejected", "withdrawn"
   "approver": {
