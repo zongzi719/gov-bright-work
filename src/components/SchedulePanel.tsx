@@ -31,15 +31,29 @@ interface Schedule {
 }
 
 const SchedulePanel = () => {
+  // Get current user from localStorage
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem("frontendUser");
+      if (userStr) {
+        return JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error("Failed to parse frontendUser", e);
+    }
+    return null;
+  };
+
+  const currentUser = getCurrentUser();
+
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>([]);
   const [formData, setFormData] = useState({
-    contact_id: "",
+    contact_id: currentUser?.id || "",
     title: "",
     schedule_date: "",
     start_time: "09:00",
@@ -69,18 +83,7 @@ const SchedulePanel = () => {
     setLoading(false);
   };
 
-  // 获取通讯录人员
-  const fetchContacts = async () => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, name, department, organization:organizations(name)")
-      .eq("is_active", true)
-      .order("sort_order");
-
-    if (!error && data) {
-      setContacts(data);
-    }
-  };
+  // No longer needed - using current user directly
 
   useEffect(() => {
     fetchSchedules();
@@ -111,7 +114,6 @@ const SchedulePanel = () => {
 
   // 打开新增对话框
   const openDialog = () => {
-    fetchContacts();
     setDialogOpen(true);
   };
 
@@ -139,7 +141,7 @@ const SchedulePanel = () => {
       toast.success("日程已添加");
       setDialogOpen(false);
       setFormData({
-        contact_id: "",
+        contact_id: currentUser?.id || "",
         title: "",
         schedule_date: "",
         start_time: "09:00",
@@ -224,23 +226,12 @@ const SchedulePanel = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>人员 *</Label>
-              <Select
-                value={formData.contact_id}
-                onValueChange={(v) => setFormData({ ...formData, contact_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择人员" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name}
-                      {contact.organization?.name && ` - ${contact.organization.name}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>人员</Label>
+              <Input
+                value={currentUser?.name || ""}
+                disabled
+                className="bg-muted"
+              />
             </div>
             <div className="space-y-2">
               <Label>日程标题 *</Label>
