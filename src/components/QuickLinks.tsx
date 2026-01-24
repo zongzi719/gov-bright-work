@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LogOut, Package, Calendar, Star, Plus, CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Package, Star, CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,11 +60,25 @@ const scheduleTypeColors: Record<string, { bg: string; text: string; label: stri
 const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
 const QuickLinks = () => {
+  // Get current user from localStorage
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem("frontendUser");
+      if (userStr) {
+        return JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error("Failed to parse frontendUser", e);
+    }
+    return null;
+  };
+
+  const currentUser = getCurrentUser();
+
   // Absence Dialog State
   const [absenceDialogOpen, setAbsenceDialogOpen] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>([]);
   const [absenceForm, setAbsenceForm] = useState({
-    contact_id: "",
+    contact_id: currentUser?.id || "",
     type: "out" as AbsenceType,
     reason: "",
     start_time: undefined as Date | undefined,
@@ -78,19 +92,7 @@ const QuickLinks = () => {
   const [supplyForm, setSupplyForm] = useState({
     supply_id: "",
     quantity: 1,
-    requisition_by: "",
-  });
-
-  // Schedule Dialog State (日程管理 - 新增功能)
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [scheduleForm, setScheduleForm] = useState({
-    contact_id: "",
-    title: "",
-    schedule_date: "",
-    start_time: "09:00",
-    end_time: "10:00",
-    location: "",
-    notes: "",
+    requisition_by: currentUser?.name || "",
   });
 
   // Leader Schedule Dialog State (领导日程 - 仅查看)
@@ -105,18 +107,7 @@ const QuickLinks = () => {
   // Week days array
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
-  // Fetch contacts for absence and schedule form
-  const fetchContacts = async () => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, name, department, organization:organizations(name)")
-      .eq("is_active", true)
-      .order("sort_order");
-    
-    if (!error && data) {
-      setContacts(data);
-    }
-  };
+  // No longer needed - using current user directly
 
   // Fetch supplies for requisition form
   const fetchSupplies = async () => {
@@ -195,7 +186,7 @@ const QuickLinks = () => {
       toast.success("外出记录已提交，等待审批");
       setAbsenceDialogOpen(false);
       setAbsenceForm({
-        contact_id: "",
+        contact_id: currentUser?.id || "",
         type: "out",
         reason: "",
         start_time: undefined,
@@ -240,60 +231,21 @@ const QuickLinks = () => {
       setSupplyForm({
         supply_id: "",
         quantity: 1,
-        requisition_by: "",
+        requisition_by: currentUser?.name || "",
       });
     }
   };
 
-  // Submit schedule (日程管理)
-  const handleScheduleSubmit = async () => {
-    if (!scheduleForm.contact_id || !scheduleForm.title || !scheduleForm.schedule_date) {
-      toast.error("请填写必填项");
-      return;
-    }
-
-    const { error } = await supabase.from("schedules").insert({
-      contact_id: scheduleForm.contact_id,
-      title: scheduleForm.title,
-      location: scheduleForm.location || null,
-      schedule_date: scheduleForm.schedule_date,
-      start_time: scheduleForm.start_time,
-      end_time: scheduleForm.end_time,
-      notes: scheduleForm.notes || null,
-    });
-
-    if (error) {
-      toast.error("添加日程失败");
-      console.error(error);
-    } else {
-      toast.success("日程已添加");
-      setScheduleDialogOpen(false);
-      setScheduleForm({
-        contact_id: "",
-        title: "",
-        location: "",
-        schedule_date: "",
-        start_time: "09:00",
-        end_time: "10:00",
-        notes: "",
-      });
-    }
-  };
+  // Schedule submit removed - no longer needed
 
   // Open dialogs with data fetch
   const openAbsenceDialog = () => {
-    fetchContacts();
     setAbsenceDialogOpen(true);
   };
 
   const openSupplyDialog = () => {
     fetchSupplies();
     setSupplyDialogOpen(true);
-  };
-
-  const openScheduleDialog = () => {
-    fetchContacts();
-    setScheduleDialogOpen(true);
   };
 
   const openLeaderScheduleDialog = async () => {
@@ -338,14 +290,6 @@ const QuickLinks = () => {
     },
     {
       id: 3,
-      name: "日程管理",
-      shortName: "程",
-      color: "bg-blue-500",
-      icon: Calendar,
-      onClick: openScheduleDialog,
-    },
-    {
-      id: 4,
       name: "领导日程",
       shortName: "领",
       color: "bg-amber-500",
@@ -363,7 +307,7 @@ const QuickLinks = () => {
 
       {/* 模块网格 */}
       <div className="p-5 flex-1 flex items-center justify-center">
-        <div className="grid grid-cols-4 gap-4 w-full">
+        <div className="grid grid-cols-3 gap-4 w-full">
           {modules.map((module) => (
             <div
               key={module.id}
@@ -389,23 +333,12 @@ const QuickLinks = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>人员 *</Label>
-              <Select
-                value={absenceForm.contact_id}
-                onValueChange={(value) => setAbsenceForm({ ...absenceForm, contact_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择人员" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name}
-                      {contact.organization?.name && ` - ${contact.organization.name}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>人员</Label>
+              <Input
+                value={currentUser?.name || ""}
+                disabled
+                className="bg-muted"
+              />
             </div>
 
             <div className="space-y-2">
@@ -510,7 +443,7 @@ const QuickLinks = () => {
                 onClick={() => {
                   setAbsenceDialogOpen(false);
                   setAbsenceForm({
-                    contact_id: "",
+                    contact_id: currentUser?.id || "",
                     type: "out",
                     reason: "",
                     start_time: undefined,
@@ -566,11 +499,11 @@ const QuickLinks = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>领用人 *</Label>
+                <Label>领用人</Label>
                 <Input
-                  value={supplyForm.requisition_by}
-                  onChange={(e) => setSupplyForm({ ...supplyForm, requisition_by: e.target.value })}
-                  placeholder="输入领用人姓名"
+                  value={currentUser?.name || ""}
+                  disabled
+                  className="bg-muted"
                 />
               </div>
             </div>
@@ -579,95 +512,6 @@ const QuickLinks = () => {
                 取消
               </Button>
               <Button onClick={handleSupplySubmit}>提交申请</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* 日程管理新增对话框 */}
-      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>新增日程</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>人员 *</Label>
-              <Select
-                value={scheduleForm.contact_id}
-                onValueChange={(v) => setScheduleForm({ ...scheduleForm, contact_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择人员" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name}
-                      {contact.organization?.name && ` - ${contact.organization.name}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>日程标题 *</Label>
-              <Input
-                value={scheduleForm.title}
-                onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
-                placeholder="输入日程标题"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>日期 *</Label>
-                <Input
-                  type="date"
-                  value={scheduleForm.schedule_date}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, schedule_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>地点</Label>
-                <Input
-                  value={scheduleForm.location}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
-                  placeholder="输入地点"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>开始时间</Label>
-                <Input
-                  type="time"
-                  value={scheduleForm.start_time}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, start_time: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>结束时间</Label>
-                <Input
-                  type="time"
-                  value={scheduleForm.end_time}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, end_time: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>备注</Label>
-              <Textarea
-                value={scheduleForm.notes}
-                onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
-                placeholder="输入备注"
-                rows={2}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>
-                取消
-              </Button>
-              <Button onClick={handleScheduleSubmit}>添加</Button>
             </div>
           </div>
         </DialogContent>
