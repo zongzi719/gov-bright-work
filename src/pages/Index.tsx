@@ -14,7 +14,7 @@ const Index = () => {
       <Header />
 
       {/* 主体内容区域 */}
-      <main className="h-[calc(100vh-64px)] p-4 flex flex-col gap-4 overflow-hidden">
+      <main className="min-h-[calc(100vh-64px)] p-4 flex flex-col gap-4 overflow-auto">
         {/* 轮播图Banner */}
         <div className="flex-shrink-0">
           <BannerCarousel />
