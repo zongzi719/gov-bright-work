@@ -243,7 +243,12 @@ const ApprovalSettings = () => {
           </TabsContent>
 
           <TabsContent value="form" className="mt-6">
-            {selectedTemplate && <ApprovalFormDesign templateId={selectedTemplate.id} />}
+            {selectedTemplate && (
+              <ApprovalFormDesign 
+                templateId={selectedTemplate.id} 
+                businessType={selectedTemplate.business_type}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="process" className="mt-6">
