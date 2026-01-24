@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LogOut, Package, Star, CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Package, Star, CalendarIcon, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,13 +86,22 @@ const QuickLinks = () => {
     notes: "",
   });
 
-  // Supply Dialog State
+  // Supply Requisition Dialog State
   const [supplyDialogOpen, setSupplyDialogOpen] = useState(false);
   const [supplies, setSupplies] = useState<OfficeSupply[]>([]);
   const [supplyForm, setSupplyForm] = useState({
     supply_id: "",
     quantity: 1,
     requisition_by: currentUser?.name || "",
+  });
+
+  // Purchase Request Dialog State
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [purchaseForm, setPurchaseForm] = useState({
+    supply_id: "",
+    quantity: 1,
+    reason: "",
+    requested_by: currentUser?.name || "",
   });
 
   // Leader Schedule Dialog State (领导日程 - 仅查看)
@@ -236,7 +245,41 @@ const QuickLinks = () => {
     }
   };
 
-  // Schedule submit removed - no longer needed
+  // Submit purchase request
+  const handlePurchaseSubmit = async () => {
+    if (!purchaseForm.supply_id) {
+      toast.error("请选择办公用品");
+      return;
+    }
+    if (!purchaseForm.requested_by.trim()) {
+      toast.error("请输入申请人");
+      return;
+    }
+    if (purchaseForm.quantity < 1) {
+      toast.error("数量必须大于0");
+      return;
+    }
+
+    const { error } = await supabase.from("purchase_requests").insert({
+      supply_id: purchaseForm.supply_id,
+      quantity: purchaseForm.quantity,
+      reason: purchaseForm.reason.trim() || null,
+      requested_by: purchaseForm.requested_by.trim(),
+    });
+
+    if (error) {
+      toast.error("提交采购申请失败");
+    } else {
+      toast.success("采购申请已提交");
+      setPurchaseDialogOpen(false);
+      setPurchaseForm({
+        supply_id: "",
+        quantity: 1,
+        reason: "",
+        requested_by: currentUser?.name || "",
+      });
+    }
+  };
 
   // Open dialogs with data fetch
   const openAbsenceDialog = () => {
@@ -246,6 +289,11 @@ const QuickLinks = () => {
   const openSupplyDialog = () => {
     fetchSupplies();
     setSupplyDialogOpen(true);
+  };
+
+  const openPurchaseDialog = () => {
+    fetchSupplies();
+    setPurchaseDialogOpen(true);
   };
 
   const openLeaderScheduleDialog = async () => {
@@ -290,6 +338,14 @@ const QuickLinks = () => {
     },
     {
       id: 3,
+      name: "采购需求",
+      shortName: "购",
+      color: "bg-blue-500",
+      icon: ShoppingCart,
+      onClick: openPurchaseDialog,
+    },
+    {
+      id: 4,
       name: "领导日程",
       shortName: "领",
       color: "bg-amber-500",
@@ -307,7 +363,7 @@ const QuickLinks = () => {
 
       {/* 模块网格 */}
       <div className="p-5 flex-1 flex items-center justify-center">
-        <div className="grid grid-cols-3 gap-4 w-full">
+        <div className="grid grid-cols-4 gap-4 w-full">
           {modules.map((module) => (
             <div
               key={module.id}
@@ -512,6 +568,72 @@ const QuickLinks = () => {
                 取消
               </Button>
               <Button onClick={handleSupplySubmit}>提交申请</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 采购需求对话框 */}
+      <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新建采购需求</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>办公用品 *</Label>
+              <Select
+                value={purchaseForm.supply_id}
+                onValueChange={(value) => setPurchaseForm({ ...purchaseForm, supply_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择办公用品" />
+                </SelectTrigger>
+                <SelectContent>
+                  {supplies
+                    .filter((s) => s.is_active)
+                    .map((supply) => (
+                      <SelectItem key={supply.id} value={supply.id}>
+                        {supply.name}
+                        {supply.specification ? ` (${supply.specification})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>采购数量 *</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={purchaseForm.quantity}
+                  onChange={(e) => setPurchaseForm({ ...purchaseForm, quantity: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>申请人</Label>
+                <Input
+                  value={currentUser?.name || ""}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>采购理由</Label>
+              <Textarea
+                value={purchaseForm.reason}
+                onChange={(e) => setPurchaseForm({ ...purchaseForm, reason: e.target.value })}
+                placeholder="请输入采购理由"
+                rows={2}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPurchaseDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handlePurchaseSubmit}>提交申请</Button>
             </div>
           </div>
         </DialogContent>

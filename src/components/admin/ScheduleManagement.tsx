@@ -210,13 +210,10 @@ const ScheduleManagement = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">日程管理</h2>
-        <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              新增日程
-            </Button>
-          </DialogTrigger>
+      </div>
+
+      {/* 编辑日程对话框 */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingSchedule ? "编辑日程" : "新增日程"}</DialogTitle>
@@ -294,16 +291,15 @@ const ScheduleManagement = () => {
                   rows={2}
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={closeDialog}>
-                  取消
-                </Button>
-                <Button onClick={handleSubmit}>{editingSchedule ? "保存" : "添加"}</Button>
-              </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={closeDialog}>
+                取消
+              </Button>
+              <Button onClick={handleSubmit}>保存</Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 搜索和筛选 */}
       <div className="flex gap-4">
