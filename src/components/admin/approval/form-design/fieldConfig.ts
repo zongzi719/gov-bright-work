@@ -70,18 +70,25 @@ const excludedFields = [
   "processed_at",
   "processed_by",
   "status",
-  "contact_id", // 自动获取当前用户
-  "requested_by", // 自动获取当前用户
-  "requisition_by", // 自动获取当前用户
   "initiator_id",
   "type", // absence_records 的类型字段由 business_type 决定
 ];
+
+/**
+ * 申请人字段映射（不同表使用不同的申请人字段名）
+ */
+const applicantFieldMapping: Record<string, string> = {
+  absence_records: "contact_id",
+  supply_requisitions: "requisition_by",
+  purchase_requests: "requested_by",
+};
 
 /**
  * 字段中文标签映射
  */
 const fieldLabelMapping: Record<string, Record<string, string>> = {
   absence_records: {
+    contact_id: "申请人",
     start_time: "开始时间",
     end_time: "结束时间",
     reason: "事由",
@@ -90,10 +97,12 @@ const fieldLabelMapping: Record<string, Record<string, string>> = {
     cancel_reason: "取消原因",
   },
   supply_requisitions: {
+    requisition_by: "申请人",
     supply_id: "领用物品",
     quantity: "领用数量",
   },
   purchase_requests: {
+    requested_by: "申请人",
     supply_id: "采购物品",
     quantity: "采购数量",
     reason: "采购原因",
@@ -105,6 +114,7 @@ const fieldLabelMapping: Record<string, Record<string, string>> = {
  */
 const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
   absence_records: {
+    contact_id: true,
     start_time: true,
     end_time: false,
     reason: true,
@@ -113,10 +123,12 @@ const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
     cancel_reason: false,
   },
   supply_requisitions: {
+    requisition_by: true,
     supply_id: true,
     quantity: true,
   },
   purchase_requests: {
+    requested_by: true,
     supply_id: true,
     quantity: true,
     reason: false,
@@ -125,13 +137,14 @@ const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
 
 /**
  * 特定业务类型需要显示的字段（过滤掉不相关字段）
+ * 注意：申请人字段放在最前面
  */
 const businessTypeFieldFilter: Record<string, string[]> = {
-  business_trip: ["start_time", "end_time", "reason", "notes"],
-  leave: ["leave_type", "start_time", "end_time", "reason", "notes"],
-  out: ["start_time", "end_time", "reason", "notes"],
-  supply_requisition: ["supply_id", "quantity"],
-  purchase_request: ["supply_id", "quantity", "reason"],
+  business_trip: ["contact_id", "reason", "start_time", "end_time", "notes"],
+  leave: ["contact_id", "leave_type", "reason", "start_time", "end_time", "notes"],
+  out: ["contact_id", "reason", "start_time", "end_time", "notes"],
+  supply_requisition: ["requisition_by", "supply_id", "quantity"],
+  purchase_request: ["requested_by", "supply_id", "quantity", "reason"],
 };
 
 /**
@@ -215,6 +228,7 @@ export const getDefaultFieldsForBusinessType = (businessType: string): Omit<Form
   const optionsMap = fieldOptionsMapping[tableName] || {};
 
   const fields: Omit<FormField, 'id' | 'template_id'>[] = [];
+  const applicantField = applicantFieldMapping[tableName];
 
   // 按照 allowedFields 的顺序生成字段
   allowedFields.forEach((fieldName, index) => {
@@ -224,7 +238,12 @@ export const getDefaultFieldsForBusinessType = (businessType: string): Omit<Form
     // 排除系统字段
     if (excludedFields.includes(column.column_name)) return;
 
-    const fieldType = dbTypeToFieldType[column.data_type] || "text";
+    // 申请人字段使用 user 类型
+    let fieldType = dbTypeToFieldType[column.data_type] || "text";
+    if (column.column_name === applicantField) {
+      fieldType = "user";
+    }
+
     const label = labels[column.column_name] || column.column_name;
     const isRequired = requiredMap[column.column_name] ?? !column.is_nullable;
     const options = optionsMap[column.column_name] || null;
@@ -243,7 +262,7 @@ export const getDefaultFieldsForBusinessType = (businessType: string): Omit<Form
       field_type: fieldType,
       field_name: column.column_name,
       field_label: label,
-      placeholder: `请输入${label}`,
+      placeholder: fieldType === "user" ? "自动获取当前用户" : `请输入${label}`,
       is_required: isRequired,
       sort_order: index + 1,
       field_options: options,
