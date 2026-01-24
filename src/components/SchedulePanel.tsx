@@ -65,13 +65,20 @@ const SchedulePanel = () => {
   const today = new Date();
   const weekDays = Array.from({ length: 14 }, (_, i) => addDays(currentWeekStart, i));
 
-  // 获取日程
+  // 获取日程 - 只获取当前登录用户的日程
   const fetchSchedules = async () => {
+    if (!currentUser?.id) {
+      setSchedules([]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     const weekEnd = addDays(currentWeekStart, 13);
     const { data, error } = await supabase
       .from("schedules")
       .select("*, contact:contacts(id, name, department)")
+      .eq("contact_id", currentUser.id) // 只获取当前用户的日程
       .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
       .lte("schedule_date", format(weekEnd, "yyyy-MM-dd"))
       .order("schedule_date")
@@ -87,7 +94,7 @@ const SchedulePanel = () => {
 
   useEffect(() => {
     fetchSchedules();
-  }, [currentWeekStart]);
+  }, [currentWeekStart, currentUser?.id]);
 
   // 获取某天的日程
   const getSchedulesForDay = (date: Date): Schedule[] => {
