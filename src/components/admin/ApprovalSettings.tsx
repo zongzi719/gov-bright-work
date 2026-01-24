@@ -6,7 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Settings, FileText, GitBranch, Cog, Plus, ArrowLeft, Copy, Eye } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Settings, FileText, GitBranch, Cog, Plus, ArrowLeft, Copy, Eye, FileQuestion, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import ApprovalBasicSettings from "./approval/ApprovalBasicSettings";
 import ApprovalFormDesign from "./approval/ApprovalFormDesign";
@@ -25,11 +32,52 @@ interface ApprovalTemplate {
 }
 
 const businessTypeLabels: Record<string, string> = {
-  absence: "外出/请假",
+  business_trip: "出差申请",
+  leave: "请假申请",
+  out: "外出申请",
   supply_requisition: "物品领用",
   purchase_request: "采购申请",
   external_approval: "外部审批",
 };
+
+// 已有业务表单配置
+const existingForms = [
+  { 
+    id: "business_trip", 
+    name: "出差申请", 
+    icon: "🚗", 
+    description: "员工出差申请流程",
+    business_type: "business_trip"
+  },
+  { 
+    id: "leave", 
+    name: "请假申请", 
+    icon: "🏖️", 
+    description: "员工请假申请流程",
+    business_type: "leave"
+  },
+  { 
+    id: "out", 
+    name: "外出申请", 
+    icon: "🚶", 
+    description: "员工临时外出申请流程",
+    business_type: "out"
+  },
+  { 
+    id: "supply_requisition", 
+    name: "物品领用", 
+    icon: "📦", 
+    description: "办公用品领用申请流程",
+    business_type: "supply_requisition"
+  },
+  { 
+    id: "purchase_request", 
+    name: "采购申请", 
+    icon: "💰", 
+    description: "办公用品采购申请流程",
+    business_type: "purchase_request"
+  },
+];
 
 const ApprovalSettings = () => {
   const [templates, setTemplates] = useState<ApprovalTemplate[]>([]);
@@ -37,6 +85,8 @@ const ApprovalSettings = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<ApprovalTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createMode, setCreateMode] = useState<"blank" | "existing" | null>(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -80,9 +130,52 @@ const ApprovalSettings = () => {
   };
 
   const handleCreateNew = () => {
+    setShowCreateDialog(true);
+    setCreateMode(null);
+  };
+
+  const handleCreateFromBlank = () => {
+    setShowCreateDialog(false);
     setSelectedTemplate(null);
     setIsCreating(true);
     setActiveTab("basic");
+  };
+
+  const handleCreateFromExisting = async (form: typeof existingForms[0]) => {
+    setShowCreateDialog(false);
+    
+    // 检查是否已存在该业务类型的模板
+    const existingTemplate = templates.find(t => t.business_type === form.business_type);
+    if (existingTemplate) {
+      toast.error(`${form.name}的审批模板已存在，请直接编辑现有模板`);
+      handleViewDetail(existingTemplate);
+      return;
+    }
+
+    // 创建新模板并预填充信息
+    const code = `PROC_${Date.now().toString(36).toUpperCase()}`;
+    const { data, error } = await supabase
+      .from("approval_templates" as any)
+      .insert({
+        name: form.name,
+        code,
+        description: form.description,
+        icon: form.icon,
+        business_type: form.business_type,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("创建模板失败");
+      return;
+    }
+
+    toast.success(`已创建${form.name}模板，请继续配置审批流程`);
+    setSelectedTemplate(data as unknown as ApprovalTemplate);
+    setIsCreating(false);
+    setActiveTab("process"); // 直接跳到流程设计
   };
 
   const handleViewDetail = (template: ApprovalTemplate) => {
@@ -263,6 +356,89 @@ const ApprovalSettings = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* 创建模板选择弹窗 */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>新建审批模板</DialogTitle>
+            <DialogDescription>
+              选择创建方式开始配置审批流程
+            </DialogDescription>
+          </DialogHeader>
+
+          {createMode === null ? (
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <Card 
+                className="cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors"
+                onClick={() => setCreateMode("existing")}
+              >
+                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                  <ClipboardList className="w-12 h-12 text-primary mb-4" />
+                  <h3 className="font-semibold mb-2">选择已有表单</h3>
+                  <p className="text-sm text-muted-foreground">
+                    基于现有业务模块创建审批流程，表单字段已预设
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors"
+                onClick={handleCreateFromBlank}
+              >
+                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                  <FileQuestion className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="font-semibold mb-2">从空白创建</h3>
+                  <p className="text-sm text-muted-foreground">
+                    自定义审批模板，需要手动配置所有字段
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="py-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setCreateMode(null)}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  返回
+                </Button>
+                <span className="text-sm text-muted-foreground">选择业务表单</span>
+              </div>
+              <div className="grid gap-3">
+                {existingForms.map((form) => {
+                  const isUsed = templates.some(t => t.business_type === form.business_type);
+                  return (
+                    <Card 
+                      key={form.id}
+                      className={`cursor-pointer transition-colors ${
+                        isUsed 
+                          ? "opacity-50 cursor-not-allowed" 
+                          : "hover:border-primary hover:bg-muted/50"
+                      }`}
+                      onClick={() => !isUsed && handleCreateFromExisting(form)}
+                    >
+                      <CardContent className="flex items-center gap-4 p-4">
+                        <span className="text-3xl">{form.icon}</span>
+                        <div className="flex-1">
+                          <h4 className="font-medium">{form.name}</h4>
+                          <p className="text-sm text-muted-foreground">{form.description}</p>
+                        </div>
+                        {isUsed && (
+                          <Badge variant="secondary">已创建</Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
