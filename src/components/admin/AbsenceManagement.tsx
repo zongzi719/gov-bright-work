@@ -334,12 +334,6 @@ const AbsenceManagement = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">外出管理</CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              新增记录
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>新增外出/请假记录</DialogTitle>
