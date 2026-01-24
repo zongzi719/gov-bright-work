@@ -119,13 +119,15 @@ const SchedulePanel = () => {
 
   // 提交日程
   const handleSubmit = async () => {
-    if (!formData.contact_id || !formData.title || !formData.schedule_date) {
-      toast.error("请填写必填项");
+    // Use currentUser.id directly since it's set from localStorage
+    const contactId = currentUser?.id;
+    if (!contactId || !formData.title || !formData.schedule_date) {
+      toast.error("请填写必填项（日程标题和日期）");
       return;
     }
 
     const { error } = await supabase.from("schedules").insert({
-      contact_id: formData.contact_id,
+      contact_id: contactId,
       title: formData.title,
       schedule_date: formData.schedule_date,
       start_time: formData.start_time,
