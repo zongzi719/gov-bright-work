@@ -501,7 +501,7 @@ const QuickLinks = () => {
 
       {/* 模块网格 */}
       <div className="p-5 flex-1 flex items-center justify-center">
-        <div className="grid grid-cols-3 gap-4 w-full">
+        <div className="grid grid-cols-4 gap-4 w-full">
           {modules.map((module) => (
             <div
               key={module.id}
