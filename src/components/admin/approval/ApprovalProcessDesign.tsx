@@ -33,9 +33,9 @@ interface ApprovalNode {
   node_type: string;
   node_name: string;
   approver_type: string;
-  approver_ids: string[];
+  approver_ids: string[] | null;
   sort_order: number;
-  conditions: any;
+  condition_expression: any;
 }
 
 interface Contact {
@@ -87,7 +87,7 @@ const ApprovalProcessDesign = () => {
 
   const fetchTemplates = async () => {
     const { data, error } = await supabase
-      .from("approval_templates")
+      .from("approval_templates" as any)
       .select("id, name, code, icon")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
@@ -96,9 +96,9 @@ const ApprovalProcessDesign = () => {
       toast.error("获取模板列表失败");
       return;
     }
-    setTemplates(data || []);
+    setTemplates((data as unknown as ApprovalTemplate[]) || []);
     if (data && data.length > 0) {
-      setSelectedTemplateId(data[0].id);
+      setSelectedTemplateId((data as unknown as ApprovalTemplate[])[0].id);
     }
     setLoading(false);
   };
@@ -114,7 +114,7 @@ const ApprovalProcessDesign = () => {
 
   const fetchNodes = async () => {
     const { data, error } = await supabase
-      .from("approval_nodes")
+      .from("approval_nodes" as any)
       .select("*")
       .eq("template_id", selectedTemplateId)
       .order("sort_order", { ascending: true });
@@ -123,7 +123,7 @@ const ApprovalProcessDesign = () => {
       toast.error("获取流程节点失败");
       return;
     }
-    setNodes(data || []);
+    setNodes((data as unknown as ApprovalNode[]) || []);
   };
 
   const handleOpenNodeDialog = (node?: ApprovalNode) => {
@@ -160,7 +160,7 @@ const ApprovalProcessDesign = () => {
 
     if (editingNode) {
       const { error } = await supabase
-        .from("approval_nodes")
+        .from("approval_nodes" as any)
         .update({
           node_type: nodeForm.node_type,
           node_name: nodeForm.node_name,
@@ -178,7 +178,7 @@ const ApprovalProcessDesign = () => {
       const maxOrder = nodes.length > 0 ? Math.max(...nodes.map(n => n.sort_order)) : 0;
       
       const { error } = await supabase
-        .from("approval_nodes")
+        .from("approval_nodes" as any)
         .insert({
           template_id: selectedTemplateId,
           node_type: nodeForm.node_type,
@@ -203,7 +203,7 @@ const ApprovalProcessDesign = () => {
     if (!confirm("确定要删除这个节点吗？")) return;
 
     const { error } = await supabase
-      .from("approval_nodes")
+      .from("approval_nodes" as any)
       .delete()
       .eq("id", id);
 
@@ -331,12 +331,12 @@ const ApprovalProcessDesign = () => {
             ) : (
               <div className="flex flex-col items-center space-y-2">
                 {/* 发起人 */}
-                <div className="flex items-center gap-3 px-6 py-3 bg-gray-100 rounded-lg border">
+                <div className="flex items-center gap-3 px-6 py-3 bg-muted rounded-lg border">
                   <User className="w-5 h-5" />
                   <span className="font-medium">发起人</span>
                 </div>
                 
-                {nodes.map((node, index) => {
+                {nodes.map((node) => {
                   const config = nodeTypeConfig[node.node_type as keyof typeof nodeTypeConfig];
                   const Icon = config?.icon || User;
                   
@@ -344,14 +344,14 @@ const ApprovalProcessDesign = () => {
                     <div key={node.id} className="flex flex-col items-center">
                       <ArrowDown className="w-5 h-5 text-muted-foreground my-1" />
                       <div 
-                        className={`flex items-center gap-3 px-6 py-3 rounded-lg border ${config?.color || "bg-gray-100"} group relative`}
+                        className={`flex items-center gap-3 px-6 py-3 rounded-lg border ${config?.color || "bg-muted"} group relative`}
                       >
                         <Icon className="w-5 h-5" />
                         <div>
                           <div className="font-medium">{node.node_name}</div>
                           <div className="text-xs opacity-70">
                             {node.approver_type === "specific" 
-                              ? node.approver_ids.map(id => getContactName(id)).join(", ")
+                              ? (node.approver_ids || []).map(id => getContactName(id)).join(", ")
                               : approverTypeLabels[node.approver_type]
                             }
                           </div>
@@ -382,7 +382,7 @@ const ApprovalProcessDesign = () => {
                 <ArrowDown className="w-5 h-5 text-muted-foreground my-1" />
                 
                 {/* 结束 */}
-                <div className="flex items-center gap-3 px-6 py-3 bg-gray-100 rounded-lg border">
+                <div className="flex items-center gap-3 px-6 py-3 bg-muted rounded-lg border">
                   <span className="font-medium">结束</span>
                 </div>
               </div>

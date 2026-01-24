@@ -17,7 +17,7 @@ interface ApprovalTemplate {
   id: string;
   name: string;
   code: string;
-  description: string;
+  description: string | null;
   icon: string;
   business_type: string;
   is_active: boolean;
@@ -63,7 +63,7 @@ const ApprovalBasicSettings = () => {
   const fetchTemplates = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from("approval_templates")
+      .from("approval_templates" as any)
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -71,13 +71,12 @@ const ApprovalBasicSettings = () => {
       console.error("Error fetching templates:", error);
       toast.error("获取审批模板失败");
     } else {
-      setTemplates(data || []);
+      setTemplates((data as unknown as ApprovalTemplate[]) || []);
     }
     setLoading(false);
   };
 
   const generateCode = (name: string) => {
-    const pinyin = name.replace(/[^\w\u4e00-\u9fa5]/g, "").substring(0, 10);
     const timestamp = Date.now().toString(36).toUpperCase();
     return `PROC_${timestamp}`;
   };
@@ -117,7 +116,7 @@ const ApprovalBasicSettings = () => {
 
     if (editingTemplate) {
       const { error } = await supabase
-        .from("approval_templates")
+        .from("approval_templates" as any)
         .update({
           name: formData.name,
           description: formData.description,
@@ -134,7 +133,7 @@ const ApprovalBasicSettings = () => {
       toast.success("更新成功");
     } else {
       const { error } = await supabase
-        .from("approval_templates")
+        .from("approval_templates" as any)
         .insert({
           name: formData.name,
           code,
@@ -159,7 +158,7 @@ const ApprovalBasicSettings = () => {
     if (!confirm("确定要删除这个审批模板吗？")) return;
 
     const { error } = await supabase
-      .from("approval_templates")
+      .from("approval_templates" as any)
       .delete()
       .eq("id", id);
 
@@ -178,7 +177,7 @@ const ApprovalBasicSettings = () => {
 
   const handleToggleActive = async (template: ApprovalTemplate) => {
     const { error } = await supabase
-      .from("approval_templates")
+      .from("approval_templates" as any)
       .update({ is_active: !template.is_active })
       .eq("id", template.id);
 
