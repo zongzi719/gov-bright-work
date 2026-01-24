@@ -1,39 +1,60 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BannerItem {
-  id: number;
+  id: string;
   image: string;
   title: string;
 }
 
 const defaultBanners: BannerItem[] = [
   {
-    id: 1,
+    id: "1",
     image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&h=400&fit=crop",
     title: "深入学习贯彻党的二十大精神，奋力开创高质量发展新局面",
   },
   {
-    id: 2,
+    id: "2",
     image: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1920&h=400&fit=crop",
     title: "全面推进数字政府建设，提升政务服务效能",
   },
   {
-    id: 3,
+    id: "3",
     image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1920&h=400&fit=crop",
     title: "坚持以人民为中心，持续优化营商环境",
   },
 ];
 
 const BannerCarousel = () => {
-  const [banners] = useState<BannerItem[]>(defaultBanners);
+  const [banners, setBanners] = useState<BannerItem[]>(defaultBanners);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
+  // 从数据库获取启用的Banner
+  useEffect(() => {
+    const fetchBanners = async () => {
+      const { data, error } = await supabase
+        .from("banners")
+        .select("id, image_url, title")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        setBanners(data.map(b => ({
+          id: b.id,
+          image: b.image_url,
+          title: b.title
+        })));
+      }
+    };
+    fetchBanners();
+  }, []);
+
   // 自动轮播
   useEffect(() => {
-    if (isHovered) return;
+    if (isHovered || banners.length === 0) return;
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % banners.length);
     }, 5000);
