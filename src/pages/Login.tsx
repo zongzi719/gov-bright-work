@@ -28,16 +28,24 @@ const Login = () => {
 
     setLoading(true);
     try {
-      // Query contacts table for matching mobile and password
+      // Use the secure RPC function for login verification
       const { data, error } = await supabase
-        .from("contacts")
-        .select("id, name, mobile, position, department, organization:organizations(name)")
-        .eq("mobile", mobile.trim())
-        .eq("password_hash", password)
-        .eq("is_active", true)
-        .single();
+        .rpc("verify_contact_login", {
+          p_mobile: mobile.trim(),
+          p_password: password
+        });
 
-      if (error || !data) {
+      if (error) {
+        console.error("Login error:", error);
+        toast({
+          title: "登录失败",
+          description: "系统错误，请稍后重试",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data || data.length === 0) {
         toast({
           title: "登录失败",
           description: "手机号或密码错误",
@@ -46,20 +54,22 @@ const Login = () => {
         return;
       }
 
+      const userData = data[0];
+      
       // Store user info in localStorage for session
       const userInfo = {
-        id: data.id,
-        name: data.name,
-        mobile: data.mobile,
-        position: data.position,
-        department: data.department,
-        organization: data.organization?.name,
+        id: userData.contact_id,
+        name: userData.contact_name,
+        mobile: userData.contact_mobile,
+        position: userData.contact_position,
+        department: userData.contact_department,
+        organization: userData.organization_name,
       };
       localStorage.setItem("frontendUser", JSON.stringify(userInfo));
 
       toast({
         title: "登录成功",
-        description: `欢迎回来，${data.name}`,
+        description: `欢迎回来，${userData.contact_name}`,
       });
 
       navigate("/");

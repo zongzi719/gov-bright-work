@@ -749,6 +749,17 @@ export type Database = {
             Returns: boolean
           }
         | { Args: { _role: string; _user_id: string }; Returns: boolean }
+      verify_contact_login: {
+        Args: { p_mobile: string; p_password: string }
+        Returns: {
+          contact_department: string
+          contact_id: string
+          contact_mobile: string
+          contact_name: string
+          contact_position: string
+          organization_name: string
+        }[]
+      }
     }
     Enums: {
       absence_status:
