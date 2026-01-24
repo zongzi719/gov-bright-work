@@ -106,13 +106,28 @@
     @apply border-border;
   }
 
+  html {
+    font-size: 16px;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased text-base;
     font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "Helvetica Neue", sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
+  }
+
+  /* 前台页面字体放大 */
+  .text-sm {
+    font-size: 0.9375rem; /* 15px instead of 14px */
+    line-height: 1.4;
+  }
+
+  .text-xs {
+    font-size: 0.8125rem; /* 13px instead of 12px */
+    line-height: 1.4;
   }
 }
 
