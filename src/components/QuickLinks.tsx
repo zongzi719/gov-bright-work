@@ -83,12 +83,23 @@ const QuickLinks = () => {
 
   // Leader Schedule Dialog State
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [addScheduleDialogOpen, setAddScheduleDialogOpen] = useState(false);
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => 
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    leader_id: "",
+    title: "",
+    location: "",
+    schedule_date: "",
+    start_time: "09:00",
+    end_time: "10:00",
+    schedule_type: "internal_meeting",
+    notes: "",
+  });
 
   // Week days array
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
@@ -233,6 +244,44 @@ const QuickLinks = () => {
     }
   };
 
+  // Submit schedule
+  const handleScheduleSubmit = async () => {
+    if (!scheduleForm.leader_id || !scheduleForm.title || !scheduleForm.schedule_date) {
+      toast.error("请填写必填项");
+      return;
+    }
+
+    const { error } = await supabase.from("leader_schedules").insert({
+      leader_id: scheduleForm.leader_id,
+      title: scheduleForm.title,
+      location: scheduleForm.location || null,
+      schedule_date: scheduleForm.schedule_date,
+      start_time: scheduleForm.start_time,
+      end_time: scheduleForm.end_time,
+      schedule_type: scheduleForm.schedule_type,
+      notes: scheduleForm.notes || null,
+    });
+
+    if (error) {
+      toast.error("添加日程失败");
+      console.error(error);
+    } else {
+      toast.success("日程已添加");
+      setAddScheduleDialogOpen(false);
+      setScheduleForm({
+        leader_id: "",
+        title: "",
+        location: "",
+        schedule_date: "",
+        start_time: "09:00",
+        end_time: "10:00",
+        schedule_type: "internal_meeting",
+        notes: "",
+      });
+      fetchSchedules();
+    }
+  };
+
   // Open dialogs with data fetch
   const openAbsenceDialog = () => {
     fetchContacts();
@@ -247,6 +296,10 @@ const QuickLinks = () => {
   const openScheduleDialog = async () => {
     setScheduleDialogOpen(true);
     await Promise.all([fetchLeaders(), fetchSchedules()]);
+  };
+
+  const openAddScheduleDialog = () => {
+    setAddScheduleDialogOpen(true);
   };
 
   // Handle week navigation
@@ -528,7 +581,13 @@ const QuickLinks = () => {
       <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
         <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>领导日程</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>领导日程</span>
+              <Button size="sm" onClick={openAddScheduleDialog}>
+                <Plus className="w-4 h-4 mr-2" />
+                添加日程
+              </Button>
+            </DialogTitle>
           </DialogHeader>
           
           {/* 周导航 - 与后台一致 */}
@@ -617,6 +676,102 @@ const QuickLinks = () => {
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增日程对话框 - 与后台一致 */}
+      <Dialog open={addScheduleDialogOpen} onOpenChange={setAddScheduleDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>添加日程</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>领导 *</Label>
+              <Select value={scheduleForm.leader_id} onValueChange={(v) => setScheduleForm({ ...scheduleForm, leader_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择领导" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leaders.map((leader) => (
+                    <SelectItem key={leader.id} value={leader.id}>
+                      {leader.name} - {leader.position}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>日程标题 *</Label>
+              <Input
+                value={scheduleForm.title}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
+                placeholder="输入日程标题"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>日期 *</Label>
+                <Input
+                  type="date"
+                  value={scheduleForm.schedule_date}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, schedule_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>类型</Label>
+                <Select value={scheduleForm.schedule_type} onValueChange={(v) => setScheduleForm({ ...scheduleForm, schedule_type: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="internal_meeting">内部会议</SelectItem>
+                    <SelectItem value="party_activity">党政重要活动</SelectItem>
+                    <SelectItem value="research_trip">调研/外出</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>开始时间</Label>
+                <Input
+                  type="time"
+                  value={scheduleForm.start_time}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, start_time: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>结束时间</Label>
+                <Input
+                  type="time"
+                  value={scheduleForm.end_time}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, end_time: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>地点</Label>
+              <Input
+                value={scheduleForm.location}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
+                placeholder="输入地点"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>备注</Label>
+              <Textarea
+                value={scheduleForm.notes}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
+                placeholder="输入备注"
+                rows={2}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAddScheduleDialogOpen(false)}>取消</Button>
+              <Button onClick={handleScheduleSubmit}>添加</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
