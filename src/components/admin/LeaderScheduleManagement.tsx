@@ -5,14 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, RefreshCw, ChevronLeft, ChevronRight, Trash2, Edit, Shield } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, RefreshCw, ChevronLeft, ChevronRight, Trash2, Edit, Shield, Search, Calendar, List } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import LeaderSchedulePermissions from "./LeaderSchedulePermissions";
+import TablePagination from "./TablePagination";
+import { usePagination } from "@/hooks/use-pagination";
 
 interface Leader {
   id: string;
@@ -39,19 +43,21 @@ const scheduleTypeColors: Record<string, { bg: string; text: string; label: stri
   research_trip: { bg: "bg-amber-500", text: "text-white", label: "调研/外出" },
 };
 
-const timeSlots = Array.from({ length: 10 }, (_, i) => {
-  const hour = 8 + i;
-  return `${hour.toString().padStart(2, "0")}:00`;
-});
-
 const LeaderScheduleManagement = () => {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]); // For list view
   const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [activeTab, setActiveTab] = useState("schedule");
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [leaderFilter, setLeaderFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -69,6 +75,12 @@ const LeaderScheduleManagement = () => {
     fetchData();
   }, [currentWeekStart]);
 
+  useEffect(() => {
+    if (viewMode === "list") {
+      fetchAllSchedules();
+    }
+  }, [viewMode]);
+
   const fetchData = async () => {
     setLoading(true);
     await Promise.all([fetchLeaders(), fetchSchedules()]);
@@ -76,7 +88,6 @@ const LeaderScheduleManagement = () => {
   };
 
   const fetchLeaders = async () => {
-    // 获取领导（假设职位包含"长"、"书记"、"主任"等的为领导）
     const { data, error } = await supabase
       .from("contacts")
       .select("id, name, position")
@@ -110,6 +121,23 @@ const LeaderScheduleManagement = () => {
       return;
     }
     setSchedules(data || []);
+  };
+
+  const fetchAllSchedules = async () => {
+    const { data, error } = await supabase
+      .from("leader_schedules")
+      .select(`
+        *,
+        leader:contacts!leader_id(id, name, position)
+      `)
+      .order("schedule_date", { ascending: false })
+      .order("start_time");
+
+    if (error) {
+      console.error("获取日程失败:", error);
+      return;
+    }
+    setAllSchedules(data || []);
   };
 
   const handleSubmit = async () => {
@@ -153,6 +181,9 @@ const LeaderScheduleManagement = () => {
     setDialogOpen(false);
     resetForm();
     fetchSchedules();
+    if (viewMode === "list") {
+      fetchAllSchedules();
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -170,6 +201,9 @@ const LeaderScheduleManagement = () => {
 
     toast.success("日程已删除");
     fetchSchedules();
+    if (viewMode === "list") {
+      fetchAllSchedules();
+    }
   };
 
   const resetForm = () => {
@@ -201,6 +235,11 @@ const LeaderScheduleManagement = () => {
     setDialogOpen(true);
   };
 
+  const openAddDialog = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
   // 获取一周的日期
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
@@ -211,19 +250,20 @@ const LeaderScheduleManagement = () => {
     return schedules.filter(s => s.leader_id === leaderId && s.schedule_date === dateStr);
   };
 
-  // 计算日程块的位置和宽度
-  const getScheduleStyle = (schedule: Schedule) => {
-    const [startHour, startMin] = schedule.start_time.split(":").map(Number);
-    const [endHour, endMin] = schedule.end_time.split(":").map(Number);
-    
-    const startOffset = (startHour - 8) + startMin / 60;
-    const duration = (endHour - startHour) + (endMin - startMin) / 60;
-    
-    const left = `${(startOffset / 10) * 100}%`;
-    const width = `${(duration / 10) * 100}%`;
-    
-    return { left, width };
-  };
+  // Filter schedules for list view
+  const filteredSchedules = allSchedules.filter((schedule) => {
+    const matchesSearch =
+      schedule.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (schedule.leader?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (schedule.location || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesLeader = leaderFilter === "all" || schedule.leader_id === leaderFilter;
+    const matchesType = typeFilter === "all" || schedule.schedule_type === typeFilter;
+    return matchesSearch && matchesLeader && matchesType;
+  });
+
+  // Pagination for list view
+  const pagination = usePagination<Schedule>(filteredSchedules, { defaultPageSize: 10 });
+  const paginatedSchedules = pagination.paginatedData;
 
   return (
     <Card>
@@ -247,210 +287,264 @@ const LeaderScheduleManagement = () => {
           </TabsList>
 
           <TabsContent value="schedule">
-            {/* 图例和工具栏 */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                {Object.entries(scheduleTypeColors).map(([key, value]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded ${value.bg}`}></div>
-                    <span className="text-sm text-muted-foreground">{value.label}</span>
+            {/* 工具栏 */}
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                {/* 视图切换 */}
+                <div className="flex items-center border rounded-md">
+                  <Button
+                    variant={viewMode === "calendar" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("calendar")}
+                    className="rounded-r-none"
+                  >
+                    <Calendar className="w-4 h-4 mr-1" />
+                    周历
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className="rounded-l-none"
+                  >
+                    <List className="w-4 h-4 mr-1" />
+                    列表
+                  </Button>
+                </div>
+                {/* 图例 */}
+                {viewMode === "calendar" && (
+                  <div className="flex items-center gap-4 ml-4">
+                    {Object.entries(scheduleTypeColors).map(([key, value]) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded ${value.bg}`}></div>
+                        <span className="text-sm text-muted-foreground">{value.label}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-              <Dialog open={dialogOpen} onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForm();
-              }}>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>{editingSchedule ? "编辑日程" : "添加日程"}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>领导 *</Label>
-                      <Select value={formData.leader_id} onValueChange={(v) => setFormData({ ...formData, leader_id: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择领导" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {leaders.map((leader) => (
-                            <SelectItem key={leader.id} value={leader.id}>
-                              {leader.name} - {leader.position}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>日程标题 *</Label>
-                      <Input
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        placeholder="输入日程标题"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>日期 *</Label>
-                        <Input
-                          type="date"
-                          value={formData.schedule_date}
-                          onChange={(e) => setFormData({ ...formData, schedule_date: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>类型</Label>
-                        <Select value={formData.schedule_type} onValueChange={(v) => setFormData({ ...formData, schedule_type: v })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="internal_meeting">内部会议</SelectItem>
-                            <SelectItem value="party_activity">党政重要活动</SelectItem>
-                            <SelectItem value="research_trip">调研/外出</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>开始时间</Label>
-                        <Input
-                          type="time"
-                          value={formData.start_time}
-                          onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>结束时间</Label>
-                        <Input
-                          type="time"
-                          value={formData.end_time}
-                          onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>地点</Label>
-                      <Input
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        placeholder="输入地点"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>备注</Label>
-                      <Textarea
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        placeholder="输入备注"
-                        rows={2}
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-                      <Button onClick={handleSubmit}>{editingSchedule ? "更新" : "添加"}</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* 周导航 */}
-            <div className="flex items-center justify-between mb-4 px-2">
-              <Button variant="ghost" size="sm" onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}>
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                上一周
-              </Button>
-              <span className="font-medium">
-                {format(currentWeekStart, "yyyy年MM月dd日", { locale: zhCN })} - {format(addDays(currentWeekStart, 6), "MM月dd日", { locale: zhCN })}
-              </span>
-              <Button variant="ghost" size="sm" onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}>
-                下一周
-                <ChevronRight className="w-4 h-4 ml-1" />
+              <Button size="sm" onClick={openAddDialog}>
+                <Plus className="w-4 h-4 mr-2" />
+                添加日程
               </Button>
             </div>
 
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">加载中...</div>
-            ) : leaders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                暂无领导数据，请先在通讯录中添加领导信息
+            {/* 列表视图的搜索和筛选 */}
+            {viewMode === "list" && (
+              <div className="flex items-center gap-4 mb-4 flex-wrap">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="搜索标题、领导或地点..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={leaderFilter} onValueChange={setLeaderFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="领导" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部领导</SelectItem>
+                    {leaders.map((leader) => (
+                      <SelectItem key={leader.id} value={leader.id}>
+                        {leader.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部类型</SelectItem>
+                    <SelectItem value="internal_meeting">内部会议</SelectItem>
+                    <SelectItem value="party_activity">党政重要活动</SelectItem>
+                    <SelectItem value="research_trip">调研/外出</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              /* 日程表格 */
-              <div className="border rounded-lg overflow-hidden">
-                {/* 表头 - 日期 */}
-                <div className="grid bg-red-800 text-white" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
-                  <div className="p-2 border-r border-red-700 text-center font-medium">姓名</div>
-                  {weekDays.map((day, idx) => (
-                    <div key={idx} className="p-2 border-r border-red-700 last:border-r-0 text-center">
-                      <div className="font-medium">{weekDayNames[idx]}</div>
-                      <div className="text-sm opacity-80">{format(day, "MM/dd")}</div>
-                    </div>
-                  ))}
+            )}
+
+            {viewMode === "calendar" ? (
+              <>
+                {/* 周导航 */}
+                <div className="flex items-center justify-between mb-4 px-2">
+                  <Button variant="ghost" size="sm" onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}>
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    上一周
+                  </Button>
+                  <span className="font-medium">
+                    {format(currentWeekStart, "yyyy年MM月dd日", { locale: zhCN })} - {format(addDays(currentWeekStart, 6), "MM月dd日", { locale: zhCN })}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}>
+                    下一周
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
                 </div>
 
-                {/* 表头 - 上午/下午 */}
-                <div className="grid bg-muted border-b" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
-                  <div className="p-1 border-r text-center text-xs text-muted-foreground"></div>
-                  {weekDays.map((_, idx) => (
-                    <div key={idx} className="grid grid-cols-2 border-r last:border-r-0">
-                      <div className="p-1 text-center text-xs border-r">上午</div>
-                      <div className="p-1 text-center text-xs">下午</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 领导日程行 */}
-                {leaders.map((leader) => (
-                  <div key={leader.id} className="grid border-b last:border-b-0" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
-                    <div className="p-2 border-r bg-muted/50 flex items-center justify-center">
-                      <span className="font-medium text-sm">{leader.name}</span>
-                    </div>
-                    {weekDays.map((day, dayIdx) => {
-                      const daySchedules = getSchedulesForLeaderAndDay(leader.id, day);
-                      return (
-                        <div key={dayIdx} className="relative border-r last:border-r-0 min-h-[60px] p-1">
-                          {/* 时间分隔线 */}
-                          <div className="absolute inset-0 grid grid-cols-10">
-                            {Array.from({ length: 10 }).map((_, i) => (
-                              <div key={i} className="border-r border-dashed border-muted-foreground/20 last:border-r-0"></div>
-                            ))}
-                          </div>
-                          {/* 日程块 */}
-                          <div className="relative z-10 space-y-1">
-                            {daySchedules.map((schedule) => {
-                              const colors = scheduleTypeColors[schedule.schedule_type] || scheduleTypeColors.internal_meeting;
-                              return (
-                                <div
-                                  key={schedule.id}
-                                  className={`group ${colors.bg} ${colors.text} rounded px-1 py-0.5 text-xs cursor-pointer relative`}
-                                  onClick={() => openEditDialog(schedule)}
-                                >
-                                  <div className="font-medium truncate">{schedule.title}</div>
-                                  <div className="opacity-80 text-[10px]">
-                                    {schedule.start_time.slice(0, 5)}-{schedule.end_time.slice(0, 5)}
-                                  </div>
-                                  <button
-                                    className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(schedule.id);
-                                    }}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">加载中...</div>
+                ) : leaders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    暂无领导数据，请先在通讯录中添加领导信息
+                  </div>
+                ) : (
+                  /* 日程表格 */
+                  <div className="border rounded-lg overflow-hidden">
+                    {/* 表头 - 日期 */}
+                    <div className="grid bg-red-800 text-white" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                      <div className="p-2 border-r border-red-700 text-center font-medium">姓名</div>
+                      {weekDays.map((day, idx) => (
+                        <div key={idx} className="p-2 border-r border-red-700 last:border-r-0 text-center">
+                          <div className="font-medium">{weekDayNames[idx]}</div>
+                          <div className="text-sm opacity-80">{format(day, "MM/dd")}</div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+
+                    {/* 表头 - 上午/下午 */}
+                    <div className="grid bg-muted border-b" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                      <div className="p-1 border-r text-center text-xs text-muted-foreground"></div>
+                      {weekDays.map((_, idx) => (
+                        <div key={idx} className="grid grid-cols-2 border-r last:border-r-0">
+                          <div className="p-1 text-center text-xs border-r">上午</div>
+                          <div className="p-1 text-center text-xs">下午</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 领导日程行 */}
+                    {leaders.map((leader) => (
+                      <div key={leader.id} className="grid border-b last:border-b-0" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                        <div className="p-2 border-r bg-muted/50 flex items-center justify-center">
+                          <span className="font-medium text-sm">{leader.name}</span>
+                        </div>
+                        {weekDays.map((day, dayIdx) => {
+                          const daySchedules = getSchedulesForLeaderAndDay(leader.id, day);
+                          return (
+                            <div key={dayIdx} className="relative border-r last:border-r-0 min-h-[60px] p-1">
+                              {/* 时间分隔线 */}
+                              <div className="absolute inset-0 grid grid-cols-10">
+                                {Array.from({ length: 10 }).map((_, i) => (
+                                  <div key={i} className="border-r border-dashed border-muted-foreground/20 last:border-r-0"></div>
+                                ))}
+                              </div>
+                              {/* 日程块 */}
+                              <div className="relative z-10 space-y-1">
+                                {daySchedules.map((schedule) => {
+                                  const colors = scheduleTypeColors[schedule.schedule_type] || scheduleTypeColors.internal_meeting;
+                                  return (
+                                    <div
+                                      key={schedule.id}
+                                      className={`group ${colors.bg} ${colors.text} rounded px-1 py-0.5 text-xs cursor-pointer relative`}
+                                      onClick={() => openEditDialog(schedule)}
+                                    >
+                                      <div className="font-medium truncate">{schedule.title}</div>
+                                      <div className="opacity-80 text-[10px]">
+                                        {schedule.start_time.slice(0, 5)}-{schedule.end_time.slice(0, 5)}
+                                      </div>
+                                      <button
+                                        className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDelete(schedule.id);
+                                        }}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
+            ) : (
+              /* 列表视图 */
+              <>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>领导</TableHead>
+                        <TableHead>日程标题</TableHead>
+                        <TableHead>日期</TableHead>
+                        <TableHead>时间</TableHead>
+                        <TableHead>类型</TableHead>
+                        <TableHead>地点</TableHead>
+                        <TableHead className="text-right">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedSchedules.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            暂无日程数据
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        paginatedSchedules.map((schedule) => {
+                          const typeInfo = scheduleTypeColors[schedule.schedule_type] || scheduleTypeColors.internal_meeting;
+                          return (
+                            <TableRow key={schedule.id}>
+                              <TableCell className="font-medium">{schedule.leader?.name || "-"}</TableCell>
+                              <TableCell>{schedule.title}</TableCell>
+                              <TableCell>{format(new Date(schedule.schedule_date), "yyyy-MM-dd")}</TableCell>
+                              <TableCell>{schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}</TableCell>
+                              <TableCell>
+                                <Badge className={`${typeInfo.bg} ${typeInfo.text}`}>
+                                  {typeInfo.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{schedule.location || "-"}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openEditDialog(schedule)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDelete(schedule.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <TablePagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  pageSize={pagination.pageSize}
+                  totalItems={pagination.totalItems}
+                  startIndex={pagination.startIndex}
+                  endIndex={pagination.endIndex}
+                  canGoNext={pagination.canGoNext}
+                  canGoPrevious={pagination.canGoPrevious}
+                  onPageChange={pagination.setCurrentPage}
+                  onPageSizeChange={pagination.setPageSize}
+                  goToNextPage={pagination.goToNextPage}
+                  goToPreviousPage={pagination.goToPreviousPage}
+                />
+              </>
             )}
           </TabsContent>
 
@@ -458,6 +552,105 @@ const LeaderScheduleManagement = () => {
             <LeaderSchedulePermissions leaders={leaders} />
           </TabsContent>
         </Tabs>
+
+        {/* 添加/编辑日程对话框 */}
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingSchedule ? "编辑日程" : "添加日程"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>领导 *</Label>
+                <Select value={formData.leader_id} onValueChange={(v) => setFormData({ ...formData, leader_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择领导" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaders.map((leader) => (
+                      <SelectItem key={leader.id} value={leader.id}>
+                        {leader.name} - {leader.position}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>日程标题 *</Label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="输入日程标题"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>日期 *</Label>
+                  <Input
+                    type="date"
+                    value={formData.schedule_date}
+                    onChange={(e) => setFormData({ ...formData, schedule_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>类型</Label>
+                  <Select value={formData.schedule_type} onValueChange={(v) => setFormData({ ...formData, schedule_type: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="internal_meeting">内部会议</SelectItem>
+                      <SelectItem value="party_activity">党政重要活动</SelectItem>
+                      <SelectItem value="research_trip">调研/外出</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>开始时间</Label>
+                  <Input
+                    type="time"
+                    value={formData.start_time}
+                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>结束时间</Label>
+                  <Input
+                    type="time"
+                    value={formData.end_time}
+                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>地点</Label>
+                <Input
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  placeholder="输入地点"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>备注</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="输入备注"
+                  rows={2}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+                <Button onClick={handleSubmit}>{editingSchedule ? "更新" : "添加"}</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
