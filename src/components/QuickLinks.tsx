@@ -322,7 +322,7 @@ const QuickLinks = () => {
   const modules = [
     {
       id: 1,
-      name: "外出管理",
+      name: "外出申请",
       shortName: "外",
       color: "bg-primary",
       icon: LogOut,
@@ -330,15 +330,15 @@ const QuickLinks = () => {
     },
     {
       id: 2,
-      name: "办公用品",
-      shortName: "品",
+      name: "领用申请",
+      shortName: "领",
       color: "bg-emerald-500",
       icon: Package,
       onClick: openSupplyDialog,
     },
     {
       id: 3,
-      name: "采购需求",
+      name: "采购申请",
       shortName: "购",
       color: "bg-blue-500",
       icon: ShoppingCart,
@@ -532,7 +532,7 @@ const QuickLinks = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="选择办公用品" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" className="z-[9999]">
                   {supplies
                     .filter((s) => s.is_active && s.current_stock > 0)
                     .map((supply) => (
@@ -573,11 +573,11 @@ const QuickLinks = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 采购需求对话框 */}
+      {/* 采购申请对话框 */}
       <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>新建采购需求</DialogTitle>
+            <DialogTitle>新建采购申请</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -589,7 +589,7 @@ const QuickLinks = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="选择办公用品" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" className="z-[9999]">
                   {supplies
                     .filter((s) => s.is_active)
                     .map((supply) => (
