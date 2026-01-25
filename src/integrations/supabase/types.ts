@@ -132,6 +132,79 @@ export type Database = {
           },
         ]
       }
+      approval_instances: {
+        Row: {
+          business_id: string
+          business_type: string
+          completed_at: string | null
+          created_at: string
+          current_node_index: number
+          form_data: Json | null
+          id: string
+          initiator_id: string
+          started_at: string
+          status: Database["public"]["Enums"]["approval_instance_status"]
+          template_id: string
+          updated_at: string
+          version_id: string
+          version_number: number
+        }
+        Insert: {
+          business_id: string
+          business_type: string
+          completed_at?: string | null
+          created_at?: string
+          current_node_index?: number
+          form_data?: Json | null
+          id?: string
+          initiator_id: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["approval_instance_status"]
+          template_id: string
+          updated_at?: string
+          version_id: string
+          version_number: number
+        }
+        Update: {
+          business_id?: string
+          business_type?: string
+          completed_at?: string | null
+          created_at?: string
+          current_node_index?: number
+          form_data?: Json | null
+          id?: string
+          initiator_id?: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["approval_instance_status"]
+          template_id?: string
+          updated_at?: string
+          version_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_instances_initiator_id_fkey"
+            columns: ["initiator_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "approval_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_instances_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "approval_process_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_nodes: {
         Row: {
           approver_ids: string[] | null
@@ -225,6 +298,73 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "approval_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_records: {
+        Row: {
+          approver_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          instance_id: string
+          node_index: number
+          node_name: string
+          node_type: string
+          processed_at: string | null
+          status: Database["public"]["Enums"]["approval_record_status"]
+          transferred_to: string | null
+          updated_at: string
+        }
+        Insert: {
+          approver_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          instance_id: string
+          node_index: number
+          node_name: string
+          node_type: string
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["approval_record_status"]
+          transferred_to?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approver_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string
+          node_index?: number
+          node_name?: string
+          node_type?: string
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["approval_record_status"]
+          transferred_to?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_records_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_records_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "approval_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_records_transferred_to_fkey"
+            columns: ["transferred_to"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -933,6 +1073,8 @@ export type Database = {
       todo_items: {
         Row: {
           action_url: string | null
+          approval_instance_id: string | null
+          approval_version_number: number | null
           assignee_id: string
           business_id: string | null
           business_type: Database["public"]["Enums"]["todo_business_type"]
@@ -955,6 +1097,8 @@ export type Database = {
         }
         Insert: {
           action_url?: string | null
+          approval_instance_id?: string | null
+          approval_version_number?: number | null
           assignee_id: string
           business_id?: string | null
           business_type: Database["public"]["Enums"]["todo_business_type"]
@@ -977,6 +1121,8 @@ export type Database = {
         }
         Update: {
           action_url?: string | null
+          approval_instance_id?: string | null
+          approval_version_number?: number | null
           assignee_id?: string
           business_id?: string | null
           business_type?: Database["public"]["Enums"]["todo_business_type"]
@@ -998,6 +1144,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "todo_items_approval_instance_id_fkey"
+            columns: ["approval_instance_id"]
+            isOneToOne: false
+            referencedRelation: "approval_instances"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "todo_items_assignee_id_fkey"
             columns: ["assignee_id"]
@@ -1085,6 +1238,17 @@ export type Database = {
         | "cancelled"
       absence_type: "out" | "leave" | "business_trip" | "meeting"
       app_role: "admin" | "user"
+      approval_instance_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+        | "expired"
+      approval_record_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "transferred"
       contact_status: "on_duty" | "out" | "leave" | "business_trip" | "meeting"
       data_scope: "self" | "department" | "organization" | "all"
       leave_type: "annual" | "sick" | "personal"
@@ -1095,6 +1259,7 @@ export type Database = {
         | "supply_requisition"
         | "purchase_request"
         | "external_approval"
+        | "business_trip"
       todo_priority: "urgent" | "normal" | "low"
       todo_source: "internal" | "external"
       todo_status:
@@ -1240,6 +1405,19 @@ export const Constants = {
       ],
       absence_type: ["out", "leave", "business_trip", "meeting"],
       app_role: ["admin", "user"],
+      approval_instance_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+        "expired",
+      ],
+      approval_record_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "transferred",
+      ],
       contact_status: ["on_duty", "out", "leave", "business_trip", "meeting"],
       data_scope: ["self", "department", "organization", "all"],
       leave_type: ["annual", "sick", "personal"],
@@ -1250,6 +1428,7 @@ export const Constants = {
         "supply_requisition",
         "purchase_request",
         "external_approval",
+        "business_trip",
       ],
       todo_priority: ["urgent", "normal", "low"],
       todo_source: ["internal", "external"],
