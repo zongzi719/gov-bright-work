@@ -855,7 +855,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
               {/* 内容 */}
               <div className="flex-1 pb-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{node.name}</span>
+                  <span className="font-medium">
+                    {node.name}
+                    {node.type === "approver" && node.approvalMode === "or" && (
+                      <span className="text-muted-foreground font-normal"> (或签)</span>
+                    )}
+                    {node.type === "approver" && node.approvalMode === "countersign" && (
+                      <span className="text-muted-foreground font-normal"> (会签)</span>
+                    )}
+                  </span>
                   {node.status === "current" && (
                     <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
                       当前节点
@@ -877,8 +885,6 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                 {node.type !== "initiator" && node.type !== "end" && node.approverNames && node.records.length === 0 && (
                   <div className="mt-1 text-sm text-muted-foreground">
                     {node.approverNames}
-                    {node.approvalMode === "or" && " (或签)"}
-                    {node.approvalMode === "countersign" && " (会签)"}
                   </div>
                 )}
 
