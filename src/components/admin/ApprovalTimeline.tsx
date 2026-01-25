@@ -183,10 +183,16 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
 
   // 展平节点树用于执行 - 只保留实际执行路径上的节点
   // 节点存储为扁平列表，通过 ID 引用关联
-  const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, any>): ApprovalNode[] => {
+  const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, any>, initiatorId?: string): ApprovalNode[] => {
     const result: ApprovalNode[] = [];
     
-    console.log("[ApprovalTimeline] Flattening nodes with formData:", formData);
+    // 将 initiator_id 注入到 formData 中用于条件评估
+    const enrichedFormData = {
+      ...formData,
+      contact_id: initiatorId || formData.contact_id,
+    };
+    
+    console.log("[ApprovalTimeline] Flattening nodes with enrichedFormData:", enrichedFormData);
     
     // 构建节点ID到节点的映射
     const nodeMap = new Map<string, ApprovalNode>();
@@ -230,7 +236,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
         for (const branch of branches) {
           // 分支的 condition_expression.condition_groups 包含该分支的条件
           const branchCondition = branch.condition_expression;
-          const matches = evaluateCondition(branchCondition, formData);
+          const matches = evaluateCondition(branchCondition, enrichedFormData);
           console.log(`[ApprovalTimeline] Branch ${branch.node_name} conditions:`, branch.condition_expression?.condition_groups);
           console.log(`[ApprovalTimeline] Branch ${branch.node_name} matches: ${matches}`);
           
@@ -252,7 +258,6 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
         }
       } else if (node.node_type === "condition_branch") {
         // 分支节点本身不加入结果（不应该在主流程中单独出现）
-        // 这种情况通常不会发生，因为分支已被排除在主流程之外
       } else {
         // 普通节点（approver, cc 等）- 加入结果
         result.push(node);
@@ -343,7 +348,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     if (!instance) return [];
     
     const formData = instance.form_data || {};
-    const executionNodes = flattenNodesForExecution(nodesSnapshot, formData);
+    const executionNodes = flattenNodesForExecution(nodesSnapshot, formData, instance.initiator_id);
     
     // 过滤掉 condition 类型节点
     const displayNodes = executionNodes.filter(n => 
