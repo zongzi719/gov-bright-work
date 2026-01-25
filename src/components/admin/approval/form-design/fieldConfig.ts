@@ -140,10 +140,15 @@ const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
  * 注意：申请人字段放在最前面
  */
 const businessTypeFieldFilter: Record<string, string[]> = {
+  // 出差申请：申请人、事由、开始时间、结束时间、备注（与前台表单一致）
   business_trip: ["contact_id", "reason", "start_time", "end_time", "notes"],
+  // 请假申请：申请人、请假类型、事由、开始时间、结束时间、备注
   leave: ["contact_id", "leave_type", "reason", "start_time", "end_time", "notes"],
+  // 外出申请：申请人、事由、开始时间、结束时间、备注
   out: ["contact_id", "reason", "start_time", "end_time", "notes"],
+  // 物品领用：申请人、领用物品、领用数量
   supply_requisition: ["requisition_by", "supply_id", "quantity"],
+  // 采购申请：申请人、采购物品、采购数量、采购原因
   purchase_request: ["requested_by", "supply_id", "quantity", "reason"],
 };
 
@@ -255,6 +260,10 @@ export const getDefaultFieldsForBusinessType = (businessType: string): Omit<Form
     }
     // textarea 始终占满整行
     if (fieldType === "textarea") {
+      colSpan = 2;
+    }
+    // 申请人字段（user类型）占满整行
+    if (fieldType === "user") {
       colSpan = 2;
     }
 
