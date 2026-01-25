@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Plus, 
   User, 
@@ -19,7 +20,11 @@ import {
   ZoomOut,
   Maximize,
   GitBranch,
-  X
+  X,
+  ChevronDown,
+  Check,
+  Clock,
+  Upload
 } from "lucide-react";
 import { toast } from "sonner";
 import ConditionConfig from "./process-design/ConditionConfig";
@@ -56,6 +61,18 @@ interface Contact {
   name: string;
   department: string | null;
   position: string | null;
+}
+
+interface ProcessVersion {
+  id: string;
+  template_id: string;
+  version_number: number;
+  version_name: string;
+  published_by: string | null;
+  published_at: string;
+  nodes_snapshot: any;
+  is_current: boolean;
+  notes: string | null;
 }
 
 interface ApprovalProcessDesignProps {
@@ -189,6 +206,14 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   const [insertAfterIndex, setInsertAfterIndex] = useState<number>(-1);
   const [activeTab, setActiveTab] = useState("approver");
   
+  // 版本管理状态
+  const [versions, setVersions] = useState<ProcessVersion[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<ProcessVersion | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string>("");
+  const [versionDropdownOpen, setVersionDropdownOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  
   // 画布状态
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -222,7 +247,102 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     fetchNodes();
     fetchContacts();
     fetchFormFields();
+    fetchVersions();
   }, [templateId]);
+
+  // 检测节点变化
+  useEffect(() => {
+    const currentSnapshot = JSON.stringify(nodes);
+    if (lastSavedSnapshot && currentSnapshot !== lastSavedSnapshot) {
+      setHasChanges(true);
+    }
+  }, [nodes, lastSavedSnapshot]);
+
+  // 获取版本列表
+  const fetchVersions = async () => {
+    const { data, error } = await supabase
+      .from("approval_process_versions" as any)
+      .select("*")
+      .eq("template_id", templateId)
+      .order("version_number", { ascending: false });
+
+    if (!error && data) {
+      setVersions(data as unknown as ProcessVersion[]);
+      const currentVersion = (data as unknown as ProcessVersion[]).find(v => v.is_current);
+      if (currentVersion) {
+        setSelectedVersion(currentVersion);
+      }
+    }
+  };
+
+  // 发布新版本
+  const handlePublishVersion = async () => {
+    if (nodes.length === 0) {
+      toast.error("请先添加流程节点");
+      return;
+    }
+
+    setPublishing(true);
+    
+    // 获取当前最大版本号
+    const maxVersion = versions.length > 0 ? Math.max(...versions.map(v => v.version_number)) : 0;
+    const newVersionNumber = maxVersion + 1;
+
+    // 将所有版本设为非当前
+    await supabase
+      .from("approval_process_versions" as any)
+      .update({ is_current: false })
+      .eq("template_id", templateId);
+
+    // 创建新版本
+    const { data: newVersion, error } = await supabase
+      .from("approval_process_versions" as any)
+      .insert({
+        template_id: templateId,
+        version_number: newVersionNumber,
+        version_name: `流程版本V${newVersionNumber}`,
+        published_by: "admin",
+        nodes_snapshot: nodes,
+        is_current: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("发布版本失败");
+      setPublishing(false);
+      return;
+    }
+
+    // 更新模板的当前版本
+    await supabase
+      .from("approval_templates" as any)
+      .update({ 
+        current_version_id: (newVersion as any).id,
+        last_process_saved_at: new Date().toISOString(),
+      })
+      .eq("id", templateId);
+
+    toast.success(`已发布版本 V${newVersionNumber}`);
+    setLastSavedSnapshot(JSON.stringify(nodes));
+    setHasChanges(false);
+    setPublishing(false);
+    await fetchVersions();
+  };
+
+  // 切换版本（仅查看）
+  const handleSelectVersion = async (version: ProcessVersion) => {
+    setSelectedVersion(version);
+    setVersionDropdownOpen(false);
+    
+    // 如果是当前版本，显示实际节点
+    if (version.is_current) {
+      await fetchNodes();
+    } else {
+      // 显示快照数据（只读）
+      setNodes(version.nodes_snapshot as ApprovalNode[]);
+    }
+  };
 
   const fetchFormFields = async () => {
     const { data } = await supabase
@@ -255,7 +375,14 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       setLoading(false);
       return;
     }
-    setNodes((data as unknown as ApprovalNode[]) || []);
+    const fetchedNodes = (data as unknown as ApprovalNode[]) || [];
+    setNodes(fetchedNodes);
+    
+    // 初始化快照用于检测变化
+    if (!lastSavedSnapshot) {
+      setLastSavedSnapshot(JSON.stringify(fetchedNodes));
+    }
+    
     setLoading(false);
   };
 
@@ -640,19 +767,33 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     return approverTypeLabels[node.approver_type] || "未设置";
   };
 
+  // 判断是否在查看历史版本 - 需要在 AddNodeButton 之前定义
+  const isViewingHistoricVersion = selectedVersion && !selectedVersion.is_current;
+
   // 添加节点按钮组件
-  const AddNodeButton = ({ afterIndex }: { afterIndex: number }) => (
-    <div className="flex flex-col items-center add-node-btn">
-      <div className="w-px h-6 bg-border" />
-      <button
-        onClick={(e) => handleAddClick(e, afterIndex)}
-        className="w-7 h-7 rounded-full border-2 border-primary bg-background flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors group z-10"
-      >
-        <Plus className="w-4 h-4 text-primary group-hover:text-primary-foreground" />
-      </button>
-      <div className="w-px h-6 bg-border" />
-    </div>
-  );
+  const AddNodeButton = ({ afterIndex }: { afterIndex: number }) => {
+    // 历史版本模式下隐藏添加按钮
+    if (isViewingHistoricVersion) {
+      return (
+        <div className="flex flex-col items-center add-node-btn">
+          <div className="w-px h-6 bg-border" />
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex flex-col items-center add-node-btn">
+        <div className="w-px h-6 bg-border" />
+        <button
+          onClick={(e) => handleAddClick(e, afterIndex)}
+          className="w-7 h-7 rounded-full border-2 border-primary bg-background flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors group z-10"
+        >
+          <Plus className="w-4 h-4 text-primary group-hover:text-primary-foreground" />
+        </button>
+        <div className="w-px h-6 bg-border" />
+      </div>
+    );
+  };
 
   // 快速删除节点 (从画布上)
   const handleQuickDeleteNode = async (e: React.MouseEvent, nodeId: string) => {
@@ -839,8 +980,8 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         }`}
         onClick={() => handleNodeClick(node)}
       >
-        {/* 删除按钮 - 使用 CSS group-hover */}
-        {node.node_type !== 'condition_branch' && (
+        {/* 删除按钮 - 使用 CSS group-hover, 历史版本模式下隐藏 */}
+        {node.node_type !== 'condition_branch' && !isViewingHistoricVersion && (
           <button
             onClick={(e) => handleQuickDeleteNode(e, node.id)}
             className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-all opacity-0 group-hover:opacity-100 z-20"
@@ -937,6 +1078,15 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
   // 分支内添加节点按钮 - 使用共享状态避免 hooks 问题
   const BranchAddNodeButton = ({ branchNode, afterNodeId }: { branchNode: ApprovalNode; afterNodeId: string | null }) => {
+    // 历史版本模式下隐藏添加按钮
+    if (isViewingHistoricVersion) {
+      return (
+        <div className="flex flex-col items-center add-node-btn">
+          <div className="w-px h-6 bg-border" />
+        </div>
+      );
+    }
+    
     const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -987,15 +1137,17 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
     return (
       <div className="relative">
-        {/* 添加条件按钮 */}
-        <div className="flex justify-center mb-2">
-          <button
-            onClick={() => handleAddConditionToBranch(parentNode)}
-            className="px-4 py-1 text-sm text-primary border border-primary rounded-md hover:bg-primary/10 transition-colors"
-          >
-            添加条件
-          </button>
-        </div>
+        {/* 添加条件按钮 - 历史版本模式下隐藏 */}
+        {!isViewingHistoricVersion && (
+          <div className="flex justify-center mb-2">
+            <button
+              onClick={() => handleAddConditionToBranch(parentNode)}
+              className="px-4 py-1 text-sm text-primary border border-primary rounded-md hover:bg-primary/10 transition-colors"
+            >
+              添加条件
+            </button>
+          </div>
+        )}
 
         {/* 分支容器 */}
         <div className={`flex ${layout === 'left' ? 'justify-start' : 'justify-center'} gap-8`}>
@@ -1027,13 +1179,15 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                 
                 {/* 分支卡片 - 带删除按钮 */}
                 <div className="relative group">
-                  {/* 分支删除按钮 */}
-                  <button
-                    onClick={(e) => handleDeleteSingleBranch(e, branch, parentNode)}
-                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-all opacity-0 group-hover:opacity-100 z-20"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  {/* 分支删除按钮 - 历史版本模式下隐藏 */}
+                  {!isViewingHistoricVersion && (
+                    <button
+                      onClick={(e) => handleDeleteSingleBranch(e, branch, parentNode)}
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-all opacity-0 group-hover:opacity-100 z-20"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                   
                   <div 
                     className="flow-node w-56 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden cursor-pointer hover:border-muted-foreground/50 transition-all"
@@ -1110,6 +1264,110 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
   return (
     <div className="relative h-full min-h-[calc(100vh-300px)] bg-muted/50 rounded-xl overflow-hidden">
+      {/* 顶部工具栏 */}
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-3">
+        {/* 版本下拉选择器 */}
+        <Popover open={versionDropdownOpen} onOpenChange={setVersionDropdownOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              {selectedVersion ? (
+                <>
+                  <span className={selectedVersion.is_current ? "text-foreground" : "text-muted-foreground"}>
+                    {selectedVersion.is_current ? "未发布版本" : selectedVersion.version_name}
+                  </span>
+                  {selectedVersion.is_current && (
+                    <Badge variant="outline" className="text-orange-600 border-orange-300">
+                      设计中
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <span>选择版本</span>
+              )}
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-0" align="start">
+            <div className="max-h-80 overflow-auto">
+              {/* 未发布版本（当前编辑） */}
+              <div 
+                className={`flex items-center gap-2 p-3 cursor-pointer hover:bg-muted border-b ${selectedVersion?.is_current ? 'bg-primary/10' : ''}`}
+                onClick={() => {
+                  setSelectedVersion(versions.find(v => v.is_current) || null);
+                  setVersionDropdownOpen(false);
+                  fetchNodes();
+                }}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">未发布版本</span>
+                    <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+                      设计中
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    <Clock className="w-3 h-3" />
+                    <span>正在编辑</span>
+                  </div>
+                </div>
+                {selectedVersion?.is_current && <Check className="w-4 h-4 text-primary" />}
+              </div>
+              
+              {/* 已发布版本列表 */}
+              {versions.filter(v => !v.is_current).map((version) => (
+                <div 
+                  key={version.id}
+                  className={`flex items-center gap-2 p-3 cursor-pointer hover:bg-muted border-b ${selectedVersion?.id === version.id ? 'bg-primary/10' : ''}`}
+                  onClick={() => handleSelectVersion(version)}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{version.version_name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        启用中
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <span>{version.published_by}</span>
+                      <span>·</span>
+                      <span>{new Date(version.published_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}发布</span>
+                    </div>
+                  </div>
+                  {selectedVersion?.id === version.id && <Check className="w-4 h-4 text-primary" />}
+                </div>
+              ))}
+              
+              {versions.length === 0 && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  暂无已发布版本
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* 历史版本提示 */}
+        {isViewingHistoricVersion && (
+          <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-300">
+            只读 - 正在查看历史版本
+          </Badge>
+        )}
+      </div>
+
+      {/* 右上角发布按钮 */}
+      <div className="absolute top-4 right-28 z-30 flex items-center gap-2">
+        {hasChanges && !isViewingHistoricVersion && (
+          <Button 
+            onClick={handlePublishVersion}
+            disabled={publishing}
+            className="gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            {publishing ? "发布中..." : "发布"}
+          </Button>
+        )}
+      </div>
+
       {/* 缩放控制按钮 */}
       <div className="absolute top-4 right-4 z-30 flex flex-col gap-1 bg-background rounded-lg shadow-md border p-1">
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn}>
