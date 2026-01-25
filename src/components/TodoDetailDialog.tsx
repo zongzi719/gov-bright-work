@@ -137,7 +137,18 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const [approverContacts, setApproverContacts] = useState<Map<string, ContactInfo>>(new Map());
   const [versionNumber, setVersionNumber] = useState<number>(1);
 
-  const { advanceToNextNode, getInitiatorInfo } = useApprovalProgression();
+  const { 
+    advanceToNextNode, 
+    getInitiatorInfo, 
+    returnToInitiatorCurrentNode, 
+    returnToInitiatorRestart, 
+    returnToPreviousNode,
+    withdrawApplication,
+    checkCanWithdraw,
+    flattenNodesForExecution 
+  } = useApprovalProgression();
+
+  const [canWithdraw, setCanWithdraw] = useState(false);
 
   // 获取当前用户
   const getCurrentUser = () => {
@@ -155,6 +166,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   useEffect(() => {
     if (open && todoItem?.approval_instance_id) {
       fetchApprovalDetails();
+      // 检查是否可以撤回（仅发起人可见）
+      if (currentUser?.id && instance?.initiator_id === currentUser.id) {
+        checkCanWithdraw(todoItem.approval_instance_id, currentUser.id).then(setCanWithdraw);
+      }
     }
   }, [open, todoItem?.approval_instance_id]);
 
@@ -535,31 +550,71 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 处理退回
   const handleReturn = async (returnType: ReturnType) => {
-    if (!todoItem?.approval_instance_id || !currentUser?.id) return;
+    if (!todoItem?.approval_instance_id || !currentUser?.id || !instance) return;
 
     setSubmitting(true);
 
     try {
-      const statusToSet: "rejected" = "rejected"; // 在 approval_records 中统一使用 rejected 状态
+      const formData = { ...businessData, ...instance?.form_data };
+      let result: { success: boolean; error?: string };
       let toastMessage = "";
 
       switch (returnType) {
         case "return_to_initiator":
+          result = await returnToInitiatorCurrentNode(
+            todoItem.approval_instance_id,
+            todoItem.business_id || "",
+            todoItem.business_type,
+            instance.initiator_id || "",
+            todoItem.title,
+            versionNumber,
+            instance.current_node_index,
+            comment.trim()
+          );
           toastMessage = "已退回发起人，发起人修改后由当前节点继续审批";
           break;
         case "return_restart":
+          result = await returnToInitiatorRestart(
+            todoItem.approval_instance_id,
+            todoItem.business_id || "",
+            todoItem.business_type,
+            instance.initiator_id || "",
+            todoItem.title,
+            versionNumber,
+            comment.trim()
+          );
           toastMessage = "已退回发起人，发起人修改后需重新走完整审批流程";
           break;
         case "return_to_previous":
+          const initiatorInfo = await getInitiatorInfo(instance.initiator_id || "");
+          result = await returnToPreviousNode(
+            todoItem.approval_instance_id,
+            todoItem.business_id || "",
+            todoItem.business_type,
+            instance.initiator_id || "",
+            initiatorInfo?.name || "未知",
+            todoItem.title,
+            nodesSnapshot,
+            formData,
+            versionNumber,
+            instance.current_node_index,
+            comment.trim()
+          );
           toastMessage = "已退回至上一节点";
           break;
+        default:
+          result = { success: false, error: "未知退回类型" };
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || "退回失败");
       }
 
       // 更新当前用户的审批记录
-      const { error: recordError } = await supabase
+      await supabase
         .from("approval_records")
         .update({
-          status: statusToSet,
+          status: "rejected",
           comment: `[${toastMessage}] ${comment.trim() || ""}`,
           processed_at: new Date().toISOString(),
         })
@@ -567,10 +622,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         .eq("approver_id", currentUser.id)
         .eq("status", "pending");
 
-      if (recordError) throw recordError;
-
       // 更新待办状态
-      const { error: todoError } = await supabase
+      await supabase
         .from("todo_items")
         .update({
           status: "rejected",
@@ -581,20 +634,43 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         })
         .eq("id", todoItem.id);
 
-      if (todoError) throw todoError;
-
-      // TODO: 根据退回类型处理流程逻辑
-      // return_to_initiator: 退回发起人，记录当前节点索引，发起人修改后从此节点继续
-      // return_restart: 退回发起人，发起人修改后从头开始审批
-      // return_to_previous: 退回上一节点，创建上一节点的待办
-
       toast.success(toastMessage);
       onOpenChange(false);
       onApprovalComplete?.();
 
     } catch (error) {
       console.error("Failed to return approval:", error);
-      toast.error("退回失败");
+      toast.error(error instanceof Error ? error.message : "退回失败");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 处理撤回（发起人）
+  const handleWithdraw = async () => {
+    if (!todoItem?.approval_instance_id || !currentUser?.id) return;
+
+    setSubmitting(true);
+
+    try {
+      const result = await withdrawApplication(
+        todoItem.approval_instance_id,
+        instance?.initiator_id || "",
+        currentUser.id
+      );
+
+      if (!result.success) {
+        toast.error(result.error || "撤回失败");
+        return;
+      }
+
+      toast.success("申请已撤回");
+      onOpenChange(false);
+      onApprovalComplete?.();
+
+    } catch (error) {
+      console.error("Failed to withdraw application:", error);
+      toast.error("撤回失败");
     } finally {
       setSubmitting(false);
     }
@@ -753,6 +829,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 判断当前用户是否可以审批
   const canApprove = todoItem?.status === "pending";
+  // 判断当前用户是否是发起人
+  const isInitiator = currentUser?.id === instance?.initiator_id;
 
   if (!todoItem) return null;
 
@@ -806,46 +884,65 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                     />
                   </div>
                   <div className="flex justify-end gap-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          disabled={submitting}
-                          className="text-destructive border-destructive hover:bg-destructive/10"
-                        >
-                          <RotateCcw className="w-4 h-4 mr-2" />
-                          退回
-                          <ChevronDown className="w-4 h-4 ml-2" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-72">
-                        <DropdownMenuItem onClick={() => handleReturn("return_to_initiator")}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">退回发起人（当前节点继续）</span>
-                            <span className="text-xs text-muted-foreground">发起人修改后由当前节点继续审批</span>
-                          </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleReturn("return_restart")}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">退回发起人（重新审批）</span>
-                            <span className="text-xs text-muted-foreground">发起人修改后所有节点需重新审批</span>
-                          </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleReturn("return_to_previous")}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">退回至上一节点</span>
-                            <span className="text-xs text-muted-foreground">退回给上一个审批节点重新审批</span>
-                          </div>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                      onClick={handleApprove}
-                      disabled={submitting}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      同意
-                    </Button>
+                    {/* 发起人撤回按钮 */}
+                    {isInitiator && canWithdraw && (
+                      <Button
+                        variant="outline"
+                        onClick={handleWithdraw}
+                        disabled={submitting}
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        撤回申请
+                      </Button>
+                    )}
+                    
+                    {/* 审批人退回按钮 */}
+                    {!isInitiator && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            disabled={submitting}
+                            className="text-destructive border-destructive hover:bg-destructive/10"
+                          >
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            退回
+                            <ChevronDown className="w-4 h-4 ml-2" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-72">
+                          <DropdownMenuItem onClick={() => handleReturn("return_to_initiator")}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">退回发起人（当前节点继续）</span>
+                              <span className="text-xs text-muted-foreground">发起人修改后由当前节点继续审批</span>
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleReturn("return_restart")}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">退回发起人（重新审批）</span>
+                              <span className="text-xs text-muted-foreground">发起人修改后所有节点需重新审批</span>
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleReturn("return_to_previous")}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">退回至上一节点</span>
+                              <span className="text-xs text-muted-foreground">退回给上一个审批节点重新审批</span>
+                            </div>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                    
+                    {/* 审批人同意按钮 */}
+                    {!isInitiator && (
+                      <Button
+                        onClick={handleApprove}
+                        disabled={submitting}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        同意
+                      </Button>
+                    )}
                   </div>
                 </div>
               </>
