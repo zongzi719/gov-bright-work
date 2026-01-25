@@ -138,6 +138,7 @@ export type Database = {
           approver_type: string
           condition_expression: Json | null
           created_at: string
+          field_permissions: Json | null
           id: string
           node_name: string
           node_type: string
@@ -150,6 +151,7 @@ export type Database = {
           approver_type?: string
           condition_expression?: Json | null
           created_at?: string
+          field_permissions?: Json | null
           id?: string
           node_name: string
           node_type?: string
@@ -162,6 +164,7 @@ export type Database = {
           approver_type?: string
           condition_expression?: Json | null
           created_at?: string
+          field_permissions?: Json | null
           id?: string
           node_name?: string
           node_type?: string

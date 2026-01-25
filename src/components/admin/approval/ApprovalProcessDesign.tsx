@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   Plus, 
   User, 
@@ -21,6 +23,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// 字段权限类型
+type FieldPermission = "editable" | "readonly" | "hidden";
+
+interface FieldPermissions {
+  [fieldName: string]: FieldPermission;
+}
+
 interface ApprovalNode {
   id: string;
   template_id: string;
@@ -30,6 +39,14 @@ interface ApprovalNode {
   approver_ids: string[] | null;
   sort_order: number;
   condition_expression: any;
+  field_permissions?: FieldPermissions;
+}
+
+interface FormField {
+  id: string;
+  field_name: string;
+  field_label: string;
+  is_required: boolean;
 }
 
 interface Contact {
@@ -154,10 +171,12 @@ const NodeTypeSelector = ({ open, position, onClose, onSelect }: NodeTypeSelecto
 const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   const [nodes, setNodes] = useState<ApprovalNode[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [formFields, setFormFields] = useState<FormField[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<ApprovalNode | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [insertAfterIndex, setInsertAfterIndex] = useState<number>(-1);
+  const [activeTab, setActiveTab] = useState("approver");
   
   // 画布状态
   const [scale, setScale] = useState(1);
@@ -175,12 +194,23 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     node_name: "",
     approver_type: "self",
     approver_ids: [] as string[],
+    field_permissions: {} as FieldPermissions,
   });
 
   useEffect(() => {
     fetchNodes();
     fetchContacts();
+    fetchFormFields();
   }, [templateId]);
+
+  const fetchFormFields = async () => {
+    const { data } = await supabase
+      .from("approval_form_fields" as any)
+      .select("id, field_name, field_label, is_required")
+      .eq("template_id", templateId)
+      .order("sort_order", { ascending: true });
+    setFormFields((data as unknown as FormField[]) || []);
+  };
 
   const fetchContacts = async () => {
     const { data } = await supabase
@@ -260,6 +290,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       node_name: config?.label || "",
       approver_type: type === 'condition' ? 'specific' : 'self',
       approver_ids: [],
+      field_permissions: {},
     });
     // 先保存节点，然后打开详情面板
     handleSaveNewNode(type);
@@ -326,6 +357,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         node_name: config?.label || "",
         approver_type: type === 'condition' ? 'specific' : 'self',
         approver_ids: [],
+        field_permissions: {},
       });
       setDetailPanelOpen(true);
     }
@@ -334,13 +366,37 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   // 点击节点打开详情
   const handleNodeClick = (node: ApprovalNode) => {
     setSelectedNode(node);
+    // 抄送节点默认所有字段只读
+    let permissions = node.field_permissions || {};
+    if (node.node_type === 'cc') {
+      // 确保所有字段为只读
+      formFields.forEach(field => {
+        permissions[field.field_name] = 'readonly';
+      });
+    }
     setNodeForm({
       node_type: node.node_type,
       node_name: node.node_name,
       approver_type: node.approver_type,
       approver_ids: node.approver_ids || [],
+      field_permissions: permissions,
     });
+    setActiveTab("approver");
     setDetailPanelOpen(true);
+  };
+
+  // 更新字段权限
+  const handleFieldPermissionChange = (fieldName: string, permission: FieldPermission) => {
+    // 抄送节点不允许修改权限
+    if (nodeForm.node_type === 'cc') return;
+    
+    setNodeForm(prev => ({
+      ...prev,
+      field_permissions: {
+        ...prev.field_permissions,
+        [fieldName]: permission,
+      },
+    }));
   };
 
   // 保存节点详情
@@ -364,6 +420,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         node_name: nodeForm.node_name,
         approver_type: nodeForm.approver_type,
         approver_ids: nodeForm.approver_ids,
+        field_permissions: nodeForm.field_permissions,
       })
       .eq("id", selectedNode.id);
 
@@ -610,63 +667,154 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
               </div>
 
               {nodeForm.node_type !== 'condition' && (
-                <>
-                  <div>
-                    <Label>审批人设置</Label>
-                    <Select
-                      value={nodeForm.approver_type}
-                      onValueChange={(value) => setNodeForm({ ...nodeForm, approver_type: value })}
-                    >
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="self">发起人自选</SelectItem>
-                        <SelectItem value="specific">指定成员</SelectItem>
-                        <SelectItem value="supervisor">直属主管</SelectItem>
-                        <SelectItem value="department_head">部门负责人</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {nodeForm.approver_type === "specific" && (
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="approver">
+                      {nodeForm.node_type === 'cc' ? '设置抄送人' : '设置审批人'}
+                    </TabsTrigger>
+                    <TabsTrigger value="permissions">表单操作权限</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="approver" className="mt-4 space-y-4">
                     <div>
-                      <Label>选择审批人</Label>
-                      <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 space-y-1">
-                        {contacts.map((contact) => (
-                          <div
-                            key={contact.id}
-                            className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted ${
-                              nodeForm.approver_ids.includes(contact.id) ? "bg-primary/10" : ""
-                            }`}
-                            onClick={() => toggleApprover(contact.id)}
-                          >
-                            <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                              nodeForm.approver_ids.includes(contact.id) ? "bg-primary border-primary text-primary-foreground" : ""
-                            }`}>
-                              {nodeForm.approver_ids.includes(contact.id) && "✓"}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium">{contact.name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {contact.department} {contact.position}
+                      <Label>{nodeForm.node_type === 'cc' ? '抄送人设置' : '审批人设置'}</Label>
+                      <Select
+                        value={nodeForm.approver_type}
+                        onValueChange={(value) => setNodeForm({ ...nodeForm, approver_type: value })}
+                      >
+                        <SelectTrigger className="mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="self">发起人自选</SelectItem>
+                          <SelectItem value="specific">指定成员</SelectItem>
+                          <SelectItem value="supervisor">直属主管</SelectItem>
+                          <SelectItem value="department_head">部门负责人</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {nodeForm.approver_type === "specific" && (
+                      <div>
+                        <Label>选择{nodeForm.node_type === 'cc' ? '抄送人' : '审批人'}</Label>
+                        <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 space-y-1">
+                          {contacts.map((contact) => (
+                            <div
+                              key={contact.id}
+                              className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted ${
+                                nodeForm.approver_ids.includes(contact.id) ? "bg-primary/10" : ""
+                              }`}
+                              onClick={() => toggleApprover(contact.id)}
+                            >
+                              <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                                nodeForm.approver_ids.includes(contact.id) ? "bg-primary border-primary text-primary-foreground" : ""
+                              }`}>
+                                {nodeForm.approver_ids.includes(contact.id) && "✓"}
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium">{contact.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {contact.department} {contact.position}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                      {nodeForm.approver_ids.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {nodeForm.approver_ids.map(id => (
-                            <Badge key={id} variant="secondary">
-                              {getContactName(id)}
-                            </Badge>
                           ))}
                         </div>
-                      )}
+                        {nodeForm.approver_ids.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {nodeForm.approver_ids.map(id => (
+                              <Badge key={id} variant="secondary">
+                                {getContactName(id)}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="permissions" className="mt-4">
+                    {nodeForm.node_type === 'cc' && (
+                      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="text-sm text-blue-700">
+                          抄送节点所有字段默认为只读，不可更改
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="border rounded-lg overflow-hidden">
+                      {/* 表头 */}
+                      <div className="grid grid-cols-4 gap-2 px-4 py-3 bg-muted/50 border-b text-sm font-medium">
+                        <div>表单字段</div>
+                        <div className="text-center">可编辑</div>
+                        <div className="text-center">只读</div>
+                        <div className="text-center">隐藏</div>
+                      </div>
+                      
+                      {/* 字段列表 */}
+                      <div className="divide-y">
+                        {formFields.map((field) => {
+                          const permission = nodeForm.field_permissions[field.field_name] || 'readonly';
+                          const isCC = nodeForm.node_type === 'cc';
+                          
+                          return (
+                            <div key={field.id} className="grid grid-cols-4 gap-2 px-4 py-3 items-center text-sm">
+                              <div className="flex items-center gap-1">
+                                {field.is_required && <span className="text-destructive">*</span>}
+                                <span>{field.field_label}</span>
+                              </div>
+                              <div className="flex justify-center">
+                                <RadioGroup
+                                  value={permission}
+                                  onValueChange={(value) => handleFieldPermissionChange(field.field_name, value as FieldPermission)}
+                                  disabled={isCC}
+                                  className="flex justify-center"
+                                >
+                                  <RadioGroupItem 
+                                    value="editable" 
+                                    className={isCC ? "opacity-50 cursor-not-allowed" : ""}
+                                  />
+                                </RadioGroup>
+                              </div>
+                              <div className="flex justify-center">
+                                <RadioGroup
+                                  value={permission}
+                                  onValueChange={(value) => handleFieldPermissionChange(field.field_name, value as FieldPermission)}
+                                  disabled={isCC}
+                                  className="flex justify-center"
+                                >
+                                  <RadioGroupItem 
+                                    value="readonly" 
+                                    className={isCC ? "opacity-50 cursor-not-allowed" : ""}
+                                  />
+                                </RadioGroup>
+                              </div>
+                              <div className="flex justify-center">
+                                <RadioGroup
+                                  value={permission}
+                                  onValueChange={(value) => handleFieldPermissionChange(field.field_name, value as FieldPermission)}
+                                  disabled={isCC}
+                                  className="flex justify-center"
+                                >
+                                  <RadioGroupItem 
+                                    value="hidden" 
+                                    className={isCC ? "opacity-50 cursor-not-allowed" : ""}
+                                  />
+                                </RadioGroup>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                        {formFields.length === 0 && (
+                          <div className="px-4 py-8 text-center text-muted-foreground">
+                            暂无表单字段，请先在表单设计中添加字段
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </>
+                  </TabsContent>
+                </Tabs>
               )}
 
               {nodeForm.node_type === 'condition' && (
