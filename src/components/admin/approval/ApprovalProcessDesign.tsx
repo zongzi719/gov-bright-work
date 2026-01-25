@@ -262,15 +262,26 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     if (isFirstLoad) return;
     
     const currentSnapshot = JSON.stringify(nodes);
+    
+    // 情况1：从未发布过任何版本 - 只要有节点就认为有变化（需要首次发布）
+    if (versions.length === 0) {
+      setHasChanges(nodes.length > 0);
+      return;
+    }
+    
+    // 情况2：已发布过版本 - 比较当前节点与最后发布的快照
     if (lastSavedSnapshot && currentSnapshot !== lastSavedSnapshot) {
       setHasChanges(true);
     } else if (lastSavedSnapshot && currentSnapshot === lastSavedSnapshot) {
       setHasChanges(false);
     }
-  }, [nodes, lastSavedSnapshot, isFirstLoad]);
+  }, [nodes, lastSavedSnapshot, isFirstLoad, versions.length]);
   
-  // 计算是否显示发布按钮：没有发布过任何版本 OR 有修改
-  const shouldShowPublishButton = versions.length === 0 || hasChanges;
+  // 判断是否为未发布状态：没有发布过任何版本，或者有修改
+  const isUnpublishedState = versions.length === 0 || hasChanges;
+  
+  // 计算是否显示发布按钮：未发布状态 且 有节点
+  const shouldShowPublishButton = isUnpublishedState && nodes.length > 0;
 
   // 获取版本列表
   const fetchVersions = async () => {
@@ -288,6 +299,9 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         setSelectedVersion(currentVersion);
         // 如果有当前版本，以其快照为基准
         setLastSavedSnapshot(JSON.stringify(currentVersion.nodes_snapshot));
+      } else {
+        // 没有当前版本，清空快照
+        setLastSavedSnapshot("");
       }
     }
     setIsFirstLoad(false);
@@ -1315,7 +1329,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         <Popover open={versionDropdownOpen} onOpenChange={setVersionDropdownOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="gap-2">
-              {hasChanges ? (
+              {isUnpublishedState ? (
                 <>
                   <span className="text-foreground">未发布版本</span>
                   <Badge variant="outline" className="text-orange-600 border-orange-300">
@@ -1324,8 +1338,6 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                 </>
               ) : selectedVersion ? (
                 <span className="text-foreground">{selectedVersion.version_name}</span>
-              ) : versions.length > 0 ? (
-                <span className="text-foreground">{versions[0].version_name}</span>
               ) : (
                 <span>选择版本</span>
               )}
@@ -1334,8 +1346,8 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
           </PopoverTrigger>
           <PopoverContent className="w-72 p-0" align="start">
             <div className="max-h-80 overflow-auto">
-              {/* 未发布版本（设计中）- 仅在有修改时显示 */}
-              {hasChanges && (
+              {/* 未发布版本（设计中）- 没有版本时显示，或者有修改时显示 */}
+              {isUnpublishedState && (
                 <div 
                   className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted border-b bg-primary/10"
                   onClick={() => {
@@ -1352,7 +1364,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                     </div>
                     <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                       <Clock className="w-3 h-3" />
-                      <span>正在编辑</span>
+                      <span>{versions.length === 0 ? "尚未发布" : "正在编辑"}</span>
                     </div>
                   </div>
                   <Check className="w-4 h-4 text-primary" />
@@ -1361,7 +1373,9 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
               
               {/* 已发布版本列表 */}
               {versions.map((version) => {
-                const isSelected = hasChanges ? false : (selectedVersion?.id === version.id || (!selectedVersion && version === versions[0]));
+                // 如果处于未发布状态，所有版本都不选中
+                // 否则选中当前选中的版本
+                const isSelected = isUnpublishedState ? false : (selectedVersion?.id === version.id);
                 return (
                   <div 
                     key={version.id}
@@ -1388,7 +1402,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                 );
               })}
               
-              {versions.length === 0 && (
+              {versions.length === 0 && !isUnpublishedState && (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   暂无已发布版本
                 </div>
@@ -1405,7 +1419,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         )}
       </div>
 
-      {/* 右上角发布按钮 - 首次发布或有修改时显示 */}
+      {/* 右上角发布按钮 - 未发布状态时显示 */}
       <div className="absolute top-4 right-28 z-30 flex items-center gap-2">
         {shouldShowPublishButton && !isViewingHistoricVersion && (
           <Button 
