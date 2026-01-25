@@ -182,56 +182,86 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
   };
 
   // 展平节点树用于执行 - 只保留实际执行路径上的节点
+  // 节点存储为扁平列表，通过 ID 引用关联
   const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, any>): ApprovalNode[] => {
     const result: ApprovalNode[] = [];
     
     console.log("[ApprovalTimeline] Flattening nodes with formData:", formData);
     
-    const traverse = (nodeList: ApprovalNode[]) => {
-      for (const node of nodeList) {
-        console.log(`[ApprovalTimeline] Processing node: ${node.node_name}, type: ${node.node_type}`);
+    // 构建节点ID到节点的映射
+    const nodeMap = new Map<string, ApprovalNode>();
+    nodes.forEach(node => nodeMap.set(node.id, node));
+    
+    // 找出所有属于某个分支的子节点ID
+    const branchChildIds = new Set<string>();
+    nodes.forEach(node => {
+      if (node.node_type === "condition_branch" && node.condition_expression?.child_nodes) {
+        node.condition_expression.child_nodes.forEach((id: string) => branchChildIds.add(id));
+      }
+    });
+    
+    // 找出所有分支节点的ID（属于条件节点的分支）
+    const branchNodeIds = new Set<string>();
+    nodes.forEach(node => {
+      if (node.node_type === "condition" && node.condition_expression?.branches) {
+        node.condition_expression.branches.forEach((id: string) => branchNodeIds.add(id));
+      }
+    });
+    
+    // 按 sort_order 排序主流程节点（不属于任何分支内部的节点）
+    const mainNodes = nodes
+      .filter(n => !branchChildIds.has(n.id) && !branchNodeIds.has(n.id))
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    
+    const processNode = (node: ApprovalNode) => {
+      console.log(`[ApprovalTimeline] Processing node: ${node.node_name}, type: ${node.node_type}`);
+      
+      if (node.node_type === "condition") {
+        // 条件节点 - 获取其分支并评估
+        const branchIds = node.condition_expression?.branches || [];
+        const branches = branchIds.map((id: string) => nodeMap.get(id)).filter(Boolean) as ApprovalNode[];
         
-        if (node.node_type === "condition") {
-          // 条件节点 - 找到其子节点（分支）并评估
-          // condition 节点的 children 是各个分支
-          const branches = node.children || [];
-          console.log(`[ApprovalTimeline] Condition node has ${branches.length} branches`);
+        console.log(`[ApprovalTimeline] Condition node has ${branches.length} branches`);
+        
+        // 按 sort_order 排序分支
+        branches.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        
+        let matchedBranch: ApprovalNode | null = null;
+        for (const branch of branches) {
+          // 分支的 condition_expression.condition_groups 包含该分支的条件
+          const branchCondition = branch.condition_expression;
+          const matches = evaluateCondition(branchCondition, formData);
+          console.log(`[ApprovalTimeline] Branch ${branch.node_name} conditions:`, branch.condition_expression?.condition_groups);
+          console.log(`[ApprovalTimeline] Branch ${branch.node_name} matches: ${matches}`);
           
-          let matchedBranch = null;
-          for (const branch of branches) {
-            // 分支的 condition_expression 包含该分支的条件
-            const branchCondition = branch.condition_expression;
-            const matches = evaluateCondition(branchCondition, formData);
-            console.log(`[ApprovalTimeline] Branch ${branch.node_name} matches: ${matches}`);
-            
-            if (matches) {
-              matchedBranch = branch;
-              break; // 只走第一个匹配的分支
-            }
-          }
-          
-          // 如果找到匹配的分支，处理其子节点
-          if (matchedBranch && matchedBranch.children) {
-            console.log(`[ApprovalTimeline] Using matched branch: ${matchedBranch.node_name}`);
-            traverse(matchedBranch.children);
-          }
-        } else if (node.node_type === "branch") {
-          // 分支节点本身不加入结果，但处理其子节点（这种情况通常不会单独出现）
-          if (node.children) {
-            traverse(node.children);
-          }
-        } else {
-          // 普通节点（approver, cc 等）- 加入结果
-          result.push(node);
-          // 处理子节点
-          if (node.children) {
-            traverse(node.children);
+          if (matches) {
+            matchedBranch = branch;
+            break; // 只走第一个匹配的分支
           }
         }
+        
+        // 如果找到匹配的分支，处理其子节点
+        if (matchedBranch) {
+          console.log(`[ApprovalTimeline] Using matched branch: ${matchedBranch.node_name}`);
+          const childIds = matchedBranch.condition_expression?.child_nodes || [];
+          const childNodes = childIds.map((id: string) => nodeMap.get(id)).filter(Boolean) as ApprovalNode[];
+          childNodes.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          
+          // 递归处理子节点
+          childNodes.forEach(child => processNode(child));
+        }
+      } else if (node.node_type === "condition_branch") {
+        // 分支节点本身不加入结果（不应该在主流程中单独出现）
+        // 这种情况通常不会发生，因为分支已被排除在主流程之外
+      } else {
+        // 普通节点（approver, cc 等）- 加入结果
+        result.push(node);
       }
     };
     
-    traverse(nodes);
+    // 处理主流程节点
+    mainNodes.forEach(node => processNode(node));
+    
     console.log(`[ApprovalTimeline] Final execution path has ${result.length} nodes:`, result.map(n => n.node_name));
     return result;
   };
