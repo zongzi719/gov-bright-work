@@ -168,12 +168,19 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   useEffect(() => {
     if (open && todoItem?.approval_instance_id) {
       fetchApprovalDetails();
-      // 检查是否可以撤回（仅发起人可见）
-      if (currentUser?.id && instance?.initiator_id === currentUser.id) {
-        checkCanWithdraw(todoItem.approval_instance_id, currentUser.id).then(setCanWithdraw);
-      }
     }
   }, [open, todoItem?.approval_instance_id]);
+
+  // 检查是否可以撤回 - 在 instance 加载后单独检查
+  useEffect(() => {
+    if (open && todoItem?.approval_instance_id && instance && currentUser?.id) {
+      if (instance.initiator_id === currentUser.id) {
+        checkCanWithdraw(todoItem.approval_instance_id, currentUser.id).then(setCanWithdraw);
+      } else {
+        setCanWithdraw(false);
+      }
+    }
+  }, [open, todoItem?.approval_instance_id, instance, currentUser?.id]);
 
   // 收集所有审批人ID
   const collectApproverIds = (nodes: ApprovalNode[]): string[] => {
@@ -834,26 +841,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   
   // 判断当前用户是否可以审批
   // 待办事项列表已经按 assignee_id 过滤，只显示当前用户的待办
-  // 所以只需要检查: 1. 实例状态是 pending 2. 待办状态是 pending
+  // 条件: 1. 待办状态是 pending 2. 审批实例状态是 pending（流程未结束）
   const canApprove = useMemo(() => {
-    if (!currentUser || !todoItem) return false;
+    if (!currentUser || !todoItem || !instance) return false;
     
     // 待办状态必须是 pending
     const isPending = todoItem.status === "pending";
     // 审批实例状态必须是 pending（流程未结束）
-    const instancePending = instance?.status === "pending";
-    
-    console.log("canApprove check:", {
-      currentUserId: currentUser?.id,
-      todoItemAssigneeId: todoItem?.assignee_id,
-      todoStatus: todoItem?.status,
-      instanceStatus: instance?.status,
-      isPending,
-      instancePending,
-    });
+    const instancePending = instance.status === "pending";
     
     return isPending && instancePending;
   }, [currentUser, todoItem, instance]);
+  
+  // 判断当前用户是否既是发起人又是审批人（需要显示所有按钮）
+  const isInitiatorAndApprover = isInitiator && canApprove;
 
   if (!todoItem) return null;
 
@@ -907,7 +908,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                     />
                   </div>
                   <div className="flex justify-end gap-3">
-                    {/* 发起人撤回按钮 */}
+                    {/* 发起人撤回按钮 - 发起人且可以撤回时显示 */}
                     {isInitiator && canWithdraw && (
                       <Button
                         variant="outline"
@@ -919,53 +920,49 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                       </Button>
                     )}
                     
-                    {/* 审批人退回按钮 */}
-                    {!isInitiator && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            disabled={submitting}
-                            className="text-destructive border-destructive hover:bg-destructive/10"
-                          >
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                            退回
-                            <ChevronDown className="w-4 h-4 ml-2" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-72">
-                          <DropdownMenuItem onClick={() => handleReturn("return_to_initiator")}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">退回发起人（当前节点继续）</span>
-                              <span className="text-xs text-muted-foreground">发起人修改后由当前节点继续审批</span>
-                            </div>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleReturn("return_restart")}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">退回发起人（重新审批）</span>
-                              <span className="text-xs text-muted-foreground">发起人修改后所有节点需重新审批</span>
-                            </div>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleReturn("return_to_previous")}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">退回至上一节点</span>
-                              <span className="text-xs text-muted-foreground">退回给上一个审批节点重新审批</span>
-                            </div>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                    {/* 退回按钮 - 无论是否是发起人，只要是审批人就显示 */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          disabled={submitting}
+                          className="text-destructive border-destructive hover:bg-destructive/10"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          退回
+                          <ChevronDown className="w-4 h-4 ml-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-72">
+                        <DropdownMenuItem onClick={() => handleReturn("return_to_initiator")}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">退回发起人（当前节点继续）</span>
+                            <span className="text-xs text-muted-foreground">发起人修改后由当前节点继续审批</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleReturn("return_restart")}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">退回发起人（重新审批）</span>
+                            <span className="text-xs text-muted-foreground">发起人修改后所有节点需重新审批</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleReturn("return_to_previous")}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">退回至上一节点</span>
+                            <span className="text-xs text-muted-foreground">退回给上一个审批节点重新审批</span>
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     
-                    {/* 审批人同意按钮 */}
-                    {!isInitiator && (
-                      <Button
-                        onClick={handleApprove}
-                        disabled={submitting}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        同意
-                      </Button>
-                    )}
+                    {/* 同意按钮 - 无论是否是发起人，只要是审批人就显示 */}
+                    <Button
+                      onClick={handleApprove}
+                      disabled={submitting}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      同意
+                    </Button>
                   </div>
                 </div>
               </>
