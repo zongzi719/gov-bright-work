@@ -346,24 +346,27 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     setLastSavedSnapshot(currentSnapshot);
     setHasChanges(false);
     
+    // 构建新版本对象
+    const newVersionObj: ProcessVersion = {
+      id: (newVersion as any).id,
+      template_id: templateId,
+      version_number: newVersionNumber,
+      version_name: `流程版本V${newVersionNumber}`,
+      published_by: "admin",
+      published_at: new Date().toISOString(),
+      nodes_snapshot: nodes,
+      is_current: true,
+      notes: null,
+    };
+    
     // 更新版本列表
     const updatedVersions = [
-      {
-        id: (newVersion as any).id,
-        template_id: templateId,
-        version_number: newVersionNumber,
-        version_name: `流程版本V${newVersionNumber}`,
-        published_by: "admin",
-        published_at: new Date().toISOString(),
-        nodes_snapshot: nodes,
-        is_current: true,
-        notes: null,
-        created_at: new Date().toISOString(),
-      } as ProcessVersion,
+      newVersionObj,
       ...versions.map(v => ({ ...v, is_current: false }))
     ];
     setVersions(updatedVersions);
-    setSelectedVersion(null);
+    // 发布后选中刚发布的版本
+    setSelectedVersion(newVersionObj);
     
     setPublishing(false);
   };
@@ -1302,17 +1305,17 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         <Popover open={versionDropdownOpen} onOpenChange={setVersionDropdownOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="gap-2">
-              {selectedVersion ? (
+              {hasChanges ? (
                 <>
-                  <span className={selectedVersion.is_current ? "text-foreground" : "text-muted-foreground"}>
-                    {selectedVersion.is_current ? "未发布版本" : selectedVersion.version_name}
-                  </span>
-                  {selectedVersion.is_current && (
-                    <Badge variant="outline" className="text-orange-600 border-orange-300">
-                      设计中
-                    </Badge>
-                  )}
+                  <span className="text-foreground">未发布版本</span>
+                  <Badge variant="outline" className="text-orange-600 border-orange-300">
+                    设计中
+                  </Badge>
                 </>
+              ) : selectedVersion ? (
+                <span className="text-foreground">{selectedVersion.version_name}</span>
+              ) : versions.length > 0 ? (
+                <span className="text-foreground">{versions[0].version_name}</span>
               ) : (
                 <span>选择版本</span>
               )}
@@ -1321,53 +1324,59 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
           </PopoverTrigger>
           <PopoverContent className="w-72 p-0" align="start">
             <div className="max-h-80 overflow-auto">
-              {/* 未发布版本（当前编辑） */}
-              <div 
-                className={`flex items-center gap-2 p-3 cursor-pointer hover:bg-muted border-b ${selectedVersion?.is_current ? 'bg-primary/10' : ''}`}
-                onClick={() => {
-                  setSelectedVersion(versions.find(v => v.is_current) || null);
-                  setVersionDropdownOpen(false);
-                  fetchNodes();
-                }}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">未发布版本</span>
-                    <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
-                      设计中
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <Clock className="w-3 h-3" />
-                    <span>正在编辑</span>
-                  </div>
-                </div>
-                {selectedVersion?.is_current && <Check className="w-4 h-4 text-primary" />}
-              </div>
-              
-              {/* 已发布版本列表 */}
-              {versions.filter(v => !v.is_current).map((version) => (
+              {/* 未发布版本（设计中）- 仅在有修改时显示 */}
+              {hasChanges && (
                 <div 
-                  key={version.id}
-                  className={`flex items-center gap-2 p-3 cursor-pointer hover:bg-muted border-b ${selectedVersion?.id === version.id ? 'bg-primary/10' : ''}`}
-                  onClick={() => handleSelectVersion(version)}
+                  className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted border-b bg-primary/10"
+                  onClick={() => {
+                    setVersionDropdownOpen(false);
+                    fetchNodes();
+                  }}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{version.version_name}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        启用中
+                      <span className="font-medium">未发布版本</span>
+                      <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+                        设计中
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <span>{version.published_by}</span>
-                      <span>·</span>
-                      <span>{new Date(version.published_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}发布</span>
+                      <Clock className="w-3 h-3" />
+                      <span>正在编辑</span>
                     </div>
                   </div>
-                  {selectedVersion?.id === version.id && <Check className="w-4 h-4 text-primary" />}
+                  <Check className="w-4 h-4 text-primary" />
                 </div>
-              ))}
+              )}
+              
+              {/* 已发布版本列表 */}
+              {versions.map((version) => {
+                const isSelected = hasChanges ? false : (selectedVersion?.id === version.id || (!selectedVersion && version === versions[0]));
+                return (
+                  <div 
+                    key={version.id}
+                    className={`flex items-center gap-2 p-3 cursor-pointer hover:bg-muted border-b ${isSelected ? 'bg-primary/10' : ''}`}
+                    onClick={() => handleSelectVersion(version)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{version.version_name}</span>
+                        {version.is_current && (
+                          <Badge variant="secondary" className="text-xs">
+                            启用中
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        <span>{version.published_by}</span>
+                        <span>·</span>
+                        <span>{new Date(version.published_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}发布</span>
+                      </div>
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-primary" />}
+                  </div>
+                );
+              })}
               
               {versions.length === 0 && (
                 <div className="p-4 text-center text-sm text-muted-foreground">
