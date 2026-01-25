@@ -203,6 +203,11 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   // 条件分支布局选择器
   const [branchLayoutSelectorOpen, setBranchLayoutSelectorOpen] = useState(false);
   const [branchLayoutPosition, setBranchLayoutPosition] = useState({ x: 0, y: 0 });
+
+  // 分支内添加节点选择器
+  const [branchNodeSelectorOpen, setBranchNodeSelectorOpen] = useState(false);
+  const [branchNodeSelectorPosition, setBranchNodeSelectorPosition] = useState({ x: 0, y: 0 });
+  const [branchNodeSelectorContext, setBranchNodeSelectorContext] = useState<{ branchNode: ApprovalNode; afterNodeId: string | null } | null>(null);
   
   const [nodeForm, setNodeForm] = useState({
     node_type: "approver",
@@ -666,13 +671,6 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       }
     }
 
-    // 检查是否为条件分支子节点
-    if (node?.node_type === 'condition_branch') {
-      // 不允许直接删除分支子节点，需要删除整个分支组
-      toast.error("请删除整个条件分支节点");
-      return;
-    }
-
     const { error } = await supabase
       .from("approval_nodes" as any)
       .delete()
@@ -684,6 +682,148 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
     toast.success("节点已删除");
     fetchNodes();
+  };
+
+  // 删除单个条件分支
+  const handleDeleteSingleBranch = async (e: React.MouseEvent, branchNode: ApprovalNode, parentNode: ApprovalNode) => {
+    e.stopPropagation();
+    
+    const branchIds = (parentNode.condition_expression as any)?.branches || [];
+    const layout = (parentNode.condition_expression as any)?.layout || 'center';
+    
+    // 如果只剩2个分支，删除整个分支组
+    if (branchIds.length <= 2) {
+      if (!confirm("删除此分支将删除整个条件分支组，确定要删除吗？")) return;
+      
+      // 删除所有分支子节点
+      for (const branchId of branchIds) {
+        await supabase
+          .from("approval_nodes" as any)
+          .delete()
+          .eq("id", branchId);
+      }
+      
+      // 删除主节点
+      await supabase
+        .from("approval_nodes" as any)
+        .delete()
+        .eq("id", parentNode.id);
+      
+      toast.success("条件分支已删除");
+      fetchNodes();
+      return;
+    }
+    
+    // 如果还有超过2个分支，只删除当前分支
+    if (!confirm("确定要删除这个条件分支吗？")) return;
+    
+    // 从父节点的分支列表中移除
+    const newBranchIds = branchIds.filter((id: string) => id !== branchNode.id);
+    
+    // 更新父节点
+    await supabase
+      .from("approval_nodes" as any)
+      .update({
+        condition_expression: { layout, branches: newBranchIds },
+      })
+      .eq("id", parentNode.id);
+    
+    // 删除分支节点
+    await supabase
+      .from("approval_nodes" as any)
+      .delete()
+      .eq("id", branchNode.id);
+    
+    toast.success("条件分支已删除");
+    fetchNodes();
+  };
+
+  // 在分支内添加节点
+  const handleAddNodeInBranch = async (e: React.MouseEvent, branchNode: ApprovalNode, afterNodeId: string | null, type: string) => {
+    const config = nodeTypeConfig[type as keyof typeof nodeTypeConfig];
+    const branchExpression = branchNode.condition_expression as any;
+    const childNodeIds = branchExpression?.child_nodes || [];
+    
+    // 计算新节点的 sort_order
+    let newSortOrder: number;
+    if (afterNodeId === null) {
+      // 在分支开始处添加
+      const firstChildNode = nodes.find(n => childNodeIds[0] === n.id);
+      newSortOrder = firstChildNode 
+        ? firstChildNode.sort_order - 5 
+        : branchNode.sort_order + 5;
+    } else {
+      // 在某个节点后添加
+      const afterNode = nodes.find(n => n.id === afterNodeId);
+      const afterIndex = childNodeIds.indexOf(afterNodeId);
+      const nextNodeId = childNodeIds[afterIndex + 1];
+      const nextNode = nodes.find(n => n.id === nextNodeId);
+      
+      if (afterNode && nextNode) {
+        newSortOrder = Math.floor((afterNode.sort_order + nextNode.sort_order) / 2);
+      } else if (afterNode) {
+        newSortOrder = afterNode.sort_order + 5;
+      } else {
+        newSortOrder = branchNode.sort_order + 5;
+      }
+    }
+    
+    // 创建新节点
+    const { data: newNode, error } = await supabase
+      .from("approval_nodes" as any)
+      .insert({
+        template_id: templateId,
+        node_type: type,
+        node_name: config?.label || "",
+        approver_type: type === 'condition' ? 'specific' : 'self',
+        approver_ids: [],
+        sort_order: newSortOrder,
+      })
+      .select()
+      .single();
+
+    if (error || !newNode) {
+      toast.error("添加节点失败");
+      return;
+    }
+    
+    // 更新分支的 child_nodes
+    let newChildNodeIds: string[];
+    if (afterNodeId === null) {
+      newChildNodeIds = [(newNode as any).id, ...childNodeIds];
+    } else {
+      const afterIndex = childNodeIds.indexOf(afterNodeId);
+      newChildNodeIds = [
+        ...childNodeIds.slice(0, afterIndex + 1),
+        (newNode as any).id,
+        ...childNodeIds.slice(afterIndex + 1),
+      ];
+    }
+    
+    await supabase
+      .from("approval_nodes" as any)
+      .update({
+        condition_expression: {
+          ...branchExpression,
+          child_nodes: newChildNodeIds,
+        },
+      })
+      .eq("id", branchNode.id);
+    
+    toast.success("节点添加成功");
+    await fetchNodes();
+    
+    // 打开详情面板
+    setSelectedNode(newNode as unknown as ApprovalNode);
+    setNodeForm({
+      node_type: type,
+      node_name: config?.label || "",
+      approver_type: type === 'condition' ? 'specific' : 'self',
+      approver_ids: [],
+      field_permissions: {},
+      condition_expression: null,
+    });
+    setDetailPanelOpen(true);
   };
 
   // 流程节点卡片组件 - 使用 CSS hover 代替 useState
@@ -795,7 +935,48 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     await fetchNodes();
   };
 
-  // 条件分支组件 - 使用 CSS hover
+  // 分支内添加节点按钮 - 使用共享状态避免 hooks 问题
+  const BranchAddNodeButton = ({ branchNode, afterNodeId }: { branchNode: ApprovalNode; afterNodeId: string | null }) => {
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const rect = (e.target as HTMLElement).getBoundingClientRect();
+      setBranchNodeSelectorPosition({ 
+        x: rect.left + rect.width / 2, 
+        y: rect.bottom + 8 
+      });
+      setBranchNodeSelectorContext({ branchNode, afterNodeId });
+      setBranchNodeSelectorOpen(true);
+    };
+
+    return (
+      <div className="flex flex-col items-center add-node-btn">
+        <div className="w-px h-6 bg-border" />
+        <button
+          onClick={handleClick}
+          className="w-7 h-7 rounded-full border-2 border-primary bg-background flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors group z-10"
+        >
+          <Plus className="w-4 h-4 text-primary group-hover:text-primary-foreground" />
+        </button>
+        <div className="w-px h-6 bg-border" />
+      </div>
+    );
+  };
+
+  // 处理分支内节点类型选择
+  const handleBranchNodeTypeSelect = (type: string) => {
+    setBranchNodeSelectorOpen(false);
+    if (branchNodeSelectorContext) {
+      handleAddNodeInBranch(
+        { stopPropagation: () => {} } as React.MouseEvent,
+        branchNodeSelectorContext.branchNode,
+        branchNodeSelectorContext.afterNodeId,
+        type
+      );
+    }
+    setBranchNodeSelectorContext(null);
+  };
+
+  // 条件分支组件
   const ConditionBranchGroup = ({ parentNode }: { parentNode: ApprovalNode }) => {
     const branchIds = (parentNode.condition_expression as any)?.branches || [];
     const layout = (parentNode.condition_expression as any)?.layout || 'center';
@@ -805,15 +986,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       .filter(Boolean) as ApprovalNode[];
 
     return (
-      <div className="relative group/branch">
-        {/* 删除整个分支组按钮 */}
-        <button
-          onClick={(e) => handleQuickDeleteNode(e, parentNode.id)}
-          className="absolute -top-2 right-0 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-all opacity-0 group-hover/branch:opacity-100 z-20"
-        >
-          <X className="w-3 h-3" />
-        </button>
-        
+      <div className="relative">
         {/* 添加条件按钮 */}
         <div className="flex justify-center mb-2">
           <button
@@ -832,10 +1005,10 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
             const hasConditions = conditionGroups.length > 0 && conditionGroups.some((g: any) => g.conditions?.length > 0);
             const childNodeIds = (branch.condition_expression as any)?.child_nodes || [];
             
-            // 获取分支下的子节点
-            const childNodes = layout === 'left' && idx === 0 
-              ? nodes.filter(n => childNodeIds.includes(n.id))
-              : [];
+            // 获取分支下的子节点，按照 childNodeIds 顺序排序
+            const childNodes = childNodeIds
+              .map((id: string) => nodes.find(n => n.id === id))
+              .filter(Boolean) as ApprovalNode[];
             
             // 生成条件摘要
             const getConditionSummary = () => {
@@ -852,40 +1025,58 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                 {/* 连接线顶部 */}
                 <div className="w-px h-4 bg-border" />
                 
-                {/* 分支卡片 */}
-                <div 
-                  className="flow-node w-56 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden cursor-pointer hover:border-muted-foreground/50 transition-all"
-                  onClick={() => handleNodeClick(branch)}
-                >
-                  <div className="px-4 py-2 border-b bg-muted/50">
-                    <span className={`text-sm font-medium ${isDefault ? 'text-muted-foreground' : 'text-primary'}`}>
-                      {isDefault ? '默认条件' : branch.node_name}
-                      {isDefault && (
-                        <span className="ml-1 text-xs text-muted-foreground">ⓘ</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="px-4 py-3">
-                    <div className={`text-sm ${hasConditions ? 'text-foreground' : 'text-muted-foreground'}`}>
-                      {getConditionSummary()}
+                {/* 分支卡片 - 带删除按钮 */}
+                <div className="relative group">
+                  {/* 分支删除按钮 */}
+                  <button
+                    onClick={(e) => handleDeleteSingleBranch(e, branch, parentNode)}
+                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-all opacity-0 group-hover:opacity-100 z-20"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  
+                  <div 
+                    className="flow-node w-56 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden cursor-pointer hover:border-muted-foreground/50 transition-all"
+                    onClick={() => handleNodeClick(branch)}
+                  >
+                    <div className="px-4 py-2 border-b bg-muted/50">
+                      <span className={`text-sm font-medium ${isDefault ? 'text-muted-foreground' : 'text-primary'}`}>
+                        {isDefault ? '默认条件' : branch.node_name}
+                        {isDefault && (
+                          <span className="ml-1 text-xs text-muted-foreground">ⓘ</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="px-4 py-3">
+                      <div className={`text-sm ${hasConditions ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {getConditionSummary()}
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                {/* 如果是左侧布局的第一个分支，显示子节点 */}
-                {layout === 'left' && idx === 0 && childNodes.length > 0 && (
+                {/* 分支下的子节点 - 使用分支内专用的添加按钮 */}
+                {childNodes.length > 0 ? (
                   <div className="flex flex-col items-center">
-                    {childNodes.map((childNode) => (
+                    {childNodes.map((childNode, childIdx) => (
                       <div key={childNode.id} className="flex flex-col items-center">
-                        <AddNodeButton afterIndex={nodes.findIndex(n => n.id === childNode.id) - 1} />
+                        <BranchAddNodeButton 
+                          branchNode={branch} 
+                          afterNodeId={childIdx === 0 ? null : childNodes[childIdx - 1].id} 
+                        />
                         <FlowNodeCard node={childNode} />
                       </div>
                     ))}
+                    {/* 最后一个节点后的添加按钮 */}
+                    <BranchAddNodeButton 
+                      branchNode={branch} 
+                      afterNodeId={childNodes[childNodes.length - 1].id} 
+                    />
                   </div>
+                ) : (
+                  /* 没有子节点时的添加按钮 */
+                  <BranchAddNodeButton branchNode={branch} afterNodeId={null} />
                 )}
-                
-                {/* 连接线底部和添加按钮 */}
-                <AddNodeButton afterIndex={nodes.findIndex(n => n.id === branch.id)} />
               </div>
             );
           })}
@@ -1063,6 +1254,60 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
             
             <div className="mt-3 text-xs text-muted-foreground">
               分支聚合后执行下方节点
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 分支内节点类型选择器 */}
+      {branchNodeSelectorOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => {
+              setBranchNodeSelectorOpen(false);
+              setBranchNodeSelectorContext(null);
+            }}
+          />
+          <div 
+            className="fixed z-50 bg-background rounded-lg shadow-xl border p-4 w-72"
+            style={{ 
+              left: branchNodeSelectorPosition.x,
+              top: branchNodeSelectorPosition.y,
+              transform: 'translate(-50%, 0)'
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium">选择节点类型</span>
+              <button 
+                onClick={() => {
+                  setBranchNodeSelectorOpen(false);
+                  setBranchNodeSelectorContext(null);
+                }} 
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleBranchNodeTypeSelect('approver')}
+                className="flex items-center gap-2 p-3 rounded-lg border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
+                  <UserCheck className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium">审批人</span>
+              </button>
+              <button
+                onClick={() => handleBranchNodeTypeSelect('cc')}
+                className="flex items-center gap-2 p-3 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                  <Send className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium">抄送人</span>
+              </button>
             </div>
           </div>
         </>
