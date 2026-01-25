@@ -626,34 +626,18 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
             <div className="mt-6 space-y-6">
               <div>
                 <Label>节点类型</Label>
-                <Select
-                  value={nodeForm.node_type}
-                  onValueChange={(value) => {
-                    const config = nodeTypeConfig[value as keyof typeof nodeTypeConfig];
-                    setNodeForm({
-                      ...nodeForm,
-                      node_type: value,
-                      node_name: nodeForm.node_name || config?.label || "",
-                    });
-                  }}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(nodeTypeConfig).map(([type, config]) => {
-                      const Icon = config.icon;
-                      return (
-                        <SelectItem key={type} value={type}>
-                          <div className="flex items-center gap-2">
-                            <Icon className="w-4 h-4" />
-                            {config.label}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <div className="mt-2 flex items-center gap-2 px-3 py-2 border rounded-md bg-muted/50">
+                  {(() => {
+                    const config = nodeTypeConfig[nodeForm.node_type as keyof typeof nodeTypeConfig] || nodeTypeConfig.approver;
+                    const Icon = config.icon;
+                    return (
+                      <>
+                        <Icon className="w-4 h-4" />
+                        <span>{config.label}</span>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
 
               <div>
