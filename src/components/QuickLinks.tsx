@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-
+import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
 interface OfficeSupply {
   id: string;
   name: string;
@@ -51,6 +51,8 @@ const scheduleTypeColors: Record<string, { bg: string; text: string; label: stri
 const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
 const QuickLinks = () => {
+  const { startApproval, getBusinessTypeLabel } = useApprovalWorkflow();
+
   // Get current user from localStorage
   const getCurrentUser = () => {
     try {
@@ -179,7 +181,8 @@ const QuickLinks = () => {
       return;
     }
 
-    const { error } = await supabase.from("absence_records").insert({
+    // 1. 创建业务记录
+    const { data: record, error } = await supabase.from("absence_records").insert({
       contact_id: currentUser.id,
       type: "business_trip",
       reason: businessTripForm.reason,
@@ -187,15 +190,35 @@ const QuickLinks = () => {
       end_time: businessTripForm.end_time?.toISOString() || null,
       notes: businessTripForm.notes || null,
       status: "pending",
-    });
+    }).select("id").single();
 
-    if (error) {
+    if (error || !record) {
       toast.error("提交失败");
       console.error(error);
-    } else {
+      return;
+    }
+
+    // 2. 启动审批工作流
+    const approvalResult = await startApproval({
+      businessType: "business_trip",
+      businessId: record.id,
+      initiatorId: currentUser.id,
+      initiatorName: currentUser.name || "未知用户",
+      title: `出差申请 - ${businessTripForm.reason.slice(0, 20)}`,
+      formData: {
+        reason: businessTripForm.reason,
+        start_time: businessTripForm.start_time.toISOString(),
+        end_time: businessTripForm.end_time?.toISOString() || null,
+        notes: businessTripForm.notes || null,
+      },
+    });
+
+    if (approvalResult.success) {
       toast.success("出差申请已提交，等待审批");
       setBusinessTripDialogOpen(false);
       setBusinessTripForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
+    } else {
+      toast.error(approvalResult.error || "启动审批流程失败");
     }
   };
 
@@ -205,7 +228,8 @@ const QuickLinks = () => {
       return;
     }
 
-    const { error } = await supabase.from("absence_records").insert({
+    // 1. 创建业务记录
+    const { data: record, error } = await supabase.from("absence_records").insert({
       contact_id: currentUser.id,
       type: "leave",
       reason: leaveForm.reason,
@@ -213,15 +237,35 @@ const QuickLinks = () => {
       end_time: leaveForm.end_time?.toISOString() || null,
       notes: leaveForm.notes || null,
       status: "pending",
-    });
+    }).select("id").single();
 
-    if (error) {
+    if (error || !record) {
       toast.error("提交失败");
       console.error(error);
-    } else {
+      return;
+    }
+
+    // 2. 启动审批工作流
+    const approvalResult = await startApproval({
+      businessType: "leave",
+      businessId: record.id,
+      initiatorId: currentUser.id,
+      initiatorName: currentUser.name || "未知用户",
+      title: `请假申请 - ${leaveForm.reason.slice(0, 20)}`,
+      formData: {
+        reason: leaveForm.reason,
+        start_time: leaveForm.start_time.toISOString(),
+        end_time: leaveForm.end_time?.toISOString() || null,
+        notes: leaveForm.notes || null,
+      },
+    });
+
+    if (approvalResult.success) {
       toast.success("请假申请已提交，等待审批");
       setLeaveDialogOpen(false);
       setLeaveForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
+    } else {
+      toast.error(approvalResult.error || "启动审批流程失败");
     }
   };
 
@@ -231,7 +275,8 @@ const QuickLinks = () => {
       return;
     }
 
-    const { error } = await supabase.from("absence_records").insert({
+    // 1. 创建业务记录
+    const { data: record, error } = await supabase.from("absence_records").insert({
       contact_id: currentUser.id,
       type: "out",
       reason: outForm.reason,
@@ -239,15 +284,35 @@ const QuickLinks = () => {
       end_time: outForm.end_time?.toISOString() || null,
       notes: outForm.notes || null,
       status: "pending",
-    });
+    }).select("id").single();
 
-    if (error) {
+    if (error || !record) {
       toast.error("提交失败");
       console.error(error);
-    } else {
+      return;
+    }
+
+    // 2. 启动审批工作流
+    const approvalResult = await startApproval({
+      businessType: "out",
+      businessId: record.id,
+      initiatorId: currentUser.id,
+      initiatorName: currentUser.name || "未知用户",
+      title: `外出申请 - ${outForm.reason.slice(0, 20)}`,
+      formData: {
+        reason: outForm.reason,
+        start_time: outForm.start_time.toISOString(),
+        end_time: outForm.end_time?.toISOString() || null,
+        notes: outForm.notes || null,
+      },
+    });
+
+    if (approvalResult.success) {
       toast.success("外出申请已提交，等待审批");
       setOutDialogOpen(false);
       setOutForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
+    } else {
+      toast.error(approvalResult.error || "启动审批流程失败");
     }
   };
 
@@ -267,18 +332,39 @@ const QuickLinks = () => {
       return;
     }
 
-    const { error } = await supabase.from("supply_requisitions").insert({
+    // 1. 创建业务记录
+    const { data: record, error } = await supabase.from("supply_requisitions").insert({
       supply_id: supplyForm.supply_id,
       quantity: supplyForm.quantity,
       requisition_by: currentUser?.name || "",
+    }).select("id").single();
+
+    if (error || !record) {
+      toast.error("提交领用申请失败");
+      console.error(error);
+      return;
+    }
+
+    // 2. 启动审批工作流
+    const approvalResult = await startApproval({
+      businessType: "supply_requisition",
+      businessId: record.id,
+      initiatorId: currentUser?.id || "",
+      initiatorName: currentUser?.name || "未知用户",
+      title: `领用申请 - ${supply?.name || "办公用品"}`,
+      formData: {
+        supply_id: supplyForm.supply_id,
+        supply_name: supply?.name,
+        quantity: supplyForm.quantity,
+      },
     });
 
-    if (error) {
-      toast.error("提交领用申请失败");
-    } else {
+    if (approvalResult.success) {
       toast.success("领用申请已提交");
       setSupplyDialogOpen(false);
       setSupplyForm({ supply_id: "", quantity: 1 });
+    } else {
+      toast.error(approvalResult.error || "启动审批流程失败");
     }
   };
 
@@ -292,19 +378,43 @@ const QuickLinks = () => {
       return;
     }
 
-    const { error } = await supabase.from("purchase_requests").insert({
+    const supply = supplies.find((s) => s.id === purchaseForm.supply_id);
+
+    // 1. 创建业务记录
+    const { data: record, error } = await supabase.from("purchase_requests").insert({
       supply_id: purchaseForm.supply_id,
       quantity: purchaseForm.quantity,
       reason: purchaseForm.reason.trim() || null,
       requested_by: currentUser?.name || "",
+    }).select("id").single();
+
+    if (error || !record) {
+      toast.error("提交采购申请失败");
+      console.error(error);
+      return;
+    }
+
+    // 2. 启动审批工作流
+    const approvalResult = await startApproval({
+      businessType: "purchase_request",
+      businessId: record.id,
+      initiatorId: currentUser?.id || "",
+      initiatorName: currentUser?.name || "未知用户",
+      title: `采购申请 - ${supply?.name || "办公用品"}`,
+      formData: {
+        supply_id: purchaseForm.supply_id,
+        supply_name: supply?.name,
+        quantity: purchaseForm.quantity,
+        reason: purchaseForm.reason,
+      },
     });
 
-    if (error) {
-      toast.error("提交采购申请失败");
-    } else {
+    if (approvalResult.success) {
       toast.success("采购申请已提交");
       setPurchaseDialogOpen(false);
       setPurchaseForm({ supply_id: "", quantity: 1, reason: "" });
+    } else {
+      toast.error(approvalResult.error || "启动审批流程失败");
     }
   };
 
