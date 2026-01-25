@@ -182,6 +182,53 @@ export type Database = {
           },
         ]
       }
+      approval_process_versions: {
+        Row: {
+          created_at: string
+          id: string
+          is_current: boolean
+          nodes_snapshot: Json
+          notes: string | null
+          published_at: string
+          published_by: string | null
+          template_id: string
+          version_name: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          nodes_snapshot?: Json
+          notes?: string | null
+          published_at?: string
+          published_by?: string | null
+          template_id: string
+          version_name: string
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          nodes_snapshot?: Json
+          notes?: string | null
+          published_at?: string
+          published_by?: string | null
+          template_id?: string
+          version_name?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_process_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "approval_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_templates: {
         Row: {
           allow_transfer: boolean
@@ -192,10 +239,12 @@ export type Database = {
           category: string
           code: string
           created_at: string
+          current_version_id: string | null
           description: string | null
           icon: string
           id: string
           is_active: boolean
+          last_process_saved_at: string | null
           name: string
           notify_approver: boolean
           notify_initiator: boolean
@@ -210,10 +259,12 @@ export type Database = {
           category?: string
           code: string
           created_at?: string
+          current_version_id?: string | null
           description?: string | null
           icon?: string
           id?: string
           is_active?: boolean
+          last_process_saved_at?: string | null
           name: string
           notify_approver?: boolean
           notify_initiator?: boolean
@@ -228,16 +279,26 @@ export type Database = {
           category?: string
           code?: string
           created_at?: string
+          current_version_id?: string | null
           description?: string | null
           icon?: string
           id?: string
           is_active?: boolean
+          last_process_saved_at?: string | null
           name?: string
           notify_approver?: boolean
           notify_initiator?: boolean
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "approval_templates_current_version_id_fkey"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "approval_process_versions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       banners: {
         Row: {
