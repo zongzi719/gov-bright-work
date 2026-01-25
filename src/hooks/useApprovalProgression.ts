@@ -25,7 +25,7 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
 
 /**
  * 审批流程推进服务
- * 负责在当前节点审批完成后推进到下一节点
+ * 负责在当前节点审批完成后推进到下一节点，以及处理退回和撤回操作
  */
 export const useApprovalProgression = () => {
 
@@ -74,7 +74,6 @@ export const useApprovalProgression = () => {
 
   /**
    * 扁平化节点列表（根据条件表达式过滤分支）
-   * 节点是按 sort_order 排序的扁平数组，条件分支通过 child_nodes 引用子节点
    */
   const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, any>): ApprovalNode[] => {
     const result: ApprovalNode[] = [];
@@ -118,7 +117,7 @@ export const useApprovalProgression = () => {
           }
         }
       } else if (node.node_type === "condition_branch") {
-        // 跳过条件分支节点本身，其子节点会在条件容器节点中处理
+        // 跳过条件分支节点本身
         continue;
       } else if (node.node_type === "approver" || node.node_type === "cc") {
         // 只添加不属于任何分支的节点
@@ -133,16 +132,12 @@ export const useApprovalProgression = () => {
 
   /**
    * 检查当前节点是否完成审批
-   * @param instanceId 审批实例ID
-   * @param nodeName 节点名称
-   * @param approvalMode 审批模式 countersign(会签) 或 or_sign(或签)
    */
   const checkNodeComplete = async (
     instanceId: string,
     nodeName: string,
     approvalMode: string = "countersign"
   ): Promise<{ complete: boolean; allApproved: boolean }> => {
-    // 获取当前节点的所有审批记录
     const { data: records } = await supabase
       .from("approval_records")
       .select("status")
@@ -195,12 +190,10 @@ export const useApprovalProgression = () => {
     currentNodeName: string
   ): Promise<{ success: boolean; completed?: boolean; error?: string }> => {
     try {
-      // 扁平化节点列表（根据条件过滤分支）
       const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
       
       console.log("Flat nodes for progression:", flatNodes.map(n => n.node_name));
       
-      // 找到当前节点在扁平化列表中的位置
       const currentIndex = flatNodes.findIndex(n => n.node_name === currentNodeName);
       
       if (currentIndex === -1) {
@@ -208,23 +201,18 @@ export const useApprovalProgression = () => {
         return { success: false, error: "找不到当前节点" };
       }
 
-      // 获取当前节点的审批模式
       const currentNode = flatNodes[currentIndex];
       const approvalMode = currentNode.approval_mode || "countersign";
-
-      // 检查当前节点是否完成
       const { complete, allApproved } = await checkNodeComplete(instanceId, currentNodeName, approvalMode);
 
       console.log(`Node ${currentNodeName} status:`, { complete, allApproved, approvalMode });
 
       if (!complete) {
-        // 当前节点尚未完成（还有其他审批人需要审批）
         console.log("Node not complete yet, waiting for other approvers");
         return { success: true, completed: false };
       }
 
       if (!allApproved) {
-        // 当前节点被拒绝，终止流程
         console.log("Node rejected, terminating workflow");
         await supabase
           .from("approval_instances")
@@ -234,11 +222,9 @@ export const useApprovalProgression = () => {
         return { success: true, completed: true };
       }
 
-      // 找到下一个节点
       const nextIndex = currentIndex + 1;
       
       if (nextIndex >= flatNodes.length) {
-        // 没有下一节点，流程完成
         console.log("No more nodes, workflow completed");
         await supabase
           .from("approval_instances")
@@ -252,20 +238,17 @@ export const useApprovalProgression = () => {
       
       console.log("Advancing to next node:", nextNode.node_name);
       
-      // 更新审批实例的当前节点
       await supabase
         .from("approval_instances")
         .update({ current_node_index: nextIndex })
         .eq("id", instanceId);
 
-      // 为下一节点创建审批记录和待办事项
       const approverIds = nextNode.approver_ids || [];
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
       console.log("Creating todos for approvers:", approverIds);
 
       for (const approverId of approverIds) {
-        // 创建审批记录
         const { error: recordError } = await supabase
           .from("approval_records")
           .insert({
@@ -281,7 +264,6 @@ export const useApprovalProgression = () => {
           console.error("Failed to create approval record:", recordError);
         }
 
-        // 创建待办事项
         const { error: todoError } = await supabase
           .from("todo_items")
           .insert({
@@ -312,6 +294,338 @@ export const useApprovalProgression = () => {
   };
 
   /**
+   * 退回发起人（当前节点继续）
+   * 发起人修改后由退回节点继续审批
+   */
+  const returnToInitiatorCurrentNode = async (
+    instanceId: string,
+    businessId: string,
+    businessType: string,
+    initiatorId: string,
+    title: string,
+    versionNumber: number,
+    currentNodeIndex: number,
+    comment: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+
+      // 更新审批实例状态为 "returned"，并保存退回节点索引
+      await supabase
+        .from("approval_instances")
+        .update({ 
+          status: "returned",
+          form_data: supabase.rpc ? undefined : undefined, // 保持form_data不变
+        })
+        .eq("id", instanceId);
+
+      // 为发起人创建修改待办
+      const { error: todoError } = await supabase
+        .from("todo_items")
+        .insert({
+          source: "internal",
+          business_type: todoBusinessType,
+          business_id: businessId,
+          title: `[需修改] ${title}`,
+          description: `您的申请被退回，请修改后重新提交。修改后由当前节点继续审批。\n退回意见：${comment}`,
+          priority: "urgent",
+          status: "pending",
+          initiator_id: initiatorId,
+          assignee_id: initiatorId,
+          approval_instance_id: instanceId,
+          approval_version_number: versionNumber,
+          process_notes: JSON.stringify({ 
+            return_type: "return_to_initiator", 
+            return_node_index: currentNodeIndex,
+            comment 
+          }),
+        });
+
+      if (todoError) {
+        console.error("Failed to create todo for initiator:", todoError);
+        return { success: false, error: "创建待办失败" };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error returning to initiator:", error);
+      return { success: false, error: "退回发起人失败" };
+    }
+  };
+
+  /**
+   * 退回发起人（重新审批）
+   * 发起人修改后所有节点需重新审批
+   */
+  const returnToInitiatorRestart = async (
+    instanceId: string,
+    businessId: string,
+    businessType: string,
+    initiatorId: string,
+    title: string,
+    versionNumber: number,
+    comment: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+
+      // 更新审批实例状态为 "returned"，重置节点索引为0
+      await supabase
+        .from("approval_instances")
+        .update({ 
+          status: "returned",
+          current_node_index: 0,
+        })
+        .eq("id", instanceId);
+
+      // 为发起人创建修改待办
+      const { error: todoError } = await supabase
+        .from("todo_items")
+        .insert({
+          source: "internal",
+          business_type: todoBusinessType,
+          business_id: businessId,
+          title: `[需修改-重审] ${title}`,
+          description: `您的申请被退回，请修改后重新提交。修改后需要重新走完整审批流程。\n退回意见：${comment}`,
+          priority: "urgent",
+          status: "pending",
+          initiator_id: initiatorId,
+          assignee_id: initiatorId,
+          approval_instance_id: instanceId,
+          approval_version_number: versionNumber,
+          process_notes: JSON.stringify({ 
+            return_type: "return_restart",
+            comment 
+          }),
+        });
+
+      if (todoError) {
+        console.error("Failed to create todo for initiator:", todoError);
+        return { success: false, error: "创建待办失败" };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error returning to initiator (restart):", error);
+      return { success: false, error: "退回发起人失败" };
+    }
+  };
+
+  /**
+   * 退回至上一节点
+   */
+  const returnToPreviousNode = async (
+    instanceId: string,
+    businessId: string,
+    businessType: string,
+    initiatorId: string,
+    initiatorName: string,
+    title: string,
+    nodesSnapshot: ApprovalNode[],
+    formData: Record<string, any>,
+    versionNumber: number,
+    currentNodeIndex: number,
+    comment: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // 获取上一个节点
+      const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
+      
+      if (currentNodeIndex <= 0) {
+        // 如果是第一个节点，退回给发起人
+        return returnToInitiatorCurrentNode(
+          instanceId,
+          businessId,
+          businessType,
+          initiatorId,
+          title,
+          versionNumber,
+          0,
+          comment
+        );
+      }
+
+      const previousNodeIndex = currentNodeIndex - 1;
+      const previousNode = flatNodes[previousNodeIndex];
+      
+      if (!previousNode) {
+        return { success: false, error: "找不到上一节点" };
+      }
+
+      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+
+      // 更新审批实例状态
+      await supabase
+        .from("approval_instances")
+        .update({ 
+          status: "processing",
+          current_node_index: previousNodeIndex,
+        })
+        .eq("id", instanceId);
+
+      // 将上一节点的审批记录重置为 pending
+      await supabase
+        .from("approval_records")
+        .update({ 
+          status: "pending",
+          comment: null,
+          processed_at: null,
+        })
+        .eq("instance_id", instanceId)
+        .eq("node_name", previousNode.node_name);
+
+      // 为上一节点的审批人创建新的待办
+      const approverIds = previousNode.approver_ids || [];
+      
+      for (const approverId of approverIds) {
+        const { error: todoError } = await supabase
+          .from("todo_items")
+          .insert({
+            source: "internal",
+            business_type: todoBusinessType,
+            business_id: businessId,
+            title: `[退回重审] ${title}`,
+            description: `申请被下一节点退回，需要重新审批。\n退回意见：${comment}`,
+            priority: "urgent",
+            status: "pending",
+            initiator_id: initiatorId,
+            assignee_id: approverId,
+            approval_instance_id: instanceId,
+            approval_version_number: versionNumber,
+          });
+
+        if (todoError) {
+          console.error("Failed to create todo for previous node:", todoError);
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error returning to previous node:", error);
+      return { success: false, error: "退回上一节点失败" };
+    }
+  };
+
+  /**
+   * 发起人撤回申请
+   * 只有当下一节点未进行任何操作时才能撤回
+   */
+  const withdrawApplication = async (
+    instanceId: string,
+    initiatorId: string,
+    currentUserId: string
+  ): Promise<{ success: boolean; canWithdraw: boolean; error?: string }> => {
+    try {
+      // 验证是否是发起人
+      const { data: instance } = await supabase
+        .from("approval_instances")
+        .select("initiator_id, status, current_node_index")
+        .eq("id", instanceId)
+        .single();
+
+      if (!instance) {
+        return { success: false, canWithdraw: false, error: "找不到审批实例" };
+      }
+
+      if (instance.initiator_id !== currentUserId) {
+        return { success: false, canWithdraw: false, error: "只有发起人可以撤回申请" };
+      }
+
+      if (instance.status !== "pending" && instance.status !== "processing") {
+        return { success: false, canWithdraw: false, error: "当前状态不允许撤回" };
+      }
+
+      // 检查当前节点是否有人已操作
+      const { data: records } = await supabase
+        .from("approval_records")
+        .select("status")
+        .eq("instance_id", instanceId)
+        .eq("node_index", instance.current_node_index);
+
+      const hasProcessed = records?.some(r => r.status === "approved" || r.status === "rejected");
+      
+      if (hasProcessed) {
+        return { success: false, canWithdraw: false, error: "当前节点已有人审批，无法撤回" };
+      }
+
+      // 可以撤回 - 更新审批实例状态
+      await supabase
+        .from("approval_instances")
+        .update({ 
+          status: "withdrawn",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", instanceId);
+
+      // 将所有 pending 状态的待办标记为已取消
+      await supabase
+        .from("todo_items")
+        .update({ 
+          status: "completed",
+          process_result: "withdrawn",
+          process_notes: "发起人已撤回申请",
+          processed_at: new Date().toISOString(),
+        })
+        .eq("approval_instance_id", instanceId)
+        .eq("status", "pending");
+
+      // 将所有 pending 状态的审批记录标记为已取消
+      await supabase
+        .from("approval_records")
+        .update({ 
+          status: "approved", // 使用 approved 状态表示流程结束
+          comment: "发起人已撤回申请",
+          processed_at: new Date().toISOString(),
+        })
+        .eq("instance_id", instanceId)
+        .eq("status", "pending");
+
+      return { success: true, canWithdraw: true };
+    } catch (error) {
+      console.error("Error withdrawing application:", error);
+      return { success: false, canWithdraw: false, error: "撤回申请失败" };
+    }
+  };
+
+  /**
+   * 检查发起人是否可以撤回
+   */
+  const checkCanWithdraw = async (
+    instanceId: string,
+    currentUserId: string
+  ): Promise<boolean> => {
+    try {
+      const { data: instance } = await supabase
+        .from("approval_instances")
+        .select("initiator_id, status, current_node_index")
+        .eq("id", instanceId)
+        .single();
+
+      if (!instance || instance.initiator_id !== currentUserId) {
+        return false;
+      }
+
+      if (instance.status !== "pending" && instance.status !== "processing") {
+        return false;
+      }
+
+      // 检查当前节点是否有人已操作
+      const { data: records } = await supabase
+        .from("approval_records")
+        .select("status")
+        .eq("instance_id", instanceId)
+        .eq("node_index", instance.current_node_index);
+
+      const hasProcessed = records?.some(r => r.status === "approved" || r.status === "rejected");
+      
+      return !hasProcessed;
+    } catch (error) {
+      console.error("Error checking withdraw status:", error);
+      return false;
+    }
+  };
+
+  /**
    * 获取申请人信息
    */
   const getInitiatorInfo = async (initiatorId: string): Promise<{ name: string; department: string | null } | null> => {
@@ -329,5 +643,10 @@ export const useApprovalProgression = () => {
     checkNodeComplete,
     flattenNodesForExecution,
     getInitiatorInfo,
+    returnToInitiatorCurrentNode,
+    returnToInitiatorRestart,
+    returnToPreviousNode,
+    withdrawApplication,
+    checkCanWithdraw,
   };
 };
