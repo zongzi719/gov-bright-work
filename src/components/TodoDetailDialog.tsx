@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,8 @@ interface TodoItem {
   approval_instance_id: string | null;
   status: string;
   created_at: string;
+  assignee_id: string;
+  initiator_id?: string | null;
 }
 
 interface TodoDetailDialogProps {
@@ -827,10 +829,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     );
   };
 
-  // 判断当前用户是否可以审批
-  const canApprove = todoItem?.status === "pending";
   // 判断当前用户是否是发起人
   const isInitiator = currentUser?.id === instance?.initiator_id;
+  
+  // 判断当前用户是否可以审批 - 必须是待办的被分配人且状态为 pending
+  const canApprove = useMemo(() => {
+    if (!currentUser || !todoItem) return false;
+    
+    // 必须是待办的被分配人
+    const isAssignee = todoItem.assignee_id === currentUser.id;
+    // 待办状态必须是 pending
+    const isPending = todoItem.status === "pending";
+    
+    return isAssignee && isPending;
+  }, [currentUser, todoItem]);
 
   if (!todoItem) return null;
 

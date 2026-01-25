@@ -17,6 +17,7 @@ interface TodoItem {
   business_id: string | null;
   action_url: string | null;
   approval_instance_id: string | null;
+  assignee_id: string;
   initiator?: {
     name: string;
     department: string | null;
@@ -81,6 +82,7 @@ const TodoList = () => {
         business_id,
         action_url,
         approval_instance_id,
+        assignee_id,
         initiator:contacts!todo_items_initiator_id_fkey(name, department)
       `)
       .eq("assignee_id", currentUser.id)
