@@ -99,16 +99,100 @@ export const useApprovalWorkflow = () => {
   };
 
   /**
-   * 找到第一个审批节点（跳过开始节点和条件节点）
+   * 评估条件表达式
    */
-  const findFirstApproverNode = (nodes: ApprovalNode[]): ApprovalNode | null => {
-    // 按 sort_order 排序
-    const sortedNodes = [...nodes].sort((a, b) => a.sort_order - b.sort_order);
+  const evaluateCondition = (conditionExpression: any, formData: Record<string, unknown>): boolean => {
+    if (!conditionExpression) return true;
     
-    // 找到第一个 approver 类型的节点
+    const groups = conditionExpression.condition_groups || conditionExpression.groups || [];
+    if (groups.length === 0) return true;
+    
+    return groups.some((group: any) => {
+      const conditions = group.conditions || [];
+      if (conditions.length === 0) return true;
+      
+      return conditions.every((cond: any) => {
+        const fieldName = cond.field || cond.field_name;
+        const fieldValue = formData[fieldName];
+        const targetValue = cond.value;
+        
+        switch (cond.operator) {
+          case "equals":
+            return String(fieldValue) === String(targetValue);
+          case "not_equals":
+            return String(fieldValue) !== String(targetValue);
+          case "contains":
+            return String(fieldValue).includes(String(targetValue));
+          case "is_empty":
+            return !fieldValue || fieldValue === "";
+          case "not_empty":
+            return !!fieldValue && fieldValue !== "";
+          default:
+            return true;
+        }
+      });
+    });
+  };
+
+  /**
+   * 扁平化节点列表（根据条件表达式过滤分支）- 与 useApprovalProgression 保持一致
+   */
+  const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, unknown>): ApprovalNode[] => {
+    const result: ApprovalNode[] = [];
+    
+    const sortedNodes = [...nodes].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    
+    const nodeMap = new Map<string, ApprovalNode>();
+    sortedNodes.forEach(node => nodeMap.set(node.id, node));
+    
+    const branchChildNodeIds = new Set<string>();
+    sortedNodes.forEach(node => {
+      if (node.node_type === "condition_branch" && (node.condition_expression as any)?.child_nodes) {
+        ((node.condition_expression as any).child_nodes as string[]).forEach((id: string) => branchChildNodeIds.add(id));
+      }
+    });
+    
     for (const node of sortedNodes) {
+      if (node.node_type === "condition") {
+        const branchIds = (node.condition_expression as any)?.branches || [];
+        
+        for (const branchId of branchIds) {
+          const branch = nodeMap.get(branchId);
+          if (!branch) continue;
+          
+          if (evaluateCondition(branch.condition_expression, formData)) {
+            const childNodeIds = (branch.condition_expression as any)?.child_nodes || [];
+            for (const childId of childNodeIds) {
+              const childNode = nodeMap.get(childId);
+              if (childNode && (childNode.node_type === "approver" || childNode.node_type === "cc")) {
+                result.push(childNode);
+              }
+            }
+            break;
+          }
+        }
+      } else if (node.node_type === "condition_branch") {
+        continue;
+      } else if (node.node_type === "approver" || node.node_type === "cc") {
+        if (!branchChildNodeIds.has(node.id)) {
+          result.push(node);
+        }
+      }
+    }
+    
+    return result;
+  };
+
+  /**
+   * 找到第一个审批节点（使用扁平化后的列表）
+   */
+  const findFirstApproverNode = (nodes: ApprovalNode[], formData: Record<string, unknown>): { node: ApprovalNode; index: number } | null => {
+    const flatNodes = flattenNodesForExecution(nodes, formData);
+    
+    for (let i = 0; i < flatNodes.length; i++) {
+      const node = flatNodes[i];
       if (node.node_type === "approver" && node.approver_ids && node.approver_ids.length > 0) {
-        return node;
+        return { node, index: i };
       }
     }
     return null;
@@ -136,14 +220,18 @@ export const useApprovalWorkflow = () => {
         return { success: true };
       }
 
-      // 3. 找到第一个审批节点
-      const firstNode = findFirstApproverNode(version.nodes_snapshot);
-      if (!firstNode) {
+      // 3. 找到第一个审批节点（使用扁平化后的索引）
+      const firstNodeResult = findFirstApproverNode(version.nodes_snapshot, formData || {});
+      if (!firstNodeResult) {
         console.log("No approver node found in workflow");
         return { success: true };
       }
 
-      // 4. 创建审批实例
+      const { node: firstNode, index: firstNodeIndex } = firstNodeResult;
+
+      console.log("Starting approval workflow, first node:", firstNode.node_name, "at index:", firstNodeIndex);
+
+      // 4. 创建审批实例 - 使用扁平化后的索引而不是 sort_order
       const instanceInsert = {
         template_id: template.id,
         version_id: version.id,
@@ -152,7 +240,7 @@ export const useApprovalWorkflow = () => {
         business_id: businessId,
         initiator_id: initiatorId,
         status: "pending" as const,
-        current_node_index: firstNode.sort_order,
+        current_node_index: firstNodeIndex, // 使用扁平化后的实际索引
         form_data: formData || {},
       };
 
@@ -172,12 +260,12 @@ export const useApprovalWorkflow = () => {
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
       
       for (const approverId of approverIds) {
-        // 创建审批记录
+        // 创建审批记录 - 使用扁平化后的索引
         const { error: recordError } = await supabase
           .from("approval_records")
           .insert({
             instance_id: instance.id,
-            node_index: firstNode.sort_order,
+            node_index: firstNodeIndex, // 使用扁平化后的索引
             node_name: firstNode.node_name,
             node_type: firstNode.node_type,
             approver_id: approverId,
