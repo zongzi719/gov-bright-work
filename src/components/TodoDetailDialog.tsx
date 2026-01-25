@@ -11,6 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -22,6 +28,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 
 interface TodoItem {
@@ -105,9 +113,14 @@ const nodeTypeIcons: Record<string, any> = {
 const statusConfig: Record<string, { color: string; label: string; icon: any }> = {
   pending: { color: "bg-yellow-100 text-yellow-800", label: "待处理", icon: Clock },
   approved: { color: "bg-green-100 text-green-800", label: "已同意", icon: CheckCircle },
-  rejected: { color: "bg-red-100 text-red-800", label: "已拒绝", icon: XCircle },
+  rejected: { color: "bg-red-100 text-red-800", label: "已退回", icon: XCircle },
+  returned_to_initiator: { color: "bg-orange-100 text-orange-800", label: "已退回发起人", icon: RotateCcw },
+  returned_restart: { color: "bg-orange-100 text-orange-800", label: "已退回(重审)", icon: RotateCcw },
+  returned_to_previous: { color: "bg-orange-100 text-orange-800", label: "已退回上一节点", icon: RotateCcw },
   processing: { color: "bg-blue-100 text-blue-800", label: "处理中", icon: Clock },
 };
+
+type ReturnType = "return_to_initiator" | "return_restart" | "return_to_previous";
 
 const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: TodoDetailDialogProps) => {
   const [loading, setLoading] = useState(true);
@@ -432,8 +445,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     return result;
   };
 
-  // 处理审批
-  const handleApproval = async (action: "approved" | "rejected") => {
+  // 处理审批通过
+  const handleApprove = async () => {
     if (!todoItem?.approval_instance_id || !currentUser?.id) return;
 
     setSubmitting(true);
@@ -443,7 +456,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       const { error: recordError } = await supabase
         .from("approval_records")
         .update({
-          status: action,
+          status: "approved",
           comment: comment.trim() || null,
           processed_at: new Date().toISOString(),
         })
@@ -457,8 +470,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       const { error: todoError } = await supabase
         .from("todo_items")
         .update({
-          status: action,
-          process_result: action,
+          status: "approved",
+          process_result: "approved",
           process_notes: comment.trim() || null,
           processed_at: new Date().toISOString(),
           processed_by: currentUser.id,
@@ -469,13 +482,80 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
       // TODO: 根据会签/或签逻辑推进流程到下一节点
 
-      toast.success(action === "approved" ? "审批已通过" : "审批已拒绝");
+      toast.success("审批已通过");
       onOpenChange(false);
       onApprovalComplete?.();
 
     } catch (error) {
       console.error("Failed to submit approval:", error);
       toast.error("提交审批失败");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 处理退回
+  const handleReturn = async (returnType: ReturnType) => {
+    if (!todoItem?.approval_instance_id || !currentUser?.id) return;
+
+    setSubmitting(true);
+
+    try {
+      const statusToSet: "rejected" = "rejected"; // 在 approval_records 中统一使用 rejected 状态
+      let toastMessage = "";
+
+      switch (returnType) {
+        case "return_to_initiator":
+          toastMessage = "已退回发起人，发起人修改后由当前节点继续审批";
+          break;
+        case "return_restart":
+          toastMessage = "已退回发起人，发起人修改后需重新走完整审批流程";
+          break;
+        case "return_to_previous":
+          toastMessage = "已退回至上一节点";
+          break;
+      }
+
+      // 更新当前用户的审批记录
+      const { error: recordError } = await supabase
+        .from("approval_records")
+        .update({
+          status: statusToSet,
+          comment: `[${toastMessage}] ${comment.trim() || ""}`,
+          processed_at: new Date().toISOString(),
+        })
+        .eq("instance_id", todoItem.approval_instance_id)
+        .eq("approver_id", currentUser.id)
+        .eq("status", "pending");
+
+      if (recordError) throw recordError;
+
+      // 更新待办状态
+      const { error: todoError } = await supabase
+        .from("todo_items")
+        .update({
+          status: "rejected",
+          process_result: returnType,
+          process_notes: `[${toastMessage}] ${comment.trim() || ""}`,
+          processed_at: new Date().toISOString(),
+          processed_by: currentUser.id,
+        })
+        .eq("id", todoItem.id);
+
+      if (todoError) throw todoError;
+
+      // TODO: 根据退回类型处理流程逻辑
+      // return_to_initiator: 退回发起人，记录当前节点索引，发起人修改后从此节点继续
+      // return_restart: 退回发起人，发起人修改后从头开始审批
+      // return_to_previous: 退回上一节点，创建上一节点的待办
+
+      toast.success(toastMessage);
+      onOpenChange(false);
+      onApprovalComplete?.();
+
+    } catch (error) {
+      console.error("Failed to return approval:", error);
+      toast.error("退回失败");
     } finally {
       setSubmitting(false);
     }
@@ -687,17 +767,41 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                     />
                   </div>
                   <div className="flex justify-end gap-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          disabled={submitting}
+                          className="text-destructive border-destructive hover:bg-destructive/10"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          退回
+                          <ChevronDown className="w-4 h-4 ml-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-72">
+                        <DropdownMenuItem onClick={() => handleReturn("return_to_initiator")}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">退回发起人（当前节点继续）</span>
+                            <span className="text-xs text-muted-foreground">发起人修改后由当前节点继续审批</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleReturn("return_restart")}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">退回发起人（重新审批）</span>
+                            <span className="text-xs text-muted-foreground">发起人修改后所有节点需重新审批</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleReturn("return_to_previous")}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">退回至上一节点</span>
+                            <span className="text-xs text-muted-foreground">退回给上一个审批节点重新审批</span>
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
-                      variant="outline"
-                      onClick={() => handleApproval("rejected")}
-                      disabled={submitting}
-                      className="text-destructive border-destructive hover:bg-destructive/10"
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      拒绝
-                    </Button>
-                    <Button
-                      onClick={() => handleApproval("approved")}
+                      onClick={handleApprove}
                       disabled={submitting}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
