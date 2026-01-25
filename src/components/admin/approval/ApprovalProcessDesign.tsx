@@ -728,11 +728,81 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     );
   };
 
+  // 添加新条件分支到现有条件组
+  const handleAddConditionToBranch = async (parentNode: ApprovalNode) => {
+    const branchIds = (parentNode.condition_expression as any)?.branches || [];
+    const layout = (parentNode.condition_expression as any)?.layout || 'center';
+    const branchNodes = nodes.filter(n => branchIds.includes(n.id));
+    
+    // 找到默认条件的索引
+    const defaultIndex = branchNodes.findIndex(n => (n.condition_expression as any)?.is_default);
+    const nonDefaultCount = branchNodes.filter(n => !(n.condition_expression as any)?.is_default).length;
+    
+    // 新条件的 sort_order 应该在默认条件之前
+    const baseSortOrder = parentNode.sort_order + nonDefaultCount + 1;
+    
+    // 创建新的条件分支
+    const { data: newBranch, error } = await supabase
+      .from("approval_nodes" as any)
+      .insert({
+        template_id: templateId,
+        node_type: 'condition_branch',
+        node_name: `条件${nonDefaultCount + 2}`,
+        approver_type: 'specific',
+        approver_ids: [],
+        sort_order: baseSortOrder,
+        condition_expression: { 
+          parent_id: parentNode.id,
+          is_default: false,
+          condition_groups: [],
+          child_nodes: [],
+        },
+      })
+      .select()
+      .single();
+
+    if (error || !newBranch) {
+      toast.error("添加条件失败");
+      return;
+    }
+
+    // 更新默认条件的 sort_order
+    const defaultBranch = branchNodes.find(n => (n.condition_expression as any)?.is_default);
+    if (defaultBranch) {
+      await supabase
+        .from("approval_nodes" as any)
+        .update({ sort_order: baseSortOrder + 1 })
+        .eq("id", defaultBranch.id);
+    }
+
+    // 将新分支插入到默认条件之前
+    const newBranchIds = [...branchIds];
+    if (defaultIndex !== -1) {
+      newBranchIds.splice(defaultIndex, 0, (newBranch as any).id);
+    } else {
+      newBranchIds.push((newBranch as any).id);
+    }
+
+    // 更新父节点的分支列表
+    await supabase
+      .from("approval_nodes" as any)
+      .update({
+        condition_expression: { layout, branches: newBranchIds },
+      })
+      .eq("id", parentNode.id);
+
+    toast.success("条件添加成功");
+    await fetchNodes();
+  };
+
   // 条件分支组件 - 使用 CSS hover
   const ConditionBranchGroup = ({ parentNode }: { parentNode: ApprovalNode }) => {
     const branchIds = (parentNode.condition_expression as any)?.branches || [];
     const layout = (parentNode.condition_expression as any)?.layout || 'center';
-    const branchNodes = nodes.filter(n => branchIds.includes(n.id));
+    // 按照 branchIds 顺序获取分支节点，确保顺序一致
+    const branchNodes = branchIds
+      .map((id: string) => nodes.find(n => n.id === id))
+      .filter(Boolean) as ApprovalNode[];
 
     return (
       <div className="relative group/branch">
@@ -747,7 +817,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         {/* 添加条件按钮 */}
         <div className="flex justify-center mb-2">
           <button
-            onClick={() => handleNodeClick(parentNode)}
+            onClick={() => handleAddConditionToBranch(parentNode)}
             className="px-4 py-1 text-sm text-primary border border-primary rounded-md hover:bg-primary/10 transition-colors"
           >
             添加条件
@@ -805,7 +875,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                 {/* 如果是左侧布局的第一个分支，显示子节点 */}
                 {layout === 'left' && idx === 0 && childNodes.length > 0 && (
                   <div className="flex flex-col items-center">
-                    {childNodes.map((childNode, childIdx) => (
+                    {childNodes.map((childNode) => (
                       <div key={childNode.id} className="flex flex-col items-center">
                         <AddNodeButton afterIndex={nodes.findIndex(n => n.id === childNode.id) - 1} />
                         <FlowNodeCard node={childNode} />
@@ -828,6 +898,20 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       </div>
     );
   };
+
+  // 获取所有被移动到分支下的节点ID（用于过滤主流程中的重复显示）
+  const getChildNodeIds = (): string[] => {
+    const childIds: string[] = [];
+    nodes.forEach(node => {
+      if (node.node_type === 'condition_branch') {
+        const ids = (node.condition_expression as any)?.child_nodes || [];
+        childIds.push(...ids);
+      }
+    });
+    return childIds;
+  };
+
+  const childNodeIdsToExclude = getChildNodeIds();
 
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
@@ -886,25 +970,28 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
           <AddNodeButton afterIndex={-1} />
 
-          {/* 流程节点 - 处理条件分支 */}
-          {nodes.filter(n => n.node_type !== 'condition_branch').map((node, index) => {
-            // 跳过条件分支子节点，它们在父节点中渲染
-            if (node.node_type === 'condition') {
+          {/* 流程节点 - 处理条件分支，过滤掉已移动到分支下的节点 */}
+          {nodes
+            .filter(n => n.node_type !== 'condition_branch')
+            .filter(n => !childNodeIdsToExclude.includes(n.id))
+            .map((node, index) => {
+              // 跳过条件分支子节点，它们在父节点中渲染
+              if (node.node_type === 'condition') {
+                return (
+                  <div key={node.id} className="flex flex-col items-center">
+                    <ConditionBranchGroup parentNode={node} />
+                    <AddNodeButton afterIndex={index} />
+                  </div>
+                );
+              }
+              
               return (
                 <div key={node.id} className="flex flex-col items-center">
-                  <ConditionBranchGroup parentNode={node} />
+                  <FlowNodeCard node={node} />
                   <AddNodeButton afterIndex={index} />
                 </div>
               );
-            }
-            
-            return (
-              <div key={node.id} className="flex flex-col items-center">
-                <FlowNodeCard node={node} />
-                <AddNodeButton afterIndex={index} />
-              </div>
-            );
-          })}
+            })}
 
           {/* 流程结束节点 */}
           <div className="flow-node w-72 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden">
