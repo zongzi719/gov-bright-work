@@ -300,50 +300,14 @@ const LeaveManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        {record.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-green-600"
-                              onClick={() => handleApprove(record.id)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-red-600"
-                              onClick={() => handleReject(record.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        {record.status === "approved" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-blue-600"
-                              onClick={() => handleComplete(record.id)}
-                              title="销假"
-                            >
-                              <UserCheck className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-orange-600"
-                              onClick={() => openCancelDialog(record.id)}
-                              title="撤销"
-                            >
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-primary"
+                        onClick={() => {/* TODO: 查看详情 */}}
+                      >
+                        查看详情
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
