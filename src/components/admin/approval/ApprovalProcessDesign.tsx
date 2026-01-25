@@ -340,10 +340,32 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       .eq("id", templateId);
 
     toast.success(`已发布版本 V${newVersionNumber}`);
-    setLastSavedSnapshot(JSON.stringify(nodes));
+    
+    // 先更新快照，确保 hasChanges 变为 false
+    const currentSnapshot = JSON.stringify(nodes);
+    setLastSavedSnapshot(currentSnapshot);
     setHasChanges(false);
+    
+    // 更新版本列表
+    const updatedVersions = [
+      {
+        id: (newVersion as any).id,
+        template_id: templateId,
+        version_number: newVersionNumber,
+        version_name: `流程版本V${newVersionNumber}`,
+        published_by: "admin",
+        published_at: new Date().toISOString(),
+        nodes_snapshot: nodes,
+        is_current: true,
+        notes: null,
+        created_at: new Date().toISOString(),
+      } as ProcessVersion,
+      ...versions.map(v => ({ ...v, is_current: false }))
+    ];
+    setVersions(updatedVersions);
+    setSelectedVersion(null);
+    
     setPublishing(false);
-    await fetchVersions();
   };
 
   // 切换版本（仅查看）
@@ -1583,7 +1605,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
       {/* 右侧详情面板 */}
       <Sheet open={detailPanelOpen} onOpenChange={setDetailPanelOpen}>
-        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+        <SheetContent className="w-[400px] sm:w-[620px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               {selectedNode && (
