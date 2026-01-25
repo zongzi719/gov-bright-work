@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,13 @@ interface FormField {
   field_label: string;
   field_type?: string;
   is_required: boolean;
+}
+
+interface Contact {
+  id: string;
+  name: string;
+  department: string | null;
+  position: string | null;
 }
 
 interface ConditionConfigProps {
@@ -156,6 +164,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 
 const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange }: ConditionConfigProps) => {
   const [groups, setGroups] = useState<ConditionGroup[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   useEffect(() => {
     // 初始化条件组
@@ -164,6 +173,19 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
       setGroups(existingGroups);
     }
   }, [conditionExpression?.condition_groups]);
+
+  useEffect(() => {
+    // 获取通讯录联系人
+    const fetchContacts = async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("id, name, department, position")
+        .eq("is_active", true)
+        .order("name");
+      setContacts(data || []);
+    };
+    fetchContacts();
+  }, []);
 
   // 更新父组件
   const updateExpression = (newGroups: ConditionGroup[]) => {
@@ -245,12 +267,6 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
     return field?.field_type || "text";
   };
 
-  // 获取字段标签
-  const getFieldLabel = (fieldName: string): string => {
-    const field = formFields.find(f => f.field_name === fieldName);
-    return field?.field_label || fieldName;
-  };
-
   // 获取可用的操作符
   const getOperators = (fieldName: string) => {
     const fieldType = getFieldType(fieldName);
@@ -264,7 +280,7 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
         <Input
           value=""
           disabled
-          className="bg-muted cursor-not-allowed"
+          className="bg-muted cursor-not-allowed flex-1 min-w-0"
           placeholder="无需填写"
         />
       );
@@ -273,26 +289,53 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
     const fieldType = getFieldType(condition.field_name);
     const isRange = rangeOperators.includes(condition.operator);
 
+    // 人员类型 - 使用通讯录下拉框
+    if (fieldType === "user") {
+      return (
+        <Select
+          value={condition.value as string || "none"}
+          onValueChange={(value) =>
+            handleUpdateCondition(groupId, condition.id, { 
+              value: value === "none" ? "" : value 
+            })
+          }
+        >
+          <SelectTrigger className="flex-1 min-w-0">
+            <SelectValue placeholder="选择人员" />
+          </SelectTrigger>
+          <SelectContent className="z-[9999]">
+            {contacts.map((contact) => (
+              <SelectItem key={contact.id} value={contact.id}>
+                {contact.name} - {contact.department} {contact.position}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
     // 日期类型
     if (fieldType === "date" || fieldType === "datetime") {
       return (
-        <div className={cn("flex gap-2", isRange && "flex-col")}>
+        <div className={cn("flex gap-2 flex-1 min-w-0", isRange && "flex-col")}>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 className={cn(
-                  "justify-start text-left font-normal flex-1",
+                  "justify-start text-left font-normal flex-1 min-w-0",
                   !condition.value && "text-muted-foreground"
                 )}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {condition.value
-                  ? format(new Date(condition.value as string), "yyyy-MM-dd")
-                  : "选择日期"}
+                <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span className="truncate">
+                  {condition.value
+                    ? format(new Date(condition.value as string), "yyyy-MM-dd")
+                    : "选择日期"}
+                </span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 z-[9999]" align="start">
               <Calendar
                 mode="single"
                 selected={condition.value ? new Date(condition.value as string) : undefined}
@@ -314,17 +357,19 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
                   <Button
                     variant="outline"
                     className={cn(
-                      "justify-start text-left font-normal flex-1",
+                      "justify-start text-left font-normal flex-1 min-w-0",
                       !condition.value2 && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {condition.value2
-                      ? format(new Date(condition.value2), "yyyy-MM-dd")
-                      : "选择日期"}
+                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">
+                      {condition.value2
+                        ? format(new Date(condition.value2), "yyyy-MM-dd")
+                        : "选择日期"}
+                    </span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                   <Calendar
                     mode="single"
                     selected={condition.value2 ? new Date(condition.value2) : undefined}
@@ -348,7 +393,7 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
     if (fieldType === "number" || fieldType === "money") {
       if (isRange) {
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <Input
               type="number"
               value={condition.value as string || ""}
@@ -356,9 +401,9 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
                 handleUpdateCondition(groupId, condition.id, { value: e.target.value })
               }
               placeholder="最小值"
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
-            <span className="text-sm text-muted-foreground">至</span>
+            <span className="text-sm text-muted-foreground flex-shrink-0">至</span>
             <Input
               type="number"
               value={condition.value2 || ""}
@@ -366,7 +411,7 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
                 handleUpdateCondition(groupId, condition.id, { value2: e.target.value })
               }
               placeholder="最大值"
-              className="flex-1"
+              className="flex-1 min-w-0"
             />
           </div>
         );
@@ -379,6 +424,7 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
             handleUpdateCondition(groupId, condition.id, { value: e.target.value })
           }
           placeholder="请输入数值"
+          className="flex-1 min-w-0"
         />
       );
     }
@@ -391,6 +437,7 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
           handleUpdateCondition(groupId, condition.id, { value: e.target.value })
         }
         placeholder="请输入匹配内容"
+        className="flex-1 min-w-0"
       />
     );
   };
@@ -410,14 +457,14 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <Label className="text-base">分支条件配置</Label>
           <p className="text-xs text-muted-foreground mt-1">
             条件组之间为"或"关系，组内条件为"且"关系
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={handleAddGroup}>
+        <Button size="sm" variant="outline" onClick={handleAddGroup} className="flex-shrink-0">
           <Plus className="w-4 h-4 mr-1" />
           添加条件组
         </Button>
@@ -476,61 +523,55 @@ const ConditionConfig = ({ conditionExpression, formFields, isDefault, onChange 
 
                   <div className="flex items-start gap-2">
                     {/* 字段选择 */}
-                    <div className="flex-1">
-                      <Select
-                        value={condition.field_name || "none"}
-                        onValueChange={(value) =>
-                          handleUpdateCondition(group.id, condition.id, {
-                            field_name: value === "none" ? "" : value,
-                            operator: "equals",
-                            value: "",
-                            value2: undefined,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="选择字段" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formFields.map((field) => (
-                            <SelectItem key={field.id} value={field.field_name}>
-                              {field.field_label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Select
+                      value={condition.field_name || "none"}
+                      onValueChange={(value) =>
+                        handleUpdateCondition(group.id, condition.id, {
+                          field_name: value === "none" ? "" : value,
+                          operator: "equals",
+                          value: "",
+                          value2: undefined,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-28 flex-shrink-0">
+                        <SelectValue placeholder="选择字段" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999]">
+                        {formFields.map((field) => (
+                          <SelectItem key={field.id} value={field.field_name}>
+                            {field.field_label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
                     {/* 操作符选择 */}
-                    <div className="w-32">
-                      <Select
-                        value={condition.operator}
-                        onValueChange={(value) =>
-                          handleUpdateCondition(group.id, condition.id, {
-                            operator: value,
-                            value: noValueOperators.includes(value) ? null : condition.value,
-                            value2: rangeOperators.includes(value) ? condition.value2 : undefined,
-                          })
-                        }
-                        disabled={!condition.field_name}
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="条件" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getOperators(condition.field_name).map((op) => (
-                            <SelectItem key={op.value} value={op.value}>
-                              {op.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Select
+                      value={condition.operator}
+                      onValueChange={(value) =>
+                        handleUpdateCondition(group.id, condition.id, {
+                          operator: value,
+                          value: noValueOperators.includes(value) ? null : condition.value,
+                          value2: rangeOperators.includes(value) ? condition.value2 : undefined,
+                        })
+                      }
+                      disabled={!condition.field_name}
+                    >
+                      <SelectTrigger className="w-24 flex-shrink-0">
+                        <SelectValue placeholder="条件" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999]">
+                        {getOperators(condition.field_name).map((op) => (
+                          <SelectItem key={op.value} value={op.value}>
+                            {op.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
                     {/* 值输入 */}
-                    <div className="flex-1">
-                      {condition.field_name && renderValueInput(condition, group.id)}
-                    </div>
+                    {condition.field_name && renderValueInput(condition, group.id)}
 
                     {/* 删除条件按钮 */}
                     <Button
