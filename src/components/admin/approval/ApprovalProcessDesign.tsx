@@ -364,25 +364,21 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
 
     // 如果是"左侧"布局，需要将后续节点移动到第一个分支下
-    // 获取插入点之后的所有非条件分支子节点
-    const nodesAfterInsertion = layout === 'left' && insertAfterIndex >= 0
-      ? nodes
-          .filter(n => n.sort_order > baseSortOrder && n.node_type !== 'condition_branch')
-          .filter(n => {
-            // 排除其他条件分支的子节点
-            if (n.node_type === 'condition') return true;
-            const parentCondition = nodes.find(
-              p => p.node_type === 'condition' && 
-              (p.condition_expression?.branches || []).includes(n.id)
-            );
-            return !parentCondition;
-          })
+    // 获取插入点之后的所有节点（排除条件分支子节点）
+    const nodesAfterInsertion = layout === 'left'
+      ? nodes.filter(n => {
+          // 只获取 sort_order 大于当前位置的节点
+          if (n.sort_order <= baseSortOrder) return false;
+          // 排除条件分支子节点
+          if (n.node_type === 'condition_branch') return false;
+          return true;
+        })
       : [];
 
     // 创建两个分支子节点
     const branches = [
-      { name: '条件1', priority: 1, is_default: false },
-      { name: '默认条件', priority: 2, is_default: true },
+      { name: '条件1', is_default: false },
+      { name: '默认条件', is_default: true },
     ];
 
     const branchIds: string[] = [];
@@ -405,7 +401,6 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
           sort_order: baseSortOrder + i + 1,
           condition_expression: { 
             parent_id: (conditionNode as any).id,
-            priority: branch.priority,
             is_default: branch.is_default,
             condition_groups: [],
             child_nodes: childNodeIds,
@@ -426,6 +421,19 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         condition_expression: { layout, branches: branchIds },
       })
       .eq("id", (conditionNode as any).id);
+
+    // 如果是左侧布局，将后续节点的 sort_order 调整到分支之后，确保它们在第一个分支下显示
+    if (layout === 'left' && nodesAfterInsertion.length > 0) {
+      // 更新后续节点的 sort_order，使它们在分支节点范围内
+      let newOrder = baseSortOrder + 10;
+      for (const node of nodesAfterInsertion) {
+        await supabase
+          .from("approval_nodes" as any)
+          .update({ sort_order: newOrder })
+          .eq("id", node.id);
+        newOrder += 10;
+      }
+    }
     
     toast.success("条件分支添加成功");
     await fetchNodes();
@@ -750,9 +758,14 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         <div className={`flex ${layout === 'left' ? 'justify-start' : 'justify-center'} gap-8`}>
           {branchNodes.map((branch, idx) => {
             const isDefault = (branch.condition_expression as any)?.is_default;
-            const priority = (branch.condition_expression as any)?.priority || idx + 1;
             const conditionGroups = (branch.condition_expression as any)?.condition_groups || [];
             const hasConditions = conditionGroups.length > 0 && conditionGroups.some((g: any) => g.conditions?.length > 0);
+            const childNodeIds = (branch.condition_expression as any)?.child_nodes || [];
+            
+            // 获取分支下的子节点
+            const childNodes = layout === 'left' && idx === 0 
+              ? nodes.filter(n => childNodeIds.includes(n.id))
+              : [];
             
             // 生成条件摘要
             const getConditionSummary = () => {
@@ -774,14 +787,13 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                   className="flow-node w-56 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden cursor-pointer hover:border-muted-foreground/50 transition-all"
                   onClick={() => handleNodeClick(branch)}
                 >
-                  <div className="px-4 py-2 border-b bg-muted/50 flex items-center justify-between">
+                  <div className="px-4 py-2 border-b bg-muted/50">
                     <span className={`text-sm font-medium ${isDefault ? 'text-muted-foreground' : 'text-primary'}`}>
                       {isDefault ? '默认条件' : branch.node_name}
                       {isDefault && (
                         <span className="ml-1 text-xs text-muted-foreground">ⓘ</span>
                       )}
                     </span>
-                    <span className="text-xs text-muted-foreground">优先级{priority}</span>
                   </div>
                   <div className="px-4 py-3">
                     <div className={`text-sm ${hasConditions ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -789,6 +801,18 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                     </div>
                   </div>
                 </div>
+                
+                {/* 如果是左侧布局的第一个分支，显示子节点 */}
+                {layout === 'left' && idx === 0 && childNodes.length > 0 && (
+                  <div className="flex flex-col items-center">
+                    {childNodes.map((childNode, childIdx) => (
+                      <div key={childNode.id} className="flex flex-col items-center">
+                        <AddNodeButton afterIndex={nodes.findIndex(n => n.id === childNode.id) - 1} />
+                        <FlowNodeCard node={childNode} />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 {/* 连接线底部和添加按钮 */}
                 <AddNodeButton afterIndex={nodes.findIndex(n => n.id === branch.id)} />
