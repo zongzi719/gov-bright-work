@@ -28,9 +28,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { Check, X, Search, Clock, UserCheck } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
@@ -79,9 +80,8 @@ const statusColors: Record<AbsenceStatus, string> = {
 const BusinessTripManagement = () => {
   const [records, setRecords] = useState<AbsenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<AbsenceRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<AbsenceStatus | "all">("all");
 
@@ -174,38 +174,9 @@ const BusinessTripManagement = () => {
     }
   };
 
-  const openCancelDialog = (id: string) => {
-    setSelectedRecordId(id);
-    setCancelReason("");
-    setIsCancelDialogOpen(true);
-  };
-
-  const handleCancel = async () => {
-    if (!selectedRecordId) return;
-
-    const record = records.find((r) => r.id === selectedRecordId);
-    const { error } = await supabase
-      .from("absence_records")
-      .update({
-        status: "cancelled",
-        cancelled_at: new Date().toISOString(),
-        cancel_reason: cancelReason || null,
-      })
-      .eq("id", selectedRecordId);
-
-    if (error) {
-      toast.error("取消失败");
-    } else {
-      toast.success("已取消");
-      if (record?.contact_id) {
-        await supabase
-          .from("contacts")
-          .update({ status: "on_duty", status_note: null })
-          .eq("id", record.contact_id);
-      }
-      setIsCancelDialogOpen(false);
-      fetchRecords();
-    }
+  const openDetailDialog = (record: AbsenceRecord) => {
+    setSelectedRecord(record);
+    setIsDetailDialogOpen(true);
   };
 
   const filteredRecords = records.filter((record) => {
@@ -304,8 +275,9 @@ const BusinessTripManagement = () => {
                         size="sm"
                         variant="ghost"
                         className="text-primary"
-                        onClick={() => {/* TODO: 查看详情 */}}
+                        onClick={() => openDetailDialog(record)}
                       >
+                        <Eye className="w-4 h-4 mr-1" />
                         查看详情
                       </Button>
                     </TableCell>
@@ -331,28 +303,84 @@ const BusinessTripManagement = () => {
         )}
       </CardContent>
 
-      {/* 取消对话框 */}
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent>
+      {/* 详情对话框 */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>撤销出差</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              出差申请详情
+              {selectedRecord && (
+                <Badge className={statusColors[selectedRecord.status]}>
+                  {statusLabels[selectedRecord.status]}
+                </Badge>
+              )}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">撤销原因</label>
-              <Input
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="请输入撤销原因（可选）"
-              />
+          {selectedRecord && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground">申请人</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.contacts?.name || "-"}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">单位/部门</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.contacts?.organization?.name || selectedRecord.contacts?.department || "-"}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-sm text-muted-foreground">事由</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.reason}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">开始时间</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">结束时间</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.end_time 
+                      ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN })
+                      : "-"}
+                  </div>
+                </div>
+                {selectedRecord.notes && (
+                  <div className="col-span-2">
+                    <Label className="text-sm text-muted-foreground">备注</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.notes}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-sm text-muted-foreground">申请时间</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                  </div>
+                </div>
+                {selectedRecord.approved_at && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">审批时间</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {format(new Date(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
+                  关闭
+                </Button>
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCancel}>确认撤销</Button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </Card>
