@@ -3,19 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Plus, 
   User, 
-  GitBranch, 
-  ArrowDown,
   Trash2,
   Edit,
   UserCheck,
-  Mail
+  Send,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,9 +40,18 @@ interface ApprovalProcessDesignProps {
 }
 
 const nodeTypeConfig = {
-  approver: { icon: UserCheck, label: "审批人", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  cc: { icon: Mail, label: "抄送人", color: "bg-green-100 text-green-700 border-green-200" },
-  condition: { icon: GitBranch, label: "条件分支", color: "bg-orange-100 text-orange-700 border-orange-200" },
+  approver: { 
+    icon: UserCheck, 
+    label: "审批人", 
+    headerColor: "bg-orange-500",
+    headerTextColor: "text-white"
+  },
+  cc: { 
+    icon: Send, 
+    label: "抄送人", 
+    headerColor: "bg-blue-500",
+    headerTextColor: "text-white"
+  },
 };
 
 const approverTypeLabels: Record<string, string> = {
@@ -52,6 +59,7 @@ const approverTypeLabels: Record<string, string> = {
   role: "指定角色",
   supervisor: "直属主管",
   department_head: "部门负责人",
+  self: "发起人自选",
 };
 
 const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
@@ -60,11 +68,12 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   const [loading, setLoading] = useState(true);
   const [nodeDialogOpen, setNodeDialogOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<ApprovalNode | null>(null);
+  const [insertAfterIndex, setInsertAfterIndex] = useState<number>(-1);
   
   const [nodeForm, setNodeForm] = useState({
     node_type: "approver",
     node_name: "",
-    approver_type: "specific",
+    approver_type: "self",
     approver_ids: [] as string[],
   });
 
@@ -99,7 +108,8 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     setLoading(false);
   };
 
-  const handleOpenNodeDialog = (node?: ApprovalNode) => {
+  const handleOpenNodeDialog = (node?: ApprovalNode, afterIndex: number = -1) => {
+    setInsertAfterIndex(afterIndex);
     if (node) {
       setEditingNode(node);
       setNodeForm({
@@ -113,7 +123,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       setNodeForm({
         node_type: "approver",
         node_name: "",
-        approver_type: "specific",
+        approver_type: "self",
         approver_ids: [],
       });
     }
@@ -148,7 +158,38 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       }
       toast.success("节点更新成功");
     } else {
-      const maxOrder = nodes.length > 0 ? Math.max(...nodes.map(n => n.sort_order)) : 0;
+      // 计算新节点的 sort_order
+      let newSortOrder: number;
+      if (insertAfterIndex === -1) {
+        // 在发起人后插入，即所有节点之前
+        newSortOrder = nodes.length > 0 ? nodes[0].sort_order - 1 : 1;
+      } else if (insertAfterIndex >= nodes.length) {
+        // 在最后一个节点后插入
+        newSortOrder = nodes.length > 0 ? nodes[nodes.length - 1].sort_order + 1 : 1;
+      } else {
+        // 在特定节点后插入
+        const currentOrder = nodes[insertAfterIndex].sort_order;
+        const nextOrder = insertAfterIndex + 1 < nodes.length 
+          ? nodes[insertAfterIndex + 1].sort_order 
+          : currentOrder + 2;
+        newSortOrder = Math.floor((currentOrder + nextOrder) / 2);
+        
+        // 如果没有空间了，重新排序所有节点
+        if (newSortOrder === currentOrder || newSortOrder === nextOrder) {
+          // 需要重新排序
+          const updates = nodes.map((n, i) => ({
+            id: n.id,
+            sort_order: (i + 1) * 10,
+          }));
+          for (const update of updates) {
+            await supabase
+              .from("approval_nodes" as any)
+              .update({ sort_order: update.sort_order })
+              .eq("id", update.id);
+          }
+          newSortOrder = (insertAfterIndex + 1) * 10 + 5;
+        }
+      }
       
       const { error } = await supabase
         .from("approval_nodes" as any)
@@ -158,7 +199,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
           node_name: nodeForm.node_name,
           approver_type: nodeForm.approver_type,
           approver_ids: nodeForm.approver_ids,
-          sort_order: maxOrder + 1,
+          sort_order: newSortOrder,
         });
 
       if (error) {
@@ -207,124 +248,124 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     return contact?.name || id;
   };
 
+  const getApproverDisplay = (node: ApprovalNode) => {
+    if (node.approver_type === "specific" && node.approver_ids && node.approver_ids.length > 0) {
+      return node.approver_ids.map(id => getContactName(id)).join(", ");
+    }
+    return approverTypeLabels[node.approver_type] || "未设置";
+  };
+
+  // 添加节点按钮组件
+  const AddNodeButton = ({ afterIndex }: { afterIndex: number }) => (
+    <div className="flex flex-col items-center">
+      {/* 连接线 */}
+      <div className="w-px h-6 bg-gray-300" />
+      {/* 添加按钮 */}
+      <button
+        onClick={() => handleOpenNodeDialog(undefined, afterIndex)}
+        className="w-7 h-7 rounded-full border-2 border-primary bg-white flex items-center justify-center hover:bg-primary hover:text-white transition-colors group"
+      >
+        <Plus className="w-4 h-4 text-primary group-hover:text-white" />
+      </button>
+      {/* 连接线 */}
+      <div className="w-px h-6 bg-gray-300" />
+    </div>
+  );
+
+  // 流程节点卡片组件
+  const FlowNodeCard = ({ 
+    node, 
+    index 
+  }: { 
+    node: ApprovalNode; 
+    index: number;
+  }) => {
+    const config = nodeTypeConfig[node.node_type as keyof typeof nodeTypeConfig] || nodeTypeConfig.approver;
+    const Icon = config.icon;
+
+    return (
+      <div className="relative group">
+        <div className="w-72 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+          {/* 节点头部 */}
+          <div className={`${config.headerColor} ${config.headerTextColor} px-4 py-2 flex items-center gap-2`}>
+            <Icon className="w-4 h-4" />
+            <span className="font-medium text-sm">{config.label}</span>
+          </div>
+          {/* 节点内容 */}
+          <div 
+            className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+            onClick={() => handleOpenNodeDialog(node)}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-gray-700 truncate">
+                {getApproverDisplay(node)}
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          </div>
+        </div>
+        {/* 操作按钮 */}
+        <div className="absolute -right-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 bg-white"
+            onClick={() => handleOpenNodeDialog(node)}
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 bg-white text-destructive hover:text-destructive"
+            onClick={() => handleDeleteNode(node.id)}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-6">
-        {/* 节点类型 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">节点类型</CardTitle>
-            <CardDescription>点击添加到流程</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {Object.entries(nodeTypeConfig).map(([type, config]) => {
-              const Icon = config.icon;
-              return (
-                <Button
-                  key={type}
-                  variant="outline"
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    setNodeForm({
-                      ...nodeForm,
-                      node_type: type,
-                      node_name: config.label,
-                    });
-                    handleOpenNodeDialog();
-                  }}
-                >
-                  <Icon className="w-4 h-4" />
-                  {config.label}
-                </Button>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* 流程图 */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">审批流程</CardTitle>
-                <CardDescription>配置审批节点和审批人</CardDescription>
-              </div>
-              <Button size="sm" onClick={() => handleOpenNodeDialog()}>
-                <Plus className="w-4 h-4 mr-1" />
-                添加节点
-              </Button>
+      {/* 流程图区域 */}
+      <div className="bg-gray-50 rounded-xl p-8 min-h-[500px] overflow-auto">
+        <div className="flex flex-col items-center py-8">
+          {/* 发起人节点 */}
+          <div className="w-72 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+            <div className="bg-slate-600 text-white px-4 py-2 flex items-center gap-2">
+              <User className="w-4 h-4" />
+              <span className="font-medium text-sm">发起人</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            {nodes.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                暂无流程节点，点击添加
-              </div>
-            ) : (
-              <div className="flex flex-col items-center space-y-2">
-                {/* 发起人 */}
-                <div className="flex items-center gap-3 px-6 py-3 bg-muted rounded-lg border">
-                  <User className="w-5 h-5" />
-                  <span className="font-medium">发起人</span>
-                </div>
-                
-                {nodes.map((node) => {
-                  const config = nodeTypeConfig[node.node_type as keyof typeof nodeTypeConfig];
-                  const Icon = config?.icon || User;
-                  
-                  return (
-                    <div key={node.id} className="flex flex-col items-center">
-                      <ArrowDown className="w-5 h-5 text-muted-foreground my-1" />
-                      <div 
-                        className={`flex items-center gap-3 px-6 py-3 rounded-lg border ${config?.color || "bg-muted"} group relative`}
-                      >
-                        <Icon className="w-5 h-5" />
-                        <div>
-                          <div className="font-medium">{node.node_name}</div>
-                          <div className="text-xs opacity-70">
-                            {node.approver_type === "specific" 
-                              ? (node.approver_ids || []).map(id => getContactName(id)).join(", ")
-                              : approverTypeLabels[node.approver_type]
-                            }
-                          </div>
-                        </div>
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleOpenNodeDialog(node)}
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-destructive"
-                            onClick={() => handleDeleteNode(node.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="px-4 py-3 flex items-center justify-between">
+              <span className="text-sm text-gray-700">提交审批的人员</span>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </div>
+          </div>
 
-                <ArrowDown className="w-5 h-5 text-muted-foreground my-1" />
-                
-                {/* 结束 */}
-                <div className="flex items-center gap-3 px-6 py-3 bg-muted rounded-lg border">
-                  <span className="font-medium">结束</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* 添加按钮 - 发起人后 */}
+          <AddNodeButton afterIndex={-1} />
+
+          {/* 流程节点 */}
+          {nodes.map((node, index) => (
+            <div key={node.id} className="flex flex-col items-center">
+              <FlowNodeCard node={node} index={index} />
+              <AddNodeButton afterIndex={index} />
+            </div>
+          ))}
+
+          {/* 流程结束节点 */}
+          <div className="w-72 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 text-center">
+              <span className="text-sm text-gray-500">流程结束</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 节点编辑弹窗 */}
@@ -375,63 +416,60 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
               />
             </div>
 
-            {nodeForm.node_type !== "condition" && (
-              <>
-                <div>
-                  <Label>审批人类型</Label>
-                  <Select
-                    value={nodeForm.approver_type}
-                    onValueChange={(value) => setNodeForm({ ...nodeForm, approver_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="specific">指定成员</SelectItem>
-                      <SelectItem value="supervisor">直属主管</SelectItem>
-                      <SelectItem value="department_head">部门负责人</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label>审批人设置</Label>
+              <Select
+                value={nodeForm.approver_type}
+                onValueChange={(value) => setNodeForm({ ...nodeForm, approver_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="self">发起人自选</SelectItem>
+                  <SelectItem value="specific">指定成员</SelectItem>
+                  <SelectItem value="supervisor">直属主管</SelectItem>
+                  <SelectItem value="department_head">部门负责人</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                {nodeForm.approver_type === "specific" && (
-                  <div>
-                    <Label>选择审批人</Label>
-                    <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 space-y-1">
-                      {contacts.map((contact) => (
-                        <div
-                          key={contact.id}
-                          className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted ${
-                            nodeForm.approver_ids.includes(contact.id) ? "bg-primary/10" : ""
-                          }`}
-                          onClick={() => toggleApprover(contact.id)}
-                        >
-                          <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                            nodeForm.approver_ids.includes(contact.id) ? "bg-primary border-primary text-primary-foreground" : ""
-                          }`}>
-                            {nodeForm.approver_ids.includes(contact.id) && "✓"}
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">{contact.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {contact.department} {contact.position}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {nodeForm.approver_ids.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {nodeForm.approver_ids.map(id => (
-                          <Badge key={id} variant="secondary">
-                            {getContactName(id)}
-                          </Badge>
-                        ))}
+            {nodeForm.approver_type === "specific" && (
+              <div>
+                <Label>选择审批人</Label>
+                <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 space-y-1">
+                  {contacts.map((contact) => (
+                    <div
+                      key={contact.id}
+                      className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted ${
+                        nodeForm.approver_ids.includes(contact.id) ? "bg-primary/10" : ""
+                      }`}
+                      onClick={() => toggleApprover(contact.id)}
+                    >
+                      <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                        nodeForm.approver_ids.includes(contact.id) ? "bg-primary border-primary text-primary-foreground" : ""
+                      }`}>
+                        {nodeForm.approver_ids.includes(contact.id) && "✓"}
                       </div>
-                    )}
+                      <div className="flex-1">
+                        <div className="font-medium">{contact.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {contact.department} {contact.position}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {nodeForm.approver_ids.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {nodeForm.approver_ids.map(id => (
+                      <Badge key={id} variant="secondary">
+                        {getContactName(id)}
+                      </Badge>
+                    ))}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
           <DialogFooter>
