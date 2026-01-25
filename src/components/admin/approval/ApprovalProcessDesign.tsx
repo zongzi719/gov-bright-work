@@ -76,8 +76,14 @@ const nodeTypeConfig = {
   condition: {
     icon: GitBranch,
     label: "条件分支",
-    headerColor: "bg-purple-500",
+    headerColor: "bg-green-500",
     headerTextColor: "text-white"
+  },
+  condition_branch: {
+    icon: GitBranch,
+    label: "条件",
+    headerColor: "bg-gray-100",
+    headerTextColor: "text-gray-700"
   }
 };
 
@@ -88,6 +94,9 @@ const approverTypeLabels: Record<string, string> = {
   department_head: "部门负责人",
   self: "发起人自选",
 };
+
+// 分支布局类型
+type BranchLayout = "left" | "center";
 
 // 节点类型选择器弹窗
 interface NodeTypeSelectorProps {
@@ -188,6 +197,10 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   // 节点类型选择器
   const [typeSelectorOpen, setTypeSelectorOpen] = useState(false);
   const [typeSelectorPosition, setTypeSelectorPosition] = useState({ x: 0, y: 0 });
+
+  // 条件分支布局选择器
+  const [branchLayoutSelectorOpen, setBranchLayoutSelectorOpen] = useState(false);
+  const [branchLayoutPosition, setBranchLayoutPosition] = useState({ x: 0, y: 0 });
   
   const [nodeForm, setNodeForm] = useState({
     node_type: "approver",
@@ -284,6 +297,14 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   // 选择节点类型后
   const handleSelectNodeType = (type: string) => {
     setTypeSelectorOpen(false);
+    
+    // 如果是条件分支，显示布局选择器
+    if (type === 'condition') {
+      setBranchLayoutPosition(typeSelectorPosition);
+      setBranchLayoutSelectorOpen(true);
+      return;
+    }
+    
     const config = nodeTypeConfig[type as keyof typeof nodeTypeConfig];
     setNodeForm({
       node_type: type,
@@ -294,6 +315,93 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     });
     // 先保存节点，然后打开详情面板
     handleSaveNewNode(type);
+  };
+
+  // 选择分支布局后创建条件分支
+  const handleSelectBranchLayout = async (layout: BranchLayout) => {
+    setBranchLayoutSelectorOpen(false);
+    await handleCreateConditionBranch(layout);
+  };
+
+  // 创建条件分支及其子节点
+  const handleCreateConditionBranch = async (layout: BranchLayout) => {
+    // 计算新节点的 sort_order
+    let baseSortOrder: number;
+    if (insertAfterIndex === -1) {
+      baseSortOrder = nodes.length > 0 ? nodes[0].sort_order - 10 : 10;
+    } else if (insertAfterIndex >= nodes.length) {
+      baseSortOrder = nodes.length > 0 ? nodes[nodes.length - 1].sort_order + 10 : 10;
+    } else {
+      const currentOrder = nodes[insertAfterIndex].sort_order;
+      const nextOrder = insertAfterIndex + 1 < nodes.length 
+        ? nodes[insertAfterIndex + 1].sort_order 
+        : currentOrder + 30;
+      baseSortOrder = Math.floor((currentOrder + nextOrder) / 2);
+    }
+    
+    // 创建主条件分支节点
+    const { data: conditionNode, error: conditionError } = await supabase
+      .from("approval_nodes" as any)
+      .insert({
+        template_id: templateId,
+        node_type: 'condition',
+        node_name: '条件分支',
+        approver_type: 'specific',
+        approver_ids: [],
+        sort_order: baseSortOrder,
+        condition_expression: { layout, branches: [] },
+      })
+      .select()
+      .single();
+
+    if (conditionError || !conditionNode) {
+      toast.error("添加条件分支失败");
+      return;
+    }
+
+    // 创建两个分支子节点
+    const branches = [
+      { name: '条件1', priority: 1, is_default: false },
+      { name: '默认条件', priority: 2, is_default: true },
+    ];
+
+    const branchIds: string[] = [];
+    for (let i = 0; i < branches.length; i++) {
+      const branch = branches[i];
+      const { data: branchNode, error: branchError } = await supabase
+        .from("approval_nodes" as any)
+        .insert({
+          template_id: templateId,
+          node_type: 'condition_branch',
+          node_name: branch.name,
+          approver_type: 'specific',
+          approver_ids: [],
+          sort_order: baseSortOrder + i + 1,
+          condition_expression: { 
+            parent_id: (conditionNode as any).id,
+            priority: branch.priority,
+            is_default: branch.is_default,
+            conditions: []
+          },
+        })
+        .select()
+        .single();
+
+      if (!branchError && branchNode) {
+        branchIds.push((branchNode as any).id);
+      }
+    }
+
+    // 更新主节点的分支引用
+    await supabase
+      .from("approval_nodes" as any)
+      .update({
+        condition_expression: { layout, branches: branchIds },
+      })
+      .eq("id", (conditionNode as any).id);
+    
+    toast.success("条件分支添加成功");
+    await fetchNodes();
   };
 
   // 保存新节点
@@ -480,18 +588,55 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   // 添加节点按钮组件
   const AddNodeButton = ({ afterIndex }: { afterIndex: number }) => (
     <div className="flex flex-col items-center add-node-btn">
-      <div className="w-px h-6 bg-gray-300" />
+      <div className="w-px h-6 bg-border" />
       <button
         onClick={(e) => handleAddClick(e, afterIndex)}
-        className="w-7 h-7 rounded-full border-2 border-primary bg-white flex items-center justify-center hover:bg-primary hover:text-white transition-colors group z-10"
+        className="w-7 h-7 rounded-full border-2 border-primary bg-background flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors group z-10"
       >
-        <Plus className="w-4 h-4 text-primary group-hover:text-white" />
+        <Plus className="w-4 h-4 text-primary group-hover:text-primary-foreground" />
       </button>
-      <div className="w-px h-6 bg-gray-300" />
+      <div className="w-px h-6 bg-border" />
     </div>
   );
 
-  // 流程节点卡片组件
+  // 快速删除节点 (从画布上)
+  const handleQuickDeleteNode = async (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    if (!confirm("确定要删除这个节点吗？")) return;
+
+    // 检查是否为条件分支主节点，如果是，删除其子分支
+    const node = nodes.find(n => n.id === nodeId);
+    if (node?.node_type === 'condition') {
+      const branchIds = (node.condition_expression as any)?.branches || [];
+      for (const branchId of branchIds) {
+        await supabase
+          .from("approval_nodes" as any)
+          .delete()
+          .eq("id", branchId);
+      }
+    }
+
+    // 检查是否为条件分支子节点
+    if (node?.node_type === 'condition_branch') {
+      // 不允许直接删除分支子节点，需要删除整个分支组
+      toast.error("请删除整个条件分支节点");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("approval_nodes" as any)
+      .delete()
+      .eq("id", nodeId);
+
+    if (error) {
+      toast.error("删除节点失败");
+      return;
+    }
+    toast.success("节点已删除");
+    fetchNodes();
+  };
+
+  // 流程节点卡片组件 - 使用 CSS hover 代替 useState
   const FlowNodeCard = ({ node }: { node: ApprovalNode }) => {
     const config = nodeTypeConfig[node.node_type as keyof typeof nodeTypeConfig] || nodeTypeConfig.approver;
     const Icon = config.icon;
@@ -499,22 +644,108 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
     return (
       <div 
-        className={`flow-node w-72 bg-white rounded-lg shadow-md border-2 overflow-hidden cursor-pointer transition-all ${
-          isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200 hover:border-gray-300'
+        className={`flow-node group relative w-72 bg-background rounded-lg shadow-md border-2 overflow-visible cursor-pointer transition-all ${
+          isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-muted-foreground/50'
         }`}
         onClick={() => handleNodeClick(node)}
       >
-        <div className={`${config.headerColor} ${config.headerTextColor} px-4 py-2 flex items-center gap-2`}>
+        {/* 删除按钮 - 使用 CSS group-hover */}
+        {node.node_type !== 'condition_branch' && (
+          <button
+            onClick={(e) => handleQuickDeleteNode(e, node.id)}
+            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-all opacity-0 group-hover:opacity-100 z-20"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+        
+        <div className={`${config.headerColor} ${config.headerTextColor} px-4 py-2 flex items-center gap-2 rounded-t-md`}>
           <Icon className="w-4 h-4" />
           <span className="font-medium text-sm">{node.node_name || config.label}</span>
         </div>
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <div className="text-sm text-gray-700 truncate">
-              {getApproverDisplay(node)}
+            <div className="text-sm text-muted-foreground truncate">
+              {node.node_type === 'condition' ? '添加条件' : 
+               node.node_type === 'condition_branch' ? (
+                 (node.condition_expression as any)?.is_default ? '其他条件进入此流程' : '请设置条件'
+               ) : getApproverDisplay(node)}
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        </div>
+      </div>
+    );
+  };
+
+  // 条件分支组件 - 使用 CSS hover
+  const ConditionBranchGroup = ({ parentNode }: { parentNode: ApprovalNode }) => {
+    const branchIds = (parentNode.condition_expression as any)?.branches || [];
+    const layout = (parentNode.condition_expression as any)?.layout || 'center';
+    const branchNodes = nodes.filter(n => branchIds.includes(n.id));
+
+    return (
+      <div className="relative group/branch">
+        {/* 删除整个分支组按钮 */}
+        <button
+          onClick={(e) => handleQuickDeleteNode(e, parentNode.id)}
+          className="absolute -top-2 right-0 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-all opacity-0 group-hover/branch:opacity-100 z-20"
+        >
+          <X className="w-3 h-3" />
+        </button>
+        
+        {/* 添加条件按钮 */}
+        <div className="flex justify-center mb-2">
+          <button
+            onClick={() => handleNodeClick(parentNode)}
+            className="px-4 py-1 text-sm text-primary border border-primary rounded-md hover:bg-primary/10 transition-colors"
+          >
+            添加条件
+          </button>
+        </div>
+
+        {/* 分支容器 */}
+        <div className={`flex ${layout === 'left' ? 'justify-start' : 'justify-center'} gap-8`}>
+          {branchNodes.map((branch, idx) => {
+            const isDefault = (branch.condition_expression as any)?.is_default;
+            const priority = (branch.condition_expression as any)?.priority || idx + 1;
+            
+            return (
+              <div key={branch.id} className="flex flex-col items-center">
+                {/* 连接线顶部 */}
+                <div className="w-px h-4 bg-border" />
+                
+                {/* 分支卡片 */}
+                <div 
+                  className="flow-node w-56 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden cursor-pointer hover:border-muted-foreground/50 transition-all"
+                  onClick={() => handleNodeClick(branch)}
+                >
+                  <div className="px-4 py-2 border-b bg-muted/50 flex items-center justify-between">
+                    <span className={`text-sm font-medium ${isDefault ? 'text-muted-foreground' : 'text-primary'}`}>
+                      {isDefault ? '默认条件' : branch.node_name}
+                      {isDefault && (
+                        <span className="ml-1 text-xs text-muted-foreground">ⓘ</span>
+                      )}
+                    </span>
+                    <span className="text-xs text-muted-foreground">优先级{priority}</span>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="text-sm text-muted-foreground">
+                      {isDefault ? '其他条件进入此流程' : '请设置条件'}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 连接线底部和添加按钮 */}
+                <AddNodeButton afterIndex={nodes.findIndex(n => n.id === branch.id)} />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 汇聚线 */}
+        <div className="flex justify-center">
+          <div className="w-px h-4 bg-border" />
         </div>
       </div>
     );
@@ -525,68 +756,82 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   }
 
   return (
-    <div className="relative h-[600px] bg-gray-100 rounded-xl overflow-hidden">
+    <div className="relative h-full min-h-[calc(100vh-300px)] bg-muted/50 rounded-xl overflow-hidden">
       {/* 缩放控制按钮 */}
-      <div className="absolute top-4 right-4 z-30 flex flex-col gap-1 bg-white rounded-lg shadow-md border p-1">
+      <div className="absolute top-4 right-4 z-30 flex flex-col gap-1 bg-background rounded-lg shadow-md border p-1">
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn}>
           <ZoomIn className="w-4 h-4" />
         </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut}>
           <ZoomOut className="w-4 h-4" />
         </Button>
-        <div className="w-full h-px bg-gray-200" />
+        <div className="w-full h-px bg-border" />
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleResetZoom}>
           <Maximize className="w-4 h-4" />
         </Button>
       </div>
 
       {/* 缩放比例显示 */}
-      <div className="absolute bottom-4 right-4 z-30 bg-white rounded-lg shadow-md border px-3 py-1.5 text-sm text-gray-600">
+      <div className="absolute bottom-4 right-4 z-30 bg-background rounded-lg shadow-md border px-3 py-1.5 text-sm text-muted-foreground">
         {Math.round(scale * 100)}%
       </div>
 
       {/* 画布区域 */}
       <div 
         ref={canvasRef}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
+        className="w-full h-full cursor-grab active:cursor-grabbing overflow-auto"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
         <div 
-          className="inline-flex flex-col items-center py-12 px-8 min-w-full min-h-full"
+          className="flex flex-col items-center py-12 px-8"
           style={{
+            minWidth: '100%',
+            minHeight: '100%',
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transformOrigin: 'center top',
           }}
         >
           {/* 发起人节点 */}
-          <div className="flow-node w-72 bg-white rounded-lg shadow-md border-2 border-gray-200 overflow-hidden">
+          <div className="flow-node w-72 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden">
             <div className="bg-slate-600 text-white px-4 py-2 flex items-center gap-2">
               <User className="w-4 h-4" />
               <span className="font-medium text-sm">发起人</span>
             </div>
             <div className="px-4 py-3 flex items-center justify-between">
-              <span className="text-sm text-gray-700">提交审批的人员</span>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-muted-foreground">提交审批的人员</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </div>
           </div>
 
           <AddNodeButton afterIndex={-1} />
 
-          {/* 流程节点 */}
-          {nodes.map((node, index) => (
-            <div key={node.id} className="flex flex-col items-center">
-              <FlowNodeCard node={node} />
-              <AddNodeButton afterIndex={index} />
-            </div>
-          ))}
+          {/* 流程节点 - 处理条件分支 */}
+          {nodes.filter(n => n.node_type !== 'condition_branch').map((node, index) => {
+            // 跳过条件分支子节点，它们在父节点中渲染
+            if (node.node_type === 'condition') {
+              return (
+                <div key={node.id} className="flex flex-col items-center">
+                  <ConditionBranchGroup parentNode={node} />
+                  <AddNodeButton afterIndex={index} />
+                </div>
+              );
+            }
+            
+            return (
+              <div key={node.id} className="flex flex-col items-center">
+                <FlowNodeCard node={node} />
+                <AddNodeButton afterIndex={index} />
+              </div>
+            );
+          })}
 
           {/* 流程结束节点 */}
-          <div className="flow-node w-72 bg-white rounded-lg shadow-md border-2 border-gray-200 overflow-hidden">
+          <div className="flow-node w-72 bg-background rounded-lg shadow-md border-2 border-border overflow-hidden">
             <div className="px-4 py-3 text-center">
-              <span className="text-sm text-gray-500">流程结束</span>
+              <span className="text-sm text-muted-foreground">流程结束</span>
             </div>
           </div>
         </div>
@@ -599,6 +844,64 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         onClose={() => setTypeSelectorOpen(false)}
         onSelect={handleSelectNodeType}
       />
+
+      {/* 条件分支布局选择器 */}
+      {branchLayoutSelectorOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setBranchLayoutSelectorOpen(false)}
+          />
+          <div 
+            className="fixed z-50 bg-background rounded-lg shadow-xl border p-4 w-64"
+            style={{ 
+              left: branchLayoutPosition.x,
+              top: branchLayoutPosition.y,
+              transform: 'translate(-50%, 0)'
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium">分支节点</span>
+              <button 
+                onClick={() => setBranchLayoutSelectorOpen(false)} 
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2 mb-3 p-2 bg-green-100 rounded-lg">
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <GitBranch className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-medium text-green-700">条件分支</span>
+            </div>
+
+            <div className="text-xs text-muted-foreground mb-2">分支下方节点整体放置在</div>
+            
+            <div className="space-y-2">
+              <button
+                onClick={() => handleSelectBranchLayout('left')}
+                className="w-full flex items-center gap-2 p-3 rounded-lg border-2 hover:border-primary hover:bg-primary/5 transition-colors text-left"
+              >
+                <span className="text-sm">左侧</span>
+                <span className="text-xs text-muted-foreground">ⓘ</span>
+              </button>
+              <button
+                onClick={() => handleSelectBranchLayout('center')}
+                className="w-full flex items-center gap-2 p-3 rounded-lg border-2 hover:border-primary hover:bg-primary/5 transition-colors text-left"
+              >
+                <span className="text-sm">不移动</span>
+                <span className="text-xs text-muted-foreground">ⓘ</span>
+              </button>
+            </div>
+            
+            <div className="mt-3 text-xs text-muted-foreground">
+              分支聚合后执行下方节点
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 右侧详情面板 */}
       <Sheet open={detailPanelOpen} onOpenChange={setDetailPanelOpen}>
@@ -650,7 +953,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                 />
               </div>
 
-              {nodeForm.node_type !== 'condition' && (
+              {nodeForm.node_type !== 'condition' && nodeForm.node_type !== 'condition_branch' && (
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="approver">
@@ -802,9 +1105,26 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
               )}
 
               {nodeForm.node_type === 'condition' && (
-                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <div className="text-sm text-purple-700">
-                    条件分支功能开发中，敬请期待...
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-sm text-green-700">
+                    <p className="font-medium mb-2">条件分支说明</p>
+                    <p>点击下方分支卡片可设置具体的分支条件。满足条件的流程将进入对应分支执行。</p>
+                  </div>
+                </div>
+              )}
+
+              {nodeForm.node_type === 'condition_branch' && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted/50 rounded-lg border">
+                    <div className="text-sm">
+                      <p className="font-medium mb-2">分支条件设置</p>
+                      <p className="text-muted-foreground">
+                        {(selectedNode?.condition_expression as any)?.is_default 
+                          ? '默认条件：当其他条件都不满足时，流程将进入此分支。' 
+                          : '请配置此分支的触发条件（条件编辑功能开发中...）'
+                        }
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
