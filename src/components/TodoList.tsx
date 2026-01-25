@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import TodoDetailDialog from "./TodoDetailDialog";
 
 interface TodoItem {
   id: string;
@@ -13,6 +14,7 @@ interface TodoItem {
   priority: "urgent" | "normal" | "low";
   status: string;
   business_type: string;
+  business_id: string | null;
   action_url: string | null;
   approval_instance_id: string | null;
   initiator?: {
@@ -40,6 +42,8 @@ const TodoList = () => {
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedTodo, setSelectedTodo] = useState<TodoItem | null>(null);
 
   // Get current user from localStorage
   const getCurrentUser = () => {
@@ -74,6 +78,7 @@ const TodoList = () => {
         priority,
         status,
         business_type,
+        business_id,
         action_url,
         approval_instance_id,
         initiator:contacts!todo_items_initiator_id_fkey(name, department)
@@ -102,11 +107,22 @@ const TodoList = () => {
 
   const handleItemClick = (item: TodoItem) => {
     setSelectedId(item.id);
+    
     // 如果是外部系统的待办，跳转到外部链接
     if (item.action_url) {
       window.open(item.action_url, "_blank");
+      return;
     }
-    // TODO: 内部待办跳转到审批详情页
+    
+    // 内部待办打开详情弹窗
+    if (item.approval_instance_id) {
+      setSelectedTodo(item);
+      setDetailOpen(true);
+    }
+  };
+
+  const handleApprovalComplete = () => {
+    fetchTodoItems();
   };
 
   const getDisplayInfo = (item: TodoItem) => {
@@ -131,74 +147,84 @@ const TodoList = () => {
   }
 
   return (
-    <div className="gov-card h-full flex flex-col">
-      {/* 标题栏 */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <h2 className="gov-card-title">待办事项</h2>
-          {unreadCount > 0 && <span className="gov-badge">{unreadCount}</span>}
-        </div>
-        <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
-          更多
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* 待办列表 */}
-      <div className="flex-1 overflow-y-auto">
-        {todoItems.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">
-            暂无待办事项
+    <>
+      <div className="gov-card h-full flex flex-col">
+        {/* 标题栏 */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <h2 className="gov-card-title">待办事项</h2>
+            {unreadCount > 0 && <span className="gov-badge">{unreadCount}</span>}
           </div>
-        ) : (
-          todoItems.map((item) => {
-            const displayStatus = priorityToStatus(item.priority, item.status);
-            const { system, department } = getDisplayInfo(item);
-            
-            return (
-              <div
-                key={item.id}
-                className={`relative px-5 py-4 cursor-pointer transition-all border-l-3 ${
-                  selectedId === item.id
-                    ? "bg-primary/5 border-l-primary"
-                    : "border-l-transparent hover:bg-muted/50"
-                }`}
-                onClick={() => handleItemClick(item)}
-              >
-                <div className="flex items-start gap-3">
-                  {/* 状态圆点 */}
-                  <div
-                    className={`status-dot mt-1.5 ${
-                      displayStatus === "urgent"
-                        ? "status-dot-urgent"
-                        : displayStatus === "normal"
-                        ? "status-dot-normal"
-                        : "status-dot-done"
-                    }`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3
-                      className={`text-sm font-medium leading-relaxed mb-1.5 ${
-                        selectedId === item.id ? "text-primary" : "text-foreground"
+          <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
+            更多
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 待办列表 */}
+        <div className="flex-1 overflow-y-auto">
+          {todoItems.length === 0 ? (
+            <div className="flex items-center justify-center h-32 text-muted-foreground">
+              暂无待办事项
+            </div>
+          ) : (
+            todoItems.map((item) => {
+              const displayStatus = priorityToStatus(item.priority, item.status);
+              const { system, department } = getDisplayInfo(item);
+              
+              return (
+                <div
+                  key={item.id}
+                  className={`relative px-5 py-4 cursor-pointer transition-all border-l-3 ${
+                    selectedId === item.id
+                      ? "bg-primary/5 border-l-primary"
+                      : "border-l-transparent hover:bg-muted/50"
+                  }`}
+                  onClick={() => handleItemClick(item)}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* 状态圆点 */}
+                    <div
+                      className={`status-dot mt-1.5 ${
+                        displayStatus === "urgent"
+                          ? "status-dot-urgent"
+                          : displayStatus === "normal"
+                          ? "status-dot-normal"
+                          : "status-dot-done"
                       }`}
-                    >
-                      {item.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                      <span>• 系统：{system}</span>
-                      <span>• 部门：{department}</span>
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className={`text-sm font-medium leading-relaxed mb-1.5 ${
+                          selectedId === item.id ? "text-primary" : "text-foreground"
+                        }`}
+                      >
+                        {item.title}
+                      </h3>
+                      <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                        <span>• 系统：{system}</span>
+                        <span>• 部门：{department}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-                    </p>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* 待办详情弹窗 */}
+      <TodoDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        todoItem={selectedTodo}
+        onApprovalComplete={handleApprovalComplete}
+      />
+    </>
   );
 };
 

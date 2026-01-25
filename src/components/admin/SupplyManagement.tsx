@@ -759,39 +759,14 @@ const SupplyManagement = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {request.status === "pending" && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleApprovePurchase(request.id)}
-                                  title="批准"
-                                >
-                                  <Check className="w-4 h-4 text-green-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRejectPurchase(request.id)}
-                                  title="拒绝"
-                                >
-                                  <X className="w-4 h-4 text-red-600" />
-                                </Button>
-                              </>
-                            )}
-                            {request.status === "approved" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCompletePurchase(request)}
-                                className="gap-1"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                                入库
-                              </Button>
-                            )}
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary"
+                            onClick={() => {/* TODO: 查看详情 */}}
+                          >
+                            查看详情
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -952,45 +927,14 @@ const SupplyManagement = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {requisition.status === "pending" && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    handleApproveRequisition(requisition.id)
-                                  }
-                                  title="批准"
-                                >
-                                  <Check className="w-4 h-4 text-green-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    handleRejectRequisition(requisition.id)
-                                  }
-                                  title="拒绝"
-                                >
-                                  <X className="w-4 h-4 text-red-600" />
-                                </Button>
-                              </>
-                            )}
-                            {requisition.status === "approved" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleCompleteRequisition(requisition)
-                                }
-                                className="gap-1"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                                确认领取
-                              </Button>
-                            )}
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary"
+                            onClick={() => {/* TODO: 查看详情 */}}
+                          >
+                            查看详情
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

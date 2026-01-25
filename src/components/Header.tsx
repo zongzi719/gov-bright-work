@@ -6,6 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { useFrontendAuth } from "@/hooks/useFrontendAuth";
 import { useState, useEffect } from "react";
 import PasswordChangeDialog from "./PasswordChangeDialog";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,10 +19,30 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, loading, logout } = useFrontendAuth();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [todoCount, setTodoCount] = useState(0);
   
   const today = new Date();
   const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
   const dateString = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 星期${weekDays[today.getDay()]}`;
+
+  // Fetch pending todo count for current user
+  useEffect(() => {
+    const fetchTodoCount = async () => {
+      if (!user?.id) return;
+      
+      const { count, error } = await supabase
+        .from("todo_items")
+        .select("*", { count: "exact", head: true })
+        .eq("assignee_id", user.id)
+        .in("status", ["pending", "processing"]);
+      
+      if (!error && count !== null) {
+        setTodoCount(count);
+      }
+    };
+
+    fetchTodoCount();
+  }, [user?.id]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -64,9 +85,11 @@ const Header = () => {
             {/* 消息通知 */}
             <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent text-xs text-white rounded-full flex items-center justify-center font-medium">
-                5
-              </span>
+              {todoCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-accent text-xs text-white rounded-full flex items-center justify-center font-medium">
+                  {todoCount > 99 ? "99+" : todoCount}
+                </span>
+              )}
             </Button>
 
             {/* 用户信息 - 下拉菜单 */}

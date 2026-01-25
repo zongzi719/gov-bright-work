@@ -46,6 +46,7 @@ interface ApprovalNode {
   sort_order: number;
   condition_expression: any;
   field_permissions?: FieldPermissions;
+  approval_mode?: string; // 'countersign' 会签 | 'or_sign' 或签
 }
 
 interface FormField {
@@ -242,6 +243,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     approver_ids: [] as string[],
     field_permissions: {} as FieldPermissions,
     condition_expression: null as any,
+    approval_mode: "countersign", // 默认会签
   });
 
   useEffect(() => {
@@ -483,6 +485,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       approver_ids: [],
       field_permissions: {},
       condition_expression: null,
+      approval_mode: "countersign",
     });
     // 先保存节点，然后打开详情面板
     handleSaveNewNode(type);
@@ -669,6 +672,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         approver_ids: [],
         field_permissions: {},
         condition_expression: null,
+        approval_mode: "countersign",
       });
       setDetailPanelOpen(true);
     }
@@ -692,6 +696,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       approver_ids: node.approver_ids || [],
       field_permissions: permissions,
       condition_expression: node.condition_expression || null,
+      approval_mode: node.approval_mode || "countersign",
     });
     setActiveTab("approver");
     setDetailPanelOpen(true);
@@ -737,6 +742,10 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       updateData.approver_type = nodeForm.approver_type;
       updateData.approver_ids = nodeForm.approver_ids;
       updateData.field_permissions = nodeForm.field_permissions;
+      // 审批人节点更新审批方式
+      if (nodeForm.node_type === 'approver') {
+        updateData.approval_mode = nodeForm.approval_mode;
+      }
     }
 
     // 条件分支节点更新条件表达式
@@ -998,6 +1007,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       approver_ids: [],
       field_permissions: {},
       condition_expression: null,
+      approval_mode: "countersign",
     });
     setDetailPanelOpen(true);
   };
@@ -1725,6 +1735,40 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                             ))}
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* 审批方式（仅审批人节点显示） */}
+                    {nodeForm.node_type === 'approver' && (
+                      <div>
+                        <Label>审批方式</Label>
+                        <Select
+                          value={nodeForm.approval_mode}
+                          onValueChange={(value) => setNodeForm({ ...nodeForm, approval_mode: value })}
+                        >
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="countersign">
+                              <div className="flex flex-col">
+                                <span>会签</span>
+                                <span className="text-xs text-muted-foreground">需要所有审批人都同意才可通过</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="or_sign">
+                              <div className="flex flex-col">
+                                <span>或签</span>
+                                <span className="text-xs text-muted-foreground">任一审批人同意或拒绝即可</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {nodeForm.approval_mode === 'countersign' 
+                            ? '会签：需要所有审批人都同意，审批才能通过' 
+                            : '或签：其中一名审批人同意或拒绝即可决定结果'}
+                        </p>
                       </div>
                     )}
                   </TabsContent>

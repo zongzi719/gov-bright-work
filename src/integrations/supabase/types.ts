@@ -207,6 +207,7 @@ export type Database = {
       }
       approval_nodes: {
         Row: {
+          approval_mode: string
           approver_ids: string[] | null
           approver_type: string
           condition_expression: Json | null
@@ -220,6 +221,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_mode?: string
           approver_ids?: string[] | null
           approver_type?: string
           condition_expression?: Json | null
@@ -233,6 +235,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_mode?: string
           approver_ids?: string[] | null
           approver_type?: string
           condition_expression?: Json | null
