@@ -213,6 +213,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string>("");
   const [versionDropdownOpen, setVersionDropdownOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   
   // 画布状态
   const [scale, setScale] = useState(1);
@@ -244,19 +245,30 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   });
 
   useEffect(() => {
-    fetchNodes();
-    fetchContacts();
-    fetchFormFields();
-    fetchVersions();
+    const initializeData = async () => {
+      await fetchNodes();
+      await fetchContacts();
+      await fetchFormFields();
+      await fetchVersions();
+    };
+    initializeData();
   }, [templateId]);
 
   // 检测节点变化
   useEffect(() => {
+    // 跳过首次加载
+    if (isFirstLoad) return;
+    
     const currentSnapshot = JSON.stringify(nodes);
     if (lastSavedSnapshot && currentSnapshot !== lastSavedSnapshot) {
       setHasChanges(true);
+    } else if (lastSavedSnapshot && currentSnapshot === lastSavedSnapshot) {
+      setHasChanges(false);
     }
-  }, [nodes, lastSavedSnapshot]);
+  }, [nodes, lastSavedSnapshot, isFirstLoad]);
+  
+  // 计算是否显示发布按钮：没有发布过任何版本 OR 有修改
+  const shouldShowPublishButton = versions.length === 0 || hasChanges;
 
   // 获取版本列表
   const fetchVersions = async () => {
@@ -267,12 +279,16 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       .order("version_number", { ascending: false });
 
     if (!error && data) {
-      setVersions(data as unknown as ProcessVersion[]);
-      const currentVersion = (data as unknown as ProcessVersion[]).find(v => v.is_current);
+      const versionList = data as unknown as ProcessVersion[];
+      setVersions(versionList);
+      const currentVersion = versionList.find(v => v.is_current);
       if (currentVersion) {
         setSelectedVersion(currentVersion);
+        // 如果有当前版本，以其快照为基准
+        setLastSavedSnapshot(JSON.stringify(currentVersion.nodes_snapshot));
       }
     }
+    setIsFirstLoad(false);
   };
 
   // 发布新版本
@@ -377,12 +393,6 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
     const fetchedNodes = (data as unknown as ApprovalNode[]) || [];
     setNodes(fetchedNodes);
-    
-    // 初始化快照用于检测变化
-    if (!lastSavedSnapshot) {
-      setLastSavedSnapshot(JSON.stringify(fetchedNodes));
-    }
-    
     setLoading(false);
   };
 
@@ -1354,16 +1364,16 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         )}
       </div>
 
-      {/* 右上角发布按钮 */}
+      {/* 右上角发布按钮 - 首次发布或有修改时显示 */}
       <div className="absolute top-4 right-28 z-30 flex items-center gap-2">
-        {hasChanges && !isViewingHistoricVersion && (
+        {shouldShowPublishButton && !isViewingHistoricVersion && (
           <Button 
             onClick={handlePublishVersion}
-            disabled={publishing}
+            disabled={publishing || nodes.length === 0}
             className="gap-2"
           >
             <Upload className="w-4 h-4" />
-            {publishing ? "发布中..." : "发布"}
+            {publishing ? "发布中..." : versions.length === 0 ? "发布 V1" : "发布"}
           </Button>
         )}
       </div>
