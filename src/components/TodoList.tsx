@@ -1,77 +1,134 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
 
 interface TodoItem {
-  id: number;
+  id: string;
   title: string;
-  system: string;
-  department: string;
-  time: string;
-  status: "urgent" | "normal" | "done";
+  source_system: string | null;
+  source_department: string | null;
+  created_at: string;
+  priority: "urgent" | "normal" | "low";
+  status: string;
+  business_type: string;
+  action_url: string | null;
+  approval_instance_id: string | null;
+  initiator?: {
+    name: string;
+    department: string | null;
+  } | null;
 }
 
-const todoItems: TodoItem[] = [
-  {
-    id: 1,
-    title: "关于2025年度工作总结的审批",
-    system: "OA办公系统",
-    department: "办公室",
-    time: "2026-01-12 09:30",
-    status: "urgent",
-  },
-  {
-    id: 2,
-    title: "关于开展安全检查的通知传阅",
-    system: "公文系统",
-    department: "安保部",
-    time: "2026-01-11 14:20",
-    status: "urgent",
-  },
-  {
-    id: 3,
-    title: "周工作例会会议纪要确认",
-    system: "会议系统",
-    department: "综合科",
-    time: "2026-01-10 16:15",
-    status: "normal",
-  },
-  {
-    id: 4,
-    title: "12月办公经费报销审核",
-    system: "财务系统",
-    department: "财务部",
-    time: "2026-01-09 10:00",
-    status: "normal",
-  },
-  {
-    id: 5,
-    title: "2026年人员考勤统计确认",
-    system: "人力系统",
-    department: "人事部",
-    time: "2026-01-08 11:20",
-    status: "normal",
-  },
-  {
-    id: 6,
-    title: "2025年档案归档审核",
-    system: "档案系统",
-    department: "档案科",
-    time: "2026-01-07 09:15",
-    status: "done",
-  },
-  {
-    id: 7,
-    title: "办公设备盘点确认",
-    system: "资产系统",
-    department: "行政部",
-    time: "2026-01-06 14:30",
-    status: "urgent",
-  },
-];
+const priorityToStatus = (priority: string, status: string): "urgent" | "normal" | "done" => {
+  if (status === "approved" || status === "rejected" || status === "completed") {
+    return "done";
+  }
+  return priority === "urgent" ? "urgent" : "normal";
+};
+
+const businessTypeLabels: Record<string, string> = {
+  business_trip: "出差申请",
+  absence: "请假/外出",
+  supply_requisition: "领用申请",
+  purchase_request: "采购申请",
+  external_approval: "外部审批",
+};
 
 const TodoList = () => {
-  const [selectedId, setSelectedId] = useState<number>(1);
-  const unreadCount = todoItems.filter((item) => item.status !== "done").length;
+  const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Get current user from localStorage
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem("frontendUser");
+      if (userStr) {
+        return JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error("Failed to parse frontendUser", e);
+    }
+    return null;
+  };
+
+  const currentUser = getCurrentUser();
+
+  // Fetch todo items for current user
+  const fetchTodoItems = async () => {
+    if (!currentUser?.id) {
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("todo_items")
+      .select(`
+        id,
+        title,
+        source_system,
+        source_department,
+        created_at,
+        priority,
+        status,
+        business_type,
+        action_url,
+        approval_instance_id,
+        initiator:contacts!todo_items_initiator_id_fkey(name, department)
+      `)
+      .eq("assignee_id", currentUser.id)
+      .in("status", ["pending", "processing"])
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error("Failed to fetch todo items:", error);
+    } else if (data) {
+      setTodoItems(data as unknown as TodoItem[]);
+      if (data.length > 0 && !selectedId) {
+        setSelectedId(data[0].id);
+      }
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTodoItems();
+  }, [currentUser?.id]);
+
+  const unreadCount = todoItems.filter((item) => item.status === "pending").length;
+
+  const handleItemClick = (item: TodoItem) => {
+    setSelectedId(item.id);
+    // 如果是外部系统的待办，跳转到外部链接
+    if (item.action_url) {
+      window.open(item.action_url, "_blank");
+    }
+    // TODO: 内部待办跳转到审批详情页
+  };
+
+  const getDisplayInfo = (item: TodoItem) => {
+    const system = item.source_system || businessTypeLabels[item.business_type] || "内部系统";
+    const department = item.source_department || item.initiator?.department || "未知部门";
+    return { system, department };
+  };
+
+  if (loading) {
+    return (
+      <div className="gov-card h-full flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <h2 className="gov-card-title">待办事项</h2>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          加载中...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="gov-card h-full flex flex-col">
@@ -79,7 +136,7 @@ const TodoList = () => {
       <div className="flex items-center justify-between px-5 py-4 border-b border-border">
         <div className="flex items-center gap-2">
           <h2 className="gov-card-title">待办事项</h2>
-          <span className="gov-badge">{unreadCount}</span>
+          {unreadCount > 0 && <span className="gov-badge">{unreadCount}</span>}
         </div>
         <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
           更多
@@ -89,46 +146,57 @@ const TodoList = () => {
 
       {/* 待办列表 */}
       <div className="flex-1 overflow-y-auto">
-        {todoItems.map((item) => (
-          <div
-            key={item.id}
-            className={`relative px-5 py-4 cursor-pointer transition-all border-l-3 ${
-              selectedId === item.id
-                ? "bg-primary/5 border-l-primary"
-                : "border-l-transparent hover:bg-muted/50"
-            }`}
-            onClick={() => setSelectedId(item.id)}
-          >
-            <div className="flex items-start gap-3">
-              {/* 状态圆点 */}
-              <div
-                className={`status-dot mt-1.5 ${
-                  item.status === "urgent"
-                    ? "status-dot-urgent"
-                    : item.status === "normal"
-                    ? "status-dot-normal"
-                    : "status-dot-done"
-                }`}
-              />
-              <div className="flex-1 min-w-0">
-                <h3
-                  className={`text-sm font-medium leading-relaxed mb-1.5 ${
-                    selectedId === item.id ? "text-primary" : "text-foreground"
-                  }`}
-                >
-                  {item.title}
-                </h3>
-                <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                  <span>• 系统：{item.system}</span>
-                  <span>• 部门：{item.department}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  • 时间：{item.time}
-                </p>
-              </div>
-            </div>
+        {todoItems.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-muted-foreground">
+            暂无待办事项
           </div>
-        ))}
+        ) : (
+          todoItems.map((item) => {
+            const displayStatus = priorityToStatus(item.priority, item.status);
+            const { system, department } = getDisplayInfo(item);
+            
+            return (
+              <div
+                key={item.id}
+                className={`relative px-5 py-4 cursor-pointer transition-all border-l-3 ${
+                  selectedId === item.id
+                    ? "bg-primary/5 border-l-primary"
+                    : "border-l-transparent hover:bg-muted/50"
+                }`}
+                onClick={() => handleItemClick(item)}
+              >
+                <div className="flex items-start gap-3">
+                  {/* 状态圆点 */}
+                  <div
+                    className={`status-dot mt-1.5 ${
+                      displayStatus === "urgent"
+                        ? "status-dot-urgent"
+                        : displayStatus === "normal"
+                        ? "status-dot-normal"
+                        : "status-dot-done"
+                    }`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3
+                      className={`text-sm font-medium leading-relaxed mb-1.5 ${
+                        selectedId === item.id ? "text-primary" : "text-foreground"
+                      }`}
+                    >
+                      {item.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                      <span>• 系统：{system}</span>
+                      <span>• 部门：{department}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
