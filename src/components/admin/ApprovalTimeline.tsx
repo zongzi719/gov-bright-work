@@ -122,29 +122,53 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
 
   // 评估条件
   const evaluateCondition = (conditionExpression: any, formData: Record<string, any>): boolean => {
-    if (!conditionExpression || !conditionExpression.groups) return true;
+    // 如果没有条件表达式，或者没有groups，或者groups为空，则默认匹配
+    if (!conditionExpression) return true;
+    
+    const groups = conditionExpression.groups || conditionExpression.condition_groups;
+    if (!groups || groups.length === 0) return true;
     
     try {
-      return conditionExpression.groups.some((group: any) => {
-        if (!group.conditions || group.conditions.length === 0) return true;
-        return group.conditions.every((cond: any) => {
-          const value = formData[cond.field];
+      // 组之间是 OR 关系
+      return groups.some((group: any) => {
+        const conditions = group.conditions || [];
+        if (conditions.length === 0) return true;
+        
+        // 条件之间是 AND 关系
+        return conditions.every((cond: any) => {
+          const field = cond.field;
+          let value = formData[field];
           const targetValue = cond.value;
+          
+          // 特殊处理申请人字段 - 可能存储为 contact_id
+          if (field === "contact_id" || field === "申请人" || field === "applicant") {
+            // 尝试获取 contact_id 或直接使用值
+            value = formData["contact_id"] || formData["申请人"] || formData["applicant"] || value;
+          }
+          
+          console.log(`[ApprovalTimeline] Evaluating condition: field=${field}, operator=${cond.operator}, value=${value}, target=${targetValue}`);
           
           switch (cond.operator) {
             case "equals":
+            case "等于":
               return value === targetValue;
             case "not_equals":
+            case "不等于":
               return value !== targetValue;
             case "contains":
+            case "包含":
               return String(value || "").includes(String(targetValue || ""));
             case "greater_than":
+            case "大于":
               return Number(value) > Number(targetValue);
             case "less_than":
+            case "小于":
               return Number(value) < Number(targetValue);
             case "is_empty":
+            case "为空":
               return !value || value === "";
             case "not_empty":
+            case "不为空":
               return value && value !== "";
             default:
               return true;
@@ -157,40 +181,58 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     }
   };
 
-  // 展平节点树用于执行
+  // 展平节点树用于执行 - 只保留实际执行路径上的节点
   const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, any>): ApprovalNode[] => {
     const result: ApprovalNode[] = [];
     
+    console.log("[ApprovalTimeline] Flattening nodes with formData:", formData);
+    
     const traverse = (nodeList: ApprovalNode[]) => {
-      nodeList.forEach(node => {
+      for (const node of nodeList) {
+        console.log(`[ApprovalTimeline] Processing node: ${node.node_name}, type: ${node.node_type}`);
+        
         if (node.node_type === "condition") {
-          // 条件节点，查找匹配的分支
-          if (node.children && node.children.length > 0) {
-            for (const branch of node.children) {
-              if (evaluateCondition(branch.condition_expression, formData)) {
-                if (branch.children) {
-                  traverse(branch.children);
-                }
-                break;
-              }
+          // 条件节点 - 找到其子节点（分支）并评估
+          // condition 节点的 children 是各个分支
+          const branches = node.children || [];
+          console.log(`[ApprovalTimeline] Condition node has ${branches.length} branches`);
+          
+          let matchedBranch = null;
+          for (const branch of branches) {
+            // 分支的 condition_expression 包含该分支的条件
+            const branchCondition = branch.condition_expression;
+            const matches = evaluateCondition(branchCondition, formData);
+            console.log(`[ApprovalTimeline] Branch ${branch.node_name} matches: ${matches}`);
+            
+            if (matches) {
+              matchedBranch = branch;
+              break; // 只走第一个匹配的分支
             }
           }
+          
+          // 如果找到匹配的分支，处理其子节点
+          if (matchedBranch && matchedBranch.children) {
+            console.log(`[ApprovalTimeline] Using matched branch: ${matchedBranch.node_name}`);
+            traverse(matchedBranch.children);
+          }
         } else if (node.node_type === "branch") {
-          // 分支节点本身不加入执行序列，但处理其子节点
+          // 分支节点本身不加入结果，但处理其子节点（这种情况通常不会单独出现）
           if (node.children) {
             traverse(node.children);
           }
         } else {
-          // 普通节点
+          // 普通节点（approver, cc 等）- 加入结果
           result.push(node);
+          // 处理子节点
           if (node.children) {
             traverse(node.children);
           }
         }
-      });
+      }
     };
     
     traverse(nodes);
+    console.log(`[ApprovalTimeline] Final execution path has ${result.length} nodes:`, result.map(n => n.node_name));
     return result;
   };
 
