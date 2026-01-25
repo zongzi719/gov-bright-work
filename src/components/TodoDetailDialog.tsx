@@ -832,17 +832,28 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   // 判断当前用户是否是发起人
   const isInitiator = currentUser?.id === instance?.initiator_id;
   
-  // 判断当前用户是否可以审批 - 必须是待办的被分配人且状态为 pending
+  // 判断当前用户是否可以审批
+  // 待办事项列表已经按 assignee_id 过滤，只显示当前用户的待办
+  // 所以只需要检查: 1. 实例状态是 pending 2. 待办状态是 pending
   const canApprove = useMemo(() => {
     if (!currentUser || !todoItem) return false;
     
-    // 必须是待办的被分配人
-    const isAssignee = todoItem.assignee_id === currentUser.id;
     // 待办状态必须是 pending
     const isPending = todoItem.status === "pending";
+    // 审批实例状态必须是 pending（流程未结束）
+    const instancePending = instance?.status === "pending";
     
-    return isAssignee && isPending;
-  }, [currentUser, todoItem]);
+    console.log("canApprove check:", {
+      currentUserId: currentUser?.id,
+      todoItemAssigneeId: todoItem?.assignee_id,
+      todoStatus: todoItem?.status,
+      instanceStatus: instance?.status,
+      isPending,
+      instancePending,
+    });
+    
+    return isPending && instancePending;
+  }, [currentUser, todoItem, instance]);
 
   if (!todoItem) return null;
 
