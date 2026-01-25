@@ -310,12 +310,28 @@ export const useApprovalProgression = () => {
     try {
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
-      // 更新审批实例状态为 "returned"，并保存退回节点索引
+      // 更新审批实例状态为 "cancelled"（用于表示退回），通过form_data保存退回信息
+      const { data: currentInstance } = await supabase
+        .from("approval_instances")
+        .select("form_data")
+        .eq("id", instanceId)
+        .single();
+
+      const updatedFormData = {
+        ...(currentInstance?.form_data as Record<string, any> || {}),
+        _return_info: {
+          type: "return_to_initiator_current",
+          return_node_index: currentNodeIndex,
+          comment,
+          returned_at: new Date().toISOString(),
+        }
+      };
+
       await supabase
         .from("approval_instances")
         .update({ 
-          status: "returned",
-          form_data: supabase.rpc ? undefined : undefined, // 保持form_data不变
+          status: "cancelled", // 使用 cancelled 表示退回状态
+          form_data: updatedFormData,
         })
         .eq("id", instanceId);
 
@@ -369,12 +385,28 @@ export const useApprovalProgression = () => {
     try {
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
-      // 更新审批实例状态为 "returned"，重置节点索引为0
+      // 更新审批实例状态为 "cancelled"，重置节点索引为0
+      const { data: currentInstance } = await supabase
+        .from("approval_instances")
+        .select("form_data")
+        .eq("id", instanceId)
+        .single();
+
+      const updatedFormData = {
+        ...(currentInstance?.form_data as Record<string, any> || {}),
+        _return_info: {
+          type: "return_restart",
+          comment,
+          returned_at: new Date().toISOString(),
+        }
+      };
+
       await supabase
         .from("approval_instances")
         .update({ 
-          status: "returned",
+          status: "cancelled", // 使用 cancelled 表示退回状态
           current_node_index: 0,
+          form_data: updatedFormData,
         })
         .eq("id", instanceId);
 
@@ -454,11 +486,11 @@ export const useApprovalProgression = () => {
 
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
-      // 更新审批实例状态
+      // 更新审批实例状态（保持 pending 表示流程进行中）
       await supabase
         .from("approval_instances")
         .update({ 
-          status: "processing",
+          status: "pending",
           current_node_index: previousNodeIndex,
         })
         .eq("id", instanceId);
@@ -531,7 +563,7 @@ export const useApprovalProgression = () => {
         return { success: false, canWithdraw: false, error: "只有发起人可以撤回申请" };
       }
 
-      if (instance.status !== "pending" && instance.status !== "processing") {
+      if (instance.status !== "pending") {
         return { success: false, canWithdraw: false, error: "当前状态不允许撤回" };
       }
 
@@ -548,11 +580,11 @@ export const useApprovalProgression = () => {
         return { success: false, canWithdraw: false, error: "当前节点已有人审批，无法撤回" };
       }
 
-      // 可以撤回 - 更新审批实例状态
+      // 可以撤回 - 更新审批实例状态（使用 cancelled 表示撤回）
       await supabase
         .from("approval_instances")
         .update({ 
-          status: "withdrawn",
+          status: "cancelled", // 使用 cancelled 表示撤回
           completed_at: new Date().toISOString(),
         })
         .eq("id", instanceId);
@@ -605,7 +637,7 @@ export const useApprovalProgression = () => {
         return false;
       }
 
-      if (instance.status !== "pending" && instance.status !== "processing") {
+      if (instance.status !== "pending") {
         return false;
       }
 
