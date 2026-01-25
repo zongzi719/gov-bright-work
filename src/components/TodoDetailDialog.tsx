@@ -393,39 +393,151 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 评估条件表达式，决定走哪个分支
   const evaluateCondition = (condition: any, formData: Record<string, any>): boolean => {
-    if (!condition || !condition.groups || condition.groups.length === 0) {
-      return true; // 没有条件默认通过
-    }
-
-    // 组之间是 OR 关系
-    return condition.groups.some((group: any) => {
-      if (!group.conditions || group.conditions.length === 0) return true;
-      
-      // 条件之间是 AND 关系
-      return group.conditions.every((cond: any) => {
-        const fieldValue = formData[cond.field];
-        const compareValue = cond.value;
-
-        switch (cond.operator) {
-          case "equals":
-            return fieldValue == compareValue;
-          case "not_equals":
-            return fieldValue != compareValue;
-          case "greater_than":
-            return Number(fieldValue) > Number(compareValue);
-          case "less_than":
-            return Number(fieldValue) < Number(compareValue);
-          case "contains":
-            return String(fieldValue).includes(String(compareValue));
-          case "is_empty":
-            return !fieldValue || fieldValue === "";
-          case "not_empty":
-            return fieldValue && fieldValue !== "";
-          default:
-            return true;
-        }
+    // 如果没有条件表达式，或者没有groups，或者groups为空，则默认匹配
+    if (!condition) return true;
+    
+    const groups = condition.groups || condition.condition_groups;
+    if (!groups || groups.length === 0) return true;
+    
+    try {
+      // 组之间是 OR 关系
+      return groups.some((group: any) => {
+        const conditions = group.conditions || [];
+        if (conditions.length === 0) return true;
+        
+        // 条件之间是 AND 关系
+        return conditions.every((cond: any) => {
+          const field = cond.field;
+          let value = formData[field];
+          const targetValue = cond.value;
+          
+          // 特殊处理申请人字段 - 可能存储为 contact_id
+          if (field === "contact_id" || field === "申请人" || field === "applicant") {
+            value = formData["contact_id"] || formData["申请人"] || formData["applicant"] || value;
+          }
+          
+          console.log(`[TodoDetailDialog] Evaluating condition: field=${field}, operator=${cond.operator}, value=${value}, target=${targetValue}`);
+          
+          switch (cond.operator) {
+            case "equals":
+            case "等于":
+              return value === targetValue;
+            case "not_equals":
+            case "不等于":
+              return value !== targetValue;
+            case "contains":
+            case "包含":
+              return String(value || "").includes(String(targetValue || ""));
+            case "greater_than":
+            case "大于":
+              return Number(value) > Number(targetValue);
+            case "less_than":
+            case "小于":
+              return Number(value) < Number(targetValue);
+            case "is_empty":
+            case "为空":
+              return !value || value === "";
+            case "not_empty":
+            case "不为空":
+              return value && value !== "";
+            default:
+              return true;
+          }
+        });
       });
+    } catch (e) {
+      console.error("Error evaluating condition:", e);
+      return true;
+    }
+  };
+
+  // 扁平化节点列表，处理条件分支 - 使用与管理后台一致的逻辑
+  const flattenNodesForDisplay = (nodes: ApprovalNode[], formData: Record<string, any>, initiatorId?: string): ApprovalNode[] => {
+    const result: ApprovalNode[] = [];
+    
+    // 将 initiator_id 注入到 formData 中用于条件评估
+    const enrichedFormData = {
+      ...formData,
+      contact_id: initiatorId || formData.contact_id,
+    };
+    
+    console.log("[TodoDetailDialog] Flattening nodes with enrichedFormData:", enrichedFormData);
+    
+    // 构建节点ID到节点的映射
+    const nodeMap = new Map<string, ApprovalNode>();
+    nodes.forEach(node => nodeMap.set(node.id, node));
+    
+    // 找出所有属于某个分支的子节点ID
+    const branchChildIds = new Set<string>();
+    nodes.forEach(node => {
+      if (node.node_type === "condition_branch" && node.condition_expression?.child_nodes) {
+        node.condition_expression.child_nodes.forEach((id: string) => branchChildIds.add(id));
+      }
     });
+    
+    // 找出所有分支节点的ID（属于条件节点的分支）
+    const branchNodeIds = new Set<string>();
+    nodes.forEach(node => {
+      if (node.node_type === "condition" && node.condition_expression?.branches) {
+        node.condition_expression.branches.forEach((id: string) => branchNodeIds.add(id));
+      }
+    });
+    
+    // 按 sort_order 排序主流程节点（不属于任何分支内部的节点）
+    const mainNodes = nodes
+      .filter(n => !branchChildIds.has(n.id) && !branchNodeIds.has(n.id))
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    
+    const processNode = (node: ApprovalNode) => {
+      console.log(`[TodoDetailDialog] Processing node: ${node.node_name}, type: ${node.node_type}`);
+      
+      if (node.node_type === "condition") {
+        // 条件节点 - 获取其分支并评估
+        const branchIds = node.condition_expression?.branches || [];
+        const branches = branchIds.map((id: string) => nodeMap.get(id)).filter(Boolean) as ApprovalNode[];
+        
+        console.log(`[TodoDetailDialog] Condition node has ${branches.length} branches`);
+        
+        // 按 sort_order 排序分支
+        branches.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        
+        let matchedBranch: ApprovalNode | null = null;
+        for (const branch of branches) {
+          // 分支的 condition_expression.condition_groups 包含该分支的条件
+          const branchCondition = branch.condition_expression;
+          const matches = evaluateCondition(branchCondition, enrichedFormData);
+          console.log(`[TodoDetailDialog] Branch ${branch.node_name} conditions:`, branch.condition_expression?.condition_groups);
+          console.log(`[TodoDetailDialog] Branch ${branch.node_name} matches: ${matches}`);
+          
+          if (matches) {
+            matchedBranch = branch;
+            break; // 只走第一个匹配的分支
+          }
+        }
+        
+        // 如果找到匹配的分支，处理其子节点
+        if (matchedBranch) {
+          console.log(`[TodoDetailDialog] Using matched branch: ${matchedBranch.node_name}`);
+          const childIds = matchedBranch.condition_expression?.child_nodes || [];
+          const childNodes = childIds.map((id: string) => nodeMap.get(id)).filter(Boolean) as ApprovalNode[];
+          childNodes.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          
+          // 递归处理子节点
+          childNodes.forEach(child => processNode(child));
+        }
+      } else if (node.node_type === "condition_branch") {
+        // 分支节点本身不加入结果（不应该在主流程中单独出现）
+      } else {
+        // 普通节点（approver, cc 等）- 加入结果
+        result.push(node);
+      }
+    };
+    
+    // 处理主流程节点
+    mainNodes.forEach(node => processNode(node));
+    
+    console.log(`[TodoDetailDialog] Final execution path has ${result.length} nodes:`, result.map(n => n.node_name));
+    return result;
   };
 
   // 获取审批人名称列表
@@ -435,45 +547,6 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       .map(id => approverContacts.get(id)?.name || "")
       .filter(Boolean)
       .join("、");
-  };
-
-  // 扁平化节点列表，处理条件分支
-  const flattenNodesForDisplay = (nodes: ApprovalNode[], formData: Record<string, any>): ApprovalNode[] => {
-    const result: ApprovalNode[] = [];
-    
-    const traverse = (nodeList: ApprovalNode[]) => {
-      nodeList.forEach(node => {
-        // 跳过条件分支节点本身，只处理其子节点
-        if (node.node_type === "condition") {
-          // 找到满足条件的分支
-          if (node.children && node.children.length > 0) {
-            for (const branch of node.children) {
-              if (evaluateCondition(branch.condition_expression, formData)) {
-                // 递归处理满足条件的分支的子节点
-                if (branch.children) {
-                  traverse(branch.children);
-                }
-                break; // 只走第一个满足条件的分支
-              }
-            }
-          }
-        } else if (node.node_type === "condition_branch") {
-          // 条件分支节点也跳过，只处理其子节点
-          if (node.children) {
-            traverse(node.children);
-          }
-        } else {
-          // 普通节点（approver, cc）直接添加
-          result.push(node);
-          if (node.children) {
-            traverse(node.children);
-          }
-        }
-      });
-    };
-
-    traverse(nodes);
-    return result;
   };
 
   // 处理审批通过
@@ -687,17 +760,18 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 渲染流程时间线
   const renderTimeline = () => {
-    // 获取表单数据用于条件判断
+    // 获取表单数据用于条件判断，注入 initiator_id 作为 contact_id
     const formData = { ...businessData, ...instance?.form_data };
     
-    // 扁平化节点（跳过条件分支节点，只保留审批人和抄送人）
-    const displayNodes = flattenNodesForDisplay(nodesSnapshot, formData);
+    // 扁平化节点（跳过条件分支节点，只保留审批人和抄送人）- 使用与管理后台一致的逻辑
+    const displayNodes = flattenNodesForDisplay(nodesSnapshot, formData, instance?.initiator_id);
     
     // 构建时间线节点
     const timelineNodes: Array<{
       type: "initiator" | "approver" | "cc" | "end";
       name: string;
       approverNames: string;
+      approvalMode?: string;
       status: "completed" | "current" | "pending";
       records: ApprovalRecord[];
       initiator?: { name: string; department: string | null };
@@ -736,6 +810,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         type: node.node_type as any,
         name: node.node_name,
         approverNames,
+        approvalMode: node.approval_mode,
         status,
         records: nodeRecords,
         originalNode: node,
@@ -802,6 +877,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                 {node.type !== "initiator" && node.type !== "end" && node.approverNames && node.records.length === 0 && (
                   <div className="mt-1 text-sm text-muted-foreground">
                     {node.approverNames}
+                    {node.approvalMode === "or" && " (或签)"}
+                    {node.approvalMode === "countersign" && " (会签)"}
                   </div>
                 )}
 
