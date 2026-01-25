@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
+import ApprovalTimeline from "./ApprovalTimeline";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Search, Eye } from "lucide-react";
@@ -305,7 +307,7 @@ const BusinessTripManagement = () => {
 
       {/* 详情对话框 */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               出差申请详情
@@ -374,7 +376,15 @@ const BusinessTripManagement = () => {
                   </div>
                 )}
               </div>
-              <div className="flex justify-end">
+              
+              {/* 审批流程 */}
+              <Separator />
+              <ApprovalTimeline 
+                businessId={selectedRecord.id} 
+                businessType="business_trip" 
+              />
+              
+              <div className="flex justify-end pt-2">
                 <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
                   关闭
                 </Button>
