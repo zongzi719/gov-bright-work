@@ -486,15 +486,21 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
               </div>
               <div className="flex-1 pt-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm">{item.node.node_name}</span>
+                  <span className="font-medium text-sm">
+                    {item.node.node_name}
+                    {item.node.node_type === "approver" && item.node.approval_mode === "or" && (
+                      <span className="text-muted-foreground font-normal"> (或签)</span>
+                    )}
+                    {item.node.node_type === "approver" && item.node.approval_mode === "countersign" && (
+                      <span className="text-muted-foreground font-normal"> (会签)</span>
+                    )}
+                  </span>
                   <span className={`text-xs px-2 py-0.5 rounded ${statusBg} ${statusTextColor}`}>
                     {statusText}
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {item.approverNames.length > 0 ? item.approverNames.join("、") : "未指定"}
-                  {item.node.approval_mode === "or" && " (或签)"}
-                  {item.node.approval_mode === "countersign" && " (会签)"}
                 </div>
                 {item.processedRecord?.comment && (
                   <div className="text-xs text-muted-foreground mt-1 bg-muted/50 px-2 py-1 rounded">
