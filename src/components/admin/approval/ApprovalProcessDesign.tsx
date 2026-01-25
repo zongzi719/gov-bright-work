@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
@@ -22,6 +22,7 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
+import ConditionConfig from "./process-design/ConditionConfig";
 
 // 字段权限类型
 type FieldPermission = "editable" | "readonly" | "hidden";
@@ -46,6 +47,7 @@ interface FormField {
   id: string;
   field_name: string;
   field_label: string;
+  field_type?: string;
   is_required: boolean;
 }
 
@@ -208,6 +210,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     approver_type: "self",
     approver_ids: [] as string[],
     field_permissions: {} as FieldPermissions,
+    condition_expression: null as any,
   });
 
   useEffect(() => {
@@ -219,7 +222,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   const fetchFormFields = async () => {
     const { data } = await supabase
       .from("approval_form_fields" as any)
-      .select("id, field_name, field_label, is_required")
+      .select("id, field_name, field_label, field_type, is_required")
       .eq("template_id", templateId)
       .order("sort_order", { ascending: true });
     setFormFields((data as unknown as FormField[]) || []);
@@ -312,6 +315,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       approver_type: type === 'condition' ? 'specific' : 'self',
       approver_ids: [],
       field_permissions: {},
+      condition_expression: null,
     });
     // 先保存节点，然后打开详情面板
     handleSaveNewNode(type);
@@ -359,6 +363,22 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       return;
     }
 
+    // 如果是"左侧"布局，需要将后续节点移动到第一个分支下
+    // 获取插入点之后的所有非条件分支子节点
+    const nodesAfterInsertion = layout === 'left' && insertAfterIndex >= 0
+      ? nodes
+          .filter(n => n.sort_order > baseSortOrder && n.node_type !== 'condition_branch')
+          .filter(n => {
+            // 排除其他条件分支的子节点
+            if (n.node_type === 'condition') return true;
+            const parentCondition = nodes.find(
+              p => p.node_type === 'condition' && 
+              (p.condition_expression?.branches || []).includes(n.id)
+            );
+            return !parentCondition;
+          })
+      : [];
+
     // 创建两个分支子节点
     const branches = [
       { name: '条件1', priority: 1, is_default: false },
@@ -368,6 +388,12 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     const branchIds: string[] = [];
     for (let i = 0; i < branches.length; i++) {
       const branch = branches[i];
+      
+      // 对于左侧布局，第一个分支包含后续节点的引用
+      const childNodeIds = (layout === 'left' && i === 0) 
+        ? nodesAfterInsertion.map(n => n.id) 
+        : [];
+      
       const { data: branchNode, error: branchError } = await supabase
         .from("approval_nodes" as any)
         .insert({
@@ -381,7 +407,8 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
             parent_id: (conditionNode as any).id,
             priority: branch.priority,
             is_default: branch.is_default,
-            conditions: []
+            condition_groups: [],
+            child_nodes: childNodeIds,
           },
         })
         .select()
@@ -466,6 +493,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         approver_type: type === 'condition' ? 'specific' : 'self',
         approver_ids: [],
         field_permissions: {},
+        condition_expression: null,
       });
       setDetailPanelOpen(true);
     }
@@ -488,6 +516,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       approver_type: node.approver_type,
       approver_ids: node.approver_ids || [],
       field_permissions: permissions,
+      condition_expression: node.condition_expression || null,
     });
     setActiveTab("approver");
     setDetailPanelOpen(true);
@@ -516,20 +545,33 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       return;
     }
 
-    if (nodeForm.approver_type === "specific" && nodeForm.approver_ids.length === 0) {
-      toast.error("请选择至少一个审批人");
-      return;
+    // 对于条件分支节点，不需要验证审批人
+    if (nodeForm.node_type !== 'condition' && nodeForm.node_type !== 'condition_branch') {
+      if (nodeForm.approver_type === "specific" && nodeForm.approver_ids.length === 0) {
+        toast.error("请选择至少一个审批人");
+        return;
+      }
+    }
+
+    const updateData: any = {
+      node_name: nodeForm.node_name,
+    };
+
+    // 非条件节点更新审批人相关信息
+    if (nodeForm.node_type !== 'condition' && nodeForm.node_type !== 'condition_branch') {
+      updateData.approver_type = nodeForm.approver_type;
+      updateData.approver_ids = nodeForm.approver_ids;
+      updateData.field_permissions = nodeForm.field_permissions;
+    }
+
+    // 条件分支节点更新条件表达式
+    if (nodeForm.node_type === 'condition_branch' && nodeForm.condition_expression) {
+      updateData.condition_expression = nodeForm.condition_expression;
     }
 
     const { error } = await supabase
       .from("approval_nodes" as any)
-      .update({
-        node_type: nodeForm.node_type,
-        node_name: nodeForm.node_name,
-        approver_type: nodeForm.approver_type,
-        approver_ids: nodeForm.approver_ids,
-        field_permissions: nodeForm.field_permissions,
-      })
+      .update(updateData)
       .eq("id", selectedNode.id);
 
     if (error) {
@@ -709,6 +751,18 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
           {branchNodes.map((branch, idx) => {
             const isDefault = (branch.condition_expression as any)?.is_default;
             const priority = (branch.condition_expression as any)?.priority || idx + 1;
+            const conditionGroups = (branch.condition_expression as any)?.condition_groups || [];
+            const hasConditions = conditionGroups.length > 0 && conditionGroups.some((g: any) => g.conditions?.length > 0);
+            
+            // 生成条件摘要
+            const getConditionSummary = () => {
+              if (isDefault) return '其他条件进入此流程';
+              if (!hasConditions) return '请设置条件';
+              
+              const groupCount = conditionGroups.length;
+              const conditionCount = conditionGroups.reduce((acc: number, g: any) => acc + (g.conditions?.length || 0), 0);
+              return `${groupCount}个条件组，${conditionCount}个条件`;
+            };
             
             return (
               <div key={branch.id} className="flex flex-col items-center">
@@ -730,8 +784,8 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                     <span className="text-xs text-muted-foreground">优先级{priority}</span>
                   </div>
                   <div className="px-4 py-3">
-                    <div className="text-sm text-muted-foreground">
-                      {isDefault ? '其他条件进入此流程' : '请设置条件'}
+                    <div className={`text-sm ${hasConditions ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      {getConditionSummary()}
                     </div>
                   </div>
                 </div>
@@ -1114,19 +1168,20 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
               )}
 
               {nodeForm.node_type === 'condition_branch' && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted/50 rounded-lg border">
-                    <div className="text-sm">
-                      <p className="font-medium mb-2">分支条件设置</p>
-                      <p className="text-muted-foreground">
-                        {(selectedNode?.condition_expression as any)?.is_default 
-                          ? '默认条件：当其他条件都不满足时，流程将进入此分支。' 
-                          : '请配置此分支的触发条件（条件编辑功能开发中...）'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <ConditionConfig
+                  conditionExpression={nodeForm.condition_expression || {}}
+                  formFields={formFields}
+                  isDefault={(nodeForm.condition_expression as any)?.is_default || false}
+                  onChange={(newExpression) => {
+                    setNodeForm(prev => ({
+                      ...prev,
+                      condition_expression: {
+                        ...prev.condition_expression,
+                        ...newExpression,
+                      },
+                    }));
+                  }}
+                />
               )}
 
               <div className="pt-4 border-t flex justify-between">
