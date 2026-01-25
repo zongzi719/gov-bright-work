@@ -49,6 +49,8 @@ interface ApprovalNode {
   approver_ids: string[] | null;
   field_permissions: Record<string, string> | null;
   approval_mode?: string;
+  condition_expression?: any;
+  children?: ApprovalNode[];
 }
 
 interface ApprovalRecord {
@@ -88,6 +90,12 @@ interface FormField {
   col_span: number;
 }
 
+interface ContactInfo {
+  id: string;
+  name: string;
+  department: string | null;
+}
+
 const nodeTypeIcons: Record<string, any> = {
   initiator: User,
   approver: UserCheck,
@@ -110,6 +118,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [nodesSnapshot, setNodesSnapshot] = useState<ApprovalNode[]>([]);
   const [businessData, setBusinessData] = useState<Record<string, any>>({});
+  const [approverContacts, setApproverContacts] = useState<Map<string, ContactInfo>>(new Map());
 
   // 获取当前用户
   const getCurrentUser = () => {
@@ -129,6 +138,39 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       fetchApprovalDetails();
     }
   }, [open, todoItem?.approval_instance_id]);
+
+  // 收集所有审批人ID
+  const collectApproverIds = (nodes: ApprovalNode[]): string[] => {
+    const ids: string[] = [];
+    const traverse = (nodeList: ApprovalNode[]) => {
+      nodeList.forEach(node => {
+        if (node.approver_ids) {
+          ids.push(...node.approver_ids);
+        }
+        if (node.children) {
+          traverse(node.children);
+        }
+      });
+    };
+    traverse(nodes);
+    return [...new Set(ids)];
+  };
+
+  // 获取审批人信息
+  const fetchApproverContacts = async (approverIds: string[]) => {
+    if (approverIds.length === 0) return;
+    
+    const { data } = await supabase
+      .from("contacts")
+      .select("id, name, department")
+      .in("id", approverIds);
+    
+    if (data) {
+      const contactMap = new Map<string, ContactInfo>();
+      data.forEach(c => contactMap.set(c.id, c));
+      setApproverContacts(contactMap);
+    }
+  };
 
   const fetchApprovalDetails = async () => {
     if (!todoItem?.approval_instance_id) return;
@@ -150,6 +192,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       setInstance(instanceData as unknown as ApprovalInstance);
 
       // 获取版本快照中的节点
+      let nodes: ApprovalNode[] = [];
       if (instanceData?.version_id) {
         const { data: versionData } = await supabase
           .from("approval_process_versions")
@@ -158,7 +201,12 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           .single();
         
         if (versionData?.nodes_snapshot) {
-          setNodesSnapshot(versionData.nodes_snapshot as unknown as ApprovalNode[]);
+          nodes = versionData.nodes_snapshot as unknown as ApprovalNode[];
+          setNodesSnapshot(nodes);
+          
+          // 获取所有审批人信息
+          const approverIds = collectApproverIds(nodes);
+          await fetchApproverContacts(approverIds);
         }
       }
 
@@ -203,10 +251,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     try {
       let data = null;
       
-      if (businessType === "business_trip" || businessType === "leave" || businessType === "out") {
+      if (businessType === "business_trip" || businessType === "leave" || businessType === "out" || businessType === "absence") {
         const result = await supabase
           .from("absence_records")
-          .select("*")
+          .select("*, contacts!absence_records_contact_id_fkey(id, name, department)")
           .eq("id", businessId)
           .maybeSingle();
         data = result.data;
@@ -242,6 +290,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     return currentNode?.field_permissions || {};
   };
 
+  // 获取申请人显示名称
+  const getApplicantName = (fieldName: string, value: any): string => {
+    // 如果是申请人字段(contact_id)，从businessData中获取关联的联系人名称
+    if ((fieldName === "contact_id" || fieldName === "申请人") && businessData?.contacts) {
+      return businessData.contacts.name || value;
+    }
+    // 如果是文本型的申请人字段
+    if (fieldName === "requisition_by" || fieldName === "requested_by") {
+      // 这些字段直接存的是名称
+      return value;
+    }
+    return value;
+  };
+
   // 渲染表单字段
   const renderFormField = (field: FormField) => {
     const permissions = getCurrentNodePermissions();
@@ -249,12 +311,16 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     
     if (permission === "hidden") return null;
 
-    const value = businessData[field.field_name] || instance?.form_data?.[field.field_name] || "";
+    let value = businessData[field.field_name] || instance?.form_data?.[field.field_name] || "";
     const isReadonly = permission === "readonly";
 
     // 格式化值
     let displayValue = value;
-    if (field.field_type === "datetime" && value) {
+    
+    // 处理申请人字段 - 显示名称而不是UUID
+    if (field.field_name === "contact_id" || field.field_label === "申请人") {
+      displayValue = getApplicantName(field.field_name, value);
+    } else if (field.field_type === "datetime" && value) {
       try {
         displayValue = format(new Date(value), "yyyy-MM-dd HH:mm", { locale: zhCN });
       } catch (e) {
@@ -279,6 +345,91 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         </div>
       </div>
     );
+  };
+
+  // 评估条件表达式，决定走哪个分支
+  const evaluateCondition = (condition: any, formData: Record<string, any>): boolean => {
+    if (!condition || !condition.groups || condition.groups.length === 0) {
+      return true; // 没有条件默认通过
+    }
+
+    // 组之间是 OR 关系
+    return condition.groups.some((group: any) => {
+      if (!group.conditions || group.conditions.length === 0) return true;
+      
+      // 条件之间是 AND 关系
+      return group.conditions.every((cond: any) => {
+        const fieldValue = formData[cond.field];
+        const compareValue = cond.value;
+
+        switch (cond.operator) {
+          case "equals":
+            return fieldValue == compareValue;
+          case "not_equals":
+            return fieldValue != compareValue;
+          case "greater_than":
+            return Number(fieldValue) > Number(compareValue);
+          case "less_than":
+            return Number(fieldValue) < Number(compareValue);
+          case "contains":
+            return String(fieldValue).includes(String(compareValue));
+          case "is_empty":
+            return !fieldValue || fieldValue === "";
+          case "not_empty":
+            return fieldValue && fieldValue !== "";
+          default:
+            return true;
+        }
+      });
+    });
+  };
+
+  // 获取审批人名称列表
+  const getApproverNames = (approverIds: string[] | null): string => {
+    if (!approverIds || approverIds.length === 0) return "";
+    return approverIds
+      .map(id => approverContacts.get(id)?.name || "")
+      .filter(Boolean)
+      .join("、");
+  };
+
+  // 扁平化节点列表，处理条件分支
+  const flattenNodesForDisplay = (nodes: ApprovalNode[], formData: Record<string, any>): ApprovalNode[] => {
+    const result: ApprovalNode[] = [];
+    
+    const traverse = (nodeList: ApprovalNode[]) => {
+      nodeList.forEach(node => {
+        // 跳过条件分支节点本身，只处理其子节点
+        if (node.node_type === "condition") {
+          // 找到满足条件的分支
+          if (node.children && node.children.length > 0) {
+            for (const branch of node.children) {
+              if (evaluateCondition(branch.condition_expression, formData)) {
+                // 递归处理满足条件的分支的子节点
+                if (branch.children) {
+                  traverse(branch.children);
+                }
+                break; // 只走第一个满足条件的分支
+              }
+            }
+          }
+        } else if (node.node_type === "condition_branch") {
+          // 条件分支节点也跳过，只处理其子节点
+          if (node.children) {
+            traverse(node.children);
+          }
+        } else {
+          // 普通节点（approver, cc）直接添加
+          result.push(node);
+          if (node.children) {
+            traverse(node.children);
+          }
+        }
+      });
+    };
+
+    traverse(nodes);
+    return result;
   };
 
   // 处理审批
@@ -332,42 +483,58 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 渲染流程时间线
   const renderTimeline = () => {
+    // 获取表单数据用于条件判断
+    const formData = { ...businessData, ...instance?.form_data };
+    
+    // 扁平化节点（跳过条件分支节点，只保留审批人和抄送人）
+    const displayNodes = flattenNodesForDisplay(nodesSnapshot, formData);
+    
     // 构建时间线节点
     const timelineNodes: Array<{
       type: "initiator" | "approver" | "cc" | "end";
       name: string;
+      approverNames: string;
       status: "completed" | "current" | "pending";
       records: ApprovalRecord[];
       initiator?: { name: string; department: string | null };
+      originalNode?: ApprovalNode;
     }> = [];
 
     // 发起人节点
     timelineNodes.push({
       type: "initiator",
       name: "发起人",
+      approverNames: "",
       status: "completed",
       records: [],
       initiator: instance?.initiator,
     });
 
-    // 审批节点
-    nodesSnapshot.forEach((node, index) => {
-      const nodeRecords = records.filter(r => r.node_index === index);
+    // 审批/抄送节点（使用扁平化后的节点）
+    displayNodes.forEach((node, index) => {
+      const nodeRecords = records.filter(r => r.node_name === node.node_name);
       let status: "completed" | "current" | "pending" = "pending";
       
-      if (instance) {
-        if (index < instance.current_node_index) {
-          status = "completed";
-        } else if (index === instance.current_node_index) {
-          status = "current";
-        }
+      // 根据记录状态判断节点状态
+      const hasProcessedRecords = nodeRecords.some(r => r.status === "approved" || r.status === "rejected");
+      const hasPendingRecords = nodeRecords.some(r => r.status === "pending");
+      
+      if (hasProcessedRecords && !hasPendingRecords) {
+        status = "completed";
+      } else if (hasPendingRecords || (instance && index === instance.current_node_index)) {
+        status = "current";
       }
+
+      // 获取审批人名称
+      const approverNames = getApproverNames(node.approver_ids);
 
       timelineNodes.push({
         type: node.node_type as any,
         name: node.node_name,
+        approverNames,
         status,
         records: nodeRecords,
+        originalNode: node,
       });
     });
 
@@ -375,6 +542,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     timelineNodes.push({
       type: "end",
       name: "结束",
+      approverNames: "",
       status: instance?.status === "approved" || instance?.status === "rejected" ? "completed" : "pending",
       records: [],
     });
@@ -416,6 +584,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   )}
                 </div>
 
+                {/* 发起人信息 */}
                 {node.type === "initiator" && node.initiator && (
                   <div className="mt-1 text-sm text-muted-foreground">
                     {node.initiator.name} - {node.initiator.department}
@@ -425,6 +594,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   </div>
                 )}
 
+                {/* 审批人/抄送人名称（当没有审批记录时显示） */}
+                {node.type !== "initiator" && node.type !== "end" && node.approverNames && node.records.length === 0 && (
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {node.approverNames}
+                  </div>
+                )}
+
+                {/* 审批记录 */}
                 {node.records.map((record) => (
                   <div key={record.id} className="mt-2 p-2 bg-muted/50 rounded-lg text-sm">
                     <div className="flex items-center gap-2">
