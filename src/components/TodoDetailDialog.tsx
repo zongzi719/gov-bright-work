@@ -31,6 +31,7 @@ import {
   RotateCcw,
   ChevronDown,
 } from "lucide-react";
+import { useApprovalProgression } from "@/hooks/useApprovalProgression";
 
 interface TodoItem {
   id: string;
@@ -59,6 +60,7 @@ interface ApprovalNode {
   approval_mode?: string;
   condition_expression?: any;
   children?: ApprovalNode[];
+  sort_order?: number;
 }
 
 interface ApprovalRecord {
@@ -82,6 +84,7 @@ interface ApprovalInstance {
   current_node_index: number;
   form_data: Record<string, any> | null;
   version_id: string;
+  initiator_id?: string;
   initiator?: {
     name: string;
     department: string | null;
@@ -132,6 +135,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const [nodesSnapshot, setNodesSnapshot] = useState<ApprovalNode[]>([]);
   const [businessData, setBusinessData] = useState<Record<string, any>>({});
   const [approverContacts, setApproverContacts] = useState<Map<string, ContactInfo>>(new Map());
+  const [versionNumber, setVersionNumber] = useState<number>(1);
+
+  const { advanceToNextNode, getInitiatorInfo } = useApprovalProgression();
 
   // 获取当前用户
   const getCurrentUser = () => {
@@ -203,6 +209,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
       if (instanceError) throw instanceError;
       setInstance(instanceData as unknown as ApprovalInstance);
+      setVersionNumber(instanceData?.version_number || 1);
 
       // 获取版本快照中的节点
       let nodes: ApprovalNode[] = [];
@@ -447,11 +454,18 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 处理审批通过
   const handleApprove = async () => {
-    if (!todoItem?.approval_instance_id || !currentUser?.id) return;
+    if (!todoItem?.approval_instance_id || !currentUser?.id || !instance) return;
 
     setSubmitting(true);
 
     try {
+      // 获取当前节点名称（从扁平化的节点列表中根据current_node_index获取）
+      const formData = { ...businessData, ...instance?.form_data };
+      const flatNodes = flattenNodesForDisplay(nodesSnapshot, formData);
+      const currentNodeIndex = instance.current_node_index;
+      const currentNode = flatNodes[currentNodeIndex];
+      const currentNodeName = currentNode?.node_name || "";
+
       // 更新当前用户的审批记录
       const { error: recordError } = await supabase
         .from("approval_records")
@@ -480,9 +494,34 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
       if (todoError) throw todoError;
 
-      // TODO: 根据会签/或签逻辑推进流程到下一节点
+      // 获取发起人信息
+      const initiatorInfo = await getInitiatorInfo(instance.initiator_id || "");
+      const initiatorName = initiatorInfo?.name || "未知";
 
-      toast.success("审批已通过");
+      // 推进审批流程到下一节点
+      const progressResult = await advanceToNextNode(
+        todoItem.approval_instance_id,
+        todoItem.business_id || "",
+        todoItem.business_type,
+        instance.initiator_id || "",
+        initiatorName,
+        todoItem.title,
+        nodesSnapshot,
+        formData,
+        versionNumber,
+        currentNodeName
+      );
+
+      if (!progressResult.success) {
+        console.error("Failed to advance workflow:", progressResult.error);
+      }
+
+      if (progressResult.completed) {
+        toast.success("审批流程已完成");
+      } else {
+        toast.success("审批已通过");
+      }
+      
       onOpenChange(false);
       onApprovalComplete?.();
 
