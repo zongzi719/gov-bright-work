@@ -446,9 +446,10 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           const Icon = nodeTypeIcons[item.node.node_type] || UserCheck;
           const isLast = idx === timelineData.length - 1;
           
-          let statusBg = "bg-muted";
-          let statusText = "等待中";
-          let statusTextColor = "text-muted-foreground";
+          let statusBg = "";
+          let statusText = "";
+          let statusTextColor = "";
+          let showStatus = true;
           
           if (item.nodeStatus === "approved") {
             statusBg = "bg-green-100";
@@ -462,6 +463,9 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
             statusBg = "bg-yellow-100";
             statusText = "待处理";
             statusTextColor = "text-yellow-800";
+          } else {
+            // 等待中状态：审批节点和抄送人节点都不显示
+            showStatus = false;
           }
           
           return (
@@ -495,9 +499,11 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
                       <span className="text-muted-foreground font-normal"> (会签)</span>
                     )}
                   </span>
-                  <span className={`text-xs px-2 py-0.5 rounded ${statusBg} ${statusTextColor}`}>
-                    {statusText}
-                  </span>
+                  {showStatus && (
+                    <span className={`text-xs px-2 py-0.5 rounded ${statusBg} ${statusTextColor}`}>
+                      {statusText}
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {item.approverNames.length > 0 ? item.approverNames.join("、") : "未指定"}
@@ -537,15 +543,16 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           <div className="flex-1 pt-1">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm">结束</span>
-              <span className={`text-xs px-2 py-0.5 rounded ${
-                instance.status === "approved" ? "bg-green-100 text-green-800" :
-                instance.status === "rejected" ? "bg-red-100 text-red-800" :
-                "bg-muted text-muted-foreground"
-              }`}>
-                {instance.status === "approved" ? "已完成" :
-                 instance.status === "rejected" ? "已拒绝" :
-                 "审批中"}
-              </span>
+              {instance.status === "approved" && (
+                <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-800">
+                  已完成
+                </span>
+              )}
+              {instance.status === "rejected" && (
+                <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-800">
+                  已拒绝
+                </span>
+              )}
             </div>
           </div>
         </div>
