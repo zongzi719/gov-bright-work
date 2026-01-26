@@ -73,8 +73,8 @@ const SchedulePanel = () => {
   });
 
   const today = new Date();
-  // 显示当周7天
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  // 显示近两周14天
+  const weekDays = Array.from({ length: 14 }, (_, i) => addDays(currentWeekStart, i));
   // 星期标签
   const weekLabels = ["一", "二", "三", "四", "五", "六", "日"];
 
@@ -87,13 +87,13 @@ const SchedulePanel = () => {
     }
     
     setLoading(true);
-    const weekEnd = addDays(currentWeekStart, 6);
+    const twoWeeksEnd = addDays(currentWeekStart, 13);
     const { data, error } = await supabase
       .from("schedules")
       .select("*, contact:contacts(id, name, department)")
       .eq("contact_id", currentUser.id)
       .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(weekEnd, "yyyy-MM-dd"))
+      .lte("schedule_date", format(twoWeeksEnd, "yyyy-MM-dd"))
       .order("schedule_date")
       .order("start_time");
 
@@ -136,9 +136,9 @@ const SchedulePanel = () => {
     setSelectedDate(date);
   };
 
-  // 周导航（改为一周）
-  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
-  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
+  // 周导航（两周）
+  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 2));
+  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 2));
 
   // 重置表单
   const resetForm = () => {
@@ -271,7 +271,7 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card h-[420px] flex flex-col overflow-hidden">
+    <div className="gov-card flex flex-col overflow-hidden">
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title">日程管理</h2>
@@ -292,27 +292,44 @@ const SchedulePanel = () => {
             <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
-            <span className="text-sm text-muted-foreground px-2">本周</span>
+            <span className="text-sm text-muted-foreground px-2">近两周</span>
             <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
 
-        {/* 星期标签和日期网格 - 对齐 */}
+        {/* 星期标签 - 两行日期 */}
         <div className="mt-4 flex-shrink-0">
-          <div className="flex justify-between">
-            {weekLabels.map((label, idx) => (
+          <div className="grid grid-cols-7 gap-1">
+            {weekLabels.map((label) => (
               <div 
                 key={label} 
-                className="w-8 text-center text-xs text-muted-foreground"
+                className="text-center text-xs text-muted-foreground py-1"
               >
                 {label}
               </div>
             ))}
           </div>
-          <div className="flex justify-between mt-1">
-            {weekDays.map((day) => (
+          {/* 第一周 */}
+          <div className="grid grid-cols-7 gap-1 mt-1">
+            {weekDays.slice(0, 7).map((day) => (
+              <div
+                key={format(day, "yyyy-MM-dd")}
+                onClick={() => handleDateClick(day)}
+                className={`calendar-day cursor-pointer transition-all ${
+                  isSelected(day) ? "ring-2 ring-primary ring-offset-1" : ""
+                } ${isToday(day) ? "calendar-day-today" : ""} ${
+                  hasSchedule(day) && !isToday(day) && !isSelected(day) ? "calendar-day-event" : ""
+                }`}
+              >
+                {format(day, "d")}
+              </div>
+            ))}
+          </div>
+          {/* 第二周 */}
+          <div className="grid grid-cols-7 gap-1 mt-1">
+            {weekDays.slice(7, 14).map((day) => (
               <div
                 key={format(day, "yyyy-MM-dd")}
                 onClick={() => handleDateClick(day)}
