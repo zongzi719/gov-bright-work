@@ -8,6 +8,13 @@ import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import Login from "./pages/Login";
+import BusinessTrip from "./pages/BusinessTrip";
+import Leave from "./pages/Leave";
+import Out from "./pages/Out";
+import Requisition from "./pages/Requisition";
+import Purchase from "./pages/Purchase";
+import Contacts from "./pages/Contacts";
+import LeaderSchedule from "./pages/LeaderSchedule";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +29,13 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/businesstrip" element={<BusinessTrip />} />
+          <Route path="/leave" element={<Leave />} />
+          <Route path="/out" element={<Out />} />
+          <Route path="/requisition" element={<Requisition />} />
+          <Route path="/purchase" element={<Purchase />} />
+          <Route path="/contacts" element={<Contacts />} />
+          <Route path="/leader-schedule" element={<LeaderSchedule />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
