@@ -608,14 +608,20 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
         }
       } else if (index >= currentNodeIndex && !processedNodeNames.has(node.node_name)) {
         // 如果节点索引 >= 当前节点索引，说明是后续待处理节点
-        timelineItems.push({
-          type: "node",
-          node,
-          index,
-          approverNames,
-          nodeStatus: "waiting",
-          timestamp: Date.now() + 1000 + index,
-        });
+        // 关键修复：检查是否已被添加为等待节点（避免重复）
+        const alreadyAddedAsNode = timelineItems.some(
+          item => item.node.node_name === node.node_name && item.type === "node"
+        );
+        if (!alreadyAddedAsNode) {
+          timelineItems.push({
+            type: "node",
+            node,
+            index,
+            approverNames,
+            nodeStatus: "waiting",
+            timestamp: Date.now() + 1000 + index,
+          });
+        }
       } else if (isAwaitingResubmit && index < displayNodes.length) {
         // 退回重审场景且发起人尚未重新提交：显示所有后续节点为等待状态
         const alreadyInTimeline = timelineItems.some(
