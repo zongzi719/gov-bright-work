@@ -315,20 +315,8 @@ const WorkPanel = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="gov-card h-full flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <h2 className="gov-card-title">工作事项</h2>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          加载中...
-        </div>
-      </div>
-    );
-  }
+  // 移除单独的 loading 状态返回，直接在主体中显示加载状态
+  // 这样Tab标签始终可见，只是内容区域显示"加载中"
 
   return (
     <>
@@ -370,7 +358,11 @@ const WorkPanel = () => {
 
           {/* 待办事项列表 */}
           <TabsContent value="pending" className="flex-1 overflow-y-auto m-0">
-            {pendingItems.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center h-32 text-muted-foreground">
+                加载中...
+              </div>
+            ) : pendingItems.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 暂无待办事项
               </div>
@@ -381,7 +373,11 @@ const WorkPanel = () => {
 
           {/* 已办理列表 */}
           <TabsContent value="completed" className="flex-1 overflow-y-auto m-0">
-            {completedItems.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center h-32 text-muted-foreground">
+                加载中...
+              </div>
+            ) : completedItems.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 暂无已办理事项
               </div>
@@ -392,7 +388,11 @@ const WorkPanel = () => {
 
           {/* 抄送列表 */}
           <TabsContent value="cc" className="flex-1 overflow-y-auto m-0">
-            {ccItems.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center h-32 text-muted-foreground">
+                加载中...
+              </div>
+            ) : ccItems.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 暂无抄送
               </div>

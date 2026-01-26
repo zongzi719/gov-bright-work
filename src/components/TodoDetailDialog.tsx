@@ -931,24 +931,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   </div>
                 )}
 
-                {/* 审批人/抄送人名称（当没有审批记录时显示） */}
-                {node.type !== "initiator" && node.type !== "end" && node.approverNames && node.records.length === 0 && (
+                {/* 审批人名称（当没有审批记录时显示，抄送节点在下方单独处理） */}
+                {node.type !== "initiator" && node.type !== "end" && node.type !== "cc" && node.approverNames && node.records.length === 0 && (
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {node.type === "cc" ? (
-                      // 抄送节点显示每个人的已阅/未阅状态
-                      node.originalNode?.approver_ids?.map((approverId, i) => {
-                        const approverContact = approverContacts.get(approverId);
-                        return (
-                          <span key={approverId}>
-                            {i > 0 && "、"}
-                            {approverContact?.name || "未知"}
-                            <span className="text-orange-500">（未阅）</span>
-                          </span>
-                        );
-                      })
-                    ) : (
-                      node.approverNames
-                    )}
+                    {node.approverNames}
                   </div>
                 )}
 
