@@ -149,8 +149,12 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     returnToPreviousNode,
     withdrawApplication,
     checkCanWithdraw,
-    flattenNodesForExecution 
+    flattenNodesForExecution,
+    resubmitAfterReturn,
   } = useApprovalProgression();
+
+  // 可编辑表单数据（用于被退回后修改）
+  const [editableFormData, setEditableFormData] = useState<Record<string, any>>({});
 
   const [canWithdraw, setCanWithdraw] = useState(false);
 
@@ -810,6 +814,50 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     }
   };
 
+  // 处理重新提交（被退回后）
+  const handleResubmit = async () => {
+    if (!todoItem?.approval_instance_id || !currentUser?.id || !instance) return;
+
+    setSubmitting(true);
+
+    try {
+      // 获取发起人信息
+      const initiatorInfo = await getInitiatorInfo(instance.initiator_id || "");
+      const initiatorName = initiatorInfo?.name || "未知";
+
+      // 合并表单数据
+      const formData = { ...businessData, ...instance.form_data, ...editableFormData };
+
+      const result = await resubmitAfterReturn(
+        todoItem.approval_instance_id,
+        todoItem.business_id || "",
+        todoItem.business_type,
+        instance.initiator_id || "",
+        initiatorName,
+        todoItem.title,
+        nodesSnapshot,
+        formData,
+        versionNumber,
+        todoItem.id
+      );
+
+      if (!result.success) {
+        toast.error(result.error || "重新提交失败");
+        return;
+      }
+
+      toast.success("已重新提交，等待审批");
+      onOpenChange(false);
+      onApprovalComplete?.();
+
+    } catch (error) {
+      console.error("Failed to resubmit application:", error);
+      toast.error("重新提交失败");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // 渲染流程时间线
   const renderTimeline = () => {
     // 获取表单数据用于条件判断，注入 initiator_id 作为 contact_id
@@ -998,14 +1046,38 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   // 判断是否是抄送待办（只读，不需要审批）
   const isCCNotification = todoItem?.title?.startsWith("[抄送]") || todoItem?.status === "completed";
   
+  // 判断是否是被退回需要修改的待办
+  const isReturnedForModification = useMemo(() => {
+    if (!todoItem || !instance) return false;
+    
+    // 通过标题前缀判断
+    const hasReturnedPrefix = todoItem.title?.startsWith("[需修改]") || todoItem.title?.startsWith("[需修改-重审]");
+    // 实例状态是 cancelled（表示被退回）
+    const instanceCancelled = instance.status === "cancelled";
+    // 待办状态是 pending
+    const todoPending = todoItem.status === "pending";
+    // 当前用户是发起人
+    const isCurrentUserInitiator = currentUser?.id === instance.initiator_id;
+    
+    return hasReturnedPrefix && instanceCancelled && todoPending && isCurrentUserInitiator;
+  }, [todoItem, instance, currentUser]);
+
+  // 获取退回信息
+  const returnInfo = useMemo(() => {
+    return (instance?.form_data as any)?._return_info || null;
+  }, [instance]);
+  
   // 判断当前用户是否可以审批
   // 待办事项列表已经按 assignee_id 过滤，只显示当前用户的待办
-  // 条件: 1. 待办状态是 pending 2. 审批实例状态是 pending（流程未结束）3. 不是抄送待办
+  // 条件: 1. 待办状态是 pending 2. 审批实例状态是 pending（流程未结束）3. 不是抄送待办 4. 不是被退回需修改的待办
   const canApprove = useMemo(() => {
     if (!currentUser || !todoItem || !instance) return false;
     
     // 抄送待办不需要审批
     if (isCCNotification) return false;
+    
+    // 被退回的待办需要走重新提交流程
+    if (isReturnedForModification) return false;
     
     // 待办状态必须是 pending
     const isPending = todoItem.status === "pending";
@@ -1013,7 +1085,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     const instancePending = instance.status === "pending";
     
     return isPending && instancePending;
-  }, [currentUser, todoItem, instance, isCCNotification]);
+  }, [currentUser, todoItem, instance, isCCNotification, isReturnedForModification]);
   
   // 判断当前用户是否既是发起人又是审批人（需要显示所有按钮）
   const isInitiatorAndApprover = isInitiator && canApprove;
@@ -1124,6 +1196,59 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       同意
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* 被退回需要修改的操作区 */}
+            {isReturnedForModification && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  {/* 退回信息提示 */}
+                  {returnInfo && (
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                      <div className="flex items-start gap-2">
+                        <RotateCcw className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-destructive">您的申请已被退回</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {returnInfo.type === "return_restart" 
+                              ? "修改后需要重新走完整审批流程" 
+                              : "修改后将由退回节点继续审批"}
+                          </p>
+                          {returnInfo.comment && (
+                            <p className="text-sm text-foreground mt-2">
+                              <span className="font-medium">退回意见：</span>{returnInfo.comment}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 提示 */}
+                  <p className="text-sm text-muted-foreground">
+                    请检查申请内容，如需修改请直接编辑相关业务表单后重新提交。
+                  </p>
+                  
+                  {/* 重新提交按钮 */}
+                  <div className="flex justify-end gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => onOpenChange(false)}
+                      disabled={submitting}
+                    >
+                      稍后处理
+                    </Button>
+                    <Button
+                      onClick={handleResubmit}
+                      disabled={submitting}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      {submitting ? "提交中..." : "重新提交"}
                     </Button>
                   </div>
                 </div>

@@ -752,6 +752,125 @@ export const useApprovalProgression = () => {
     return data;
   };
 
+  /**
+   * 发起人重新提交被退回的申请
+   * 根据退回类型决定从哪个节点继续
+   */
+  const resubmitAfterReturn = async (
+    instanceId: string,
+    businessId: string,
+    businessType: string,
+    initiatorId: string,
+    initiatorName: string,
+    title: string,
+    nodesSnapshot: ApprovalNode[],
+    formData: Record<string, any>,
+    versionNumber: number,
+    todoItemId: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // 获取审批实例，获取退回信息
+      const { data: instanceData } = await supabase
+        .from("approval_instances")
+        .select("form_data, current_node_index")
+        .eq("id", instanceId)
+        .single();
+
+      if (!instanceData) {
+        return { success: false, error: "找不到审批实例" };
+      }
+
+      const returnInfo = (instanceData.form_data as any)?._return_info;
+      if (!returnInfo) {
+        return { success: false, error: "找不到退回信息" };
+      }
+
+      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      
+      // 扁平化节点列表
+      const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
+
+      // 根据退回类型决定从哪个节点继续
+      let startNodeIndex: number;
+      if (returnInfo.type === "return_restart") {
+        // 重新审批 - 从第一个节点开始
+        startNodeIndex = 0;
+      } else {
+        // 从退回节点继续 - 使用保存的节点索引
+        startNodeIndex = returnInfo.return_node_index || 0;
+      }
+
+      const startNode = flatNodes[startNodeIndex];
+      if (!startNode) {
+        return { success: false, error: "找不到起始审批节点" };
+      }
+
+      // 清除退回信息，准备重新审批
+      const updatedFormData = { ...formData };
+      delete updatedFormData._return_info;
+
+      // 更新审批实例状态为 pending
+      await supabase
+        .from("approval_instances")
+        .update({
+          status: "pending",
+          current_node_index: startNodeIndex,
+          form_data: updatedFormData,
+        })
+        .eq("id", instanceId);
+
+      // 将当前修改待办标记为已完成
+      await supabase
+        .from("todo_items")
+        .update({
+          status: "completed",
+          process_result: "resubmitted",
+          process_notes: "已重新提交",
+          processed_at: new Date().toISOString(),
+        })
+        .eq("id", todoItemId);
+
+      // 为起始节点的审批人创建新的审批记录和待办
+      const approverIds = startNode.approver_ids || [];
+      
+      for (const approverId of approverIds) {
+        // 创建审批记录
+        await supabase
+          .from("approval_records")
+          .insert({
+            instance_id: instanceId,
+            node_index: startNodeIndex,
+            node_name: startNode.node_name,
+            node_type: startNode.node_type,
+            approver_id: approverId,
+            status: "pending",
+          });
+
+        // 创建待办事项
+        await supabase
+          .from("todo_items")
+          .insert({
+            source: "internal",
+            business_type: todoBusinessType,
+            business_id: businessId,
+            title: title.replace(/^\[需修改(-重审)?\]\s*/, ""), // 移除前缀
+            description: `${initiatorName} 重新提交的申请`,
+            priority: "normal",
+            status: "pending",
+            initiator_id: initiatorId,
+            assignee_id: approverId,
+            approval_instance_id: instanceId,
+            approval_version_number: versionNumber,
+          });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error resubmitting after return:", error);
+      return { success: false, error: "重新提交失败" };
+    }
+  };
+
   return {
     advanceToNextNode,
     checkNodeComplete,
@@ -762,5 +881,6 @@ export const useApprovalProgression = () => {
     returnToPreviousNode,
     withdrawApplication,
     checkCanWithdraw,
+    resubmitAfterReturn,
   };
 };
