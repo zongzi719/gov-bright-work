@@ -64,29 +64,29 @@ const Header = () => {
   return (
     <>
       <header className="bg-header-gradient shadow-header sticky top-0 z-50">
-        <div className="max-w-[1920px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1920px] mx-auto px-4 h-12 flex items-center justify-between">
           {/* 左侧：平台名称 */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-white text-xl font-bold">政</span>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+              <span className="text-white text-lg font-bold">政</span>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-wide">
+            <h1 className="text-lg font-bold text-white tracking-wide">
               一体化政务工作平台
             </h1>
           </div>
 
           {/* 右侧：日期、用户信息、退出 */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             {/* 日期显示 */}
             <span className="text-white/90 text-sm hidden md:block">
               {dateString}
             </span>
 
             {/* 消息通知 */}
-            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
-              <Bell className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 w-8 h-8">
+              <Bell className="w-4 h-4" />
               {todoCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-accent text-xs text-white rounded-full flex items-center justify-center font-medium">
+                <span className="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-1 bg-accent text-[10px] text-white rounded-full flex items-center justify-center font-medium">
                   {todoCount > 99 ? "99+" : todoCount}
                 </span>
               )}
@@ -95,9 +95,9 @@ const Header = () => {
             {/* 用户信息 - 下拉菜单 */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
-                  <Avatar className="w-9 h-9 border-2 border-white/30">
-                    <AvatarFallback className="bg-white text-primary font-bold text-sm">
+                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
+                  <Avatar className="w-7 h-7 border-2 border-white/30">
+                    <AvatarFallback className="bg-white text-primary font-bold text-xs">
                       {avatarChar}
                     </AvatarFallback>
                   </Avatar>

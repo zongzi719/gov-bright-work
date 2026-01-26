@@ -271,16 +271,16 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card min-h-[480px] flex flex-col">
+    <div className="gov-card min-h-[420px] flex flex-col">
       {/* 标题栏 */}
-      <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
-        <h2 className="gov-card-title">日程管理</h2>
-        <Button size="sm" variant="ghost" onClick={openAddDialog}>
+      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between flex-shrink-0">
+        <h2 className="gov-card-title text-sm">日程管理</h2>
+        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-7 w-7 p-0">
           <Plus className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="p-5 flex-1 flex flex-col">
+      <div className="p-3 flex-1 flex flex-col">
         {/* 日历头部 */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
@@ -300,7 +300,7 @@ const SchedulePanel = () => {
         </div>
 
         {/* 星期标签 - 两行日期 */}
-        <div className="mt-4 flex-shrink-0">
+        <div className="mt-3 flex-shrink-0">
           <div className="grid grid-cols-7 gap-1 mb-1">
             {weekLabels.map((label) => (
               <div 
@@ -346,14 +346,14 @@ const SchedulePanel = () => {
         </div>
 
         {/* 选中日期的标题 */}
-        <div className="mt-5 mb-2 flex-shrink-0 border-t border-border pt-4">
-          <span className="text-sm font-medium text-foreground">
+        <div className="mt-3 mb-2 flex-shrink-0 border-t border-border pt-3">
+          <span className="text-xs font-medium text-foreground">
             {format(selectedDate, "M月d日 EEEE", { locale: zhCN })} 日程
           </span>
         </div>
 
         {/* 选中日期的日程列表 */}
-        <div className="flex-1 overflow-hidden space-y-2 min-h-[120px]">
+        <div className="flex-1 overflow-hidden space-y-1.5 min-h-[100px]">
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
