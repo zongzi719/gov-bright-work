@@ -121,7 +121,7 @@ const nodeTypeIcons: Record<string, any> = {
 const statusConfig: Record<string, { color: string; label: string; icon: any }> = {
   pending: { color: "bg-yellow-100 text-yellow-800", label: "待处理", icon: Clock },
   approved: { color: "bg-green-100 text-green-800", label: "已同意", icon: CheckCircle },
-  rejected: { color: "bg-red-100 text-red-800", label: "已退回", icon: XCircle },
+  rejected: { color: "bg-red-100 text-red-800", label: "已驳回", icon: XCircle },
   completed: { color: "bg-blue-100 text-blue-800", label: "已抄送", icon: Send },
   returned_to_initiator: { color: "bg-orange-100 text-orange-800", label: "已退回发起人", icon: RotateCcw },
   returned_restart: { color: "bg-orange-100 text-orange-800", label: "已退回(重审)", icon: RotateCcw },

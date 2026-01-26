@@ -84,7 +84,7 @@ const statusColors: Record<AbsenceStatus, string> = {
 const approvalStatusLabels: Record<string, string> = {
   pending: "审批中",
   approved: "已完成",
-  rejected: "已拒绝",
+  rejected: "已驳回",
   cancelled: "已取消",
   expired: "已过期",
 };
