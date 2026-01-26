@@ -73,7 +73,7 @@ const BannerCarousel = () => {
 
   return (
     <div 
-      className="relative w-full h-[170px] md:h-[250px] overflow-hidden"
+      className="relative w-full overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -81,14 +81,14 @@ const BannerCarousel = () => {
       {banners.map((banner, index) => (
         <div
           key={banner.id}
-          className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+          className={`${index === currentIndex ? "relative" : "absolute inset-0"} transition-opacity duration-700 ease-in-out ${
             index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
           }`}
         >
           <img
             src={banner.image}
             alt={banner.title}
-            className="w-full h-full object-contain object-center"
+            className="w-full h-auto"
           />
           {/* 渐变遮罩和标题 */}
           <div className="carousel-overlay absolute inset-0 flex items-end">
