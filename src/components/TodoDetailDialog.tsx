@@ -985,12 +985,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           });
         }
       } else if (isReturnRestart) {
-        // 场景2：退回发起人重新审批，检查第一个节点是否有后续记录（pending 或 已处理）
-        const firstNodeRecord = records.find(r => 
+        // 场景2：退回发起人重新审批，检查第一个节点是否有后续记录（pending 或 已处理都算）
+        // 关键：即使是 pending 状态也说明发起人已经重新提交了
+        const firstNodeRecords = records.filter(r => 
           r.node_index === 0 &&
           new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime()
         );
-        if (firstNodeRecord) {
+        
+        // 只要有记录（不管是pending还是已处理），就说明发起人重新提交了
+        if (firstNodeRecords.length > 0) {
+          // 取最早的那条记录作为"发起人重新提交"的时间点
+          const firstNodeRecord = firstNodeRecords.sort(
+            (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+          )[0];
+          
           resubmitEvents.push({
             afterRecord: rejectedRecord,
             beforeRecord: firstNodeRecord,
@@ -1009,6 +1017,22 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     const processedRecords = records
       .filter(r => r.status !== "pending" && r.processed_at)
       .sort((a, b) => new Date(a.processed_at || 0).getTime() - new Date(b.processed_at || 0).getTime());
+    
+    // 先处理那些 beforeRecord 是 pending 状态的重新提交事件（这些事件不会被 processedRecords 循环捕获）
+    resubmitEvents.forEach(resubmitEvent => {
+      if (resubmitEvent.beforeRecord?.status === "pending" && !addedResubmitEvents.has(resubmitEvent.afterRecord.id)) {
+        addedResubmitEvents.add(resubmitEvent.afterRecord.id);
+        timelineItems.push({
+          type: "resubmit",
+          name: "发起人重新提交",
+          approverNames: "",
+          status: "completed",
+          initiator: instance?.initiator,
+          resubmitTime: resubmitEvent.time,
+          timestamp: new Date(resubmitEvent.time).getTime() - 1,
+        });
+      }
+    });
     
     processedRecords.forEach(record => {
       const nodeInfo = nodeMap.get(record.node_name);
@@ -1092,11 +1116,12 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
             const futureNodeInfo = nodeMap.get(futureNode.node_name);
             if (!futureNodeInfo) return;
             
-            // 检查是否已经在时间线中
-            const alreadyAdded = timelineItems.some(
-              item => item.node?.node_name === futureNode.node_name
+            // 关键修复：检查是否已作为"等待中"节点添加（不要被历史 record 记录阻止）
+            // 因为历史记录是作为 type: "record" 添加的，而等待节点是 type: "node"
+            const alreadyAddedAsNode = timelineItems.some(
+              item => item.node?.node_name === futureNode.node_name && item.type === "node"
             );
-            if (!alreadyAdded) {
+            if (!alreadyAddedAsNode) {
               timelineItems.push({
                 type: "node",
                 node: futureNode,
