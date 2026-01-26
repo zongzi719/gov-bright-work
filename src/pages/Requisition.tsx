@@ -176,13 +176,15 @@ const Requisition = () => {
 
     setSubmitting(true);
 
-    // Create requisition record
+    // Create requisition record (supply_id and quantity are now nullable)
     const { data: record, error } = await supabase
       .from("supply_requisitions")
       .insert({
         requisition_by: currentUser?.name || "",
         requisition_date: format(requisitionDate, "yyyy-MM-dd"),
-      })
+        supply_id: null,
+        quantity: null,
+      } as any)
       .select("id")
       .single();
 
