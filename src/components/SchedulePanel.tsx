@@ -1,11 +1,11 @@
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, subWeeks, addWeeks } from "date-fns";
@@ -53,7 +53,15 @@ const SchedulePanel = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // 当前选中的日期
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // 编辑相关状态
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  
+  // 删除确认相关状态
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
+  
   const [formData, setFormData] = useState({
     contact_id: currentUser?.id || "",
     title: "",
@@ -80,7 +88,7 @@ const SchedulePanel = () => {
     const { data, error } = await supabase
       .from("schedules")
       .select("*, contact:contacts(id, name, department)")
-      .eq("contact_id", currentUser.id) // 只获取当前用户的日程
+      .eq("contact_id", currentUser.id)
       .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
       .lte("schedule_date", format(weekEnd, "yyyy-MM-dd"))
       .order("schedule_date")
@@ -91,8 +99,6 @@ const SchedulePanel = () => {
     }
     setLoading(false);
   };
-
-  // No longer needed - using current user directly
 
   useEffect(() => {
     fetchSchedules();
@@ -131,17 +137,51 @@ const SchedulePanel = () => {
   const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 2));
   const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 2));
 
+  // 重置表单
+  const resetForm = () => {
+    setFormData({
+      contact_id: currentUser?.id || "",
+      title: "",
+      schedule_date: "",
+      start_time: "09:00",
+      end_time: "10:00",
+      location: "",
+      notes: "",
+    });
+    setEditingSchedule(null);
+  };
+
   // 打开新增对话框
-  const openDialog = () => {
+  const openAddDialog = () => {
+    resetForm();
     setDialogOpen(true);
   };
 
-  // 提交日程
+  // 打开编辑对话框
+  const openEditDialog = (schedule: Schedule) => {
+    setEditingSchedule(schedule);
+    setFormData({
+      contact_id: schedule.contact_id,
+      title: schedule.title,
+      schedule_date: schedule.schedule_date,
+      start_time: schedule.start_time.slice(0, 5),
+      end_time: schedule.end_time.slice(0, 5),
+      location: schedule.location || "",
+      notes: schedule.notes || "",
+    });
+    setDialogOpen(true);
+  };
+
+  // 关闭对话框
+  const closeDialog = () => {
+    setDialogOpen(false);
+    resetForm();
+  };
+
+  // 提交日程（新增或编辑）
   const handleSubmit = async () => {
-    // 防止重复提交
     if (submitting) return;
     
-    // Use currentUser.id directly since it's set from localStorage
     const contactId = currentUser?.id;
     if (!contactId || !formData.title || !formData.schedule_date) {
       toast.error("请填写必填项（日程标题和日期）");
@@ -151,44 +191,69 @@ const SchedulePanel = () => {
     setSubmitting(true);
     
     try {
-      const { error } = await supabase.from("schedules").insert({
-        contact_id: contactId,
-        title: formData.title,
-        schedule_date: formData.schedule_date,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        location: formData.location || null,
-        notes: formData.notes || null,
-      });
+      if (editingSchedule) {
+        // 编辑模式
+        const { error } = await supabase
+          .from("schedules")
+          .update({
+            title: formData.title,
+            schedule_date: formData.schedule_date,
+            start_time: formData.start_time,
+            end_time: formData.end_time,
+            location: formData.location || null,
+            notes: formData.notes || null,
+          })
+          .eq("id", editingSchedule.id);
 
-      if (error) {
-        toast.error("添加日程失败");
-        console.error(error);
+        if (error) {
+          toast.error("修改日程失败");
+          console.error(error);
+        } else {
+          toast.success("日程已修改");
+          closeDialog();
+          fetchSchedules();
+        }
       } else {
-        toast.success("日程已添加");
-        setDialogOpen(false);
-        setFormData({
-          contact_id: currentUser?.id || "",
-          title: "",
-          schedule_date: "",
-          start_time: "09:00",
-          end_time: "10:00",
-          location: "",
-          notes: "",
+        // 新增模式
+        const { error } = await supabase.from("schedules").insert({
+          contact_id: contactId,
+          title: formData.title,
+          schedule_date: formData.schedule_date,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          location: formData.location || null,
+          notes: formData.notes || null,
         });
-        fetchSchedules();
+
+        if (error) {
+          toast.error("添加日程失败");
+          console.error(error);
+        } else {
+          toast.success("日程已添加");
+          closeDialog();
+          fetchSchedules();
+        }
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 删除日程
-  const handleDelete = async (scheduleId: string) => {
+  // 打开删除确认对话框
+  const openDeleteDialog = (schedule: Schedule, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setScheduleToDelete(schedule);
+    setDeleteDialogOpen(true);
+  };
+
+  // 确认删除日程
+  const confirmDelete = async () => {
+    if (!scheduleToDelete) return;
+
     const { error } = await supabase
       .from("schedules")
       .delete()
-      .eq("id", scheduleId);
+      .eq("id", scheduleToDelete.id);
 
     if (error) {
       toast.error("删除日程失败");
@@ -197,6 +262,9 @@ const SchedulePanel = () => {
       toast.success("日程已删除");
       fetchSchedules();
     }
+    
+    setDeleteDialogOpen(false);
+    setScheduleToDelete(null);
   };
 
   return (
@@ -204,7 +272,7 @@ const SchedulePanel = () => {
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <h2 className="gov-card-title">日程管理</h2>
-        <Button size="sm" variant="ghost" onClick={openDialog}>
+        <Button size="sm" variant="ghost" onClick={openAddDialog}>
           <Plus className="w-4 h-4" />
         </Button>
       </div>
@@ -255,7 +323,8 @@ const SchedulePanel = () => {
             selectedDateSchedules.map((item) => (
               <div 
                 key={item.id} 
-                className="flex items-start gap-3 text-sm group hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors"
+                onClick={() => openEditDialog(item)}
+                className="flex items-start gap-3 text-sm group hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors cursor-pointer"
               >
                 <span className="text-primary font-medium w-12 flex-shrink-0">
                   {item.start_time.slice(0, 5)}
@@ -264,24 +333,39 @@ const SchedulePanel = () => {
                   {item.title}
                   {item.location && ` - ${item.location}`}
                 </span>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-opacity"
-                  title="删除日程"
-                >
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </button>
+                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditDialog(item);
+                    }}
+                    className="p-1 hover:bg-primary/10 rounded"
+                    title="编辑日程"
+                  >
+                    <Pencil className="w-4 h-4 text-primary" />
+                  </button>
+                  <button
+                    onClick={(e) => openDeleteDialog(item, e)}
+                    className="p-1 hover:bg-destructive/10 rounded"
+                    title="删除日程"
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </button>
+                </div>
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* 新增日程对话框 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* 新增/编辑日程对话框 */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>新增日程</DialogTitle>
+            <DialogTitle>{editingSchedule ? "编辑日程" : "新增日程"}</DialogTitle>
+            <DialogDescription>
+              {editingSchedule ? "修改日程信息" : "添加新的日程安排"}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -346,16 +430,34 @@ const SchedulePanel = () => {
               />
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={closeDialog}>
                 取消
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? "添加中..." : "添加"}
+                {submitting ? (editingSchedule ? "保存中..." : "添加中...") : (editingSchedule ? "保存" : "添加")}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除日程「{scheduleToDelete?.title}」吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
