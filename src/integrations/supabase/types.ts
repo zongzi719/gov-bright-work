@@ -1252,6 +1252,7 @@ export type Database = {
           contact_mobile: string
           contact_name: string
           contact_position: string
+          contact_security_level: string
           organization_name: string
         }[]
       }

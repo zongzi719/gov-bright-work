@@ -8,6 +8,7 @@ interface FrontendUser {
   position: string | null;
   department: string | null;
   organization: string | null;
+  security_level: string;
 }
 
 export const useFrontendAuth = () => {

@@ -16,7 +16,15 @@ interface NoticeItem {
   content: string | null;
   created_at: string;
   is_pinned: boolean;
+  security_level: string;
 }
+
+// 密级等级映射，数值越大权限越高
+const securityLevelRank: Record<string, number> = {
+  '一般': 1,
+  '秘密': 2,
+  '机密': 3,
+};
 
 const NoticeList = () => {
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -29,16 +37,37 @@ const NoticeList = () => {
   }, []);
 
   const fetchNotices = async () => {
+    // 获取当前登录用户的密级
+    const storedUser = localStorage.getItem("frontendUser");
+    let userSecurityLevel = "一般";
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        userSecurityLevel = user.security_level || "一般";
+      } catch {
+        // ignore
+      }
+    }
+
+    // 获取用户密级对应的等级
+    const userRank = securityLevelRank[userSecurityLevel] || 1;
+
+    // 查询所有已发布的通知
     const { data, error } = await supabase
       .from("notices")
-      .select("id, title, department, content, created_at, is_pinned")
+      .select("id, title, department, content, created_at, is_pinned, security_level")
       .eq("is_published", true)
       .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(10);
+      .limit(20);
 
     if (!error && data) {
-      setNotices(data);
+      // 根据用户密级过滤通知：用户只能看到等级 <= 自己密级的通知
+      const filteredNotices = data.filter((notice) => {
+        const noticeRank = securityLevelRank[notice.security_level] || 1;
+        return noticeRank <= userRank;
+      });
+      setNotices(filteredNotices.slice(0, 10));
     }
     setLoading(false);
   };
@@ -86,6 +115,14 @@ const NoticeList = () => {
                     置顶
                   </Badge>
                 )}
+                {notice.security_level && notice.security_level !== '一般' && (
+                  <Badge 
+                    variant={notice.security_level === '机密' ? 'destructive' : 'secondary'} 
+                    className="flex-shrink-0 text-xs px-1.5 py-0"
+                  >
+                    {notice.security_level}
+                  </Badge>
+                )}
                 <span className="text-sm text-foreground truncate group-hover:text-primary transition-colors">
                   {notice.title}
                 </span>
@@ -113,6 +150,14 @@ const NoticeList = () => {
               <span>发布时间：{selectedNotice ? formatDate(selectedNotice.created_at) : ""}</span>
               {selectedNotice?.is_pinned && (
                 <Badge variant="destructive" className="text-xs px-1.5 py-0">置顶</Badge>
+              )}
+              {selectedNotice?.security_level && selectedNotice.security_level !== '一般' && (
+                <Badge 
+                  variant={selectedNotice.security_level === '机密' ? 'destructive' : 'secondary'} 
+                  className="text-xs px-1.5 py-0"
+                >
+                  {selectedNotice.security_level}
+                </Badge>
               )}
             </div>
             <div className="border-t border-border pt-4">
