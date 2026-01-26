@@ -487,6 +487,30 @@ const ContactManagement = () => {
     });
   };
 
+  // 构建组织层级树形结构显示
+  const buildOrganizationTree = (orgs: Organization[], parentId: string | null = null, level: number = 0): { org: Organization; level: number }[] => {
+    const result: { org: Organization; level: number }[] = [];
+    const children = orgs.filter(o => o.parent_id === parentId);
+    
+    for (const child of children) {
+      result.push({ org: child, level });
+      result.push(...buildOrganizationTree(orgs, child.id, level + 1));
+    }
+    
+    return result;
+  };
+
+  // 获取带层级的组织列表
+  const getHierarchicalOrganizations = () => {
+    // 首先获取所有顶级组织（没有父级）
+    const topLevel = organizations.filter(o => !o.parent_id);
+    // 如果没有层级关系，返回扁平列表
+    if (topLevel.length === 0 || topLevel.length === organizations.length) {
+      return organizations.map(org => ({ org, level: 0 }));
+    }
+    return buildOrganizationTree(organizations);
+  };
+
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
   }
@@ -532,9 +556,12 @@ const ContactManagement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部单位</SelectItem>
-                    {organizations.map((org) => (
+                    {getHierarchicalOrganizations().map(({ org, level }) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <span style={{ paddingLeft: `${level * 16}px` }} className="flex items-center gap-1">
+                          {level > 0 && <span className="text-muted-foreground">└</span>}
+                          {org.name}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -599,9 +626,12 @@ const ContactManagement = () => {
                               <SelectValue placeholder="选择单位" />
                             </SelectTrigger>
                             <SelectContent>
-                              {organizations.map((org) => (
+                              {getHierarchicalOrganizations().map(({ org, level }) => (
                                 <SelectItem key={org.id} value={org.id}>
-                                  {org.name}
+                                  <span style={{ paddingLeft: `${level * 16}px` }} className="flex items-center gap-1">
+                                    {level > 0 && <span className="text-muted-foreground">└</span>}
+                                    {org.name}
+                                  </span>
                                 </SelectItem>
                               ))}
                             </SelectContent>
