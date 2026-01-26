@@ -1090,6 +1090,45 @@ export type Database = {
           },
         ]
       }
+      supply_requisition_items: {
+        Row: {
+          created_at: string
+          id: string
+          quantity: number
+          requisition_id: string
+          supply_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          quantity: number
+          requisition_id: string
+          supply_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          quantity?: number
+          requisition_id?: string
+          supply_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_requisition_items_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "supply_requisitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_requisition_items_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "office_supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supply_requisitions: {
         Row: {
           approved_at: string | null
