@@ -410,8 +410,13 @@ const Purchase = () => {
                           <Input
                             type="number"
                             min={1}
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                            value={item.quantity === 0 ? "" : item.quantity}
+                            onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 0 : parseInt(e.target.value) || 0)}
+                            onBlur={(e) => {
+                              if (e.target.value === "" || parseInt(e.target.value) < 1) {
+                                handleItemChange(index, "quantity", 1);
+                              }
+                            }}
                           />
                         </TableCell>
                         <TableCell className="p-2">
@@ -419,8 +424,13 @@ const Purchase = () => {
                             type="number"
                             min={0}
                             step={0.01}
-                            value={item.unit_price}
-                            onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)}
+                            value={item.unit_price === 0 ? "" : item.unit_price}
+                            onChange={(e) => handleItemChange(index, "unit_price", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                            onBlur={(e) => {
+                              if (e.target.value === "") {
+                                handleItemChange(index, "unit_price", 0);
+                              }
+                            }}
                           />
                         </TableCell>
                         <TableCell className="p-2">
