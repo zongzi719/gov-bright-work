@@ -48,18 +48,18 @@ const CanteenMenu = () => {
   return (
     <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
-      <div className="px-5 py-4 border-b border-border">
-        <h2 className="gov-card-title">食堂每周菜谱</h2>
+      <div className="px-4 py-2.5 border-b border-border">
+        <h2 className="gov-card-title text-sm">食堂每周菜谱</h2>
       </div>
 
-      <div className="p-5 flex-1 overflow-auto">
+      <div className="p-3 flex-1 overflow-auto">
         {/* 日期Tab */}
-        <div className="flex gap-1.5 mb-5">
+        <div className="flex gap-1 mb-3">
           {weekMenu.map((item, index) => (
             <button
               key={item.day}
               onClick={() => setActiveDay(index)}
-              className={`menu-tab ${
+              className={`menu-tab text-xs px-2 py-1 ${
                 activeDay === index ? "menu-tab-active" : "menu-tab-inactive"
               }`}
             >
@@ -69,22 +69,22 @@ const CanteenMenu = () => {
         </div>
 
         {/* 菜谱内容 */}
-        <div className="space-y-4">
+        <div className="space-y-2.5">
           <div>
-            <h4 className="text-sm font-bold text-accent mb-2">早餐</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <h4 className="text-xs font-bold text-accent mb-1">早餐</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {currentMenu.breakfast.join("、")}
             </p>
           </div>
           <div>
-            <h4 className="text-sm font-bold text-accent mb-2">午餐</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <h4 className="text-xs font-bold text-accent mb-1">午餐</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {currentMenu.lunch.join("、")}
             </p>
           </div>
           <div>
-            <h4 className="text-sm font-bold text-accent mb-2">晚餐</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <h4 className="text-xs font-bold text-accent mb-1">晚餐</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {currentMenu.dinner.join("、")}
             </p>
           </div>

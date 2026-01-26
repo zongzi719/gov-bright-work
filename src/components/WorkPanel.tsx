@@ -188,14 +188,14 @@ const WorkPanel = () => {
     return (
       <div
         key={item.id}
-        className={`relative px-5 py-4 cursor-pointer transition-all border-l-3 ${
+        className={`relative px-4 py-2.5 cursor-pointer transition-all border-l-3 ${
           selectedId === item.id
             ? "bg-primary/5 border-l-primary"
             : "border-l-transparent hover:bg-muted/50"
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2">
           <div
             className={`status-dot mt-1.5 ${
               displayStatus === "urgent"
@@ -233,14 +233,14 @@ const WorkPanel = () => {
     return (
       <div
         key={item.id}
-        className={`relative px-5 py-4 cursor-pointer transition-all border-l-3 ${
+        className={`relative px-4 py-2.5 cursor-pointer transition-all border-l-3 ${
           selectedId === item.id
             ? "bg-primary/5 border-l-primary"
             : "border-l-transparent hover:bg-muted/50"
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2">
           <div className="status-dot mt-1.5 status-dot-done" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -276,14 +276,14 @@ const WorkPanel = () => {
     return (
       <div
         key={item.id}
-        className={`relative px-5 py-4 cursor-pointer transition-all border-l-3 ${
+        className={`relative px-4 py-2.5 cursor-pointer transition-all border-l-3 ${
           selectedId === item.id
             ? "bg-primary/5 border-l-primary"
             : "border-l-transparent hover:bg-muted/50"
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2">
           <div className={`status-dot mt-1.5 ${isRead ? "status-dot-done" : "status-dot-normal"}`} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -323,36 +323,36 @@ const WorkPanel = () => {
       <div className="gov-card h-full flex flex-col">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* 标题栏 + Tab切换 */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
             <TabsList className="bg-transparent gap-1 p-0 h-auto">
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2.5 py-1 text-xs"
               >
                 待办事项
                 {pendingCount > 0 && (
-                  <span className="ml-1.5 gov-badge">{pendingCount}</span>
+                  <span className="ml-1 gov-badge text-[10px] px-1">{pendingCount}</span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2.5 py-1 text-xs"
               >
                 已办理
               </TabsTrigger>
               <TabsTrigger
                 value="cc"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2.5 py-1 text-xs"
               >
                 抄送
                 {ccUnreadCount > 0 && (
-                  <span className="ml-1.5 gov-badge">{ccUnreadCount}</span>
+                  <span className="ml-1 gov-badge text-[10px] px-1">{ccUnreadCount}</span>
                 )}
               </TabsTrigger>
             </TabsList>
-            <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
+            <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
               更多
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 

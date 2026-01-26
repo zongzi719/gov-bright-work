@@ -74,23 +74,23 @@ const Admin = () => {
     <div className="h-screen bg-muted flex flex-col overflow-hidden">
       {/* 顶部导航 - 固定 */}
       <header className="bg-primary text-primary-foreground shadow-md flex-shrink-0">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-foreground/20 rounded-lg flex items-center justify-center">
-              <span className="text-lg font-bold">管</span>
+        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary-foreground/20 rounded-lg flex items-center justify-center">
+              <span className="text-sm font-bold">管</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold">内容管理后台</h1>
-              <p className="text-xs text-primary-foreground/70">政府一体化工作平台</p>
+              <h1 className="text-base font-bold leading-tight">内容管理后台</h1>
+              <p className="text-[10px] text-primary-foreground/70">政府一体化工作平台</p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="text-primary-foreground hover:bg-primary-foreground/10"
+            className="text-primary-foreground hover:bg-primary-foreground/10 h-8"
           >
-            <LogOut className="w-4 h-4 mr-2" />
+            <LogOut className="w-4 h-4 mr-1" />
             退出登录
           </Button>
         </div>
@@ -100,9 +100,9 @@ const Admin = () => {
       <main className="flex-1 overflow-hidden">
         <Tabs defaultValue="banners" className="h-full flex flex-col">
           {/* 菜单栏 - 固定 */}
-          <div className="bg-muted px-4 py-4 flex-shrink-0 border-b">
+          <div className="bg-muted px-4 py-2 flex-shrink-0 border-b">
             <div className="container mx-auto">
-              <TabsList className="bg-card border">
+              <TabsList className="bg-card border h-9">
                 <TabsTrigger value="banners" className="gap-2">
                   <Image className="w-4 h-4" />
                   轮播图管理
@@ -153,7 +153,7 @@ const Admin = () => {
 
           {/* 内容区 - 可滚动 */}
           <div className="flex-1 overflow-auto">
-            <div className="container mx-auto px-4 py-6">
+            <div className="container mx-auto px-4 py-3">
               <TabsContent value="banners" className="mt-0">
                 <BannerManagement />
               </TabsContent>

@@ -88,25 +88,25 @@ const NoticeList = () => {
   return (
     <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-        <h2 className="gov-card-title">通知公告</h2>
-        <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+        <h2 className="gov-card-title text-sm">通知公告</h2>
+        <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
           更多
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* 通知列表 */}
       <div className="divide-y divide-border flex-1 overflow-auto">
         {loading ? (
-          <div className="px-5 py-8 text-center text-muted-foreground text-sm">加载中...</div>
+          <div className="px-4 py-6 text-center text-muted-foreground text-xs">加载中...</div>
         ) : notices.length === 0 ? (
-          <div className="px-5 py-8 text-center text-muted-foreground text-sm">暂无通知公告</div>
+          <div className="px-4 py-6 text-center text-muted-foreground text-xs">暂无通知公告</div>
         ) : (
           notices.map((notice) => (
             <div
               key={notice.id}
-              className="px-5 py-3.5 flex items-center justify-between gap-4 cursor-pointer hover:bg-muted/50 transition-colors group"
+              className="px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-muted/50 transition-colors group"
               onClick={() => handleNoticeClick(notice)}
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
