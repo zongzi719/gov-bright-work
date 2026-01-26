@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -183,6 +183,22 @@ const SchedulePanel = () => {
     }
   };
 
+  // 删除日程
+  const handleDelete = async (scheduleId: string) => {
+    const { error } = await supabase
+      .from("schedules")
+      .delete()
+      .eq("id", scheduleId);
+
+    if (error) {
+      toast.error("删除日程失败");
+      console.error(error);
+    } else {
+      toast.success("日程已删除");
+      fetchSchedules();
+    }
+  };
+
   return (
     <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
@@ -237,14 +253,24 @@ const SchedulePanel = () => {
             <div className="text-sm text-muted-foreground text-center py-4">该日暂无日程</div>
           ) : (
             selectedDateSchedules.map((item) => (
-              <div key={item.id} className="flex items-start gap-3 text-sm">
+              <div 
+                key={item.id} 
+                className="flex items-start gap-3 text-sm group hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors"
+              >
                 <span className="text-primary font-medium w-12 flex-shrink-0">
                   {item.start_time.slice(0, 5)}
                 </span>
-                <span className="text-foreground">
+                <span className="text-foreground flex-1">
                   {item.title}
                   {item.location && ` - ${item.location}`}
                 </span>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-opacity"
+                  title="删除日程"
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </button>
               </div>
             ))
           )}
