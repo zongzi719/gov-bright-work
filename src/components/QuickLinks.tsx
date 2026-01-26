@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router-dom";
 import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, ShoppingCart, BookUser } from "lucide-react";
 
 const QuickLinks = () => {
-  const navigate = useNavigate();
+  const openInNewWindow = (path: string) => {
+    window.open(path, "_blank");
+  };
 
   const modules = [
     {
@@ -10,49 +11,49 @@ const QuickLinks = () => {
       name: "出差申请",
       color: "bg-primary",
       icon: Briefcase,
-      onClick: () => navigate("/businesstrip"),
+      onClick: () => openInNewWindow("/businesstrip"),
     },
     {
       id: 2,
       name: "请假申请",
       color: "bg-orange-500",
       icon: CalendarOff,
-      onClick: () => navigate("/leave"),
+      onClick: () => openInNewWindow("/leave"),
     },
     {
       id: 3,
       name: "外出申请",
       color: "bg-purple-500",
       icon: LogOutIcon,
-      onClick: () => navigate("/out"),
+      onClick: () => openInNewWindow("/out"),
     },
     {
       id: 4,
       name: "领用申请",
       color: "bg-emerald-500",
       icon: Package,
-      onClick: () => navigate("/requisition"),
+      onClick: () => openInNewWindow("/requisition"),
     },
     {
       id: 5,
       name: "采购申请",
       color: "bg-blue-500",
       icon: ShoppingCart,
-      onClick: () => navigate("/purchase"),
+      onClick: () => openInNewWindow("/purchase"),
     },
     {
       id: 6,
       name: "通讯录",
       color: "bg-cyan-500",
       icon: BookUser,
-      onClick: () => navigate("/contacts"),
+      onClick: () => openInNewWindow("/contacts"),
     },
     {
       id: 7,
       name: "领导日程",
       color: "bg-amber-500",
       icon: Star,
-      onClick: () => navigate("/leader-schedule"),
+      onClick: () => openInNewWindow("/leader-schedule"),
     },
   ];
 
