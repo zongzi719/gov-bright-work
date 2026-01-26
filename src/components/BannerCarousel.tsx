@@ -88,7 +88,7 @@ const BannerCarousel = () => {
           <img
             src={banner.image}
             alt={banner.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain object-center"
           />
           {/* 渐变遮罩和标题 */}
           <div className="carousel-overlay absolute inset-0 flex items-end">
