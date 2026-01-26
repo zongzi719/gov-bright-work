@@ -69,6 +69,7 @@ const nodeTypeIcons: Record<string, any> = {
   initiator: User,
   approver: UserCheck,
   cc: Send,
+  resubmit: RotateCcw,
 };
 
 const statusConfig: Record<string, { color: string; label: string; icon: any }> = {
@@ -356,7 +357,60 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
       n.node_type !== "condition" && n.node_type !== "branch"
     );
     
-    return displayNodes.map((node, index) => {
+    // 检测是否有重新提交事件
+    const rejectedRecords = records.filter(r => 
+      r.status === "rejected" || r.status === "returned_to_initiator"
+    ).sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+    
+    const resubmitEvents: { nodeIndex: number; time: string; afterNodeName: string }[] = [];
+    rejectedRecords.forEach(rejectedRecord => {
+      const laterRecord = records.find(r => 
+        r.node_name === rejectedRecord.node_name &&
+        r.approver_id === rejectedRecord.approver_id &&
+        new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.created_at || 0).getTime()
+      );
+      if (laterRecord) {
+        resubmitEvents.push({
+          nodeIndex: rejectedRecord.node_index,
+          time: laterRecord.created_at,
+          afterNodeName: rejectedRecord.node_name,
+        });
+      }
+    });
+    
+    const result: Array<{
+      node: ApprovalNode;
+      index: number;
+      nodeRecords: ApprovalRecord[];
+      approverNames: string[];
+      nodeStatus: "pending" | "approved" | "rejected" | "waiting";
+      processedRecords: ApprovalRecord[];
+      isResubmit?: boolean;
+      resubmitTime?: string;
+    }> = [];
+    
+    displayNodes.forEach((node, index) => {
+      // 检查是否需要在此节点前插入"发起人重新提交"事件
+      const resubmitEvent = resubmitEvents.find(e => e.afterNodeName === node.node_name);
+      if (resubmitEvent && !result.some(r => r.isResubmit)) {
+        result.push({
+          node: {
+            id: "resubmit",
+            node_type: "resubmit",
+            node_name: "发起人重新提交",
+            approver_type: "",
+            approver_ids: null,
+          },
+          index: -1,
+          nodeRecords: [],
+          approverNames: [],
+          nodeStatus: "approved",
+          processedRecords: [],
+          isResubmit: true,
+          resubmitTime: resubmitEvent.time,
+        });
+      }
+
       // 获取该节点的审批记录，按创建时间排序
       const nodeRecords = records
         .filter(r => r.node_name === node.node_name)
@@ -380,7 +434,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
       
       const latestRecords = Array.from(latestRecordsByApprover.values());
       const approvedRecords = latestRecords.filter(r => r.status === "approved");
-      const rejectedRecords = latestRecords.filter(r => 
+      const rejectedLatestRecords = latestRecords.filter(r => 
         r.status === "rejected" || 
         r.status === "returned_to_initiator" || 
         r.status === "returned_restart" || 
@@ -392,8 +446,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
       let nodeStatus: "pending" | "approved" | "rejected" | "waiting" = "waiting";
       
       if (latestRecords.length > 0) {
-        if (rejectedRecords.length > 0 && pendingRecords.length === 0) {
-          // 只有当没有pending记录时才显示rejected（说明没有重新提交）
+        if (rejectedLatestRecords.length > 0 && pendingRecords.length === 0) {
           nodeStatus = "rejected";
         } else if (approvedRecords.length > 0 && pendingRecords.length === 0) {
           nodeStatus = "approved";
@@ -407,15 +460,17 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
         r.status !== "pending" && r.processed_at
       );
       
-      return {
+      result.push({
         node,
         index,
         nodeRecords,
         approverNames,
         nodeStatus,
-        processedRecords, // 返回所有已处理记录，而不是单个
-      };
+        processedRecords,
+      });
     });
+    
+    return result;
   }, [instance, nodesSnapshot, records, approverContacts]);
 
   if (loading) {
@@ -468,8 +523,11 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           let statusTextColor = "";
           let showStatus = true;
           
-          // 抄送节点不显示节点级别状态标签
-          if (item.node.node_type === "cc") {
+          // 重新提交节点特殊处理
+          if (item.isResubmit) {
+            showStatus = false;
+          } else if (item.node.node_type === "cc") {
+            // 抄送节点不显示节点级别状态标签
             showStatus = false;
           } else if (item.nodeStatus === "approved") {
             statusBg = "bg-green-100";
@@ -526,7 +584,17 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {item.node.node_type === "cc" ? (
+                  {item.isResubmit ? (
+                    // 重新提交节点
+                    <span>
+                      {instance.initiator?.name || "发起人"} 修改后重新提交
+                      {item.resubmitTime && (
+                        <span className="ml-1">
+                          {format(new Date(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
+                        </span>
+                      )}
+                    </span>
+                  ) : item.node.node_type === "cc" ? (
                     // 抄送节点显示每个人的已阅/未阅状态
                     item.approverNames.length > 0 
                       ? item.approverNames.map((name, i) => {
@@ -553,27 +621,48 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
                 </div>
                 {/* 抄送节点不显示意见 */}
                 {item.node.node_type !== "cc" && item.processedRecords.length > 0 && (
-                  <div className="space-y-1 mt-1">
-                    {item.processedRecords.map((record, rIdx) => (
-                      <div key={record.id || rIdx}>
-                        {record.comment && (
-                          <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                            <span className="font-medium">{record.approver?.name || "审批人"}</span>：
-                            <span className={record.status === "approved" ? "text-green-700" : 
-                                           record.status === "rejected" ? "text-red-700" : ""}>
+                  <div className="space-y-2 mt-1">
+                    {item.processedRecords.map((record, rIdx) => {
+                      // 检查是否是重新提交后的新记录（同一审批人的后续记录）
+                      const isResubmittedRecord = item.processedRecords.findIndex(
+                        r => r.approver_id === record.approver_id
+                      ) !== rIdx && item.processedRecords.some(
+                        (r, i) => i < rIdx && r.approver_id === record.approver_id && 
+                        (r.status === "rejected" || r.status === "returned_to_initiator")
+                      );
+                      
+                      return (
+                        <div 
+                          key={record.id || rIdx}
+                          className={`text-xs ${
+                            isResubmittedRecord 
+                              ? "bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-800 px-2 py-1.5 rounded" 
+                              : "text-muted-foreground bg-muted/50 px-2 py-1 rounded"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">{record.approver?.name || "审批人"}</span>
+                            <span className={
+                              record.status === "approved" ? "text-green-700 dark:text-green-400" : 
+                              record.status === "rejected" ? "text-red-700 dark:text-red-400" : ""
+                            }>
                               {record.status === "approved" ? "已同意" : 
                                record.status === "rejected" ? "已退回" : ""}
                             </span>
-                            {" - "}意见：{record.comment}
+                            {record.processed_at && (
+                              <span className="text-muted-foreground">
+                                {format(new Date(record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        {record.processed_at && (
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(record.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          {record.comment && (
+                            <div className="mt-0.5">
+                              {record.comment}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
