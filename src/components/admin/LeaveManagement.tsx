@@ -82,20 +82,29 @@ const statusColors: Record<AbsenceStatus, string> = {
   cancelled: "bg-gray-100 text-gray-500",
 };
 
+// 统一使用前台的状态枚举
 const approvalStatusLabels: Record<string, string> = {
-  pending: "审批中",
-  pending_returned: "已退回", // 退回待修改
-  approved: "已完成",
+  pending: "待处理",
+  approved: "已同意",
   rejected: "已驳回",
+  completed: "已抄送",
+  returned_to_initiator: "已退回发起人",
+  returned_restart: "已退回(重审)",
+  returned_to_previous: "已退回上一节点",
+  processing: "处理中",
   cancelled: "已取消",
   expired: "已过期",
 };
 
 const approvalStatusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
-  pending_returned: "bg-orange-100 text-orange-800", // 退回待修改
   approved: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
+  completed: "bg-blue-100 text-blue-800",
+  returned_to_initiator: "bg-orange-100 text-orange-800",
+  returned_restart: "bg-orange-100 text-orange-800",
+  returned_to_previous: "bg-orange-100 text-orange-800",
+  processing: "bg-blue-100 text-blue-800",
   cancelled: "bg-gray-100 text-gray-500",
   expired: "bg-gray-100 text-gray-500",
 };
@@ -151,15 +160,24 @@ const LeaveManagement = () => {
           .eq("business_type", "leave")
           .in("business_id", recordIds);
         
-        // 创建映射 - 判断是否有退回信息
+        // 创建映射 - 判断是否有退回信息，使用前台一致的状态
         const statusMap = new Map<string, string>();
         instancesData?.forEach(inst => {
           let displayStatus: string = inst.status;
-          // 如果状态是 pending 但有退回信息，显示为"已退回"
+          // 如果状态是 pending 但有退回信息，根据退回类型显示不同状态
           if (inst.status === "pending" && inst.form_data) {
             const formData = inst.form_data as Record<string, any>;
             if (formData._return_info) {
-              displayStatus = "pending_returned";
+              const returnType = formData._return_info.type;
+              if (returnType === "return_to_initiator_current") {
+                displayStatus = "returned_to_initiator";
+              } else if (returnType === "return_restart") {
+                displayStatus = "returned_restart";
+              } else if (returnType === "return_to_previous") {
+                displayStatus = "returned_to_previous";
+              } else {
+                displayStatus = "returned_to_initiator";
+              }
             }
           }
           statusMap.set(inst.business_id, displayStatus);
@@ -190,12 +208,21 @@ const LeaveManagement = () => {
       .single();
     
     if (instanceData) {
-      // 如果状态是 pending 但有退回信息，显示为"已退回"
+      // 根据退回类型显示不同状态，与前台保持一致
       let displayStatus: string = instanceData.status;
       if (instanceData.status === "pending" && instanceData.form_data) {
         const formData = instanceData.form_data as Record<string, any>;
         if (formData._return_info) {
-          displayStatus = "pending_returned";
+          const returnType = formData._return_info.type;
+          if (returnType === "return_to_initiator_current") {
+            displayStatus = "returned_to_initiator";
+          } else if (returnType === "return_restart") {
+            displayStatus = "returned_restart";
+          } else if (returnType === "return_to_previous") {
+            displayStatus = "returned_to_previous";
+          } else {
+            displayStatus = "returned_to_initiator";
+          }
         }
       }
       setApprovalInstanceStatus(displayStatus);
