@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, Search, Eye, CalendarIcon } from "lucide-react";
+import { Plus, Search, Eye, CalendarIcon, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -21,15 +21,20 @@ import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
 
 interface PurchaseRequest {
   id: string;
-  supply_id: string;
-  quantity: number;
   requested_by: string;
   purchase_date: string;
-  unit_price: number | null;
   total_amount: number | null;
   reason: string | null;
   status: string;
   created_at: string;
+}
+
+interface PurchaseItem {
+  id: string;
+  supply_id: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
   office_supplies: {
     name: string;
     specification: string | null;
@@ -42,6 +47,13 @@ interface OfficeSupply {
   name: string;
   specification: string | null;
   unit: string;
+}
+
+interface FormItem {
+  supply_id: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
 }
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -58,16 +70,13 @@ const Purchase = () => {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PurchaseRequest | null>(null);
+  const [selectedItems, setSelectedItems] = useState<PurchaseItem[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
   const [supplies, setSupplies] = useState<OfficeSupply[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    supply_id: "",
-    quantity: 1,
-    reason: "",
-    purchase_date: new Date(),
-    unit_price: 0,
-  });
+  const [purchaseDate, setPurchaseDate] = useState<Date>(new Date());
+  const [reason, setReason] = useState("");
+  const [formItems, setFormItems] = useState<FormItem[]>([{ supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
 
   const getCurrentUser = () => {
     try {
@@ -87,14 +96,7 @@ const Purchase = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("purchase_requests")
-      .select(`
-        *,
-        office_supplies (
-          name,
-          specification,
-          unit
-        )
-      `)
+      .select("id, requested_by, purchase_date, total_amount, reason, status, created_at")
       .eq("requested_by", currentUser.name)
       .order("created_at", { ascending: false });
 
@@ -107,7 +109,7 @@ const Purchase = () => {
   const fetchSupplies = async () => {
     const { data } = await supabase
       .from("office_supplies")
-      .select("*")
+      .select("id, name, specification, unit")
       .eq("is_active", true)
       .order("name");
     if (data) setSupplies(data);
@@ -118,44 +120,86 @@ const Purchase = () => {
   }, [currentUser?.name]);
 
   const filteredRecords = records.filter(r =>
-    r.office_supplies?.name.includes(search) ||
+    r.requested_by.includes(search) ||
     r.reason?.includes(search)
   );
 
-  const handleViewDetail = (record: PurchaseRequest) => {
+  const handleViewDetail = async (record: PurchaseRequest) => {
     setSelectedRecord(record);
+    // Fetch items for this request
+    const { data } = await supabase
+      .from("purchase_request_items")
+      .select(`
+        id, supply_id, quantity, unit_price, amount,
+        office_supplies (name, specification, unit)
+      `)
+      .eq("request_id", record.id);
+    
+    if (data) {
+      setSelectedItems(data as PurchaseItem[]);
+    }
     setDetailOpen(true);
   };
 
   const handleOpenForm = () => {
     fetchSupplies();
+    setFormItems([{ supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
+    setPurchaseDate(new Date());
+    setReason("");
     setFormOpen(true);
   };
 
-  const totalAmount = form.quantity * form.unit_price;
+  const handleAddItem = () => {
+    setFormItems([...formItems, { supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    if (formItems.length > 1) {
+      setFormItems(formItems.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleItemChange = (index: number, field: keyof FormItem, value: string | number) => {
+    const newItems = [...formItems];
+    newItems[index] = { ...newItems[index], [field]: value };
+    
+    // Recalculate amount when quantity or unit_price changes
+    if (field === "quantity" || field === "unit_price") {
+      const quantity = field === "quantity" ? Number(value) : newItems[index].quantity;
+      const unitPrice = field === "unit_price" ? Number(value) : newItems[index].unit_price;
+      newItems[index].amount = Number((quantity * unitPrice).toFixed(2));
+    }
+    
+    setFormItems(newItems);
+  };
+
+  // Calculate total amount
+  const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
 
   const handleSubmit = async () => {
-    if (!form.supply_id) {
-      toast.error("请选择办公用品");
-      return;
-    }
-    if (form.quantity < 1) {
-      toast.error("数量必须大于0");
+    // Validate items
+    const validItems = formItems.filter(item => item.supply_id && item.quantity > 0);
+    if (validItems.length === 0) {
+      toast.error("请至少添加一条采购明细");
       return;
     }
 
-    const supply = supplies.find((s) => s.id === form.supply_id);
     setSubmitting(true);
 
-    const { data: record, error } = await supabase.from("purchase_requests").insert({
-      supply_id: form.supply_id,
-      quantity: form.quantity,
-      reason: form.reason.trim() || null,
-      requested_by: currentUser?.name || "",
-      purchase_date: format(form.purchase_date, "yyyy-MM-dd"),
-      unit_price: form.unit_price,
-      total_amount: totalAmount,
-    }).select("id").single();
+    // Create purchase request record
+    const { data: record, error } = await supabase
+      .from("purchase_requests")
+      .insert({
+        requested_by: currentUser?.name || "",
+        purchase_date: format(purchaseDate, "yyyy-MM-dd"),
+        reason: reason.trim() || null,
+        total_amount: Number(totalAmount.toFixed(2)),
+        supply_id: null,
+        quantity: null,
+        unit_price: null,
+      } as any)
+      .select("id")
+      .single();
 
     if (error || !record) {
       toast.error("提交采购申请失败");
@@ -163,19 +207,50 @@ const Purchase = () => {
       return;
     }
 
+    // Insert detail items
+    const itemsToInsert = validItems.map(item => ({
+      request_id: record.id,
+      supply_id: item.supply_id,
+      quantity: item.quantity,
+      unit_price: Number(item.unit_price.toFixed(2)),
+      amount: Number(item.amount.toFixed(2)),
+    }));
+
+    const { error: itemsError } = await supabase
+      .from("purchase_request_items")
+      .insert(itemsToInsert);
+
+    if (itemsError) {
+      toast.error("保存采购明细失败");
+      setSubmitting(false);
+      return;
+    }
+
+    // Build approval form data
+    const itemNames = validItems.map(item => {
+      const supply = supplies.find(s => s.id === item.supply_id);
+      return `${supply?.name || "物品"} x ${item.quantity}`;
+    }).join(", ");
+
     const approvalResult = await startApproval({
       businessType: "purchase_request",
       businessId: record.id,
       initiatorId: currentUser?.id || "",
       initiatorName: currentUser?.name || "未知用户",
-      title: `采购申请 - ${supply?.name || "办公用品"}`,
+      title: `采购申请 - ${itemNames.substring(0, 50)}${itemNames.length > 50 ? "..." : ""}`,
       formData: {
-        supply_id: form.supply_id,
-        supply_name: supply?.name,
-        quantity: form.quantity,
-        reason: form.reason,
-        purchase_date: format(form.purchase_date, "yyyy-MM-dd"),
-        unit_price: form.unit_price,
+        items: validItems.map(item => {
+          const supply = supplies.find(s => s.id === item.supply_id);
+          return {
+            supply_id: item.supply_id,
+            supply_name: supply?.name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            amount: item.amount,
+          };
+        }),
+        purchase_date: format(purchaseDate, "yyyy-MM-dd"),
+        reason: reason,
         total_amount: totalAmount,
       },
     });
@@ -185,7 +260,8 @@ const Purchase = () => {
     if (approvalResult.success) {
       toast.success("采购申请已提交");
       setFormOpen(false);
-      setForm({ supply_id: "", quantity: 1, reason: "", purchase_date: new Date(), unit_price: 0 });
+      setFormItems([{ supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
+      setReason("");
       fetchRecords();
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
@@ -207,7 +283,7 @@ const Purchase = () => {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="搜索物品名称或原因..."
+                placeholder="搜索申请人或原因..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -223,11 +299,10 @@ const Purchase = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>物品名称</TableHead>
-                  <TableHead>数量</TableHead>
-                  <TableHead>单价</TableHead>
-                  <TableHead>总额</TableHead>
+                  <TableHead>申请人</TableHead>
                   <TableHead>采购日期</TableHead>
+                  <TableHead>采购总额</TableHead>
+                  <TableHead>申请时间</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
@@ -235,11 +310,10 @@ const Purchase = () => {
               <TableBody>
                 {filteredRecords.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell>{record.office_supplies?.name || "-"}</TableCell>
-                    <TableCell>{record.quantity} {record.office_supplies?.unit}</TableCell>
-                    <TableCell>¥{record.unit_price || 0}</TableCell>
-                    <TableCell>¥{record.total_amount || 0}</TableCell>
+                    <TableCell>{record.requested_by}</TableCell>
                     <TableCell>{record.purchase_date}</TableCell>
+                    <TableCell>¥{(record.total_amount || 0).toFixed(2)}</TableCell>
+                    <TableCell>{format(new Date(record.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</TableCell>
                     <TableCell>
                       <Badge variant={statusLabels[record.status]?.variant || "secondary"}>
                         {statusLabels[record.status]?.label || record.status}
@@ -260,35 +334,16 @@ const Purchase = () => {
 
       {/* 新增对话框 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>新建采购申请</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>办公用品 *</Label>
-              <Select value={form.supply_id} onValueChange={(v) => setForm({ ...form, supply_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择办公用品" />
-                </SelectTrigger>
-                <SelectContent>
-                  {supplies.map((supply) => (
-                    <SelectItem key={supply.id} value={supply.id}>
-                      {supply.name}{supply.specification ? ` (${supply.specification})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* 申请人和日期 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>采购数量 *</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: parseInt(e.target.value) || 1 })}
-                />
+                <Label>申请人</Label>
+                <Input value={currentUser?.name || ""} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
                 <Label>采购日期 *</Label>
@@ -296,45 +351,119 @@ const Purchase = () => {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(form.purchase_date, "yyyy-MM-dd", { locale: zhCN })}
+                      {format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={form.purchase_date}
-                      onSelect={(date) => date && setForm({ ...form, purchase_date: date })}
+                      selected={purchaseDate}
+                      onSelect={(date) => date && setPurchaseDate(date)}
                       locale={zhCN}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>采购单价 (元)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={form.unit_price}
-                  onChange={(e) => setForm({ ...form, unit_price: parseFloat(e.target.value) || 0 })}
-                />
+
+            {/* 采购明细 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>采购明细 *</Label>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  添加物品
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label>采购总额</Label>
-                <Input value={`¥${totalAmount.toFixed(2)}`} disabled className="bg-muted" />
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[30%]">办公用品</TableHead>
+                      <TableHead className="w-[15%]">采购数量</TableHead>
+                      <TableHead className="w-[18%]">采购单价(元)</TableHead>
+                      <TableHead className="w-[18%]">采购金额(元)</TableHead>
+                      <TableHead className="w-[10%]">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {formItems.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="p-2">
+                          <Select
+                            value={item.supply_id}
+                            onValueChange={(v) => handleItemChange(index, "supply_id", v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择办公用品" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {supplies.map((supply) => (
+                                <SelectItem key={supply.id} value={supply.id}>
+                                  {supply.name}{supply.specification ? ` (${supply.specification})` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={item.unit_price}
+                            onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)}
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input
+                            value={item.amount.toFixed(2)}
+                            disabled
+                            className="bg-muted text-right"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem(index)}
+                            disabled={formItems.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* 采购总额 */}
+              <div className="flex justify-end items-center gap-2 pt-2">
+                <Label className="text-muted-foreground">采购总额:</Label>
+                <span className="text-lg font-semibold">¥{totalAmount.toFixed(2)}</span>
               </div>
             </div>
+
+            {/* 采购原因 */}
             <div className="space-y-2">
               <Label>采购原因</Label>
               <Textarea
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
                 placeholder="请说明采购原因"
                 rows={2}
               />
             </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>取消</Button>
               <Button onClick={handleSubmit} disabled={submitting}>
@@ -347,7 +476,7 @@ const Purchase = () => {
 
       {/* 详情对话框 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>采购详情</DialogTitle>
           </DialogHeader>
@@ -355,8 +484,8 @@ const Purchase = () => {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-muted-foreground">物品名称</Label>
-                  <div className="mt-1">{selectedRecord.office_supplies?.name || "-"}</div>
+                  <Label className="text-sm text-muted-foreground">申请人</Label>
+                  <div className="mt-1">{selectedRecord.requested_by}</div>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">状态</Label>
@@ -369,32 +498,6 @@ const Purchase = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-muted-foreground">规格</Label>
-                  <div className="mt-1">{selectedRecord.office_supplies?.specification || "-"}</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">采购数量</Label>
-                  <div className="mt-1">{selectedRecord.quantity} {selectedRecord.office_supplies?.unit}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">采购单价</Label>
-                  <div className="mt-1">¥{selectedRecord.unit_price || 0}</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">采购总额</Label>
-                  <div className="mt-1">¥{selectedRecord.total_amount || 0}</div>
-                </div>
-              </div>
-              {selectedRecord.reason && (
-                <div>
-                  <Label className="text-sm text-muted-foreground">采购原因</Label>
-                  <div className="mt-1">{selectedRecord.reason}</div>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
                   <Label className="text-sm text-muted-foreground">采购日期</Label>
                   <div className="mt-1">{selectedRecord.purchase_date}</div>
                 </div>
@@ -403,6 +506,55 @@ const Purchase = () => {
                   <div className="mt-1">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
                 </div>
               </div>
+              
+              {/* 采购明细 */}
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">采购明细</Label>
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>物品名称</TableHead>
+                        <TableHead>规格</TableHead>
+                        <TableHead>数量</TableHead>
+                        <TableHead>单价(元)</TableHead>
+                        <TableHead>金额(元)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedItems.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            暂无明细数据
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        selectedItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.office_supplies?.name || "-"}</TableCell>
+                            <TableCell>{item.office_supplies?.specification || "-"}</TableCell>
+                            <TableCell>{item.quantity} {item.office_supplies?.unit}</TableCell>
+                            <TableCell>{item.unit_price.toFixed(2)}</TableCell>
+                            <TableCell>{item.amount.toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* 采购总额 */}
+                <div className="flex justify-end items-center gap-2 pt-2">
+                  <Label className="text-muted-foreground">采购总额:</Label>
+                  <span className="text-lg font-semibold">¥{(selectedRecord.total_amount || 0).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {selectedRecord.reason && (
+                <div>
+                  <Label className="text-sm text-muted-foreground">采购原因</Label>
+                  <div className="mt-1">{selectedRecord.reason}</div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
