@@ -299,30 +299,33 @@ const SchedulePanel = () => {
           </div>
         </div>
 
-        {/* 星期标签 */}
-        <div className="grid grid-cols-7 gap-1 mt-4 flex-shrink-0">
-          {weekLabels.map((label) => (
-            <div key={label} className="text-center text-xs text-muted-foreground">
-              {label}
-            </div>
-          ))}
-        </div>
-
-        {/* 日历网格 */}
-        <div className="grid grid-cols-7 gap-1 mt-1 flex-shrink-0">
-          {weekDays.map((day) => (
-            <div
-              key={format(day, "yyyy-MM-dd")}
-              onClick={() => handleDateClick(day)}
-              className={`calendar-day cursor-pointer transition-all ${
-                isSelected(day) ? "ring-2 ring-primary ring-offset-1" : ""
-              } ${isToday(day) ? "calendar-day-today" : ""} ${
-                hasSchedule(day) && !isToday(day) && !isSelected(day) ? "calendar-day-event" : ""
-              }`}
-            >
-              {format(day, "d")}
-            </div>
-          ))}
+        {/* 星期标签和日期网格 - 对齐 */}
+        <div className="mt-4 flex-shrink-0">
+          <div className="flex justify-between">
+            {weekLabels.map((label, idx) => (
+              <div 
+                key={label} 
+                className="w-8 text-center text-xs text-muted-foreground"
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between mt-1">
+            {weekDays.map((day) => (
+              <div
+                key={format(day, "yyyy-MM-dd")}
+                onClick={() => handleDateClick(day)}
+                className={`calendar-day cursor-pointer transition-all ${
+                  isSelected(day) ? "ring-2 ring-primary ring-offset-1" : ""
+                } ${isToday(day) ? "calendar-day-today" : ""} ${
+                  hasSchedule(day) && !isToday(day) && !isSelected(day) ? "calendar-day-event" : ""
+                }`}
+              >
+                {format(day, "d")}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* 选中日期的日程 - 固定高度仅上下滚动 */}
