@@ -398,39 +398,50 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     // 找出退回后创建的pending记录的时间点（用于过滤这些记录）
     const returnedAt = returnInfo?.returned_at ? new Date(returnInfo.returned_at).getTime() : 0;
     
-    // 检测重新提交事件（退回记录后面有新记录的情况）
-    // 场景1：同节点同审批人有后续记录（return_current_node 场景）
-    // 场景2：退回后第一个节点有新的pending/processed记录（return_restart 场景）
+    // 检测重新提交事件（只有"退回发起人"才需要发起人重新提交，"退回至上一节点"不需要）
+    // 场景1：退回发起人当前节点继续审批（return_current_node）- 发起人修改后同节点继续审批
+    // 场景2：退回发起人重新审批（return_restart）- 发起人修改后从头开始审批
+    // 注意："退回至上一节点"（return_to_previous）不需要发起人重新提交！
     const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord?: ApprovalRecord; time: string; isRestartType?: boolean }[] = [];
     
-    // 始终检测重新提交事件（即使 isAwaitingResubmit 为 true，历史记录中可能已有重新提交事件）
     records.forEach(rejectedRecord => {
       if (rejectedRecord.status !== "rejected" && rejectedRecord.status !== "returned_to_initiator") return;
       
-      // 场景1：同节点同审批人有后续的已处理记录
-      const laterRecord = records.find(r => 
-        r.node_name === rejectedRecord.node_name &&
-        r.approver_id === rejectedRecord.approver_id &&
-        r.status !== "pending" && // 必须是已处理的记录
-        new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.created_at || 0).getTime()
-      );
-      if (laterRecord) {
-        resubmitEvents.push({
-          afterRecord: rejectedRecord,
-          beforeRecord: laterRecord,
-          time: laterRecord.created_at,
-        });
-        return;
+      // 检查是否是"退回至上一节点" - 这种情况不需要发起人重新提交
+      const isReturnToPrevious = rejectedRecord.comment?.includes("退回至上一节点") || 
+                                  rejectedRecord.comment?.includes("return_to_previous");
+      if (isReturnToPrevious) {
+        return; // 跳过，不生成重新提交事件
       }
       
-      // 场景2：检查是否是 return_restart 类型的退回，且有后续已处理的记录
+      // 检查是否是"退回发起人当前节点继续"
+      const isReturnCurrentNode = rejectedRecord.comment?.includes("当前节点继续") || 
+                                   rejectedRecord.comment?.includes("return_current_node");
+      
+      // 检查是否是"退回发起人重新审批"
       const isReturnRestart = rejectedRecord.comment?.includes("重新走完整") || 
                               rejectedRecord.comment?.includes("重审") ||
                               rejectedRecord.comment?.includes("return_restart");
-      if (isReturnRestart) {
+      
+      if (isReturnCurrentNode) {
+        // 场景1：同节点同审批人有后续的已处理记录
+        const laterRecord = records.find(r => 
+          r.node_name === rejectedRecord.node_name &&
+          r.approver_id === rejectedRecord.approver_id &&
+          r.status !== "pending" && // 必须是已处理的记录
+          new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.created_at || 0).getTime()
+        );
+        if (laterRecord) {
+          resubmitEvents.push({
+            afterRecord: rejectedRecord,
+            beforeRecord: laterRecord,
+            time: laterRecord.created_at,
+          });
+        }
+      } else if (isReturnRestart) {
+        // 场景2：退回发起人重新审批，检查第一个节点是否有后续记录（pending 或 已处理）
         const firstNodeRecord = records.find(r => 
           r.node_index === 0 &&
-          r.status !== "pending" && // 必须是已处理的记录
           new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime()
         );
         if (firstNodeRecord) {
@@ -540,6 +551,29 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           nodeStatus: isAwaitingResubmit ? "waiting" : "pending",
           timestamp: Date.now() + index,
         });
+        
+        // 如果用户已重新提交（有 pending 记录且不是等待重新提交状态），需要显示后续所有节点
+        if (!isAwaitingResubmit) {
+          // 添加当前节点后面的所有等待节点
+          displayNodes.slice(index + 1).forEach((futureNode, futureIdx) => {
+            const futureApproverNames = nodeMap.get(futureNode.node_name)?.approverNames || [];
+            
+            // 检查是否已经在时间线中
+            const alreadyAdded = timelineItems.some(
+              item => item.node.node_name === futureNode.node_name
+            );
+            if (!alreadyAdded) {
+              timelineItems.push({
+                type: "node",
+                node: futureNode,
+                index: index + futureIdx + 1,
+                approverNames: futureApproverNames,
+                nodeStatus: "waiting",
+                timestamp: Date.now() + 1000 + index + futureIdx + 1,
+              });
+            }
+          });
+        }
       } else if (index >= currentNodeIndex && !processedNodeNames.has(node.node_name)) {
         // 如果节点索引 >= 当前节点索引，说明是后续待处理节点
         timelineItems.push({
@@ -551,23 +585,11 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           timestamp: Date.now() + 1000 + index,
         });
       } else if (isAwaitingResubmit && index < displayNodes.length) {
-        // 退回重审场景：即使有历史记录，也要显示所有后续节点为等待状态
-        // 检查是否已经作为记录显示过
+        // 退回重审场景且发起人尚未重新提交：显示所有后续节点为等待状态
         const alreadyInTimeline = timelineItems.some(
           item => item.node.node_name === node.node_name && item.type === "record"
         );
-        // 获取该节点最后一条记录是否是已退回的
-        const lastRecord = processedRecords
-          .filter(r => r.node_name === node.node_name)
-          .pop();
-        const lastWasRejected = lastRecord && (
-          lastRecord.status === "rejected" || 
-          lastRecord.status === "returned_to_initiator" ||
-          lastRecord.status === "returned_restart"
-        );
-        
         // 如果该节点索引 >= 当前退回的节点（退回后需要重新审批的节点）
-        // 并且还没有pending记录，显示为等待状态
         if (!alreadyInTimeline || (index > 0 && index >= currentNodeIndex)) {
           // 避免重复添加
           const alreadyAdded = timelineItems.some(
