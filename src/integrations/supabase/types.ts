@@ -853,11 +853,14 @@ export type Database = {
           completed_at: string | null
           created_at: string
           id: string
+          purchase_date: string
           quantity: number
           reason: string | null
           requested_by: string
           status: Database["public"]["Enums"]["purchase_status"]
           supply_id: string
+          total_amount: number | null
+          unit_price: number | null
           updated_at: string
         }
         Insert: {
@@ -866,11 +869,14 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          purchase_date?: string
           quantity: number
           reason?: string | null
           requested_by: string
           status?: Database["public"]["Enums"]["purchase_status"]
           supply_id: string
+          total_amount?: number | null
+          unit_price?: number | null
           updated_at?: string
         }
         Update: {
@@ -879,11 +885,14 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          purchase_date?: string
           quantity?: number
           reason?: string | null
           requested_by?: string
           status?: Database["public"]["Enums"]["purchase_status"]
           supply_id?: string
+          total_amount?: number | null
+          unit_price?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1037,6 +1046,7 @@ export type Database = {
           id: string
           quantity: number
           requisition_by: string
+          requisition_date: string
           status: Database["public"]["Enums"]["requisition_status"]
           supply_id: string
           updated_at: string
@@ -1048,6 +1058,7 @@ export type Database = {
           id?: string
           quantity: number
           requisition_by: string
+          requisition_date?: string
           status?: Database["public"]["Enums"]["requisition_status"]
           supply_id: string
           updated_at?: string
@@ -1059,6 +1070,7 @@ export type Database = {
           id?: string
           quantity?: number
           requisition_by?: string
+          requisition_date?: string
           status?: Database["public"]["Enums"]["requisition_status"]
           supply_id?: string
           updated_at?: string

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, CalendarIcon, ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, CalendarIcon, ChevronLeft, ChevronRight, ShoppingCart, BookUser } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,6 +102,7 @@ const QuickLinks = () => {
   const [supplyForm, setSupplyForm] = useState({
     supply_id: "",
     quantity: 1,
+    requisition_date: new Date(),
   });
 
   // Purchase Request Dialog State
@@ -109,7 +111,15 @@ const QuickLinks = () => {
     supply_id: "",
     quantity: 1,
     reason: "",
+    purchase_date: new Date(),
+    unit_price: 0,
   });
+
+  // Contacts Dialog State
+  const [contactsDialogOpen, setContactsDialogOpen] = useState(false);
+  const [contacts, setContacts] = useState<{ id: string; name: string; department: string | null; position: string | null; mobile: string | null; status: string }[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
 
   // Leader Schedule Dialog State
   const [leaderScheduleDialogOpen, setLeaderScheduleDialogOpen] = useState(false);
@@ -337,6 +347,7 @@ const QuickLinks = () => {
       supply_id: supplyForm.supply_id,
       quantity: supplyForm.quantity,
       requisition_by: currentUser?.name || "",
+      requisition_date: format(supplyForm.requisition_date, "yyyy-MM-dd"),
     }).select("id").single();
 
     if (error || !record) {
@@ -356,13 +367,14 @@ const QuickLinks = () => {
         supply_id: supplyForm.supply_id,
         supply_name: supply?.name,
         quantity: supplyForm.quantity,
+        requisition_date: format(supplyForm.requisition_date, "yyyy-MM-dd"),
       },
     });
 
     if (approvalResult.success) {
       toast.success("领用申请已提交");
       setSupplyDialogOpen(false);
-      setSupplyForm({ supply_id: "", quantity: 1 });
+      setSupplyForm({ supply_id: "", quantity: 1, requisition_date: new Date() });
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
     }
@@ -379,6 +391,7 @@ const QuickLinks = () => {
     }
 
     const supply = supplies.find((s) => s.id === purchaseForm.supply_id);
+    const totalAmount = purchaseForm.quantity * purchaseForm.unit_price;
 
     // 1. 创建业务记录
     const { data: record, error } = await supabase.from("purchase_requests").insert({
@@ -386,6 +399,9 @@ const QuickLinks = () => {
       quantity: purchaseForm.quantity,
       reason: purchaseForm.reason.trim() || null,
       requested_by: currentUser?.name || "",
+      purchase_date: format(purchaseForm.purchase_date, "yyyy-MM-dd"),
+      unit_price: purchaseForm.unit_price,
+      total_amount: totalAmount,
     }).select("id").single();
 
     if (error || !record) {
@@ -406,13 +422,16 @@ const QuickLinks = () => {
         supply_name: supply?.name,
         quantity: purchaseForm.quantity,
         reason: purchaseForm.reason,
+        purchase_date: format(purchaseForm.purchase_date, "yyyy-MM-dd"),
+        unit_price: purchaseForm.unit_price,
+        total_amount: totalAmount,
       },
     });
 
     if (approvalResult.success) {
       toast.success("采购申请已提交");
       setPurchaseDialogOpen(false);
-      setPurchaseForm({ supply_id: "", quantity: 1, reason: "" });
+      setPurchaseForm({ supply_id: "", quantity: 1, reason: "", purchase_date: new Date(), unit_price: 0 });
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
     }
@@ -432,6 +451,40 @@ const QuickLinks = () => {
     setLeaderScheduleDialogOpen(true);
     await Promise.all([fetchLeaders(), fetchLeaderSchedules()]);
   };
+
+  // Fetch contacts for directory
+  const fetchContacts = async () => {
+    setContactsLoading(true);
+    const { data } = await supabase
+      .from("contacts")
+      .select("id, name, department, position, mobile, status")
+      .eq("is_active", true)
+      .order("sort_order");
+    
+    if (data) {
+      setContacts(data);
+    }
+    setContactsLoading(false);
+  };
+
+  const openContactsDialog = async () => {
+    setContactsDialogOpen(true);
+    await fetchContacts();
+  };
+
+  const contactStatusLabels: Record<string, { label: string; color: string }> = {
+    on_duty: { label: "在职", color: "bg-green-100 text-green-700" },
+    out: { label: "外出", color: "bg-purple-100 text-purple-700" },
+    leave: { label: "请假", color: "bg-orange-100 text-orange-700" },
+    business_trip: { label: "出差", color: "bg-blue-100 text-blue-700" },
+    meeting: { label: "会议", color: "bg-amber-100 text-amber-700" },
+  };
+
+  const filteredContacts = contacts.filter(c => 
+    c.name.includes(contactSearch) || 
+    c.department?.includes(contactSearch) || 
+    c.position?.includes(contactSearch)
+  );
 
   const handlePrevWeek = () => {
     setCurrentWeekStart(subWeeks(currentWeekStart, 1));
@@ -485,6 +538,13 @@ const QuickLinks = () => {
     },
     {
       id: 6,
+      name: "通讯录",
+      color: "bg-cyan-500",
+      icon: BookUser,
+      onClick: openContactsDialog,
+    },
+    {
+      id: 7,
       name: "领导日程",
       color: "bg-amber-500",
       icon: Star,
@@ -698,9 +758,37 @@ const QuickLinks = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>领用人</Label>
-                <Input value={currentUser?.name || ""} disabled className="bg-muted" />
+                <Label>领用日期 *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !supplyForm.requisition_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {supplyForm.requisition_date
+                        ? format(supplyForm.requisition_date, "yyyy-MM-dd", { locale: zhCN })
+                        : "选择日期"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={supplyForm.requisition_date}
+                      onSelect={(date) => setSupplyForm({ ...supplyForm, requisition_date: date || new Date() })}
+                      locale={zhCN}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>领用人</Label>
+              <Input value={currentUser?.name || ""} disabled className="bg-muted" />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setSupplyDialogOpen(false)}>
@@ -751,9 +839,57 @@ const QuickLinks = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>申请人</Label>
-                <Input value={currentUser?.name || ""} disabled className="bg-muted" />
+                <Label>采购日期 *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !purchaseForm.purchase_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {purchaseForm.purchase_date
+                        ? format(purchaseForm.purchase_date, "yyyy-MM-dd", { locale: zhCN })
+                        : "选择日期"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={purchaseForm.purchase_date}
+                      onSelect={(date) => setPurchaseForm({ ...purchaseForm, purchase_date: date || new Date() })}
+                      locale={zhCN}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>采购单价 (元) *</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={purchaseForm.unit_price}
+                  onChange={(e) => setPurchaseForm({ ...purchaseForm, unit_price: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>采购总额 (元)</Label>
+                <Input 
+                  value={(purchaseForm.quantity * purchaseForm.unit_price).toFixed(2)} 
+                  disabled 
+                  className="bg-muted" 
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>申请人</Label>
+              <Input value={currentUser?.name || ""} disabled className="bg-muted" />
             </div>
             <div className="space-y-2">
               <Label>采购理由</Label>
@@ -862,6 +998,64 @@ const QuickLinks = () => {
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 通讯录对话框 */}
+      <Dialog open={contactsDialogOpen} onOpenChange={setContactsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle>通讯录</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Input
+              placeholder="搜索姓名、部门或职位..."
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+            />
+            
+            {contactsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">加载中...</div>
+            ) : filteredContacts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">暂无联系人</div>
+            ) : (
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-2">
+                  {filteredContacts.map((contact) => {
+                    const statusInfo = contactStatusLabels[contact.status] || contactStatusLabels.on_duty;
+                    return (
+                      <div
+                        key={contact.id}
+                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{contact.name}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </span>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {contact.department && <span>{contact.department}</span>}
+                            {contact.position && <span> · {contact.position}</span>}
+                          </div>
+                        </div>
+                        {contact.mobile && (
+                          <a
+                            href={`tel:${contact.mobile}`}
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {contact.mobile}
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
