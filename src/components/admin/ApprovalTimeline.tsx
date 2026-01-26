@@ -451,10 +451,12 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           let statusTextColor = "";
           let showStatus = true;
           
-          if (item.nodeStatus === "approved") {
+          // 抄送节点不显示节点级别状态标签
+          if (item.node.node_type === "cc") {
+            showStatus = false;
+          } else if (item.nodeStatus === "approved") {
             statusBg = "bg-green-100";
-            // 抄送节点显示"已抄送"，审批节点显示"已同意"
-            statusText = item.node.node_type === "cc" ? "已抄送" : "已同意";
+            statusText = "已同意";
             statusTextColor = "text-green-800";
           } else if (item.nodeStatus === "rejected") {
             statusBg = "bg-red-100";
@@ -465,7 +467,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
             statusText = "待处理";
             statusTextColor = "text-yellow-800";
           } else {
-            // 等待中状态：审批节点和抄送人节点都不显示
+            // 等待中状态：不显示
             showStatus = false;
           }
           
