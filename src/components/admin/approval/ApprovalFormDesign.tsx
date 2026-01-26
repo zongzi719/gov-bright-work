@@ -30,6 +30,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
   const [editingField, setEditingField] = useState<FormField | null>(null);
   const [initialFieldType, setInitialFieldType] = useState<string | undefined>();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false); // 防止重复初始化
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -59,8 +60,8 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
 
     let loadedFields = (data as unknown as FormField[]) || [];
 
-    // 如果没有字段且有业务类型，加载默认字段
-    if (loadedFields.length === 0 && businessType) {
+    // 如果没有字段且有业务类型，加载默认字段（防止重复初始化）
+    if (loadedFields.length === 0 && businessType && !isInitializing) {
       const defaultFields = getDefaultFieldsForBusinessType(businessType);
       if (defaultFields.length > 0) {
         await initializeDefaultFields(defaultFields);
@@ -73,6 +74,9 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
   };
 
   const initializeDefaultFields = async (defaultFields: Omit<FormField, 'id' | 'template_id'>[]) => {
+    // 设置初始化标志，防止重复插入
+    setIsInitializing(true);
+    
     const fieldsToInsert = defaultFields.map(field => ({
       ...field,
       template_id: templateId,
@@ -89,7 +93,16 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
       toast.success("已加载预设表单字段");
     }
     
-    fetchFields();
+    // 重新获取字段后重置标志
+    const { data } = await supabase
+      .from("approval_form_fields" as any)
+      .select("*")
+      .eq("template_id", templateId)
+      .order("sort_order", { ascending: true });
+    
+    setFields((data as unknown as FormField[]) || []);
+    setLoading(false);
+    setIsInitializing(false);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
