@@ -52,6 +52,7 @@ const SchedulePanel = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // 当前选中的日期
   const [formData, setFormData] = useState({
     contact_id: currentUser?.id || "",
@@ -137,6 +138,9 @@ const SchedulePanel = () => {
 
   // 提交日程
   const handleSubmit = async () => {
+    // 防止重复提交
+    if (submitting) return;
+    
     // Use currentUser.id directly since it's set from localStorage
     const contactId = currentUser?.id;
     if (!contactId || !formData.title || !formData.schedule_date) {
@@ -144,32 +148,38 @@ const SchedulePanel = () => {
       return;
     }
 
-    const { error } = await supabase.from("schedules").insert({
-      contact_id: contactId,
-      title: formData.title,
-      schedule_date: formData.schedule_date,
-      start_time: formData.start_time,
-      end_time: formData.end_time,
-      location: formData.location || null,
-      notes: formData.notes || null,
-    });
-
-    if (error) {
-      toast.error("添加日程失败");
-      console.error(error);
-    } else {
-      toast.success("日程已添加");
-      setDialogOpen(false);
-      setFormData({
-        contact_id: currentUser?.id || "",
-        title: "",
-        schedule_date: "",
-        start_time: "09:00",
-        end_time: "10:00",
-        location: "",
-        notes: "",
+    setSubmitting(true);
+    
+    try {
+      const { error } = await supabase.from("schedules").insert({
+        contact_id: contactId,
+        title: formData.title,
+        schedule_date: formData.schedule_date,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        location: formData.location || null,
+        notes: formData.notes || null,
       });
-      fetchSchedules();
+
+      if (error) {
+        toast.error("添加日程失败");
+        console.error(error);
+      } else {
+        toast.success("日程已添加");
+        setDialogOpen(false);
+        setFormData({
+          contact_id: currentUser?.id || "",
+          title: "",
+          schedule_date: "",
+          start_time: "09:00",
+          end_time: "10:00",
+          location: "",
+          notes: "",
+        });
+        fetchSchedules();
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -313,7 +323,9 @@ const SchedulePanel = () => {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 取消
               </Button>
-              <Button onClick={handleSubmit}>添加</Button>
+              <Button onClick={handleSubmit} disabled={submitting}>
+                {submitting ? "添加中..." : "添加"}
+              </Button>
             </div>
           </div>
         </DialogContent>
