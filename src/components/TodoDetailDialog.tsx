@@ -947,51 +947,48 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     // 检测重新提交事件
     // 场景1：同节点同审批人有后续记录（return_current_node 场景）
     // 场景2：退回后第一个节点有新的pending/processed记录（return_restart 场景）
-    // 重要：如果发起人尚未重新提交，则不生成重新提交事件
     const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord?: ApprovalRecord; time: string; isRestartType?: boolean }[] = [];
     
-    if (!isAwaitingResubmit) {
-      // 只有在发起人已经重新提交后才检测重新提交事件
-      records.forEach(rejectedRecord => {
-        if (rejectedRecord.status !== "rejected" && rejectedRecord.status !== "returned_to_initiator") return;
-        
-        // 场景1：同节点同审批人有后续的已处理记录（不只是pending）
-        const laterRecord = records.find(r => 
-          r.node_name === rejectedRecord.node_name &&
-          r.approver_id === rejectedRecord.approver_id &&
+    // 始终检测重新提交事件（即使 isAwaitingResubmit 为 true，历史记录中可能已有重新提交事件）
+    records.forEach(rejectedRecord => {
+      if (rejectedRecord.status !== "rejected" && rejectedRecord.status !== "returned_to_initiator") return;
+      
+      // 场景1：同节点同审批人有后续的已处理记录
+      const laterRecord = records.find(r => 
+        r.node_name === rejectedRecord.node_name &&
+        r.approver_id === rejectedRecord.approver_id &&
+        r.status !== "pending" && // 必须是已处理的记录
+        new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.created_at || 0).getTime()
+      );
+      if (laterRecord) {
+        resubmitEvents.push({
+          afterRecord: rejectedRecord,
+          beforeRecord: laterRecord,
+          time: laterRecord.created_at,
+        });
+        return;
+      }
+      
+      // 场景2：检查是否是 return_restart 类型的退回，且有后续已处理的记录
+      const isReturnRestart = rejectedRecord.comment?.includes("重新走完整") || 
+                              rejectedRecord.comment?.includes("重审") ||
+                              rejectedRecord.comment?.includes("return_restart");
+      if (isReturnRestart) {
+        const firstNodeRecord = records.find(r => 
+          r.node_index === 0 &&
           r.status !== "pending" && // 必须是已处理的记录
-          new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.created_at || 0).getTime()
+          new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime()
         );
-        if (laterRecord) {
+        if (firstNodeRecord) {
           resubmitEvents.push({
             afterRecord: rejectedRecord,
-            beforeRecord: laterRecord,
-            time: laterRecord.created_at,
+            beforeRecord: firstNodeRecord,
+            time: firstNodeRecord.created_at,
+            isRestartType: true,
           });
-          return;
         }
-        
-        // 场景2：检查是否是 return_restart 类型的退回，且有后续已处理的记录
-        const isReturnRestart = rejectedRecord.comment?.includes("重新走完整") || 
-                                rejectedRecord.comment?.includes("重审") ||
-                                rejectedRecord.comment?.includes("return_restart");
-        if (isReturnRestart) {
-          const firstNodeRecord = records.find(r => 
-            r.node_index === 0 &&
-            r.status !== "pending" && // 必须是已处理的记录
-            new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime()
-          );
-          if (firstNodeRecord) {
-            resubmitEvents.push({
-              afterRecord: rejectedRecord,
-              beforeRecord: firstNodeRecord,
-              time: firstNodeRecord.created_at,
-              isRestartType: true,
-            });
-          }
-        }
-      });
-    }
+      }
+    });
     
     // 跟踪哪些节点已经有了已处理的记录
     const processedNodeNames = new Set<string>();
