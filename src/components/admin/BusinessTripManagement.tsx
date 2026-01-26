@@ -84,6 +84,7 @@ const statusColors: Record<AbsenceStatus, string> = {
 // 审批实例状态标签和颜色
 const approvalStatusLabels: Record<string, string> = {
   pending: "审批中",
+  pending_returned: "已退回", // 退回待修改
   approved: "已完成",
   rejected: "已驳回",
   cancelled: "已取消",
@@ -92,6 +93,7 @@ const approvalStatusLabels: Record<string, string> = {
 
 const approvalStatusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
+  pending_returned: "bg-orange-100 text-orange-800", // 退回待修改
   approved: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
   cancelled: "bg-gray-100 text-gray-500",
@@ -139,14 +141,22 @@ const BusinessTripManagement = () => {
         const recordIds = recordsData.map(r => r.id);
         const { data: instancesData } = await supabase
           .from("approval_instances")
-          .select("business_id, status")
+          .select("business_id, status, form_data")
           .eq("business_type", "business_trip")
           .in("business_id", recordIds);
         
-        // 创建映射
+        // 创建映射 - 判断是否有退回信息
         const statusMap = new Map<string, string>();
         instancesData?.forEach(inst => {
-          statusMap.set(inst.business_id, inst.status);
+          let displayStatus: string = inst.status;
+          // 如果状态是 pending 但有退回信息，显示为"已退回"
+          if (inst.status === "pending" && inst.form_data) {
+            const formData = inst.form_data as Record<string, any>;
+            if (formData._return_info) {
+              displayStatus = "pending_returned";
+            }
+          }
+          statusMap.set(inst.business_id, displayStatus);
         });
         
         // 合并状态
@@ -227,13 +237,21 @@ const BusinessTripManagement = () => {
     // 获取审批实例的真实状态
     const { data: instanceData } = await supabase
       .from("approval_instances")
-      .select("status")
+      .select("status, form_data")
       .eq("business_id", record.id)
       .eq("business_type", "business_trip")
       .single();
     
     if (instanceData) {
-      setApprovalInstanceStatus(instanceData.status);
+      // 如果状态是 pending 但有退回信息，显示为"已退回"
+      let displayStatus: string = instanceData.status;
+      if (instanceData.status === "pending" && instanceData.form_data) {
+        const formData = instanceData.form_data as Record<string, any>;
+        if (formData._return_info) {
+          displayStatus = "pending_returned";
+        }
+      }
+      setApprovalInstanceStatus(displayStatus);
     }
   };
 
