@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, Search, ArrowLeft, Eye, CalendarIcon } from "lucide-react";
+import { Plus, Search, Eye, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -50,7 +49,6 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 };
 
 const Requisition = () => {
-  const navigate = useNavigate();
   const { startApproval } = useApprovalWorkflow();
   const [records, setRecords] = useState<SupplyRequisition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,12 +187,7 @@ const Requisition = () => {
     <PageLayout>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <CardTitle>领用申请</CardTitle>
-          </div>
+          <CardTitle>领用申请</CardTitle>
           <Button onClick={handleOpenForm}>
             <Plus className="h-4 w-4 mr-2" />
             新增申请

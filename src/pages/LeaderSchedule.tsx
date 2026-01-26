@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -36,7 +35,6 @@ const scheduleTypeColors: Record<string, { bg: string; text: string; label: stri
 const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
 const LeaderSchedule = () => {
-  const navigate = useNavigate();
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [leaderSchedules, setLeaderSchedules] = useState<LeaderSchedule[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
@@ -103,12 +101,7 @@ const LeaderSchedule = () => {
     <PageLayout>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <CardTitle>领导日程</CardTitle>
-          </div>
+          <CardTitle>领导日程</CardTitle>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={handlePrevWeek}>
               <ChevronLeft className="h-4 w-4" />

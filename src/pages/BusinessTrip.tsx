@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, ArrowLeft, Eye } from "lucide-react";
+import { Plus, Search, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -49,7 +48,6 @@ const transportTypeLabels: Record<string, string> = {
 };
 
 const BusinessTrip = () => {
-  const navigate = useNavigate();
   const [records, setRecords] = useState<AbsenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -117,12 +115,7 @@ const BusinessTrip = () => {
     <PageLayout>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <CardTitle>出差申请</CardTitle>
-          </div>
+          <CardTitle>出差申请</CardTitle>
           <Button onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             新增申请
