@@ -941,10 +941,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     });
     
     // 检测重新提交事件
-    const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord: ApprovalRecord; time: string }[] = [];
+    // 场景1：同节点同审批人有后续记录（return_current_node 场景）
+    // 场景2：退回后第一个节点有新的pending/processed记录（return_restart 场景）
+    const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord?: ApprovalRecord; time: string; isRestartType?: boolean }[] = [];
+    
     records.forEach(rejectedRecord => {
       if (rejectedRecord.status !== "rejected" && rejectedRecord.status !== "returned_to_initiator") return;
       
+      // 场景1：同节点同审批人有后续记录
       const laterRecord = records.find(r => 
         r.node_name === rejectedRecord.node_name &&
         r.approver_id === rejectedRecord.approver_id &&
@@ -956,6 +960,27 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           beforeRecord: laterRecord,
           time: laterRecord.created_at,
         });
+        return; // 已找到重新提交事件，不需要继续检查
+      }
+      
+      // 场景2：检查是否是 return_restart 类型的退回（退回意见中包含"重新"或"重审"）
+      const isReturnRestart = rejectedRecord.comment?.includes("重新走完整") || 
+                              rejectedRecord.comment?.includes("重审") ||
+                              rejectedRecord.comment?.includes("return_restart");
+      if (isReturnRestart) {
+        // 查找退回后第一个节点（node_index=0）的新记录
+        const firstNodeRecord = records.find(r => 
+          r.node_index === 0 &&
+          new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime()
+        );
+        if (firstNodeRecord) {
+          resubmitEvents.push({
+            afterRecord: rejectedRecord,
+            beforeRecord: firstNodeRecord,
+            time: firstNodeRecord.created_at,
+            isRestartType: true,
+          });
+        }
       }
     });
     
@@ -1014,6 +1039,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     // 关键修复：考虑退回场景，即使节点有历史记录，如果它在当前节点之后，仍需显示为"等待中"
     const currentNodeIndex = instance?.current_node_index || 0;
     
+    // 检查是否是"退回发起人-重审"场景
+    const returnInfo = (instance?.form_data as any)?._return_info;
+    const isReturnRestart = returnInfo?.type === "return_restart";
+    
     displayNodes.forEach((node, index) => {
       const nodeRecords = nodeRecordsMap.get(node.node_name) || [];
       const nodeInfo = nodeMap.get(node.node_name);
@@ -1045,6 +1074,18 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       } else if (index > currentNodeIndex) {
         // 关键修复：如果节点索引大于当前节点索引，说明是后续待处理节点
         // 即使该节点有历史记录（如被退回后），仍需显示为"等待中"
+        timelineItems.push({
+          type: "node",
+          node,
+          name: node.node_name,
+          approverNames: nodeInfo.approverNames,
+          approvalMode: node.approval_mode,
+          status: "pending",
+          timestamp: Date.now() + 1000 + index,
+        });
+      } else if (isReturnRestart && index >= currentNodeIndex && pendingRecords.length === 0) {
+        // 退回发起人-重审场景：所有节点都需要在"发起人重新提交"之后显示为"等待中"
+        // 只有没有pending记录的节点才需要添加（有pending记录的已在上面处理）
         timelineItems.push({
           type: "node",
           node,
