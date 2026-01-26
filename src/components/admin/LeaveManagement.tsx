@@ -62,6 +62,12 @@ interface AbsenceRecord {
   leave_type: string | null;
   created_at: string;
   contacts: Contact | null;
+  // 新增字段
+  duration_days: number | null;
+  duration_hours: number | null;
+  handover_person_id: string | null;
+  handover_notes: string | null;
+  handover_person?: { name: string } | null;
   // 关联的审批实例状态
   approval_status?: string;
 }
@@ -140,6 +146,9 @@ const LeaveManagement = () => {
           department,
           position,
           organization:organizations (name)
+        ),
+        handover_person:contacts!absence_records_handover_person_id_fkey (
+          name
         )
       `)
       .eq("type", "leave")
@@ -399,8 +408,16 @@ const LeaveManagement = () => {
                     </div>
                   </div>
                 )}
+                {selectedRecord.duration_days && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">请假时长</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.duration_days} 天
+                    </div>
+                  </div>
+                )}
                 <div className="col-span-2">
-                  <Label className="text-sm text-muted-foreground">事由</Label>
+                  <Label className="text-sm text-muted-foreground">请假事由</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {selectedRecord.reason}
                   </div>
@@ -419,6 +436,22 @@ const LeaveManagement = () => {
                       : "-"}
                   </div>
                 </div>
+                {selectedRecord.handover_person && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">工作交接人</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.handover_person.name}
+                    </div>
+                  </div>
+                )}
+                {selectedRecord.handover_notes && (
+                  <div className="col-span-2">
+                    <Label className="text-sm text-muted-foreground">交接事项</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.handover_notes}
+                    </div>
+                  </div>
+                )}
                 {selectedRecord.notes && (
                   <div className="col-span-2">
                     <Label className="text-sm text-muted-foreground">备注</Label>

@@ -20,15 +20,26 @@ export type Database = {
           approved_by: string | null
           cancel_reason: string | null
           cancelled_at: string | null
+          companions: string[] | null
           contact_id: string
+          contact_phone: string | null
           created_at: string
+          destination: string | null
+          duration_days: number | null
+          duration_hours: number | null
           end_time: string | null
+          estimated_cost: number | null
+          handover_notes: string | null
+          handover_person_id: string | null
           id: string
           leave_type: Database["public"]["Enums"]["leave_type"] | null
           notes: string | null
+          out_location: string | null
+          out_type: string | null
           reason: string
           start_time: string
           status: Database["public"]["Enums"]["absence_status"]
+          transport_type: string | null
           type: Database["public"]["Enums"]["absence_type"]
           updated_at: string
         }
@@ -37,15 +48,26 @@ export type Database = {
           approved_by?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
+          companions?: string[] | null
           contact_id: string
+          contact_phone?: string | null
           created_at?: string
+          destination?: string | null
+          duration_days?: number | null
+          duration_hours?: number | null
           end_time?: string | null
+          estimated_cost?: number | null
+          handover_notes?: string | null
+          handover_person_id?: string | null
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"] | null
           notes?: string | null
+          out_location?: string | null
+          out_type?: string | null
           reason: string
           start_time: string
           status?: Database["public"]["Enums"]["absence_status"]
+          transport_type?: string | null
           type: Database["public"]["Enums"]["absence_type"]
           updated_at?: string
         }
@@ -54,15 +76,26 @@ export type Database = {
           approved_by?: string | null
           cancel_reason?: string | null
           cancelled_at?: string | null
+          companions?: string[] | null
           contact_id?: string
+          contact_phone?: string | null
           created_at?: string
+          destination?: string | null
+          duration_days?: number | null
+          duration_hours?: number | null
           end_time?: string | null
+          estimated_cost?: number | null
+          handover_notes?: string | null
+          handover_person_id?: string | null
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"] | null
           notes?: string | null
+          out_location?: string | null
+          out_type?: string | null
           reason?: string
           start_time?: string
           status?: Database["public"]["Enums"]["absence_status"]
+          transport_type?: string | null
           type?: Database["public"]["Enums"]["absence_type"]
           updated_at?: string
         }
@@ -70,6 +103,13 @@ export type Database = {
           {
             foreignKeyName: "absence_records_contact_id_fkey"
             columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_records_handover_person_id_fkey"
+            columns: ["handover_person_id"]
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]

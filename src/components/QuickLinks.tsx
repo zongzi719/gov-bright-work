@@ -15,6 +15,9 @@ import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
+import BusinessTripForm from "@/components/forms/BusinessTripForm";
+import LeaveForm from "@/components/forms/LeaveForm";
+import OutForm from "@/components/forms/OutForm";
 interface OfficeSupply {
   id: string;
   name: string;
@@ -71,30 +74,12 @@ const QuickLinks = () => {
 
   // 出差申请 Dialog State
   const [businessTripDialogOpen, setBusinessTripDialogOpen] = useState(false);
-  const [businessTripForm, setBusinessTripForm] = useState({
-    reason: "",
-    start_time: undefined as Date | undefined,
-    end_time: undefined as Date | undefined,
-    notes: "",
-  });
 
   // 请假申请 Dialog State
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
-  const [leaveForm, setLeaveForm] = useState({
-    reason: "",
-    start_time: undefined as Date | undefined,
-    end_time: undefined as Date | undefined,
-    notes: "",
-  });
 
   // 外出申请 Dialog State
   const [outDialogOpen, setOutDialogOpen] = useState(false);
-  const [outForm, setOutForm] = useState({
-    reason: "",
-    start_time: undefined as Date | undefined,
-    end_time: undefined as Date | undefined,
-    notes: "",
-  });
 
   // Supply Requisition Dialog State
   const [supplyDialogOpen, setSupplyDialogOpen] = useState(false);
@@ -184,147 +169,7 @@ const QuickLinks = () => {
     );
   };
 
-  // Submit handlers
-  const handleBusinessTripSubmit = async () => {
-    if (!currentUser?.id || !businessTripForm.reason || !businessTripForm.start_time) {
-      toast.error("请填写必填项");
-      return;
-    }
-
-    // 1. 创建业务记录
-    const { data: record, error } = await supabase.from("absence_records").insert({
-      contact_id: currentUser.id,
-      type: "business_trip",
-      reason: businessTripForm.reason,
-      start_time: businessTripForm.start_time.toISOString(),
-      end_time: businessTripForm.end_time?.toISOString() || null,
-      notes: businessTripForm.notes || null,
-      status: "pending",
-    }).select("id").single();
-
-    if (error || !record) {
-      toast.error("提交失败");
-      console.error(error);
-      return;
-    }
-
-    // 2. 启动审批工作流
-    const approvalResult = await startApproval({
-      businessType: "business_trip",
-      businessId: record.id,
-      initiatorId: currentUser.id,
-      initiatorName: currentUser.name || "未知用户",
-      title: `出差申请 - ${businessTripForm.reason.slice(0, 20)}`,
-      formData: {
-        reason: businessTripForm.reason,
-        start_time: businessTripForm.start_time.toISOString(),
-        end_time: businessTripForm.end_time?.toISOString() || null,
-        notes: businessTripForm.notes || null,
-      },
-    });
-
-    if (approvalResult.success) {
-      toast.success("出差申请已提交，等待审批");
-      setBusinessTripDialogOpen(false);
-      setBusinessTripForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
-    } else {
-      toast.error(approvalResult.error || "启动审批流程失败");
-    }
-  };
-
-  const handleLeaveSubmit = async () => {
-    if (!currentUser?.id || !leaveForm.reason || !leaveForm.start_time) {
-      toast.error("请填写必填项");
-      return;
-    }
-
-    // 1. 创建业务记录
-    const { data: record, error } = await supabase.from("absence_records").insert({
-      contact_id: currentUser.id,
-      type: "leave",
-      reason: leaveForm.reason,
-      start_time: leaveForm.start_time.toISOString(),
-      end_time: leaveForm.end_time?.toISOString() || null,
-      notes: leaveForm.notes || null,
-      status: "pending",
-    }).select("id").single();
-
-    if (error || !record) {
-      toast.error("提交失败");
-      console.error(error);
-      return;
-    }
-
-    // 2. 启动审批工作流
-    const approvalResult = await startApproval({
-      businessType: "leave",
-      businessId: record.id,
-      initiatorId: currentUser.id,
-      initiatorName: currentUser.name || "未知用户",
-      title: `请假申请 - ${leaveForm.reason.slice(0, 20)}`,
-      formData: {
-        reason: leaveForm.reason,
-        start_time: leaveForm.start_time.toISOString(),
-        end_time: leaveForm.end_time?.toISOString() || null,
-        notes: leaveForm.notes || null,
-      },
-    });
-
-    if (approvalResult.success) {
-      toast.success("请假申请已提交，等待审批");
-      setLeaveDialogOpen(false);
-      setLeaveForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
-    } else {
-      toast.error(approvalResult.error || "启动审批流程失败");
-    }
-  };
-
-  const handleOutSubmit = async () => {
-    if (!currentUser?.id || !outForm.reason || !outForm.start_time) {
-      toast.error("请填写必填项");
-      return;
-    }
-
-    // 1. 创建业务记录
-    const { data: record, error } = await supabase.from("absence_records").insert({
-      contact_id: currentUser.id,
-      type: "out",
-      reason: outForm.reason,
-      start_time: outForm.start_time.toISOString(),
-      end_time: outForm.end_time?.toISOString() || null,
-      notes: outForm.notes || null,
-      status: "pending",
-    }).select("id").single();
-
-    if (error || !record) {
-      toast.error("提交失败");
-      console.error(error);
-      return;
-    }
-
-    // 2. 启动审批工作流
-    const approvalResult = await startApproval({
-      businessType: "out",
-      businessId: record.id,
-      initiatorId: currentUser.id,
-      initiatorName: currentUser.name || "未知用户",
-      title: `外出申请 - ${outForm.reason.slice(0, 20)}`,
-      formData: {
-        reason: outForm.reason,
-        start_time: outForm.start_time.toISOString(),
-        end_time: outForm.end_time?.toISOString() || null,
-        notes: outForm.notes || null,
-      },
-    });
-
-    if (approvalResult.success) {
-      toast.success("外出申请已提交，等待审批");
-      setOutDialogOpen(false);
-      setOutForm({ reason: "", start_time: undefined, end_time: undefined, notes: "" });
-    } else {
-      toast.error(approvalResult.error || "启动审批流程失败");
-    }
-  };
+  // Submit handlers for absence forms moved to dedicated components
 
   const handleSupplySubmit = async () => {
     if (!supplyForm.supply_id) {
@@ -552,116 +397,6 @@ const QuickLinks = () => {
     },
   ];
 
-  // Reusable absence form dialog component
-  const renderAbsenceDialog = (
-    open: boolean,
-    onOpenChange: (open: boolean) => void,
-    title: string,
-    form: { reason: string; start_time: Date | undefined; end_time: Date | undefined; notes: string },
-    setForm: React.Dispatch<React.SetStateAction<{ reason: string; start_time: Date | undefined; end_time: Date | undefined; notes: string }>>,
-    onSubmit: () => void
-  ) => (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>申请人</Label>
-            <Input value={currentUser?.name || ""} disabled className="bg-muted" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>事由 *</Label>
-            <Textarea
-              value={form.reason}
-              onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              placeholder="请输入事由"
-              rows={2}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>开始时间 *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !form.start_time && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.start_time
-                      ? format(form.start_time, "yyyy-MM-dd", { locale: zhCN })
-                      : "选择日期"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={form.start_time}
-                    onSelect={(date) => setForm({ ...form, start_time: date })}
-                    locale={zhCN}
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>结束时间</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !form.end_time && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.end_time
-                      ? format(form.end_time, "yyyy-MM-dd", { locale: zhCN })
-                      : "选择日期"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={form.end_time}
-                    onSelect={(date) => setForm({ ...form, end_time: date })}
-                    locale={zhCN}
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>备注</Label>
-            <Input
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              placeholder="可选备注"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              取消
-            </Button>
-            <Button onClick={onSubmit}>提交</Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
   return (
     <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
@@ -690,34 +425,25 @@ const QuickLinks = () => {
       </div>
 
       {/* 出差申请对话框 */}
-      {renderAbsenceDialog(
-        businessTripDialogOpen,
-        setBusinessTripDialogOpen,
-        "出差申请",
-        businessTripForm,
-        setBusinessTripForm,
-        handleBusinessTripSubmit
-      )}
+      <BusinessTripForm
+        open={businessTripDialogOpen}
+        onOpenChange={setBusinessTripDialogOpen}
+        currentUser={currentUser}
+      />
 
       {/* 请假申请对话框 */}
-      {renderAbsenceDialog(
-        leaveDialogOpen,
-        setLeaveDialogOpen,
-        "请假申请",
-        leaveForm,
-        setLeaveForm,
-        handleLeaveSubmit
-      )}
+      <LeaveForm
+        open={leaveDialogOpen}
+        onOpenChange={setLeaveDialogOpen}
+        currentUser={currentUser}
+      />
 
       {/* 外出申请对话框 */}
-      {renderAbsenceDialog(
-        outDialogOpen,
-        setOutDialogOpen,
-        "外出申请",
-        outForm,
-        setOutForm,
-        handleOutSubmit
-      )}
+      <OutForm
+        open={outDialogOpen}
+        onOpenChange={setOutDialogOpen}
+        currentUser={currentUser}
+      />
 
       {/* 办公用品领用对话框 */}
       <Dialog open={supplyDialogOpen} onOpenChange={setSupplyDialogOpen}>
