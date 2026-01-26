@@ -74,6 +74,7 @@ interface ApprovalRecord {
   status: string;
   comment: string | null;
   processed_at: string | null;
+  created_at: string;
   approver?: {
     name: string;
     department: string | null;
@@ -920,11 +921,31 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       const nodeRecords = records.filter(r => r.node_name === node.node_name);
       let status: "completed" | "current" | "pending" = "pending";
       
-      // 根据记录状态判断节点状态
-      const hasProcessedRecords = nodeRecords.some(r => r.status === "approved" || r.status === "rejected");
-      const hasPendingRecords = nodeRecords.some(r => r.status === "pending");
+      // 获取每个审批人的最新记录来判断节点状态
+      // 这样可以正确处理重新提交后的状态
+      const latestRecordsByApprover = new Map<string, { status: string; created_at: string }>();
+      for (const record of nodeRecords) {
+        const existing = latestRecordsByApprover.get(record.approver_id);
+        const recordTime = new Date(record.created_at || 0).getTime();
+        const existingTime = existing ? new Date(existing.created_at || 0).getTime() : 0;
+        if (!existing || recordTime > existingTime) {
+          latestRecordsByApprover.set(record.approver_id, {
+            status: record.status,
+            created_at: record.created_at,
+          });
+        }
+      }
       
-      if (hasProcessedRecords && !hasPendingRecords) {
+      // 基于最新记录判断状态
+      const latestRecords = Array.from(latestRecordsByApprover.values());
+      const hasApprovedRecords = latestRecords.some(r => r.status === "approved");
+      const hasRejectedRecords = latestRecords.some(r => r.status === "rejected");
+      const hasPendingRecords = latestRecords.some(r => r.status === "pending");
+      
+      if (hasApprovedRecords && !hasPendingRecords) {
+        status = "completed";
+      } else if (hasRejectedRecords && !hasPendingRecords) {
+        // 被拒绝且没有pending记录，也算completed（但是是rejected状态）
         status = "completed";
       } else if (hasPendingRecords || (instance && index === instance.current_node_index)) {
         status = "current";
@@ -944,12 +965,28 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       });
     });
 
-    // 结束节点
+    // 结束节点 - 根据实际的节点完成情况来判断
+    // 检查所有审批节点是否都已完成
+    const allNodesCompleted = timelineNodes.every(n => 
+      n.status === "completed" || n.type === "initiator"
+    );
+    const hasRejectedNode = timelineNodes.some(n => 
+      n.records.some(r => r.status === "rejected") && 
+      !n.records.some(r => r.status === "pending")
+    );
+    const hasPendingNode = timelineNodes.some(n => n.status === "current" || n.status === "pending");
+    
+    // 计算结束节点状态
+    let endStatus: "completed" | "current" | "pending" = "pending";
+    if (allNodesCompleted && !hasPendingNode) {
+      endStatus = "completed";
+    }
+    
     timelineNodes.push({
       type: "end",
       name: "结束",
       approverNames: "",
-      status: instance?.status === "approved" || instance?.status === "rejected" ? "completed" : "pending",
+      status: endStatus,
       records: [],
     });
 
