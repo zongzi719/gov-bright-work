@@ -170,8 +170,56 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   useEffect(() => {
     if (open && todoItem?.approval_instance_id) {
       fetchApprovalDetails();
+      // 如果是抄送待办，自动标记为已阅
+      markCCAsRead();
     }
   }, [open, todoItem?.approval_instance_id]);
+
+  // 标记抄送为已阅
+  const markCCAsRead = async () => {
+    if (!todoItem || !currentUser?.id) return;
+    
+    // 检查是否是抄送待办（通过标题前缀或process_result判断）
+    const isCCItem = todoItem.title?.startsWith("[抄送]");
+    if (!isCCItem) return;
+    
+    // 检查待办状态是否为pending（未阅）
+    if (todoItem.status !== "pending") return;
+    
+    console.log("Marking CC item as read:", todoItem.id);
+    
+    try {
+      // 更新待办状态为已完成
+      await supabase
+        .from("todo_items")
+        .update({
+          status: "completed",
+          processed_at: new Date().toISOString(),
+          processed_by: currentUser.id,
+          process_notes: "已阅",
+        })
+        .eq("id", todoItem.id);
+      
+      // 更新审批记录状态为已阅
+      if (todoItem.approval_instance_id) {
+        await supabase
+          .from("approval_records")
+          .update({
+            status: "approved",
+            processed_at: new Date().toISOString(),
+            comment: "已阅",
+          })
+          .eq("instance_id", todoItem.approval_instance_id)
+          .eq("approver_id", currentUser.id)
+          .eq("node_type", "cc")
+          .eq("status", "pending");
+      }
+      
+      console.log("CC item marked as read successfully");
+    } catch (error) {
+      console.error("Failed to mark CC as read:", error);
+    }
+  };
 
   // 检查是否可以撤回 - 在 instance 加载后单独检查
   useEffect(() => {

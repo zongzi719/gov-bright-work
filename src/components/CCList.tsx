@@ -18,18 +18,12 @@ interface TodoItem {
   action_url: string | null;
   approval_instance_id: string | null;
   assignee_id: string;
+  process_result: string | null;
   initiator?: {
     name: string;
     department: string | null;
   } | null;
 }
-
-const priorityToStatus = (priority: string, status: string): "urgent" | "normal" | "done" => {
-  if (status === "approved" || status === "rejected" || status === "completed") {
-    return "done";
-  }
-  return priority === "urgent" ? "urgent" : "normal";
-};
 
 const businessTypeLabels: Record<string, string> = {
   business_trip: "出差申请",
@@ -39,8 +33,8 @@ const businessTypeLabels: Record<string, string> = {
   external_approval: "外部审批",
 };
 
-const TodoList = () => {
-  const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
+const CCList = () => {
+  const [ccItems, setCCItems] = useState<TodoItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -61,8 +55,8 @@ const TodoList = () => {
 
   const currentUser = getCurrentUser();
 
-  // Fetch todo items for current user
-  const fetchTodoItems = async () => {
+  // Fetch CC items for current user
+  const fetchCCItems = async () => {
     if (!currentUser?.id) {
       setLoading(false);
       return;
@@ -87,50 +81,39 @@ const TodoList = () => {
         initiator:contacts!todo_items_initiator_id_fkey(name, department)
       `)
       .eq("assignee_id", currentUser.id)
-      .in("status", ["pending", "processing"])
+      .eq("process_result", "cc_notified") // 只获取抄送的待办
       .order("created_at", { ascending: false })
       .limit(20);
-    
-    // 过滤掉抄送待办（抄送待办在CCList中单独显示）
-    const filteredData = (data || []).filter(item => 
-      !(item as any).process_result || (item as any).process_result !== "cc_notified"
-    );
 
     if (error) {
-      console.error("Failed to fetch todo items:", error);
-    } else {
-      setTodoItems(filteredData as unknown as TodoItem[]);
-      if (filteredData.length > 0 && !selectedId) {
-        setSelectedId(filteredData[0].id);
+      console.error("Failed to fetch CC items:", error);
+    } else if (data) {
+      setCCItems(data as unknown as TodoItem[]);
+      if (data.length > 0 && !selectedId) {
+        setSelectedId(data[0].id);
       }
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchTodoItems();
+    fetchCCItems();
   }, [currentUser?.id]);
 
-  const unreadCount = todoItems.filter((item) => item.status === "pending").length;
+  const unreadCount = ccItems.filter((item) => item.status === "pending").length;
 
   const handleItemClick = (item: TodoItem) => {
     setSelectedId(item.id);
     
-    // 如果是外部系统的待办，跳转到外部链接
-    if (item.action_url) {
-      window.open(item.action_url, "_blank");
-      return;
-    }
-    
-    // 内部待办打开详情弹窗
+    // 打开详情弹窗
     if (item.approval_instance_id) {
       setSelectedTodo(item);
       setDetailOpen(true);
     }
   };
 
-  const handleApprovalComplete = () => {
-    fetchTodoItems();
+  const handleViewComplete = () => {
+    fetchCCItems();
   };
 
   const getDisplayInfo = (item: TodoItem) => {
@@ -144,7 +127,7 @@ const TodoList = () => {
       <div className="gov-card h-full flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <h2 className="gov-card-title">待办事项</h2>
+            <h2 className="gov-card-title">抄送</h2>
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -160,7 +143,7 @@ const TodoList = () => {
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <h2 className="gov-card-title">待办事项</h2>
+            <h2 className="gov-card-title">抄送</h2>
             {unreadCount > 0 && <span className="gov-badge">{unreadCount}</span>}
           </div>
           <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
@@ -169,15 +152,15 @@ const TodoList = () => {
           </button>
         </div>
 
-        {/* 待办列表 */}
+        {/* 抄送列表 */}
         <div className="flex-1 overflow-y-auto">
-          {todoItems.length === 0 ? (
+          {ccItems.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-muted-foreground">
-              暂无待办事项
+              暂无抄送
             </div>
           ) : (
-            todoItems.map((item) => {
-              const displayStatus = priorityToStatus(item.priority, item.status);
+            ccItems.map((item) => {
+              const isRead = item.status !== "pending";
               const { system, department } = getDisplayInfo(item);
               
               return (
@@ -194,21 +177,26 @@ const TodoList = () => {
                     {/* 状态圆点 */}
                     <div
                       className={`status-dot mt-1.5 ${
-                        displayStatus === "urgent"
-                          ? "status-dot-urgent"
-                          : displayStatus === "normal"
-                          ? "status-dot-normal"
-                          : "status-dot-done"
+                        isRead ? "status-dot-done" : "status-dot-normal"
                       }`}
                     />
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className={`text-sm font-medium leading-relaxed mb-1.5 ${
-                          selectedId === item.id ? "text-primary" : "text-foreground"
-                        }`}
-                      >
-                        {item.title}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3
+                          className={`text-sm font-medium leading-relaxed mb-1.5 ${
+                            selectedId === item.id ? "text-primary" : "text-foreground"
+                          }`}
+                        >
+                          {item.title.replace(/^\[抄送\]\s*/, "")}
+                        </h3>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          isRead 
+                            ? "bg-green-100 text-green-700" 
+                            : "bg-orange-100 text-orange-700"
+                        }`}>
+                          {isRead ? "已阅" : "未阅"}
+                        </span>
+                      </div>
                       <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
                         <span>• 系统：{system}</span>
                         <span>• 部门：{department}</span>
@@ -225,15 +213,15 @@ const TodoList = () => {
         </div>
       </div>
 
-      {/* 待办详情弹窗 */}
+      {/* 详情弹窗 */}
       <TodoDetailDialog
         open={detailOpen}
         onOpenChange={setDetailOpen}
         todoItem={selectedTodo}
-        onApprovalComplete={handleApprovalComplete}
+        onApprovalComplete={handleViewComplete}
       />
     </>
   );
 };
 
-export default TodoList;
+export default CCList;

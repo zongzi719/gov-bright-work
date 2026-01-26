@@ -1,6 +1,8 @@
 import Header from "@/components/Header";
 import BannerCarousel from "@/components/BannerCarousel";
 import TodoList from "@/components/TodoList";
+import CompletedList from "@/components/CompletedList";
+import CCList from "@/components/CCList";
 import NoticeList from "@/components/NoticeList";
 import QuickLinks from "@/components/QuickLinks";
 import SchedulePanel from "@/components/SchedulePanel";
@@ -22,9 +24,11 @@ const Index = () => {
 
         {/* 三栏布局 - 3:4:3 比例 */}
         <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
-          {/* 左侧：待办事项 - 30% */}
-          <div className="lg:col-span-3">
+          {/* 左侧：待办事项 + 已办理 + 抄送 - 30% */}
+          <div className="lg:col-span-3 flex flex-col gap-4">
             <TodoList />
+            <CompletedList />
+            <CCList />
           </div>
 
           {/* 中间：通知公告 + 单点登录 - 40% */}
