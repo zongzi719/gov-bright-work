@@ -225,7 +225,7 @@ export const useApprovalWorkflow = () => {
         console.log(`Processing initial CC node "${node.node_name}" for recipients:`, ccRecipientIds);
         
         for (const recipientId of ccRecipientIds) {
-          // 创建审批记录（状态直接设为 approved 表示已处理）
+          // 创建审批记录（状态设为 pending 表示未阅）
           await supabase
             .from("approval_records")
             .insert({
@@ -234,12 +234,11 @@ export const useApprovalWorkflow = () => {
               node_name: node.node_name,
               node_type: "cc",
               approver_id: recipientId,
-              status: "approved",
-              comment: "已抄送",
-              processed_at: new Date().toISOString(),
+              status: "pending", // 抄送节点初始状态为未阅
+              comment: null,
             } as never);
 
-          // 创建只读待办通知（状态直接设为 completed）
+          // 创建待办通知（状态设为 pending，表示未阅）
           await supabase
             .from("todo_items")
             .insert({
@@ -249,10 +248,8 @@ export const useApprovalWorkflow = () => {
               title: `[抄送] ${title}`,
               description: `${initiatorName} 发起的申请 - 抄送通知`,
               priority: "normal",
-              status: "completed",
+              status: "pending", // 抄送待办初始状态为未阅
               process_result: "cc_notified",
-              process_notes: "已抄送",
-              processed_at: new Date().toISOString(),
               initiator_id: initiatorId,
               assignee_id: recipientId,
               approval_instance_id: instanceId,
