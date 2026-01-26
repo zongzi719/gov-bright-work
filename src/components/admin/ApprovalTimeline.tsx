@@ -507,9 +507,33 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {item.approverNames.length > 0 ? item.approverNames.join("、") : "未指定"}
+                  {item.node.node_type === "cc" ? (
+                    // 抄送节点显示每个人的已阅/未阅状态
+                    item.approverNames.length > 0 
+                      ? item.approverNames.map((name, i) => {
+                          // 检查该抄送人是否已处理（通过 nodeRecords 判断）
+                          const approverId = item.node.approver_ids?.[i];
+                          const hasRead = item.nodeRecords.some(r => 
+                            r.approver_id === approverId && r.status === "approved"
+                          );
+                          return (
+                            <span key={i}>
+                              {i > 0 && "、"}
+                              {name}
+                              <span className={hasRead ? "text-green-600" : "text-orange-500"}>
+                                （{hasRead ? "已阅" : "未阅"}）
+                              </span>
+                            </span>
+                          );
+                        })
+                      : "未指定"
+                  ) : (
+                    // 审批节点显示人员列表
+                    item.approverNames.length > 0 ? item.approverNames.join("、") : "未指定"
+                  )}
                 </div>
-                {item.processedRecord?.comment && (
+                {/* 抄送节点不显示意见 */}
+                {item.node.node_type !== "cc" && item.processedRecord?.comment && (
                   <div className="text-xs text-muted-foreground mt-1 bg-muted/50 px-2 py-1 rounded">
                     意见：{item.processedRecord.comment}
                   </div>
