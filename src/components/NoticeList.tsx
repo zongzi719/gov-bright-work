@@ -115,14 +115,12 @@ const NoticeList = () => {
                     置顶
                   </Badge>
                 )}
-                {notice.security_level && notice.security_level !== '一般' && (
-                  <Badge 
-                    variant={notice.security_level === '机密' ? 'destructive' : 'secondary'} 
-                    className="flex-shrink-0 text-xs px-1.5 py-0"
-                  >
-                    {notice.security_level}
-                  </Badge>
-                )}
+                <Badge 
+                  variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
+                  className="flex-shrink-0 text-xs px-1.5 py-0"
+                >
+                  {notice.security_level || '一般'}
+                </Badge>
                 <span className="text-sm text-foreground truncate group-hover:text-primary transition-colors">
                   {notice.title}
                 </span>
@@ -151,14 +149,12 @@ const NoticeList = () => {
               {selectedNotice?.is_pinned && (
                 <Badge variant="destructive" className="text-xs px-1.5 py-0">置顶</Badge>
               )}
-              {selectedNotice?.security_level && selectedNotice.security_level !== '一般' && (
-                <Badge 
-                  variant={selectedNotice.security_level === '机密' ? 'destructive' : 'secondary'} 
-                  className="text-xs px-1.5 py-0"
-                >
-                  {selectedNotice.security_level}
-                </Badge>
-              )}
+              <Badge 
+                variant={selectedNotice?.security_level === '机密' ? 'destructive' : selectedNotice?.security_level === '秘密' ? 'secondary' : 'outline'} 
+                className="text-xs px-1.5 py-0"
+              >
+                {selectedNotice?.security_level || '一般'}
+              </Badge>
             </div>
             <div className="border-t border-border pt-4">
               <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
