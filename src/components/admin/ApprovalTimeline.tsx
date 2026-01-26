@@ -392,10 +392,13 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     });
     
     // 检测重新提交事件（退回记录后面有新记录的情况）
-    const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord: ApprovalRecord; time: string }[] = [];
+    // 场景1：同节点同审批人有后续记录（return_current_node 场景）
+    // 场景2：退回后第一个节点有新的pending/processed记录（return_restart 场景）
+    const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord?: ApprovalRecord; time: string; isRestartType?: boolean }[] = [];
     records.forEach(rejectedRecord => {
       if (rejectedRecord.status !== "rejected" && rejectedRecord.status !== "returned_to_initiator") return;
       
+      // 场景1：同节点同审批人有后续记录
       const laterRecord = records.find(r => 
         r.node_name === rejectedRecord.node_name &&
         r.approver_id === rejectedRecord.approver_id &&
@@ -407,6 +410,26 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           beforeRecord: laterRecord,
           time: laterRecord.created_at,
         });
+        return;
+      }
+      
+      // 场景2：检查是否是 return_restart 类型的退回
+      const isReturnRestart = rejectedRecord.comment?.includes("重新走完整") || 
+                              rejectedRecord.comment?.includes("重审") ||
+                              rejectedRecord.comment?.includes("return_restart");
+      if (isReturnRestart) {
+        const firstNodeRecord = records.find(r => 
+          r.node_index === 0 &&
+          new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime()
+        );
+        if (firstNodeRecord) {
+          resubmitEvents.push({
+            afterRecord: rejectedRecord,
+            beforeRecord: firstNodeRecord,
+            time: firstNodeRecord.created_at,
+            isRestartType: true,
+          });
+        }
       }
     });
     
@@ -480,6 +503,10 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     // 关键修复：考虑退回场景，即使节点有历史记录，如果它在当前节点之后，仍需显示为"等待中"
     const currentNodeIndex = instance.current_node_index || 0;
     
+    // 检查是否是"退回发起人-重审"场景
+    const returnInfo = formData?._return_info;
+    const isReturnRestart = returnInfo?.type === "return_restart";
+    
     displayNodes.forEach((node, index) => {
       const nodeRecords = nodeRecordsMap.get(node.node_name) || [];
       const approverNames = nodeMap.get(node.node_name)?.approverNames || [];
@@ -517,6 +544,10 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           nodeStatus: "waiting",
           timestamp: Date.now() + 1000 + index,
         });
+      } else if (isReturnRestart && index >= currentNodeIndex && !pendingRecords.length) {
+        // 退回发起人-重审场景：所有节点都需要显示为"等待中"
+        // 这里不加入，因为 index > currentNodeIndex 已经处理了后续节点
+        // 但需要确保当前节点也显示
       } else if (!processedNodeNames.has(node.node_name)) {
         // 如果该节点没有任何记录且不在后续路径上，添加为等待状态
         timelineItems.push({
