@@ -28,9 +28,10 @@ const defaultBanners: BannerItem[] = [
 ];
 
 const BannerCarousel = () => {
-  const [banners, setBanners] = useState<BannerItem[]>(defaultBanners);
+  const [banners, setBanners] = useState<BannerItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // 从数据库获取启用的Banner
   useEffect(() => {
@@ -47,7 +48,11 @@ const BannerCarousel = () => {
           image: b.image_url,
           title: b.title
         })));
+      } else {
+        // 如果数据库没有数据，使用默认banners
+        setBanners(defaultBanners);
       }
+      setLoading(false);
     };
     fetchBanners();
   }, []);
@@ -70,6 +75,15 @@ const BannerCarousel = () => {
   };
 
   const showControls = banners.length > 1;
+
+  // 加载中时显示占位
+  if (loading) {
+    return <div className="w-full h-[120px] md:h-[180px] bg-muted animate-pulse" />;
+  }
+
+  if (banners.length === 0) {
+    return null;
+  }
 
   return (
     <div 
