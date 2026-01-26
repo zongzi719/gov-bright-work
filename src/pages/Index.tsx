@@ -14,12 +14,12 @@ const Index = () => {
       <Header />
 
       {/* 主体内容区域 */}
-      <main className="px-4 pb-4 flex flex-col gap-4">
-        {/* 轮播图Banner */}
+      <main className="pb-4 flex flex-col gap-4">
+        {/* 轮播图Banner - 全屏宽度 */}
         <BannerCarousel />
 
         {/* 三栏布局 - 3:4:3 比例 */}
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
+        <div className="px-4 grid grid-cols-1 lg:grid-cols-10 gap-4">
           {/* 左侧：工作事项（待办/已办理/抄送）- 30% */}
           <div className="lg:col-span-3 flex flex-col gap-4">
             <WorkPanel />

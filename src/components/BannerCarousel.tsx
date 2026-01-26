@@ -73,7 +73,7 @@ const BannerCarousel = () => {
 
   return (
     <div 
-      className="relative w-full h-[190px] md:h-[270px] overflow-hidden rounded-lg shadow-card"
+      className="relative w-full h-[170px] md:h-[250px] overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
