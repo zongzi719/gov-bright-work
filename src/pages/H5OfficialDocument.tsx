@@ -194,12 +194,12 @@ const H5OfficialDocument = () => {
               filteredDocuments.map((doc) => (
                 <div
                   key={doc.id}
-                  className="bg-background rounded-lg p-4 shadow-sm"
+                  className="bg-background rounded-lg p-3 shadow-sm"
                 >
                   {/* 流程标签 */}
                   <div className="mb-2">
                     <span className={cn(
-                      "inline-block px-2 py-0.5 text-xs text-white rounded",
+                      "inline-block px-2 py-0.5 text-[12px] text-white rounded",
                       doc.flowColor
                     )}>
                       {doc.flowName}
@@ -207,19 +207,27 @@ const H5OfficialDocument = () => {
                   </div>
 
                   {/* 标题 */}
-                  <h3 className="font-medium text-foreground mb-3 line-clamp-2">
+                  <h3 className="font-medium text-foreground mb-2 text-[14px] leading-tight line-clamp-2">
                     {doc.title}
                   </h3>
 
-                  {/* 信息 */}
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div className="flex justify-between">
-                      <span>提交人：{doc.submitter}</span>
-                      <span>提交时间：{doc.submitTime}</span>
+                  {/* 信息 - 垂直排列 */}
+                  <div className="text-[12px] text-muted-foreground space-y-0.5">
+                    <div className="flex">
+                      <span className="w-16 shrink-0">提交人：</span>
+                      <span className="truncate">{doc.submitter}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>当前节点：{doc.currentNode}</span>
-                      <span>状态：{doc.status}</span>
+                    <div className="flex">
+                      <span className="w-16 shrink-0">提交时间：</span>
+                      <span>{doc.submitTime}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="w-16 shrink-0">当前节点：</span>
+                      <span>{doc.currentNode}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="w-16 shrink-0">状态：</span>
+                      <span>{doc.status}</span>
                     </div>
                   </div>
                 </div>
