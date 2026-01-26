@@ -878,11 +878,14 @@ const ContactManagement = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">无</SelectItem>
-                          {organizations
-                            .filter((o) => o.id !== editingOrg?.id)
-                            .map((org) => (
+                          {getHierarchicalOrganizations()
+                            .filter(({ org }) => org.id !== editingOrg?.id)
+                            .map(({ org, level }) => (
                               <SelectItem key={org.id} value={org.id}>
-                                {org.name}
+                                <span style={{ paddingLeft: `${level * 16}px` }} className="flex items-center gap-1">
+                                  {level > 0 && <span className="text-muted-foreground">└</span>}
+                                  {org.name}
+                                </span>
                               </SelectItem>
                             ))}
                         </SelectContent>
