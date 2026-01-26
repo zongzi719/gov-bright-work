@@ -415,10 +415,19 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     // 跟踪已经添加的重新提交事件（按退回记录ID）
     const addedResubmitEvents = new Set<string>();
     
-    // 按时间顺序处理所有已处理的记录
+    // 按时间顺序处理所有已处理的记录（包括所有非pending状态的记录）
+    // 关键修复：确保显示所有历史记录，即使该节点后来被退回并有新的pending记录
     const processedRecords = records
       .filter(r => r.status !== "pending" && r.processed_at)
       .sort((a, b) => new Date(a.processed_at || 0).getTime() - new Date(b.processed_at || 0).getTime());
+    
+    // 同时收集所有节点的所有已处理记录（包括被退回到的节点的历史记录）
+    const allProcessedRecordsByNode = new Map<string, ApprovalRecord[]>();
+    processedRecords.forEach(record => {
+      const existing = allProcessedRecordsByNode.get(record.node_name) || [];
+      existing.push(record);
+      allProcessedRecordsByNode.set(record.node_name, existing);
+    });
     
     processedRecords.forEach(record => {
       const nodeInfo = nodeMap.get(record.node_name);
