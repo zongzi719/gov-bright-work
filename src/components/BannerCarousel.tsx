@@ -69,9 +69,11 @@ const BannerCarousel = () => {
     setCurrentIndex((prev) => (prev + 1) % banners.length);
   };
 
+  const showControls = banners.length > 1;
+
   return (
     <div 
-      className="relative w-full h-[200px] md:h-[280px] overflow-hidden rounded-lg shadow-card"
+      className="relative w-full h-[190px] md:h-[270px] overflow-hidden rounded-lg shadow-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -97,42 +99,48 @@ const BannerCarousel = () => {
         </div>
       ))}
 
-      {/* 左右箭头 */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white rounded-full transition-opacity ${
-          isHovered ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={goToPrev}
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white rounded-full transition-opacity ${
-          isHovered ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={goToNext}
-      >
-        <ChevronRight className="w-6 h-6" />
-      </Button>
-
-      {/* 底部指示器 */}
-      <div className="absolute bottom-4 right-6 z-20 flex gap-2">
-        {banners.map((_, index) => (
-          <button
-            key={index}
-            className={`w-8 h-1.5 rounded-full transition-all ${
-              index === currentIndex
-                ? "bg-white"
-                : "bg-white/40 hover:bg-white/60"
+      {/* 左右箭头 - 仅多张图时显示 */}
+      {showControls && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white rounded-full transition-opacity ${
+              isHovered ? "opacity-100" : "opacity-0"
             }`}
-            onClick={() => setCurrentIndex(index)}
-          />
-        ))}
-      </div>
+            onClick={goToPrev}
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white rounded-full transition-opacity ${
+              isHovered ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={goToNext}
+          >
+            <ChevronRight className="w-6 h-6" />
+          </Button>
+        </>
+      )}
+
+      {/* 底部指示器 - 仅多张图时显示 */}
+      {showControls && (
+        <div className="absolute bottom-4 right-6 z-20 flex gap-2">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              className={`w-8 h-1.5 rounded-full transition-all ${
+                index === currentIndex
+                  ? "bg-white"
+                  : "bg-white/40 hover:bg-white/60"
+              }`}
+              onClick={() => setCurrentIndex(index)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
