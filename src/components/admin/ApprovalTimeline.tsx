@@ -453,7 +453,8 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           
           if (item.nodeStatus === "approved") {
             statusBg = "bg-green-100";
-            statusText = "已同意";
+            // 抄送节点显示"已抄送"，审批节点显示"已同意"
+            statusText = item.node.node_type === "cc" ? "已抄送" : "已同意";
             statusTextColor = "text-green-800";
           } else if (item.nodeStatus === "rejected") {
             statusBg = "bg-red-100";
