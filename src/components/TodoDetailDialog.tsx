@@ -889,7 +889,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     }
   };
 
-  // 渲染流程时间线
+  // 渲染流程时间线 - 按时间顺序混合显示记录和待处理节点
   const renderTimeline = () => {
     // 获取表单数据用于条件判断，注入 initiator_id 作为 contact_id
     const formData = { ...businessData, ...instance?.form_data };
@@ -897,39 +897,54 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     // 扁平化节点（跳过条件分支节点，只保留审批人和抄送人）- 使用与管理后台一致的逻辑
     const displayNodes = flattenNodesForDisplay(nodesSnapshot, formData, instance?.initiator_id);
     
-    // 构建时间线节点
-    const timelineNodes: Array<{
-      type: "initiator" | "approver" | "cc" | "end" | "resubmit";
+    // 定义时间线项类型
+    type TimelineItem = {
+      type: "initiator" | "record" | "node" | "resubmit" | "end";
+      node?: ApprovalNode;
+      record?: ApprovalRecord;
       name: string;
       approverNames: string;
       approvalMode?: string;
-      status: "completed" | "current" | "pending";
-      records: ApprovalRecord[];
+      status: "completed" | "current" | "pending" | "rejected";
       initiator?: { name: string; department: string | null };
-      originalNode?: ApprovalNode;
       resubmitTime?: string;
-    }> = [];
-
+      timestamp: number;
+    };
+    
+    const timelineItems: TimelineItem[] = [];
+    
     // 发起人节点
-    timelineNodes.push({
+    timelineItems.push({
       type: "initiator",
       name: "发起人",
       approverNames: "",
       status: "completed",
-      records: [],
       initiator: instance?.initiator,
+      timestamp: new Date(instance?.created_at || 0).getTime(),
     });
-
-    // 检测是否有重新提交事件（通过查找退回后又有新的审批记录）
-    // 先收集所有被退回的记录，然后查找其后的新记录来确定重新提交时间
-    const rejectedRecords = records.filter(r => 
-      r.status === "rejected" || r.status === "returned_to_initiator"
-    ).sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
     
-    // 找出重新提交时间点（退回记录后的第一个新记录）
-    const resubmitEvents: { nodeIndex: number; time: string; afterNodeName: string }[] = [];
-    rejectedRecords.forEach(rejectedRecord => {
-      // 查找同一节点名称的后续approved/pending记录
+    // 创建节点名称到节点信息的映射
+    const nodeMap = new Map<string, { node: ApprovalNode; index: number; approverNames: string }>();
+    displayNodes.forEach((node, index) => {
+      const approverNames = getApproverNames(node.approver_ids);
+      nodeMap.set(node.node_name, { node, index, approverNames });
+    });
+    
+    // 获取每个节点的所有记录
+    const nodeRecordsMap = new Map<string, ApprovalRecord[]>();
+    displayNodes.forEach(node => {
+      const nodeRecords = records
+        .filter(r => r.node_name === node.node_name)
+        .sort((a, b) => new Date(a.processed_at || a.created_at || 0).getTime() - 
+                        new Date(b.processed_at || b.created_at || 0).getTime());
+      nodeRecordsMap.set(node.node_name, nodeRecords);
+    });
+    
+    // 检测重新提交事件
+    const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord: ApprovalRecord; time: string }[] = [];
+    records.forEach(rejectedRecord => {
+      if (rejectedRecord.status !== "rejected" && rejectedRecord.status !== "returned_to_initiator") return;
+      
       const laterRecord = records.find(r => 
         r.node_name === rejectedRecord.node_name &&
         r.approver_id === rejectedRecord.approver_id &&
@@ -937,127 +952,154 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       );
       if (laterRecord) {
         resubmitEvents.push({
-          nodeIndex: rejectedRecord.node_index,
+          afterRecord: rejectedRecord,
+          beforeRecord: laterRecord,
           time: laterRecord.created_at,
-          afterNodeName: rejectedRecord.node_name,
         });
       }
     });
-
-    // 审批/抄送节点（使用扁平化后的节点）
-    displayNodes.forEach((node, index) => {
-      // 获取该节点的所有审批记录，按创建时间排序
-      const nodeRecords = records
-        .filter(r => r.node_name === node.node_name)
-        .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+    
+    // 跟踪哪些节点已经有了已处理的记录
+    const processedNodeNames = new Set<string>();
+    const addedResubmitEvents = new Set<string>();
+    
+    // 按时间顺序处理所有已处理的记录
+    const processedRecords = records
+      .filter(r => r.status !== "pending" && r.processed_at)
+      .sort((a, b) => new Date(a.processed_at || 0).getTime() - new Date(b.processed_at || 0).getTime());
+    
+    processedRecords.forEach(record => {
+      const nodeInfo = nodeMap.get(record.node_name);
+      if (!nodeInfo) return;
       
-      let status: "completed" | "current" | "pending" = "pending";
-      
-      // 获取每个审批人的最新记录来判断节点状态
-      // 这样可以正确处理重新提交后的状态
-      const latestRecordsByApprover = new Map<string, { status: string; created_at: string }>();
-      for (const record of nodeRecords) {
-        const existing = latestRecordsByApprover.get(record.approver_id);
-        const recordTime = new Date(record.created_at || 0).getTime();
-        const existingTime = existing ? new Date(existing.created_at || 0).getTime() : 0;
-        if (!existing || recordTime > existingTime) {
-          latestRecordsByApprover.set(record.approver_id, {
-            status: record.status,
-            created_at: record.created_at,
-          });
-        }
-      }
-      
-      // 基于最新记录判断状态
-      const latestRecords = Array.from(latestRecordsByApprover.values());
-      const hasApprovedRecords = latestRecords.some(r => r.status === "approved");
-      const hasRejectedRecords = latestRecords.some(r => r.status === "rejected");
-      const hasPendingRecords = latestRecords.some(r => r.status === "pending");
-      
-      if (hasApprovedRecords && !hasPendingRecords) {
-        status = "completed";
-      } else if (hasRejectedRecords && !hasPendingRecords) {
-        // 被拒绝且没有pending记录，也算completed（但是是rejected状态）
-        status = "completed";
-      } else if (hasPendingRecords || (instance && index === instance.current_node_index)) {
-        status = "current";
-      }
-
-      // 获取审批人名称
-      const approverNames = getApproverNames(node.approver_ids);
-
-      // 检查是否需要在此节点前插入"发起人重新提交"事件
-      const resubmitEvent = resubmitEvents.find(e => e.afterNodeName === node.node_name);
-      if (resubmitEvent && !timelineNodes.some(n => n.type === "resubmit")) {
-        timelineNodes.push({
+      // 检查是否需要在此记录前插入重新提交事件
+      const resubmitEvent = resubmitEvents.find(e => 
+        e.beforeRecord.id === record.id && !addedResubmitEvents.has(e.afterRecord.id)
+      );
+      if (resubmitEvent) {
+        addedResubmitEvents.add(resubmitEvent.afterRecord.id);
+        timelineItems.push({
           type: "resubmit",
           name: "发起人重新提交",
           approverNames: "",
           status: "completed",
-          records: [],
           initiator: instance?.initiator,
           resubmitTime: resubmitEvent.time,
+          timestamp: new Date(resubmitEvent.time).getTime() - 1,
         });
       }
-
-      timelineNodes.push({
-        type: node.node_type as any,
-        name: node.node_name,
-        approverNames,
-        approvalMode: node.approval_mode,
-        status,
-        records: nodeRecords, // 包含所有记录，已按时间排序
-        originalNode: node,
+      
+      processedNodeNames.add(record.node_name);
+      
+      // 判断该记录的状态
+      let recordStatus: "completed" | "rejected" = "completed";
+      if (record.status === "rejected" || record.status === "returned_to_initiator" || 
+          record.status === "returned_restart" || record.status === "returned_to_previous") {
+        recordStatus = "rejected";
+      }
+      
+      timelineItems.push({
+        type: "record",
+        node: nodeInfo.node,
+        record,
+        name: nodeInfo.node.node_name,
+        approverNames: nodeInfo.approverNames,
+        approvalMode: nodeInfo.node.approval_mode,
+        status: recordStatus,
+        timestamp: new Date(record.processed_at || 0).getTime(),
       });
     });
-
-    // 结束节点 - 根据实际的节点完成情况来判断
-    // 检查所有审批节点是否都已完成
-    const allNodesCompleted = timelineNodes.every(n => 
-      n.status === "completed" || n.type === "initiator"
-    );
-    const hasRejectedNode = timelineNodes.some(n => 
-      n.records.some(r => r.status === "rejected") && 
-      !n.records.some(r => r.status === "pending")
-    );
-    const hasPendingNode = timelineNodes.some(n => n.status === "current" || n.status === "pending");
+    
+    // 添加未处理的节点（当前节点和等待中的节点）
+    displayNodes.forEach((node, index) => {
+      const nodeRecords = nodeRecordsMap.get(node.node_name) || [];
+      const nodeInfo = nodeMap.get(node.node_name);
+      if (!nodeInfo) return;
+      
+      // 获取每个审批人的最新记录
+      const latestRecordsByApprover = new Map<string, ApprovalRecord>();
+      for (const record of nodeRecords) {
+        const existing = latestRecordsByApprover.get(record.approver_id);
+        if (!existing || new Date(record.created_at || 0) > new Date(existing.created_at || 0)) {
+          latestRecordsByApprover.set(record.approver_id, record);
+        }
+      }
+      
+      const latestRecords = Array.from(latestRecordsByApprover.values());
+      const pendingRecords = latestRecords.filter(r => r.status === "pending");
+      
+      // 如果该节点有待处理的记录，添加到时间线末尾作为当前节点
+      if (pendingRecords.length > 0) {
+        timelineItems.push({
+          type: "node",
+          node,
+          name: node.node_name,
+          approverNames: nodeInfo.approverNames,
+          approvalMode: node.approval_mode,
+          status: "current",
+          timestamp: Date.now() + index,
+        });
+      } else if (!processedNodeNames.has(node.node_name)) {
+        // 如果该节点没有任何记录，添加为等待状态
+        timelineItems.push({
+          type: "node",
+          node,
+          name: node.node_name,
+          approverNames: nodeInfo.approverNames,
+          approvalMode: node.approval_mode,
+          status: "pending",
+          timestamp: Date.now() + 1000 + index,
+        });
+      }
+    });
+    
+    // 按时间戳排序
+    timelineItems.sort((a, b) => a.timestamp - b.timestamp);
     
     // 计算结束节点状态
-    let endStatus: "completed" | "current" | "pending" = "pending";
-    if (allNodesCompleted && !hasPendingNode) {
-      endStatus = "completed";
-    }
+    const recordItems = timelineItems.filter(item => item.type === "record" || item.type === "node");
+    const allNodesApproved = recordItems.every(item => item.status === "completed");
+    const hasRejectedNode = recordItems.some(item => item.status === "rejected");
+    const hasPendingNode = recordItems.some(item => item.status === "current" || item.status === "pending");
     
-    timelineNodes.push({
+    const endStatus: "completed" | "pending" = 
+      allNodesApproved && !hasPendingNode ? "completed" : "pending";
+    
+    // 添加结束节点
+    timelineItems.push({
       type: "end",
       name: "结束",
       approverNames: "",
       status: endStatus,
-      records: [],
+      timestamp: Number.MAX_SAFE_INTEGER,
     });
 
     return (
       <div className="space-y-4">
-        {timelineNodes.map((node, index) => {
-          const Icon = nodeTypeIcons[node.type] || CheckCircle;
-          const isLast = index === timelineNodes.length - 1;
+        {timelineItems.map((item, index) => {
+          const Icon = nodeTypeIcons[item.type] || (item.node ? nodeTypeIcons[item.node.node_type] : CheckCircle);
+          const isLast = index === timelineItems.length - 1;
+          
+          // 确定图标背景色
+          let iconBgClass = "bg-muted text-muted-foreground";
+          if (item.status === "completed") {
+            iconBgClass = "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400";
+          } else if (item.status === "rejected") {
+            iconBgClass = "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400";
+          } else if (item.status === "current") {
+            iconBgClass = "bg-primary/10 text-primary";
+          }
           
           return (
             <div key={index} className="flex gap-4">
               {/* 时间线 */}
               <div className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  node.status === "completed" 
-                    ? "bg-green-100 text-green-600" 
-                    : node.status === "current"
-                    ? "bg-primary/10 text-primary"
-                    : "bg-muted text-muted-foreground"
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${iconBgClass}`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 {!isLast && (
                   <div className={`w-0.5 flex-1 min-h-8 ${
-                    node.status === "completed" ? "bg-green-300" : "bg-muted"
+                    item.status === "completed" ? "bg-green-300 dark:bg-green-700" : "bg-muted"
                   }`} />
                 )}
               </div>
@@ -1066,15 +1108,17 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
               <div className="flex-1 pb-4">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    {node.name}
-                    {node.type === "approver" && node.approvalMode === "or" && (
+                    {item.name}
+                    {item.type !== "initiator" && item.type !== "end" && item.type !== "resubmit" && 
+                     item.approvalMode === "or" && (
                       <span className="text-muted-foreground font-normal"> (或签)</span>
                     )}
-                    {node.type === "approver" && node.approvalMode === "countersign" && (
+                    {item.type !== "initiator" && item.type !== "end" && item.type !== "resubmit" && 
+                     item.approvalMode === "countersign" && (
                       <span className="text-muted-foreground font-normal"> (会签)</span>
                     )}
                   </span>
-                  {node.status === "current" && (
+                  {item.status === "current" && (
                     <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
                       当前节点
                     </Badge>
@@ -1082,9 +1126,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                 </div>
 
                 {/* 发起人信息 */}
-                {node.type === "initiator" && node.initiator && (
+                {item.type === "initiator" && item.initiator && (
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {node.initiator.name} - {node.initiator.department}
+                    {item.initiator.name} - {item.initiator.department}
                     <span className="ml-2 text-xs">
                       {instance?.created_at && format(new Date(instance.created_at), "MM-dd HH:mm", { locale: zhCN })}
                     </span>
@@ -1092,94 +1136,66 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                 )}
 
                 {/* 发起人重新提交信息 */}
-                {node.type === "resubmit" && node.initiator && (
+                {item.type === "resubmit" && item.initiator && (
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {node.initiator.name} 修改后重新提交
-                    {node.resubmitTime && (
+                    {item.initiator.name} 修改后重新提交
+                    {item.resubmitTime && (
                       <span className="ml-2 text-xs">
-                        {format(new Date(node.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
+                        {format(new Date(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
                       </span>
                     )}
                   </div>
                 )}
 
-                {/* 审批人名称（当没有审批记录时显示，抄送节点在下方单独处理） */}
-                {node.type !== "initiator" && node.type !== "end" && node.type !== "cc" && node.type !== "resubmit" && node.approverNames && node.records.length === 0 && (
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {node.approverNames}
+                {/* 已处理的记录 - 显示审批人、状态、时间、意见 */}
+                {item.type === "record" && item.record && (
+                  <div className="mt-1 p-2 rounded-lg text-sm bg-muted/50">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{item.record.approver?.name}</span>
+                      {item.record.status !== "pending" && (
+                        <Badge className={statusConfig[item.record.status]?.color || ""}>
+                          {statusConfig[item.record.status]?.label || item.record.status}
+                        </Badge>
+                      )}
+                      {item.record.processed_at && (
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(item.record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
+                        </span>
+                      )}
+                    </div>
+                    {item.record.comment && (
+                      <div className="mt-1 text-muted-foreground">
+                        {item.record.comment}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* 审批记录 */}
-                {node.type === "cc" ? (
-                  // 抄送节点：显示每个抄送人的已阅/未阅状态
+                {/* 等待中或当前节点 - 显示审批人名称 */}
+                {item.type === "node" && item.node && (
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {node.originalNode?.approver_ids?.map((approverId, i) => {
-                      const approverContact = approverContacts.get(approverId);
-                      const record = node.records.find(r => r.approver_id === approverId);
-                      const hasRead = record?.status === "approved";
-                      return (
-                        <span key={approverId}>
-                          {i > 0 && "、"}
-                          {approverContact?.name || record?.approver?.name || "未知"}
-                          <span className={hasRead ? "text-green-600" : "text-orange-500"}>
-                            （{hasRead ? "已阅" : "未阅"}）
+                    {item.node.node_type === "cc" ? (
+                      // 抄送节点：显示每个抄送人的已阅/未阅状态
+                      item.node.approver_ids?.map((approverId, i) => {
+                        const approverContact = approverContacts.get(approverId);
+                        const record = records.find(r => 
+                          r.node_name === item.node!.node_name && r.approver_id === approverId
+                        );
+                        const hasRead = record?.status === "approved";
+                        return (
+                          <span key={approverId}>
+                            {i > 0 && "、"}
+                            {approverContact?.name || record?.approver?.name || "未知"}
+                            <span className={hasRead ? "text-green-600 dark:text-green-400" : "text-orange-500 dark:text-orange-400"}>
+                              （{hasRead ? "已阅" : "未阅"}）
+                            </span>
                           </span>
-                        </span>
-                      );
-                    })}
+                        );
+                      })
+                    ) : (
+                      item.approverNames || "未指定"
+                    )}
                   </div>
-                ) : (
-                  // 审批节点：显示详细审批记录（包括退回和重新审批的历史）
-                  <>
-                    {node.records.map((record, rIdx) => {
-                      // 检查是否是重新提交后的新记录（同一审批人的后续记录）
-                      const isResubmittedRecord = node.records.findIndex(
-                        r => r.approver_id === record.approver_id
-                      ) !== rIdx && node.records.some(
-                        (r, i) => i < rIdx && r.approver_id === record.approver_id && 
-                        (r.status === "rejected" || r.status === "returned_to_initiator")
-                      );
-                      
-                      return (
-                        <div 
-                          key={record.id} 
-                          className={`mt-2 p-2 rounded-lg text-sm ${
-                            isResubmittedRecord 
-                              ? "bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-800" 
-                              : "bg-muted/50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium">{record.approver?.name}</span>
-                            {record.status !== "pending" && (
-                              <Badge className={statusConfig[record.status]?.color || ""}>
-                                {statusConfig[record.status]?.label || record.status}
-                              </Badge>
-                            )}
-                            {record.processed_at && (
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
-                              </span>
-                            )}
-                          </div>
-                          {record.comment && (
-                            <div className="mt-1 text-muted-foreground">
-                              {record.comment}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {/* 如果有重新提交事件，在退回记录后插入提示 */}
-                    {node.records.some(r => r.status === "rejected" || r.status === "returned_to_initiator") && 
-                     node.records.some(r => r.status === "approved" && 
-                       node.records.findIndex(rejected => 
-                         (rejected.status === "rejected" || rejected.status === "returned_to_initiator") && 
-                         rejected.approver_id === r.approver_id
-                       ) < node.records.indexOf(r)
-                     ) && null}
-                  </>
                 )}
               </div>
             </div>
