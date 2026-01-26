@@ -1011,6 +1011,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     });
     
     // 添加未处理的节点（当前节点和等待中的节点）
+    // 关键修复：考虑退回场景，即使节点有历史记录，如果它在当前节点之后，仍需显示为"等待中"
+    const currentNodeIndex = instance?.current_node_index || 0;
+    
     displayNodes.forEach((node, index) => {
       const nodeRecords = nodeRecordsMap.get(node.node_name) || [];
       const nodeInfo = nodeMap.get(node.node_name);
@@ -1039,8 +1042,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           status: "current",
           timestamp: Date.now() + index,
         });
+      } else if (index > currentNodeIndex) {
+        // 关键修复：如果节点索引大于当前节点索引，说明是后续待处理节点
+        // 即使该节点有历史记录（如被退回后），仍需显示为"等待中"
+        timelineItems.push({
+          type: "node",
+          node,
+          name: node.node_name,
+          approverNames: nodeInfo.approverNames,
+          approvalMode: node.approval_mode,
+          status: "pending",
+          timestamp: Date.now() + 1000 + index,
+        });
       } else if (!processedNodeNames.has(node.node_name)) {
-        // 如果该节点没有任何记录，添加为等待状态
+        // 如果该节点没有任何记录且不在后续路径上，添加为等待状态
         timelineItems.push({
           type: "node",
           node,
