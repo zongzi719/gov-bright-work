@@ -23,6 +23,54 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
   purchase_request: "purchase_request",
 };
 
+// 业务类型到联系人状态的映射
+const businessTypeToContactStatus: Record<string, string> = {
+  business_trip: "business_trip",
+  leave: "leave",
+  out: "out",
+};
+
+/**
+ * 更新业务表状态和联系人状态
+ */
+const updateBusinessAndContactStatus = async (
+  businessType: string,
+  businessId: string,
+  newStatus: "approved" | "rejected" | "completed"
+) => {
+  try {
+    // 只有外出、请假、出差需要联动联系人状态
+    if (["business_trip", "leave", "out"].includes(businessType)) {
+      // 获取业务记录
+      const { data: record } = await supabase
+        .from("absence_records")
+        .select("contact_id")
+        .eq("id", businessId)
+        .single();
+      
+      if (record?.contact_id) {
+        // 更新业务记录状态
+        await supabase
+          .from("absence_records")
+          .update({ status: newStatus, approved_at: new Date().toISOString() })
+          .eq("id", businessId);
+        
+        // 审批通过时更新联系人状态
+        if (newStatus === "approved") {
+          const contactStatus = businessTypeToContactStatus[businessType] as "business_trip" | "leave" | "out" | "on_duty" | "meeting" || "on_duty";
+          await supabase
+            .from("contacts")
+            .update({ status: contactStatus })
+            .eq("id", record.contact_id);
+          console.log(`Updated contact ${record.contact_id} status to ${contactStatus}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to update business/contact status:", error);
+  }
+};
+
 /**
  * 审批流程推进服务
  * 负责在当前节点审批完成后推进到下一节点，以及处理退回和撤回操作
@@ -336,6 +384,9 @@ export const useApprovalProgression = () => {
             current_node_index: flatNodes.length - 1,
           })
           .eq("id", instanceId);
+        
+        // 联动更新业务表状态和联系人状态
+        await updateBusinessAndContactStatus(businessType, businessId, "approved");
         
         return { success: true, completed: true };
       }
