@@ -95,6 +95,20 @@ const fieldLabelMapping: Record<string, Record<string, string>> = {
     notes: "备注",
     leave_type: "请假类型",
     cancel_reason: "取消原因",
+    // 出差相关
+    destination: "出差目的地",
+    transport_type: "交通方式",
+    companions: "同行人员",
+    estimated_cost: "预计费用",
+    duration_days: "出差天数",
+    // 请假相关
+    handover_person_id: "工作交接人",
+    handover_notes: "交接事项",
+    duration_hours: "请假时长(小时)",
+    // 外出相关
+    out_location: "外出地点",
+    out_type: "外出类型",
+    contact_phone: "联系电话",
   },
   supply_requisitions: {
     requisition_by: "申请人",
@@ -121,6 +135,20 @@ const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
     notes: false,
     leave_type: true,
     cancel_reason: false,
+    // 出差相关
+    destination: true,
+    transport_type: false,
+    companions: false,
+    estimated_cost: false,
+    duration_days: false,
+    // 请假相关
+    handover_person_id: false,
+    handover_notes: false,
+    duration_hours: false,
+    // 外出相关
+    out_location: true,
+    out_type: true,
+    contact_phone: false,
   },
   supply_requisitions: {
     requisition_by: true,
@@ -140,12 +168,12 @@ const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
  * 注意：申请人字段放在最前面
  */
 const businessTypeFieldFilter: Record<string, string[]> = {
-  // 出差申请：申请人、事由、开始时间、结束时间、备注（与前台表单一致）
-  business_trip: ["contact_id", "reason", "start_time", "end_time", "notes"],
-  // 请假申请：申请人、请假类型、事由、开始时间、结束时间、备注
-  leave: ["contact_id", "leave_type", "reason", "start_time", "end_time", "notes"],
-  // 外出申请：申请人、事由、开始时间、结束时间、备注
-  out: ["contact_id", "reason", "start_time", "end_time", "notes"],
+  // 出差申请：申请人、目的地、事由、开始时间、结束时间、天数、交通方式、同行人、预计费用、备注
+  business_trip: ["contact_id", "destination", "reason", "start_time", "end_time", "duration_days", "transport_type", "companions", "estimated_cost", "notes"],
+  // 请假申请：申请人、请假类型、事由、开始时间、结束时间、时长、交接人、交接事项、备注
+  leave: ["contact_id", "leave_type", "reason", "start_time", "end_time", "duration_hours", "handover_person_id", "handover_notes", "notes"],
+  // 外出申请：申请人、外出类型、外出地点、事由、开始时间、结束时间、时长、联系电话、备注
+  out: ["contact_id", "out_type", "out_location", "reason", "start_time", "end_time", "duration_hours", "contact_phone", "notes"],
   // 物品领用：申请人、领用物品、领用数量
   supply_requisition: ["requisition_by", "supply_id", "quantity"],
   // 采购申请：申请人、采购物品、采购数量、采购原因
@@ -158,6 +186,8 @@ const businessTypeFieldFilter: Record<string, string[]> = {
 const fieldOptionsMapping: Record<string, Record<string, string[] | null>> = {
   absence_records: {
     leave_type: ["annual", "sick", "personal"],
+    transport_type: ["plane", "train", "car", "other"],
+    out_type: ["meeting", "client", "errand", "other"],
   },
   supply_requisitions: {},
   purchase_requests: {},
@@ -190,6 +220,20 @@ const tableSchemas: Record<string, TableColumn[]> = {
     { column_name: "cancel_reason", data_type: "text", is_nullable: true },
     { column_name: "created_at", data_type: "timestamp with time zone", is_nullable: false },
     { column_name: "updated_at", data_type: "timestamp with time zone", is_nullable: false },
+    // 新增字段 - 出差相关
+    { column_name: "destination", data_type: "text", is_nullable: true },
+    { column_name: "transport_type", data_type: "text", is_nullable: true },
+    { column_name: "companions", data_type: "ARRAY", is_nullable: true },
+    { column_name: "estimated_cost", data_type: "numeric", is_nullable: true },
+    { column_name: "duration_days", data_type: "numeric", is_nullable: true },
+    // 新增字段 - 请假相关
+    { column_name: "handover_person_id", data_type: "uuid", is_nullable: true },
+    { column_name: "handover_notes", data_type: "text", is_nullable: true },
+    { column_name: "duration_hours", data_type: "numeric", is_nullable: true },
+    // 新增字段 - 外出相关
+    { column_name: "out_location", data_type: "text", is_nullable: true },
+    { column_name: "out_type", data_type: "text", is_nullable: true },
+    { column_name: "contact_phone", data_type: "text", is_nullable: true },
   ],
   supply_requisitions: [
     { column_name: "id", data_type: "uuid", is_nullable: false },
