@@ -406,13 +406,21 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 渲染表单字段
   const renderFormField = (field: FormField) => {
+    // 如果是被退回需要修改的状态，发起人可以编辑表单
+    const canEditForm = isReturnedForModification;
+    
     const permissions = getCurrentNodePermissions();
-    const permission = permissions[field.field_name] || "readonly";
+    let permission = permissions[field.field_name] || "readonly";
+    
+    // 如果是被退回状态且是发起人，允许编辑（除了申请人字段）
+    if (canEditForm && field.field_name !== "contact_id" && field.field_label !== "申请人") {
+      permission = "editable";
+    }
     
     if (permission === "hidden") return null;
 
-    let value = businessData[field.field_name] || instance?.form_data?.[field.field_name] || "";
-    const isReadonly = permission === "readonly";
+    let value = editableFormData[field.field_name] ?? businessData[field.field_name] ?? instance?.form_data?.[field.field_name] ?? "";
+    const isEditable = permission === "editable" && canEditForm;
 
     // 格式化值
     let displayValue = value;
@@ -428,6 +436,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       }
     }
 
+    // 处理可编辑字段的值变更
+    const handleFieldChange = (newValue: string) => {
+      setEditableFormData(prev => ({
+        ...prev,
+        [field.field_name]: newValue
+      }));
+    };
+
     return (
       <div key={field.id} className={field.col_span === 2 ? "col-span-2" : "col-span-1"}>
         <Label className="text-sm text-muted-foreground">
@@ -435,12 +451,23 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           {field.field_label}
         </Label>
         <div className="mt-1">
-          {isReadonly ? (
+          {isEditable ? (
+            field.field_type === "textarea" ? (
+              <Textarea
+                value={editableFormData[field.field_name] ?? value}
+                onChange={(e) => handleFieldChange(e.target.value)}
+                className="min-h-[80px]"
+              />
+            ) : (
+              <Input
+                value={editableFormData[field.field_name] ?? value}
+                onChange={(e) => handleFieldChange(e.target.value)}
+              />
+            )
+          ) : (
             <div className="px-3 py-2 bg-muted/50 rounded-md text-sm min-h-[40px] flex items-center">
               {displayValue || "-"}
             </div>
-          ) : (
-            <Input value={displayValue} readOnly />
           )}
         </div>
       </div>
@@ -1059,7 +1086,22 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     // 当前用户是发起人
     const isCurrentUserInitiator = currentUser?.id === instance.initiator_id;
     
-    return hasReturnedPrefix && instanceCancelled && todoPending && isCurrentUserInitiator;
+    // 检查是否有 _return_info 标记（更可靠的判断）
+    const hasReturnInfo = !!(instance.form_data as any)?._return_info;
+    
+    console.log("[isReturnedForModification] check:", {
+      hasReturnedPrefix,
+      instanceCancelled,
+      todoPending,
+      isCurrentUserInitiator,
+      hasReturnInfo,
+      todoTitle: todoItem.title,
+      instanceStatus: instance.status,
+      todoStatus: todoItem.status,
+    });
+    
+    // 有退回信息且当前用户是发起人且待办待处理 OR 标题前缀匹配
+    return ((hasReturnInfo || hasReturnedPrefix) && instanceCancelled && todoPending && isCurrentUserInitiator);
   }, [todoItem, instance, currentUser]);
 
   // 获取退回信息

@@ -61,6 +61,8 @@ interface AbsenceRecord {
   notes: string | null;
   created_at: string;
   contacts: Contact | null;
+  // 关联的审批实例状态
+  approval_status?: string;
 }
 
 const statusLabels: Record<AbsenceStatus, string> = {
@@ -129,7 +131,30 @@ const OutManagement = () => {
       toast.error("获取记录失败");
       console.error(error);
     } else {
-      setRecords((data as unknown as AbsenceRecord[]) || []);
+      const recordsData = (data as unknown as AbsenceRecord[]) || [];
+      
+      // 批量获取审批实例状态
+      if (recordsData.length > 0) {
+        const recordIds = recordsData.map(r => r.id);
+        const { data: instancesData } = await supabase
+          .from("approval_instances")
+          .select("business_id, status")
+          .eq("business_type", "out")
+          .in("business_id", recordIds);
+        
+        // 创建映射
+        const statusMap = new Map<string, string>();
+        instancesData?.forEach(inst => {
+          statusMap.set(inst.business_id, inst.status);
+        });
+        
+        // 合并状态
+        recordsData.forEach(record => {
+          record.approval_status = statusMap.get(record.id);
+        });
+      }
+      
+      setRecords(recordsData);
     }
     setLoading(false);
   };
@@ -239,9 +264,15 @@ const OutManagement = () => {
                         : "-"}
                     </TableCell>
                     <TableCell>
-                      <Badge className={statusColors[record.status]}>
-                        {statusLabels[record.status]}
-                      </Badge>
+                      {record.approval_status ? (
+                        <Badge className={approvalStatusColors[record.approval_status] || "bg-gray-100 text-gray-800"}>
+                          {approvalStatusLabels[record.approval_status] || record.approval_status}
+                        </Badge>
+                      ) : (
+                        <Badge className={statusColors[record.status]}>
+                          {statusLabels[record.status]}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button
