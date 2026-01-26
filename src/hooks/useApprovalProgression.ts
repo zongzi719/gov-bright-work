@@ -132,26 +132,43 @@ export const useApprovalProgression = () => {
 
   /**
    * 检查当前节点是否完成审批
+   * 注意：只检查当前批次的审批记录（按 pending 状态的记录判断）
+   * 重新提交后会创建新的 pending 记录，老的 rejected 记录不影响判断
    */
   const checkNodeComplete = async (
     instanceId: string,
     nodeName: string,
     approvalMode: string = "countersign"
   ): Promise<{ complete: boolean; allApproved: boolean }> => {
-    const { data: records } = await supabase
+    // 获取该节点所有审批记录，按创建时间倒序
+    const { data: allRecords } = await supabase
       .from("approval_records")
-      .select("status")
+      .select("status, created_at, approver_id")
       .eq("instance_id", instanceId)
-      .eq("node_name", nodeName);
+      .eq("node_name", nodeName)
+      .order("created_at", { ascending: false });
 
-    if (!records || records.length === 0) {
+    if (!allRecords || allRecords.length === 0) {
       return { complete: false, allApproved: false };
     }
 
-    const approvedCount = records.filter(r => r.status === "approved").length;
-    const rejectedCount = records.filter(r => r.status === "rejected").length;
-    const pendingCount = records.filter(r => r.status === "pending").length;
-    const totalCount = records.length;
+    // 获取每个审批人的最新记录（重新提交后可能有多条记录）
+    const latestRecordsByApprover = new Map<string, { status: string; created_at: string }>();
+    for (const record of allRecords) {
+      if (!latestRecordsByApprover.has(record.approver_id)) {
+        latestRecordsByApprover.set(record.approver_id, {
+          status: record.status,
+          created_at: record.created_at,
+        });
+      }
+    }
+
+    // 只统计每个审批人的最新记录
+    const latestRecords = Array.from(latestRecordsByApprover.values());
+    const approvedCount = latestRecords.filter(r => r.status === "approved").length;
+    const rejectedCount = latestRecords.filter(r => r.status === "rejected").length;
+    const pendingCount = latestRecords.filter(r => r.status === "pending").length;
+    const totalCount = latestRecords.length;
 
     if (approvalMode === "or_sign") {
       // 或签：任一审批人同意或拒绝即完成
