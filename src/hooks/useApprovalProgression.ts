@@ -601,21 +601,27 @@ export const useApprovalProgression = () => {
         })
         .eq("id", instanceId);
 
-      // 将上一节点的审批记录重置为 pending
-      await supabase
-        .from("approval_records")
-        .update({ 
-          status: "pending",
-          comment: null,
-          processed_at: null,
-        })
-        .eq("instance_id", instanceId)
-        .eq("node_name", previousNode.node_name);
-
-      // 为上一节点的审批人创建新的待办
+      // 为上一节点的审批人创建新的审批记录和待办（保留历史记录，不要更新）
       const approverIds = previousNode.approver_ids || [];
       
       for (const approverId of approverIds) {
+        // 创建新的 pending 审批记录（保留历史通过记录）
+        const { error: recordError } = await supabase
+          .from("approval_records")
+          .insert({
+            instance_id: instanceId,
+            node_index: previousNodeIndex,
+            node_name: previousNode.node_name,
+            node_type: previousNode.node_type,
+            approver_id: approverId,
+            status: "pending",
+          });
+
+        if (recordError) {
+          console.error("Failed to create approval record for previous node:", recordError);
+        }
+
+        // 创建新的待办
         const { error: todoError } = await supabase
           .from("todo_items")
           .insert({
