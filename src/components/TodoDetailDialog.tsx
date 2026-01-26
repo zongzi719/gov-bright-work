@@ -119,10 +119,12 @@ const statusConfig: Record<string, { color: string; label: string; icon: any }> 
   pending: { color: "bg-yellow-100 text-yellow-800", label: "待处理", icon: Clock },
   approved: { color: "bg-green-100 text-green-800", label: "已同意", icon: CheckCircle },
   rejected: { color: "bg-red-100 text-red-800", label: "已退回", icon: XCircle },
+  completed: { color: "bg-blue-100 text-blue-800", label: "已抄送", icon: Send },
   returned_to_initiator: { color: "bg-orange-100 text-orange-800", label: "已退回发起人", icon: RotateCcw },
   returned_restart: { color: "bg-orange-100 text-orange-800", label: "已退回(重审)", icon: RotateCcw },
   returned_to_previous: { color: "bg-orange-100 text-orange-800", label: "已退回上一节点", icon: RotateCcw },
   processing: { color: "bg-blue-100 text-blue-800", label: "处理中", icon: Clock },
+  cc_notified: { color: "bg-blue-100 text-blue-800", label: "已抄送", icon: Send },
 };
 
 type ReturnType = "return_to_initiator" | "return_restart" | "return_to_previous";
@@ -922,11 +924,17 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   // 判断当前用户是否是发起人
   const isInitiator = currentUser?.id === instance?.initiator_id;
   
+  // 判断是否是抄送待办（只读，不需要审批）
+  const isCCNotification = todoItem?.title?.startsWith("[抄送]") || todoItem?.status === "completed";
+  
   // 判断当前用户是否可以审批
   // 待办事项列表已经按 assignee_id 过滤，只显示当前用户的待办
-  // 条件: 1. 待办状态是 pending 2. 审批实例状态是 pending（流程未结束）
+  // 条件: 1. 待办状态是 pending 2. 审批实例状态是 pending（流程未结束）3. 不是抄送待办
   const canApprove = useMemo(() => {
     if (!currentUser || !todoItem || !instance) return false;
+    
+    // 抄送待办不需要审批
+    if (isCCNotification) return false;
     
     // 待办状态必须是 pending
     const isPending = todoItem.status === "pending";
@@ -934,7 +942,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     const instancePending = instance.status === "pending";
     
     return isPending && instancePending;
-  }, [currentUser, todoItem, instance]);
+  }, [currentUser, todoItem, instance, isCCNotification]);
   
   // 判断当前用户是否既是发起人又是审批人（需要显示所有按钮）
   const isInitiatorAndApprover = isInitiator && canApprove;

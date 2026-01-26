@@ -175,7 +175,63 @@ export const useApprovalProgression = () => {
   };
 
   /**
-   * 推进审批流程到下一节点
+   * 处理抄送节点 - 创建只读通知并自动跳过
+   */
+  const processCCNode = async (
+    instanceId: string,
+    businessId: string,
+    businessType: string,
+    initiatorId: string,
+    initiatorName: string,
+    title: string,
+    nodeIndex: number,
+    node: ApprovalNode,
+    versionNumber: number
+  ): Promise<void> => {
+    const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+    const ccRecipientIds = node.approver_ids || [];
+    
+    console.log(`Processing CC node "${node.node_name}" for recipients:`, ccRecipientIds);
+
+    for (const recipientId of ccRecipientIds) {
+      // 创建审批记录（状态直接设为 approved 表示已处理）
+      await supabase
+        .from("approval_records")
+        .insert({
+          instance_id: instanceId,
+          node_index: nodeIndex,
+          node_name: node.node_name,
+          node_type: "cc",
+          approver_id: recipientId,
+          status: "approved", // 抄送节点直接标记为已完成
+          comment: "已抄送",
+          processed_at: new Date().toISOString(),
+        });
+
+      // 创建只读待办通知（状态直接设为 completed）
+      await supabase
+        .from("todo_items")
+        .insert({
+          source: "internal",
+          business_type: todoBusinessType,
+          business_id: businessId,
+          title: `[抄送] ${title}`,
+          description: `${initiatorName} 发起的申请 - 抄送通知`,
+          priority: "normal",
+          status: "completed", // 抄送待办直接标记为已完成
+          process_result: "cc_notified",
+          process_notes: "已抄送",
+          processed_at: new Date().toISOString(),
+          initiator_id: initiatorId,
+          assignee_id: recipientId,
+          approval_instance_id: instanceId,
+          approval_version_number: versionNumber,
+        });
+    }
+  };
+
+  /**
+   * 推进审批流程到下一节点（递归处理抄送节点）
    */
   const advanceToNextNode = async (
     instanceId: string,
@@ -222,13 +278,42 @@ export const useApprovalProgression = () => {
         return { success: true, completed: true };
       }
 
-      const nextIndex = currentIndex + 1;
+      // 递归推进到下一个审批节点（跳过所有抄送节点）
+      let nextIndex = currentIndex + 1;
+      
+      while (nextIndex < flatNodes.length) {
+        const nextNode = flatNodes[nextIndex];
+        
+        if (nextNode.node_type === "cc") {
+          // 处理抄送节点并继续
+          console.log(`Skipping CC node "${nextNode.node_name}", processing notifications...`);
+          await processCCNode(
+            instanceId,
+            businessId,
+            businessType,
+            initiatorId,
+            initiatorName,
+            title,
+            nextIndex,
+            nextNode,
+            versionNumber
+          );
+          nextIndex++;
+        } else {
+          // 找到下一个审批节点，停止循环
+          break;
+        }
+      }
       
       if (nextIndex >= flatNodes.length) {
         console.log("No more nodes, workflow completed");
         await supabase
           .from("approval_instances")
-          .update({ status: "approved", completed_at: new Date().toISOString() })
+          .update({ 
+            status: "approved", 
+            completed_at: new Date().toISOString(),
+            current_node_index: flatNodes.length - 1,
+          })
           .eq("id", instanceId);
         
         return { success: true, completed: true };
@@ -236,7 +321,7 @@ export const useApprovalProgression = () => {
 
       const nextNode = flatNodes[nextIndex];
       
-      console.log("Advancing to next node:", nextNode.node_name);
+      console.log("Advancing to next approver node:", nextNode.node_name, "at index:", nextIndex);
       
       await supabase
         .from("approval_instances")

@@ -184,18 +184,83 @@ export const useApprovalWorkflow = () => {
   };
 
   /**
-   * 找到第一个审批节点（使用扁平化后的列表）
+   * 找到第一个审批节点（跳过CC节点）
    */
   const findFirstApproverNode = (nodes: ApprovalNode[], formData: Record<string, unknown>): { node: ApprovalNode; index: number } | null => {
     const flatNodes = flattenNodesForExecution(nodes, formData);
     
     for (let i = 0; i < flatNodes.length; i++) {
       const node = flatNodes[i];
+      // 跳过CC节点，只找审批节点
       if (node.node_type === "approver" && node.approver_ids && node.approver_ids.length > 0) {
         return { node, index: i };
       }
     }
     return null;
+  };
+
+  /**
+   * 处理启动时的抄送节点 - 创建只读通知
+   */
+  const processInitialCCNodes = async (
+    instanceId: string,
+    businessId: string,
+    businessType: string,
+    initiatorId: string,
+    initiatorName: string,
+    title: string,
+    nodes: ApprovalNode[],
+    formData: Record<string, unknown>,
+    versionNumber: number,
+    firstApproverIndex: number
+  ): Promise<void> => {
+    const flatNodes = flattenNodesForExecution(nodes, formData);
+    const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+    
+    // 处理第一个审批节点之前的所有CC节点
+    for (let i = 0; i < firstApproverIndex; i++) {
+      const node = flatNodes[i];
+      if (node.node_type === "cc") {
+        const ccRecipientIds = node.approver_ids || [];
+        console.log(`Processing initial CC node "${node.node_name}" for recipients:`, ccRecipientIds);
+        
+        for (const recipientId of ccRecipientIds) {
+          // 创建审批记录（状态直接设为 approved 表示已处理）
+          await supabase
+            .from("approval_records")
+            .insert({
+              instance_id: instanceId,
+              node_index: i,
+              node_name: node.node_name,
+              node_type: "cc",
+              approver_id: recipientId,
+              status: "approved",
+              comment: "已抄送",
+              processed_at: new Date().toISOString(),
+            } as never);
+
+          // 创建只读待办通知（状态直接设为 completed）
+          await supabase
+            .from("todo_items")
+            .insert({
+              source: "internal",
+              business_type: todoBusinessType,
+              business_id: businessId,
+              title: `[抄送] ${title}`,
+              description: `${initiatorName} 发起的申请 - 抄送通知`,
+              priority: "normal",
+              status: "completed",
+              process_result: "cc_notified",
+              process_notes: "已抄送",
+              processed_at: new Date().toISOString(),
+              initiator_id: initiatorId,
+              assignee_id: recipientId,
+              approval_instance_id: instanceId,
+              approval_version_number: versionNumber,
+            });
+        }
+      }
+    }
   };
 
   /**
@@ -231,7 +296,7 @@ export const useApprovalWorkflow = () => {
 
       console.log("Starting approval workflow, first node:", firstNode.node_name, "at index:", firstNodeIndex);
 
-      // 4. 创建审批实例 - 使用扁平化后的索引而不是 sort_order
+      // 4. 创建审批实例
       const instanceInsert = {
         template_id: template.id,
         version_id: version.id,
@@ -240,7 +305,7 @@ export const useApprovalWorkflow = () => {
         business_id: businessId,
         initiator_id: initiatorId,
         status: "pending" as const,
-        current_node_index: firstNodeIndex, // 使用扁平化后的实际索引
+        current_node_index: firstNodeIndex, // 使用第一个审批节点的索引
         form_data: formData || {},
       };
 
@@ -255,17 +320,33 @@ export const useApprovalWorkflow = () => {
         return { success: false, error: "创建审批实例失败" };
       }
 
-      // 5. 为第一个节点的所有审批人创建审批记录和待办
+      // 5. 处理第一个审批节点之前的CC节点
+      if (firstNodeIndex > 0) {
+        await processInitialCCNodes(
+          instance.id,
+          businessId,
+          businessType,
+          initiatorId,
+          initiatorName,
+          title,
+          version.nodes_snapshot,
+          formData || {},
+          version.version_number,
+          firstNodeIndex
+        );
+      }
+
+      // 6. 为第一个审批节点的所有审批人创建审批记录和待办
       const approverIds = firstNode.approver_ids || [];
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
       
       for (const approverId of approverIds) {
-        // 创建审批记录 - 使用扁平化后的索引
+        // 创建审批记录
         const { error: recordError } = await supabase
           .from("approval_records")
           .insert({
             instance_id: instance.id,
-            node_index: firstNodeIndex, // 使用扁平化后的索引
+            node_index: firstNodeIndex,
             node_name: firstNode.node_name,
             node_type: firstNode.node_type,
             approver_id: approverId,
