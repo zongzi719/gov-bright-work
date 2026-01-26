@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
+import ApprovalTimeline from "./ApprovalTimeline";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,9 +29,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { Check, X, Search, Clock, UserCheck } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
@@ -56,6 +59,7 @@ interface AbsenceRecord {
   cancelled_at: string | null;
   cancel_reason: string | null;
   notes: string | null;
+  leave_type: string | null;
   created_at: string;
   contacts: Contact | null;
 }
@@ -76,12 +80,34 @@ const statusColors: Record<AbsenceStatus, string> = {
   cancelled: "bg-gray-100 text-gray-500",
 };
 
+const approvalStatusLabels: Record<string, string> = {
+  pending: "审批中",
+  approved: "已完成",
+  rejected: "已拒绝",
+  cancelled: "已取消",
+  expired: "已过期",
+};
+
+const approvalStatusColors: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  approved: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-800",
+  cancelled: "bg-gray-100 text-gray-500",
+  expired: "bg-gray-100 text-gray-500",
+};
+
+const leaveTypeLabels: Record<string, string> = {
+  annual: "年假",
+  sick: "病假",
+  personal: "事假",
+};
+
 const LeaveManagement = () => {
   const [records, setRecords] = useState<AbsenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<AbsenceRecord | null>(null);
+  const [approvalInstanceStatus, setApprovalInstanceStatus] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<AbsenceStatus | "all">("all");
 
@@ -115,96 +141,21 @@ const LeaveManagement = () => {
     setLoading(false);
   };
 
-  const handleApprove = async (id: string) => {
-    const { error } = await supabase
-      .from("absence_records")
-      .update({
-        status: "approved",
-        approved_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("审批失败");
-    } else {
-      toast.success("已批准");
-      fetchRecords();
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    const record = records.find((r) => r.id === id);
-    const { error } = await supabase
-      .from("absence_records")
-      .update({ status: "rejected" })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("操作失败");
-    } else {
-      toast.success("已拒绝");
-      if (record?.contact_id) {
-        await supabase
-          .from("contacts")
-          .update({ status: "on_duty", status_note: null })
-          .eq("id", record.contact_id);
-      }
-      fetchRecords();
-    }
-  };
-
-  const handleComplete = async (id: string) => {
-    const record = records.find((r) => r.id === id);
-    const { error } = await supabase
-      .from("absence_records")
-      .update({ status: "completed" })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("销假失败");
-    } else {
-      toast.success("销假成功");
-      if (record?.contact_id) {
-        await supabase
-          .from("contacts")
-          .update({ status: "on_duty", status_note: null })
-          .eq("id", record.contact_id);
-      }
-      fetchRecords();
-    }
-  };
-
-  const openCancelDialog = (id: string) => {
-    setSelectedRecordId(id);
-    setCancelReason("");
-    setIsCancelDialogOpen(true);
-  };
-
-  const handleCancel = async () => {
-    if (!selectedRecordId) return;
-
-    const record = records.find((r) => r.id === selectedRecordId);
-    const { error } = await supabase
-      .from("absence_records")
-      .update({
-        status: "cancelled",
-        cancelled_at: new Date().toISOString(),
-        cancel_reason: cancelReason || null,
-      })
-      .eq("id", selectedRecordId);
-
-    if (error) {
-      toast.error("取消失败");
-    } else {
-      toast.success("已取消");
-      if (record?.contact_id) {
-        await supabase
-          .from("contacts")
-          .update({ status: "on_duty", status_note: null })
-          .eq("id", record.contact_id);
-      }
-      setIsCancelDialogOpen(false);
-      fetchRecords();
+  const openDetailDialog = async (record: AbsenceRecord) => {
+    setSelectedRecord(record);
+    setApprovalInstanceStatus(null);
+    setIsDetailDialogOpen(true);
+    
+    // 获取审批实例的真实状态
+    const { data: instanceData } = await supabase
+      .from("approval_instances")
+      .select("status")
+      .eq("business_id", record.id)
+      .eq("business_type", "leave")
+      .single();
+    
+    if (instanceData) {
+      setApprovalInstanceStatus(instanceData.status);
     }
   };
 
@@ -304,8 +255,9 @@ const LeaveManagement = () => {
                         size="sm"
                         variant="ghost"
                         className="text-primary"
-                        onClick={() => {/* TODO: 查看详情 */}}
+                        onClick={() => openDetailDialog(record)}
                       >
+                        <Eye className="w-4 h-4 mr-1" />
                         查看详情
                       </Button>
                     </TableCell>
@@ -331,28 +283,104 @@ const LeaveManagement = () => {
         )}
       </CardContent>
 
-      {/* 取消对话框 */}
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent>
+      {/* 详情对话框 */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>撤销请假</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              请假申请详情
+              {approvalInstanceStatus ? (
+                <Badge className={approvalStatusColors[approvalInstanceStatus] || "bg-gray-100 text-gray-800"}>
+                  {approvalStatusLabels[approvalInstanceStatus] || approvalInstanceStatus}
+                </Badge>
+              ) : selectedRecord ? (
+                <Badge className={statusColors[selectedRecord.status]}>
+                  {statusLabels[selectedRecord.status]}
+                </Badge>
+              ) : null}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">撤销原因</label>
-              <Input
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="请输入撤销原因（可选）"
+          {selectedRecord && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-muted-foreground">申请人</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.contacts?.name || "-"}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">单位/部门</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.contacts?.organization?.name || selectedRecord.contacts?.department || "-"}
+                  </div>
+                </div>
+                {selectedRecord.leave_type && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">请假类型</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {leaveTypeLabels[selectedRecord.leave_type] || selectedRecord.leave_type}
+                    </div>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <Label className="text-sm text-muted-foreground">事由</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.reason}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">开始时间</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">结束时间</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.end_time 
+                      ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN })
+                      : "-"}
+                  </div>
+                </div>
+                {selectedRecord.notes && (
+                  <div className="col-span-2">
+                    <Label className="text-sm text-muted-foreground">备注</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.notes}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-sm text-muted-foreground">申请时间</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                  </div>
+                </div>
+                {selectedRecord.approved_at && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">审批时间</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {format(new Date(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* 审批流程 */}
+              <Separator />
+              <ApprovalTimeline 
+                businessId={selectedRecord.id} 
+                businessType="leave" 
               />
+              
+              <div className="flex justify-end pt-2">
+                <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
+                  关闭
+                </Button>
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCancel}>确认撤销</Button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </Card>
