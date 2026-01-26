@@ -353,7 +353,7 @@ const SchedulePanel = () => {
         </div>
 
         {/* 选中日期的日程列表 */}
-        <div className="flex-1 overflow-y-auto space-y-2 min-h-[120px]">
+        <div className="flex-1 overflow-hidden space-y-2 min-h-[120px]">
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
