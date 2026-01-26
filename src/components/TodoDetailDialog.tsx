@@ -934,33 +934,68 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                 {/* 审批人/抄送人名称（当没有审批记录时显示） */}
                 {node.type !== "initiator" && node.type !== "end" && node.approverNames && node.records.length === 0 && (
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {node.approverNames}
+                    {node.type === "cc" ? (
+                      // 抄送节点显示每个人的已阅/未阅状态
+                      node.originalNode?.approver_ids?.map((approverId, i) => {
+                        const approverContact = approverContacts.get(approverId);
+                        return (
+                          <span key={approverId}>
+                            {i > 0 && "、"}
+                            {approverContact?.name || "未知"}
+                            <span className="text-orange-500">（未阅）</span>
+                          </span>
+                        );
+                      })
+                    ) : (
+                      node.approverNames
+                    )}
                   </div>
                 )}
 
                 {/* 审批记录 */}
-                {node.records.map((record) => (
-                  <div key={record.id} className="mt-2 p-2 bg-muted/50 rounded-lg text-sm">
-                    <div className="flex items-center gap-2">
-                      <span>{record.approver?.name}</span>
-                      {record.status !== "pending" && (
-                        <Badge className={statusConfig[record.status]?.color || ""}>
-                          {statusConfig[record.status]?.label || record.status}
-                        </Badge>
-                      )}
-                      {record.processed_at && (
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
+                {node.type === "cc" ? (
+                  // 抄送节点：显示每个抄送人的已阅/未阅状态
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {node.originalNode?.approver_ids?.map((approverId, i) => {
+                      const approverContact = approverContacts.get(approverId);
+                      const record = node.records.find(r => r.approver_id === approverId);
+                      const hasRead = record?.status === "approved";
+                      return (
+                        <span key={approverId}>
+                          {i > 0 && "、"}
+                          {approverContact?.name || record?.approver?.name || "未知"}
+                          <span className={hasRead ? "text-green-600" : "text-orange-500"}>
+                            （{hasRead ? "已阅" : "未阅"}）
+                          </span>
                         </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  // 审批节点：显示详细审批记录
+                  node.records.map((record) => (
+                    <div key={record.id} className="mt-2 p-2 bg-muted/50 rounded-lg text-sm">
+                      <div className="flex items-center gap-2">
+                        <span>{record.approver?.name}</span>
+                        {record.status !== "pending" && (
+                          <Badge className={statusConfig[record.status]?.color || ""}>
+                            {statusConfig[record.status]?.label || record.status}
+                          </Badge>
+                        )}
+                        {record.processed_at && (
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
+                          </span>
+                        )}
+                      </div>
+                      {record.comment && (
+                        <div className="mt-1 text-muted-foreground">
+                          {record.comment}
+                        </div>
                       )}
                     </div>
-                    {record.comment && (
-                      <div className="mt-1 text-muted-foreground">
-                        {record.comment}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           );
