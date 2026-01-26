@@ -268,18 +268,18 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card h-full flex flex-col">
+    <div className="gov-card h-[420px] flex flex-col">
       {/* 标题栏 */}
-      <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title">日程管理</h2>
         <Button size="sm" variant="ghost" onClick={openAddDialog}>
           <Plus className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="p-5 space-y-5 flex-1 overflow-auto">
+      <div className="p-5 flex-1 overflow-hidden flex flex-col">
         {/* 日历头部 */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="font-bold text-foreground">
               {format(currentWeekStart, "yyyy年M月", { locale: zhCN })}
@@ -297,7 +297,7 @@ const SchedulePanel = () => {
         </div>
 
         {/* 日历网格 */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1 mt-5 flex-shrink-0">
           {weekDays.map((day) => (
             <div
               key={format(day, "yyyy-MM-dd")}
@@ -313,8 +313,8 @@ const SchedulePanel = () => {
           ))}
         </div>
 
-        {/* 选中日期的日程 */}
-        <div className="space-y-2.5">
+        {/* 选中日期的日程 - 固定高度可滚动 */}
+        <div className="mt-5 flex-1 overflow-y-auto space-y-2.5 min-h-0">
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
@@ -329,11 +329,17 @@ const SchedulePanel = () => {
                 <span className="text-primary font-medium w-12 flex-shrink-0">
                   {item.start_time.slice(0, 5)}
                 </span>
-                <span className="text-foreground flex-1">
-                  {item.title}
-                  {item.location && ` - ${item.location}`}
-                </span>
-                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                <div className="flex-1 min-w-0">
+                  <div className="text-foreground line-clamp-2">
+                    {item.title}
+                  </div>
+                  {item.location && (
+                    <div className="text-muted-foreground text-xs mt-0.5 truncate">
+                      {item.location}
+                    </div>
+                  )}
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
