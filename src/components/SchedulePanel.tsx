@@ -271,7 +271,7 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card flex flex-col overflow-hidden">
+    <div className="gov-card min-h-[480px] flex flex-col">
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title">日程管理</h2>
@@ -280,7 +280,7 @@ const SchedulePanel = () => {
         </Button>
       </div>
 
-      <div className="p-5 flex-1 overflow-hidden flex flex-col">
+      <div className="p-5 flex-1 flex flex-col">
         {/* 日历头部 */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
@@ -301,7 +301,7 @@ const SchedulePanel = () => {
 
         {/* 星期标签 - 两行日期 */}
         <div className="mt-4 flex-shrink-0">
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1 mb-1">
             {weekLabels.map((label) => (
               <div 
                 key={label} 
@@ -312,7 +312,7 @@ const SchedulePanel = () => {
             ))}
           </div>
           {/* 第一周 */}
-          <div className="grid grid-cols-7 gap-1 mt-1">
+          <div className="grid grid-cols-7 gap-1">
             {weekDays.slice(0, 7).map((day) => (
               <div
                 key={format(day, "yyyy-MM-dd")}
@@ -345,8 +345,15 @@ const SchedulePanel = () => {
           </div>
         </div>
 
-        {/* 选中日期的日程 - 固定高度仅上下滚动 */}
-        <div className="mt-5 flex-1 overflow-y-auto overflow-x-hidden space-y-2.5 min-h-0">
+        {/* 选中日期的标题 */}
+        <div className="mt-5 mb-2 flex-shrink-0 border-t border-border pt-4">
+          <span className="text-sm font-medium text-foreground">
+            {format(selectedDate, "M月d日 EEEE", { locale: zhCN })} 日程
+          </span>
+        </div>
+
+        {/* 选中日期的日程列表 */}
+        <div className="flex-1 overflow-y-auto space-y-2 min-h-[120px]">
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
