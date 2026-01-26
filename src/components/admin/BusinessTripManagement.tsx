@@ -79,11 +79,29 @@ const statusColors: Record<AbsenceStatus, string> = {
   cancelled: "bg-gray-100 text-gray-500",
 };
 
+// 审批实例状态标签和颜色
+const approvalStatusLabels: Record<string, string> = {
+  pending: "审批中",
+  approved: "已完成",
+  rejected: "已拒绝",
+  cancelled: "已取消",
+  expired: "已过期",
+};
+
+const approvalStatusColors: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  approved: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-800",
+  cancelled: "bg-gray-100 text-gray-500",
+  expired: "bg-gray-100 text-gray-500",
+};
+
 const BusinessTripManagement = () => {
   const [records, setRecords] = useState<AbsenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AbsenceRecord | null>(null);
+  const [approvalInstanceStatus, setApprovalInstanceStatus] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<AbsenceStatus | "all">("all");
 
@@ -176,9 +194,22 @@ const BusinessTripManagement = () => {
     }
   };
 
-  const openDetailDialog = (record: AbsenceRecord) => {
+  const openDetailDialog = async (record: AbsenceRecord) => {
     setSelectedRecord(record);
+    setApprovalInstanceStatus(null);
     setIsDetailDialogOpen(true);
+    
+    // 获取审批实例的真实状态
+    const { data: instanceData } = await supabase
+      .from("approval_instances")
+      .select("status")
+      .eq("business_id", record.id)
+      .eq("business_type", "business_trip")
+      .single();
+    
+    if (instanceData) {
+      setApprovalInstanceStatus(instanceData.status);
+    }
   };
 
   const filteredRecords = records.filter((record) => {
@@ -311,11 +342,15 @@ const BusinessTripManagement = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               出差申请详情
-              {selectedRecord && (
+              {approvalInstanceStatus ? (
+                <Badge className={approvalStatusColors[approvalInstanceStatus] || "bg-gray-100 text-gray-800"}>
+                  {approvalStatusLabels[approvalInstanceStatus] || approvalInstanceStatus}
+                </Badge>
+              ) : selectedRecord ? (
                 <Badge className={statusColors[selectedRecord.status]}>
                   {statusLabels[selectedRecord.status]}
                 </Badge>
-              )}
+              ) : null}
             </DialogTitle>
           </DialogHeader>
           {selectedRecord && (
