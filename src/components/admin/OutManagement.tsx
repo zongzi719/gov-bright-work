@@ -61,9 +61,21 @@ interface AbsenceRecord {
   notes: string | null;
   created_at: string;
   contacts: Contact | null;
+  // 新增字段
+  out_type: string | null;
+  out_location: string | null;
+  contact_phone: string | null;
+  duration_hours: number | null;
   // 关联的审批实例状态
   approval_status?: string;
 }
+
+const outTypeLabels: Record<string, string> = {
+  meeting: "外出开会",
+  client: "拜访客户",
+  errand: "外出办事",
+  other: "其他",
+};
 
 const statusLabels: Record<AbsenceStatus, string> = {
   pending: "待审批",
@@ -384,8 +396,24 @@ const OutManagement = () => {
                     {selectedRecord.contacts?.organization?.name || selectedRecord.contacts?.department || "-"}
                   </div>
                 </div>
+                {selectedRecord.out_type && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">外出类型</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {outTypeLabels[selectedRecord.out_type] || selectedRecord.out_type}
+                    </div>
+                  </div>
+                )}
+                {selectedRecord.out_location && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">外出地点</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.out_location}
+                    </div>
+                  </div>
+                )}
                 <div className="col-span-2">
-                  <Label className="text-sm text-muted-foreground">事由</Label>
+                  <Label className="text-sm text-muted-foreground">外出事由</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {selectedRecord.reason}
                   </div>
@@ -397,13 +425,29 @@ const OutManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">结束时间</Label>
+                  <Label className="text-sm text-muted-foreground">预计返回时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {selectedRecord.end_time 
                       ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN })
                       : "-"}
                   </div>
                 </div>
+                {selectedRecord.duration_hours && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">外出时长</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.duration_hours} 小时
+                    </div>
+                  </div>
+                )}
+                {selectedRecord.contact_phone && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">联系电话</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.contact_phone}
+                    </div>
+                  </div>
+                )}
                 {selectedRecord.notes && (
                   <div className="col-span-2">
                     <Label className="text-sm text-muted-foreground">备注</Label>

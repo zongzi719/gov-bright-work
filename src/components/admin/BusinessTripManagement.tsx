@@ -61,9 +61,23 @@ interface AbsenceRecord {
   notes: string | null;
   created_at: string;
   contacts: Contact | null;
+  // 新增字段
+  destination: string | null;
+  transport_type: string | null;
+  companions: string[] | null;
+  estimated_cost: number | null;
+  duration_days: number | null;
+  duration_hours: number | null;
   // 关联的审批实例状态
   approval_status?: string;
 }
+
+const transportTypeLabels: Record<string, string> = {
+  plane: "飞机",
+  train: "火车/高铁",
+  car: "汽车/自驾",
+  other: "其他",
+};
 
 const statusLabels: Record<AbsenceStatus, string> = {
   pending: "待审批",
@@ -444,8 +458,16 @@ const BusinessTripManagement = () => {
                     {selectedRecord.contacts?.organization?.name || selectedRecord.contacts?.department || "-"}
                   </div>
                 </div>
+                {selectedRecord.destination && (
+                  <div className="col-span-2">
+                    <Label className="text-sm text-muted-foreground">出差目的地</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.destination}
+                    </div>
+                  </div>
+                )}
                 <div className="col-span-2">
-                  <Label className="text-sm text-muted-foreground">事由</Label>
+                  <Label className="text-sm text-muted-foreground">出差事由</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {selectedRecord.reason}
                   </div>
@@ -464,6 +486,30 @@ const BusinessTripManagement = () => {
                       : "-"}
                   </div>
                 </div>
+                {selectedRecord.duration_days && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">出差时长</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {selectedRecord.duration_days} 天
+                    </div>
+                  </div>
+                )}
+                {selectedRecord.transport_type && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">交通方式</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      {transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type}
+                    </div>
+                  </div>
+                )}
+                {selectedRecord.estimated_cost && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">预计费用</Label>
+                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                      ¥{selectedRecord.estimated_cost.toLocaleString()}
+                    </div>
+                  </div>
+                )}
                 {selectedRecord.notes && (
                   <div className="col-span-2">
                     <Label className="text-sm text-muted-foreground">备注</Label>
