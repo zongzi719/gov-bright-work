@@ -205,22 +205,22 @@ const WorkPanel = () => {
                 : "status-dot-done"
             }`}
           />
-          <div className="flex-1 min-w-0">
-            <h3
-              className={`text-sm font-medium leading-relaxed mb-1.5 ${
-                selectedId === item.id ? "text-primary" : "text-foreground"
-              }`}
-            >
-              {item.title}
-            </h3>
-            <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-              <span>• 系统：{system}</span>
-              <span>• 部门：{department}</span>
+            <div className="flex-1 min-w-0">
+              <h3
+                className={`text-base font-medium leading-relaxed mb-1.5 ${
+                  selectedId === item.id ? "text-primary" : "text-foreground"
+                }`}
+              >
+                {item.title}
+              </h3>
+              <div className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+                <span>• 系统：{system}</span>
+                <span>• 部门：{department}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-            </p>
-          </div>
         </div>
       </div>
     );
@@ -242,28 +242,28 @@ const WorkPanel = () => {
       >
         <div className="flex items-start gap-2">
           <div className="status-dot mt-1.5 status-dot-done" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3
-                className={`text-sm font-medium leading-relaxed mb-1.5 ${
-                  selectedId === item.id ? "text-primary" : "text-foreground"
-                }`}
-              >
-                {item.title}
-              </h3>
-              <span className={`text-xs px-1.5 py-0.5 rounded ${color}`}>{label}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3
+                  className={`text-base font-medium leading-relaxed mb-1.5 ${
+                    selectedId === item.id ? "text-primary" : "text-foreground"
+                  }`}
+                >
+                  {item.title}
+                </h3>
+                <span className={`text-sm px-2 py-0.5 rounded ${color}`}>{label}</span>
+              </div>
+              <div className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+                <span>• 系统：{system}</span>
+                <span>• 部门：{department}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                • 处理时间：
+                {item.processed_at
+                  ? format(new Date(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
+                  : format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+              </p>
             </div>
-            <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-              <span>• 系统：{system}</span>
-              <span>• 部门：{department}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              • 处理时间：
-              {item.processed_at
-                ? format(new Date(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
-                : format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-            </p>
-          </div>
         </div>
       </div>
     );
@@ -285,31 +285,31 @@ const WorkPanel = () => {
       >
         <div className="flex items-start gap-2">
           <div className={`status-dot mt-1.5 ${isRead ? "status-dot-done" : "status-dot-normal"}`} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3
-                className={`text-sm font-medium leading-relaxed mb-1.5 ${
-                  selectedId === item.id ? "text-primary" : "text-foreground"
-                }`}
-              >
-                {item.title.replace(/^\[抄送\]\s*/, "")}
-              </h3>
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded ${
-                  isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                }`}
-              >
-                {isRead ? "已阅" : "未阅"}
-              </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3
+                  className={`text-base font-medium leading-relaxed mb-1.5 ${
+                    selectedId === item.id ? "text-primary" : "text-foreground"
+                  }`}
+                >
+                  {item.title.replace(/^\[抄送\]\s*/, "")}
+                </h3>
+                <span
+                  className={`text-sm px-2 py-0.5 rounded ${
+                    isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                  }`}
+                >
+                  {isRead ? "已阅" : "未阅"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+                <span>• 系统：{system}</span>
+                <span>• 部门：{department}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+              </p>
             </div>
-            <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-              <span>• 系统：{system}</span>
-              <span>• 部门：{department}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-            </p>
-          </div>
         </div>
       </div>
     );
@@ -323,36 +323,36 @@ const WorkPanel = () => {
       <div className="gov-card h-full flex flex-col">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* 标题栏 + Tab切换 */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
             <TabsList className="bg-transparent gap-1 p-0 h-auto">
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2.5 py-1 text-xs"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
               >
                 待办事项
                 {pendingCount > 0 && (
-                  <span className="ml-1 gov-badge text-[10px] px-1">{pendingCount}</span>
+                  <span className="ml-1.5 gov-badge text-xs px-1.5">{pendingCount}</span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2.5 py-1 text-xs"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
               >
                 已办理
               </TabsTrigger>
               <TabsTrigger
                 value="cc"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2.5 py-1 text-xs"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
               >
                 抄送
                 {ccUnreadCount > 0 && (
-                  <span className="ml-1 gov-badge text-[10px] px-1">{ccUnreadCount}</span>
+                  <span className="ml-1.5 gov-badge text-xs px-1.5">{ccUnreadCount}</span>
                 )}
               </TabsTrigger>
             </TabsList>
-            <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
+            <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
               更多
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 

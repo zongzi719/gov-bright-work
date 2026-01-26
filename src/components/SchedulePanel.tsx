@@ -273,10 +273,10 @@ const SchedulePanel = () => {
   return (
     <div className="gov-card min-h-[420px] flex flex-col">
       {/* 标题栏 */}
-      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between flex-shrink-0">
-        <h2 className="gov-card-title text-sm">日程管理</h2>
-        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-7 w-7 p-0">
-          <Plus className="w-4 h-4" />
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
+        <h2 className="gov-card-title text-base">日程管理</h2>
+        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-8 w-8 p-0">
+          <Plus className="w-5 h-5" />
         </Button>
       </div>
 
@@ -284,17 +284,17 @@ const SchedulePanel = () => {
         {/* 日历头部 */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">
+            <span className="font-bold text-foreground text-base">
               {format(currentWeekStart, "yyyy年M月", { locale: zhCN })}
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
-              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            <button className="p-1.5 hover:bg-muted rounded" onClick={handlePrevWeek}>
+              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
             </button>
-            <span className="text-sm text-muted-foreground px-2">近两周</span>
-            <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <span className="text-base text-muted-foreground px-2">近两周</span>
+            <button className="p-1.5 hover:bg-muted rounded" onClick={handleNextWeek}>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
         </div>
@@ -305,7 +305,7 @@ const SchedulePanel = () => {
             {weekLabels.map((label) => (
               <div 
                 key={label} 
-                className="text-center text-xs text-muted-foreground py-1"
+                className="text-center text-sm text-muted-foreground py-1"
               >
                 {label}
               </div>
@@ -347,25 +347,25 @@ const SchedulePanel = () => {
 
         {/* 选中日期的标题 */}
         <div className="mt-3 mb-2 flex-shrink-0 border-t border-border pt-3">
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-sm font-medium text-foreground">
             {format(selectedDate, "M月d日 EEEE", { locale: zhCN })} 日程
           </span>
         </div>
 
         {/* 选中日期的日程列表 */}
-        <div className="flex-1 overflow-hidden space-y-1.5 min-h-[100px]">
+        <div className="flex-1 overflow-hidden space-y-2 min-h-[100px]">
           {loading ? (
-            <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
+            <div className="text-base text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
-            <div className="text-sm text-muted-foreground text-center py-4">该日暂无日程</div>
+            <div className="text-base text-muted-foreground text-center py-4">该日暂无日程</div>
           ) : (
             selectedDateSchedules.map((item) => (
               <div 
                 key={item.id} 
                 onClick={() => openEditDialog(item)}
-                className="flex items-start gap-3 text-sm group hover:bg-muted/50 rounded-md p-1.5 -mx-1.5 transition-colors cursor-pointer"
+                className="flex items-start gap-3 text-base group hover:bg-muted/50 rounded-md p-2 -mx-2 transition-colors cursor-pointer"
               >
-                <span className="text-primary font-medium w-12 flex-shrink-0">
+                <span className="text-primary font-medium w-14 flex-shrink-0">
                   {item.start_time.slice(0, 5)}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -373,7 +373,7 @@ const SchedulePanel = () => {
                     {item.title}
                   </div>
                   {item.location && (
-                    <div className="text-muted-foreground text-xs mt-0.5 truncate">
+                    <div className="text-muted-foreground text-sm mt-0.5 truncate">
                       {item.location}
                     </div>
                   )}

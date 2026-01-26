@@ -70,7 +70,7 @@ const Header = () => {
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <span className="text-white text-lg font-bold">政</span>
             </div>
-            <h1 className="text-lg font-bold text-white tracking-wide">
+            <h1 className="text-xl font-bold text-white tracking-wide">
               一体化政务工作平台
             </h1>
           </div>
@@ -78,7 +78,7 @@ const Header = () => {
           {/* 右侧：日期、用户信息、退出 */}
           <div className="flex items-center gap-4">
             {/* 日期显示 */}
-            <span className="text-white/90 text-sm hidden md:block">
+            <span className="text-white/90 text-base hidden md:block">
               {dateString}
             </span>
 
@@ -102,8 +102,8 @@ const Header = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block text-left">
-                    <p className="text-white font-medium text-sm leading-tight">{user?.name || "用户"}</p>
-                    <p className="text-white/70 text-xs">
+                    <p className="text-white font-medium text-base leading-tight">{user?.name || "用户"}</p>
+                    <p className="text-white/70 text-sm">
                       {user?.department || user?.organization || "未设置部门"}
                       {user?.position && ` · ${user.position}`}
                     </p>
