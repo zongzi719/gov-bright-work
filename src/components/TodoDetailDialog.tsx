@@ -216,6 +216,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       }
       
       console.log("CC item marked as read successfully");
+      // 通知父组件刷新列表
+      onApprovalComplete?.();
     } catch (error) {
       console.error("Failed to mark CC as read:", error);
     }
