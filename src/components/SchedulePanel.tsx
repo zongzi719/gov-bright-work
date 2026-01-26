@@ -73,7 +73,10 @@ const SchedulePanel = () => {
   });
 
   const today = new Date();
-  const weekDays = Array.from({ length: 14 }, (_, i) => addDays(currentWeekStart, i));
+  // 显示当周7天
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  // 星期标签
+  const weekLabels = ["一", "二", "三", "四", "五", "六", "日"];
 
   // 获取日程 - 只获取当前登录用户的日程
   const fetchSchedules = async () => {
@@ -84,7 +87,7 @@ const SchedulePanel = () => {
     }
     
     setLoading(true);
-    const weekEnd = addDays(currentWeekStart, 13);
+    const weekEnd = addDays(currentWeekStart, 6);
     const { data, error } = await supabase
       .from("schedules")
       .select("*, contact:contacts(id, name, department)")
@@ -133,9 +136,9 @@ const SchedulePanel = () => {
     setSelectedDate(date);
   };
 
-  // 周导航
-  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 2));
-  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 2));
+  // 周导航（改为一周）
+  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
+  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
 
   // 重置表单
   const resetForm = () => {
@@ -268,7 +271,7 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card h-[420px] flex flex-col">
+    <div className="gov-card h-[420px] flex flex-col overflow-hidden">
       {/* 标题栏 */}
       <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title">日程管理</h2>
@@ -289,15 +292,24 @@ const SchedulePanel = () => {
             <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
-            <span className="text-sm text-muted-foreground px-2">近两周</span>
+            <span className="text-sm text-muted-foreground px-2">本周</span>
             <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
 
+        {/* 星期标签 */}
+        <div className="grid grid-cols-7 gap-1 mt-4 flex-shrink-0">
+          {weekLabels.map((label) => (
+            <div key={label} className="text-center text-xs text-muted-foreground">
+              {label}
+            </div>
+          ))}
+        </div>
+
         {/* 日历网格 */}
-        <div className="grid grid-cols-7 gap-1 mt-5 flex-shrink-0">
+        <div className="grid grid-cols-7 gap-1 mt-1 flex-shrink-0">
           {weekDays.map((day) => (
             <div
               key={format(day, "yyyy-MM-dd")}
@@ -313,8 +325,8 @@ const SchedulePanel = () => {
           ))}
         </div>
 
-        {/* 选中日期的日程 - 固定高度可滚动 */}
-        <div className="mt-5 flex-1 overflow-y-auto space-y-2.5 min-h-0">
+        {/* 选中日期的日程 - 固定高度仅上下滚动 */}
+        <div className="mt-5 flex-1 overflow-y-auto overflow-x-hidden space-y-2.5 min-h-0">
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
