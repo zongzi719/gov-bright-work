@@ -898,6 +898,51 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_request_items: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          quantity: number
+          request_id: string
+          supply_id: string
+          unit_price: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          quantity: number
+          request_id: string
+          supply_id: string
+          unit_price?: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          quantity?: number
+          request_id?: string
+          supply_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_request_items_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "office_supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_requests: {
         Row: {
           approved_at: string | null
@@ -906,11 +951,11 @@ export type Database = {
           created_at: string
           id: string
           purchase_date: string
-          quantity: number
+          quantity: number | null
           reason: string | null
           requested_by: string
           status: Database["public"]["Enums"]["purchase_status"]
-          supply_id: string
+          supply_id: string | null
           total_amount: number | null
           unit_price: number | null
           updated_at: string
@@ -922,11 +967,11 @@ export type Database = {
           created_at?: string
           id?: string
           purchase_date?: string
-          quantity: number
+          quantity?: number | null
           reason?: string | null
           requested_by: string
           status?: Database["public"]["Enums"]["purchase_status"]
-          supply_id: string
+          supply_id?: string | null
           total_amount?: number | null
           unit_price?: number | null
           updated_at?: string
@@ -938,11 +983,11 @@ export type Database = {
           created_at?: string
           id?: string
           purchase_date?: string
-          quantity?: number
+          quantity?: number | null
           reason?: string | null
           requested_by?: string
           status?: Database["public"]["Enums"]["purchase_status"]
-          supply_id?: string
+          supply_id?: string | null
           total_amount?: number | null
           unit_price?: number | null
           updated_at?: string
