@@ -14,11 +14,9 @@ const Index = () => {
       <Header />
 
       {/* 主体内容区域 */}
-      <main className="p-4 flex flex-col gap-4">
+      <main className="px-4 pb-4 flex flex-col gap-4">
         {/* 轮播图Banner */}
-        <div className="flex-shrink-0">
-          <BannerCarousel />
-        </div>
+        <BannerCarousel />
 
         {/* 三栏布局 - 3:4:3 比例 */}
         <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
