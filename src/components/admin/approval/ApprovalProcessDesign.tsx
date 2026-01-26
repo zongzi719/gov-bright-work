@@ -256,12 +256,28 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     initializeData();
   }, [templateId]);
 
+  // 规范化节点以进行比较（只保留关键字段，忽略时间戳等非关键字段）
+  const normalizeNodesForComparison = useCallback((nodeList: ApprovalNode[]): string => {
+    const normalized = nodeList.map(node => ({
+      id: node.id,
+      node_type: node.node_type,
+      node_name: node.node_name,
+      approver_type: node.approver_type,
+      approver_ids: node.approver_ids,
+      sort_order: node.sort_order,
+      condition_expression: node.condition_expression,
+      field_permissions: node.field_permissions,
+      approval_mode: node.approval_mode,
+    }));
+    return JSON.stringify(normalized);
+  }, []);
+
   // 检测节点变化
   useEffect(() => {
     // 跳过首次加载
     if (isFirstLoad) return;
     
-    const currentSnapshot = JSON.stringify(nodes);
+    const currentSnapshot = normalizeNodesForComparison(nodes);
     
     // 情况1：从未发布过任何版本 - 只要有节点就认为有变化（需要首次发布）
     if (versions.length === 0) {
@@ -275,7 +291,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     } else if (lastSavedSnapshot && currentSnapshot === lastSavedSnapshot) {
       setHasChanges(false);
     }
-  }, [nodes, lastSavedSnapshot, isFirstLoad, versions.length]);
+  }, [nodes, lastSavedSnapshot, isFirstLoad, versions.length, normalizeNodesForComparison]);
   
   // 判断是否为未发布状态：没有发布过任何版本，或者有修改
   const isUnpublishedState = versions.length === 0 || hasChanges;
@@ -297,8 +313,9 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       const currentVersion = versionList.find(v => v.is_current);
       if (currentVersion) {
         setSelectedVersion(currentVersion);
-        // 如果有当前版本，以其快照为基准
-        setLastSavedSnapshot(JSON.stringify(currentVersion.nodes_snapshot));
+        // 如果有当前版本，以其快照为基准（使用规范化比较）
+        const snapshotNodes = currentVersion.nodes_snapshot as ApprovalNode[];
+        setLastSavedSnapshot(normalizeNodesForComparison(snapshotNodes));
       } else {
         // 没有当前版本，清空快照
         setLastSavedSnapshot("");
@@ -357,8 +374,8 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
     toast.success(`已发布版本 V${newVersionNumber}`);
     
-    // 先更新快照，确保 hasChanges 变为 false
-    const currentSnapshot = JSON.stringify(nodes);
+    // 先更新快照，确保 hasChanges 变为 false（使用规范化比较）
+    const currentSnapshot = normalizeNodesForComparison(nodes);
     setLastSavedSnapshot(currentSnapshot);
     setHasChanges(false);
     
