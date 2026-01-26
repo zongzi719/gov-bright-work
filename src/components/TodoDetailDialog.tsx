@@ -905,7 +905,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       name: string;
       approverNames: string;
       approvalMode?: string;
-      status: "completed" | "current" | "pending" | "rejected";
+      status: "completed" | "current" | "pending" | "rejected" | "end_completed" | "end_rejected";
       initiator?: { name: string; department: string | null };
       resubmitTime?: string;
       timestamp: number;
@@ -1174,14 +1174,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     // 按时间戳排序
     timelineItems.sort((a, b) => a.timestamp - b.timestamp);
     
-    // 计算结束节点状态
-    const recordItems = timelineItems.filter(item => item.type === "record" || item.type === "node");
-    const allNodesApproved = recordItems.every(item => item.status === "completed");
-    const hasRejectedNode = recordItems.some(item => item.status === "rejected");
-    const hasPendingNode = recordItems.some(item => item.status === "current" || item.status === "pending");
+    // 计算结束节点状态 - 优先使用审批实例的最终状态
+    const instanceApproved = instance?.status === "approved";
+    const instanceRejected = instance?.status === "rejected";
     
-    const endStatus: "completed" | "pending" = 
-      allNodesApproved && !hasPendingNode ? "completed" : "pending";
+    const endStatus: "completed" | "rejected" | "pending" = 
+      instanceApproved ? "completed" : 
+      instanceRejected ? "rejected" : 
+      "pending";
     
     // 添加结束节点
     timelineItems.push({

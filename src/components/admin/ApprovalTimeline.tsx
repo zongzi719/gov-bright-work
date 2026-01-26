@@ -825,21 +825,15 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
           );
         })}
 
-        {/* 结束节点 - 只有流程真正完成时才高亮 */}
+        {/* 结束节点 - 根据审批实例状态显示 */}
         {(() => {
-          // 计算是否所有必要节点都已完成（只检查 record 类型和当前/等待节点）
-          const recordItems = timelineData.filter(item => item.type === "record" || item.type === "node");
-          const allNodesApproved = recordItems.every(item => 
-            item.nodeStatus === "approved"
-          );
-          const hasRejectedNode = recordItems.some(item => item.nodeStatus === "rejected");
-          const hasPendingNode = recordItems.some(item => 
-            item.nodeStatus === "pending" || item.nodeStatus === "waiting"
-          );
+          // 优先使用审批实例的最终状态来判断
+          const instanceApproved = instance?.status === "approved";
+          const instanceRejected = instance?.status === "rejected";
           
           // 计算结束节点的实际状态
-          const endStatus = allNodesApproved && !hasPendingNode ? "approved" : 
-                           (hasRejectedNode && !hasPendingNode) ? "rejected" : 
+          const endStatus = instanceApproved ? "approved" : 
+                           instanceRejected ? "rejected" : 
                            "pending";
           
           return (
