@@ -1135,11 +1135,11 @@ export type Database = {
           approved_by: string | null
           created_at: string
           id: string
-          quantity: number
+          quantity: number | null
           requisition_by: string
           requisition_date: string
           status: Database["public"]["Enums"]["requisition_status"]
-          supply_id: string
+          supply_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1147,11 +1147,11 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: string
-          quantity: number
+          quantity?: number | null
           requisition_by: string
           requisition_date?: string
           status?: Database["public"]["Enums"]["requisition_status"]
-          supply_id: string
+          supply_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1159,11 +1159,11 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: string
-          quantity?: number
+          quantity?: number | null
           requisition_by?: string
           requisition_date?: string
           status?: Database["public"]["Enums"]["requisition_status"]
-          supply_id?: string
+          supply_id?: string | null
           updated_at?: string
         }
         Relationships: [
