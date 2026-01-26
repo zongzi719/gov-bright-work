@@ -323,6 +323,10 @@ const LeaderScheduleManagement = () => {
                   </div>
                 )}
               </div>
+              <Button size="sm" onClick={openAddDialog}>
+                <Plus className="w-4 h-4 mr-1" />
+                新增日程
+              </Button>
             </div>
 
             {/* 列表视图的搜索和筛选 */}
