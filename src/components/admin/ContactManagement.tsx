@@ -75,6 +75,8 @@ const statusColors: Record<ContactStatus, 'default' | 'secondary' | 'destructive
   meeting: 'secondary',
 };
 
+type SecurityLevel = '机密' | '秘密' | '一般';
+
 interface Contact {
   id: string;
   organization_id: string;
@@ -89,6 +91,9 @@ interface Contact {
   is_active: boolean;
   status: ContactStatus;
   status_note: string | null;
+  security_level: SecurityLevel;
+  is_leader: boolean;
+  first_work_date: string | null;
   organization?: Organization;
 }
 
@@ -131,6 +136,9 @@ const ContactManagement = () => {
     is_active: true,
     status: "on_duty" as ContactStatus,
     status_note: "",
+    security_level: "一般" as SecurityLevel,
+    is_leader: false,
+    first_work_date: "",
   });
 
   // 导入对话框
@@ -169,7 +177,7 @@ const ContactManagement = () => {
       toast.error("获取联系人列表失败");
       return;
     }
-    setContacts(data || []);
+    setContacts((data || []) as Contact[]);
   };
 
   // 单位管理
@@ -274,6 +282,9 @@ const ContactManagement = () => {
       is_active: contactFormData.is_active,
       status: contactFormData.status,
       status_note: contactFormData.status_note || null,
+      security_level: contactFormData.security_level,
+      is_leader: contactFormData.is_leader,
+      first_work_date: contactFormData.first_work_date || null,
     };
 
     if (editingContact) {
@@ -316,6 +327,9 @@ const ContactManagement = () => {
       is_active: contact.is_active,
       status: contact.status || "on_duty",
       status_note: contact.status_note || "",
+      security_level: contact.security_level || "一般",
+      is_leader: contact.is_leader || false,
+      first_work_date: contact.first_work_date || "",
     });
     setContactDialogOpen(true);
   };
@@ -348,6 +362,9 @@ const ContactManagement = () => {
       is_active: true,
       status: "on_duty",
       status_note: "",
+      security_level: "一般",
+      is_leader: false,
+      first_work_date: "",
     });
     setContactDialogOpen(false);
   };
@@ -695,6 +712,51 @@ const ContactManagement = () => {
                             placeholder="如：请假至1月25日、出差北京等"
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label>密级</Label>
+                          <Select
+                            value={contactFormData.security_level}
+                            onValueChange={(value: SecurityLevel) =>
+                              setContactFormData({ ...contactFormData, security_level: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择密级" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="机密">机密</SelectItem>
+                              <SelectItem value="秘密">秘密</SelectItem>
+                              <SelectItem value="一般">一般</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>是否领导</Label>
+                          <Select
+                            value={contactFormData.is_leader ? "是" : "否"}
+                            onValueChange={(value) =>
+                              setContactFormData({ ...contactFormData, is_leader: value === "是" })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择是否领导" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="是">是</SelectItem>
+                              <SelectItem value="否">否</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>首次参加工作时间</Label>
+                          <Input
+                            type="date"
+                            value={contactFormData.first_work_date}
+                            onChange={(e) =>
+                              setContactFormData({ ...contactFormData, first_work_date: e.target.value })
+                            }
+                          />
+                        </div>
                         <div className="flex items-center gap-2 pt-6">
                           <Switch
                             checked={contactFormData.is_active}
@@ -943,6 +1005,8 @@ const ContactTable = ({
             <TableHead>部门</TableHead>
             <TableHead>办公电话</TableHead>
             <TableHead>手机</TableHead>
+            <TableHead>密级</TableHead>
+            <TableHead>领导</TableHead>
             <TableHead>状态</TableHead>
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
@@ -973,6 +1037,18 @@ const ContactTable = ({
                     <Phone className="w-3 h-3 text-muted-foreground" />
                     {contact.mobile}
                   </div>
+                )}
+              </TableCell>
+              <TableCell>
+                <Badge variant={contact.security_level === '机密' ? 'destructive' : contact.security_level === '秘密' ? 'secondary' : 'outline'}>
+                  {contact.security_level || '一般'}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {contact.is_leader ? (
+                  <Badge variant="default">是</Badge>
+                ) : (
+                  <span className="text-muted-foreground">否</span>
                 )}
               </TableCell>
               <TableCell>

@@ -33,6 +33,8 @@ import { toast } from "sonner";
 import { useState } from "react";
 import TablePagination from "./TablePagination";
 
+type SecurityLevel = '机密' | '秘密' | '一般';
+
 interface Notice {
   id: string;
   title: string;
@@ -40,6 +42,7 @@ interface Notice {
   content: string | null;
   is_pinned: boolean;
   is_published: boolean;
+  security_level: SecurityLevel;
   created_at: string;
 }
 
@@ -61,6 +64,7 @@ const NoticeManagement = () => {
     content: "",
     is_pinned: false,
     is_published: true,
+    security_level: "一般" as SecurityLevel,
   });
 
   useEffect(() => {
@@ -93,7 +97,7 @@ const NoticeManagement = () => {
       return;
     }
 
-    setNotices(data || []);
+    setNotices((data || []) as Notice[]);
   };
 
   const fetchOrganizations = async () => {
@@ -147,6 +151,7 @@ const NoticeManagement = () => {
       content: notice.content || "",
       is_pinned: notice.is_pinned,
       is_published: notice.is_published,
+      security_level: notice.security_level || "一般",
     });
     setDialogOpen(true);
   };
@@ -173,6 +178,7 @@ const NoticeManagement = () => {
       content: "",
       is_pinned: false,
       is_published: true,
+      security_level: "一般",
     });
   };
 
@@ -248,6 +254,22 @@ const NoticeManagement = () => {
                   rows={4}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="security_level">密级</Label>
+                <Select
+                  value={formData.security_level}
+                  onValueChange={(value: SecurityLevel) => setFormData({ ...formData, security_level: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择密级" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="机密">机密</SelectItem>
+                    <SelectItem value="秘密">秘密</SelectItem>
+                    <SelectItem value="一般">一般</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Switch
@@ -310,6 +332,7 @@ const NoticeTable = ({
             <TableHead>标题</TableHead>
             <TableHead className="w-28">发布单位</TableHead>
             <TableHead className="w-24">发布日期</TableHead>
+            <TableHead className="w-16">密级</TableHead>
             <TableHead className="w-14">置顶</TableHead>
             <TableHead className="w-16">状态</TableHead>
             <TableHead className="w-20">操作</TableHead>
@@ -321,6 +344,15 @@ const NoticeTable = ({
               <TableCell className="font-medium">{notice.title}</TableCell>
               <TableCell>{notice.department}</TableCell>
               <TableCell>{new Date(notice.created_at).toLocaleDateString()}</TableCell>
+              <TableCell className="whitespace-nowrap">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                  notice.security_level === '机密' ? 'bg-red-100 text-red-700' : 
+                  notice.security_level === '秘密' ? 'bg-orange-100 text-orange-700' : 
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {notice.security_level || '一般'}
+                </span>
+              </TableCell>
               <TableCell className="whitespace-nowrap">
                 {notice.is_pinned && (
                   <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">置顶</span>

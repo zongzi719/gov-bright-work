@@ -508,8 +508,10 @@ export type Database = {
           created_at: string
           department: string | null
           email: string | null
+          first_work_date: string | null
           id: string
           is_active: boolean
+          is_leader: boolean
           mobile: string | null
           name: string
           office_location: string | null
@@ -517,6 +519,7 @@ export type Database = {
           password_hash: string
           phone: string | null
           position: string | null
+          security_level: string
           sort_order: number
           status: Database["public"]["Enums"]["contact_status"]
           status_note: string | null
@@ -526,8 +529,10 @@ export type Database = {
           created_at?: string
           department?: string | null
           email?: string | null
+          first_work_date?: string | null
           id?: string
           is_active?: boolean
+          is_leader?: boolean
           mobile?: string | null
           name: string
           office_location?: string | null
@@ -535,6 +540,7 @@ export type Database = {
           password_hash?: string
           phone?: string | null
           position?: string | null
+          security_level?: string
           sort_order?: number
           status?: Database["public"]["Enums"]["contact_status"]
           status_note?: string | null
@@ -544,8 +550,10 @@ export type Database = {
           created_at?: string
           department?: string | null
           email?: string | null
+          first_work_date?: string | null
           id?: string
           is_active?: boolean
+          is_leader?: boolean
           mobile?: string | null
           name?: string
           office_location?: string | null
@@ -553,6 +561,7 @@ export type Database = {
           password_hash?: string
           phone?: string | null
           position?: string | null
+          security_level?: string
           sort_order?: number
           status?: Database["public"]["Enums"]["contact_status"]
           status_note?: string | null
@@ -711,6 +720,7 @@ export type Database = {
           id: string
           is_pinned: boolean
           is_published: boolean
+          security_level: string
           title: string
           updated_at: string
         }
@@ -721,6 +731,7 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           is_published?: boolean
+          security_level?: string
           title: string
           updated_at?: string
         }
@@ -731,6 +742,7 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           is_published?: boolean
+          security_level?: string
           title?: string
           updated_at?: string
         }
