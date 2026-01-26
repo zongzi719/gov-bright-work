@@ -642,7 +642,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     try {
       // 获取当前节点名称（从扁平化的节点列表中根据current_node_index获取）
       const formData = { ...businessData, ...instance?.form_data };
-      const flatNodes = flattenNodesForDisplay(nodesSnapshot, formData);
+      // 传递 initiator_id 以确保条件评估与推进逻辑一致
+      const flatNodes = flattenNodesForDisplay(nodesSnapshot, formData, instance.initiator_id);
       const currentNodeIndex = instance.current_node_index;
       const currentNode = flatNodes[currentNodeIndex];
       const currentNodeName = currentNode?.node_name || "";

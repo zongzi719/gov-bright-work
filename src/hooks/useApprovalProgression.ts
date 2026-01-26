@@ -75,8 +75,14 @@ export const useApprovalProgression = () => {
   /**
    * 扁平化节点列表（根据条件表达式过滤分支）
    */
-  const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, any>): ApprovalNode[] => {
+  const flattenNodesForExecution = (nodes: ApprovalNode[], formData: Record<string, any>, initiatorId?: string): ApprovalNode[] => {
     const result: ApprovalNode[] = [];
+    
+    // 将 initiator_id 注入到 formData 中用于条件评估（与 TodoDetailDialog 保持一致）
+    const enrichedFormData = {
+      ...formData,
+      contact_id: initiatorId || formData.contact_id,
+    };
     
     // 按 sort_order 排序
     const sortedNodes = [...nodes].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -103,8 +109,8 @@ export const useApprovalProgression = () => {
           const branch = nodeMap.get(branchId);
           if (!branch) continue;
           
-          // 检查分支条件是否满足
-          if (evaluateCondition(branch.condition_expression, formData)) {
+          // 检查分支条件是否满足（使用 enrichedFormData）
+          if (evaluateCondition(branch.condition_expression, enrichedFormData)) {
             // 添加分支的子节点
             const childNodeIds = branch.condition_expression?.child_nodes || [];
             for (const childId of childNodeIds) {
@@ -260,7 +266,8 @@ export const useApprovalProgression = () => {
     currentNodeName: string
   ): Promise<{ success: boolean; completed?: boolean; error?: string }> => {
     try {
-      const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
+      // 使用 initiatorId 进行扁平化以确保条件评估一致
+      const flatNodes = flattenNodesForExecution(nodesSnapshot, formData, initiatorId);
       
       console.log("Flat nodes for progression:", flatNodes.map(n => n.node_name));
       
