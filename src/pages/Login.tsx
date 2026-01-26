@@ -64,6 +64,7 @@ const Login = () => {
         position: userData.contact_position,
         department: userData.contact_department,
         organization: userData.organization_name,
+        security_level: userData.contact_security_level || "一般",
       };
       localStorage.setItem("frontendUser", JSON.stringify(userInfo));
 
