@@ -139,7 +139,7 @@ const OutManagement = () => {
       .from("absence_records")
       .select(`
         *,
-        contacts (
+        contacts:contacts!absence_records_contact_id_fkey (
           id,
           name,
           department,
