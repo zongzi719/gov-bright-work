@@ -120,7 +120,7 @@ const Header = () => {
                 variant="ghost" 
                 size="icon" 
                 className="text-white hover:bg-white/10 w-8 h-8"
-                onClick={() => window.open("/", "_self")}
+                onClick={() => navigate("/")}
                 title="返回工作台"
               >
                 <Home className="w-4 h-4" />
