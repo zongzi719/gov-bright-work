@@ -3,6 +3,7 @@ import { ArrowLeft, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import DocumentDetail from "@/components/h5/DocumentDetail";
 
 // 模拟数据
 const mockCategories = [
@@ -79,10 +80,13 @@ const mockDocuments = [
   },
 ];
 
+type DocumentType = typeof mockDocuments[0];
+
 const H5OfficialDocument = () => {
   const [activeTab, setActiveTab] = useState<"pending" | "completed">("pending");
   const [activeCategory, setActiveCategory] = useState("send");
   const [searchText, setSearchText] = useState("");
+  const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null);
 
   const filteredDocuments = mockDocuments.filter((doc) => {
     const matchCategory = doc.category === activeCategory;
@@ -98,6 +102,24 @@ const H5OfficialDocument = () => {
   const handleBack = () => {
     window.close();
   };
+
+  const handleDocumentClick = (doc: DocumentType) => {
+    setSelectedDocument(doc);
+  };
+
+  const handleBackFromDetail = () => {
+    setSelectedDocument(null);
+  };
+
+  // 如果选中了文档，显示详情页
+  if (selectedDocument) {
+    return (
+      <DocumentDetail 
+        document={selectedDocument} 
+        onBack={handleBackFromDetail} 
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#8B7355] flex flex-col">
@@ -194,7 +216,8 @@ const H5OfficialDocument = () => {
               filteredDocuments.map((doc) => (
                 <div
                   key={doc.id}
-                  className="bg-background rounded-lg p-3 shadow-sm"
+                  className="bg-background rounded-lg p-3 shadow-sm cursor-pointer active:bg-muted/50 transition-colors"
+                  onClick={() => handleDocumentClick(doc)}
                 >
                   {/* 流程标签 */}
                   <div className="mb-2">
