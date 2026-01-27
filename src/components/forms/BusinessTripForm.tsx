@@ -232,14 +232,14 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-lg max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
         {/* 固定顶部标题 */}
-        <DialogHeader className="px-6 py-4 border-b bg-background sticky top-0 z-10 shrink-0">
+        <DialogHeader className="px-6 py-4 border-b bg-background">
           <DialogTitle>出差申请</DialogTitle>
         </DialogHeader>
         
         {/* 可滚动内容区域 */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="overflow-y-auto px-6 py-4 space-y-4">
           {/* 申请人 */}
           <div className="space-y-2">
             <Label>申请人</Label>
@@ -488,7 +488,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
         </div>
 
         {/* 固定底部操作按钮 */}
-        <div className="px-6 py-4 border-t bg-background sticky bottom-0 z-10 shrink-0 flex justify-end gap-2">
+        <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             取消
           </Button>
