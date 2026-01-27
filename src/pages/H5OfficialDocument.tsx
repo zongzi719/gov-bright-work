@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import DocumentDetail from "@/components/h5/DocumentDetail";
+import ProcessDocumentDetail from "@/components/h5/ProcessDocumentDetail";
 
 // 模拟数据
 const mockCategories = [
@@ -111,8 +112,18 @@ const H5OfficialDocument = () => {
     setSelectedDocument(null);
   };
 
-  // 如果选中了文档，显示详情页
+  // 如果选中了文档，根据分类显示不同详情页
   if (selectedDocument) {
+    // 公文办理使用不同的详情页
+    if (selectedDocument.category === "process") {
+      return (
+        <ProcessDocumentDetail 
+          document={selectedDocument} 
+          onBack={handleBackFromDetail} 
+        />
+      );
+    }
+    // 发文审签使用原有详情页
     return (
       <DocumentDetail 
         document={selectedDocument} 
