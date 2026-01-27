@@ -48,35 +48,35 @@ const mockDocuments = [
   {
     id: "4",
     category: "process",
-    flowName: "收文办理流程",
-    flowColor: "bg-blue-500",
-    title: "关于开展年度检查的通知",
-    submitter: "李明",
-    submitTime: "2025-11-15 09:30:00",
-    currentNode: "部门领导审批",
-    status: "待办",
+    flowName: "",
+    flowColor: "",
+    title: "关于推进各类改革试点协同配合的通知",
+    submitter: "张玉",
+    submitTime: "2025-09-04 12:31:54",
+    currentNode: "",
+    status: "未批阅",
   },
   {
     id: "5",
     category: "process",
-    flowName: "收文办理流程",
-    flowColor: "bg-blue-500",
-    title: "关于调整工作安排的函",
-    submitter: "王芳",
-    submitTime: "2025-11-14 14:20:00",
-    currentNode: "办公室主任",
-    status: "在办",
+    flowName: "",
+    flowColor: "",
+    title: "测试发送附附附附",
+    submitter: "张玉",
+    submitTime: "2025-09-04 12:27:08",
+    currentNode: "",
+    status: "未批阅",
   },
   {
     id: "6",
     category: "process",
-    flowName: "紧急收文流程",
-    flowColor: "bg-red-500",
-    title: "关于紧急会议安排的通知",
-    submitter: "赵刚",
-    submitTime: "2025-11-16 08:00:00",
-    currentNode: "主要领导",
-    status: "待办",
+    flowName: "",
+    flowColor: "",
+    title: "无人陪审员司法案VS行政复暂行条例.ofd",
+    submitter: "张玉",
+    submitTime: "2025-08-27 16:34:29",
+    currentNode: "",
+    status: "未批阅",
   },
 ];
 
@@ -91,8 +91,8 @@ const H5OfficialDocument = () => {
   const filteredDocuments = mockDocuments.filter((doc) => {
     const matchCategory = doc.category === activeCategory;
     const matchTab = activeTab === "pending" 
-      ? doc.status === "待办" || doc.status === "在办"
-      : doc.status === "已办";
+      ? doc.status === "待办" || doc.status === "在办" || doc.status === "未批阅"
+      : doc.status === "已办" || doc.status === "已批阅";
     const matchSearch = searchText === "" || 
       doc.title.includes(searchText) || 
       doc.submitter.includes(searchText);
@@ -219,40 +219,63 @@ const H5OfficialDocument = () => {
                   className="bg-background rounded-lg p-3 shadow-sm cursor-pointer active:bg-muted/50 transition-colors"
                   onClick={() => handleDocumentClick(doc)}
                 >
-                  {/* 流程标签 */}
-                  <div className="mb-2">
-                    <span className={cn(
-                      "inline-block px-2 py-0.5 text-[12px] text-white rounded",
-                      doc.flowColor
-                    )}>
-                      {doc.flowName}
-                    </span>
-                  </div>
+                  {/* 发文审签 - 显示流程标签和详细信息 */}
+                  {activeCategory === "send" ? (
+                    <>
+                      {/* 流程标签 */}
+                      <div className="mb-2">
+                        <span className={cn(
+                          "inline-block px-2 py-0.5 text-[12px] text-white rounded",
+                          doc.flowColor
+                        )}>
+                          {doc.flowName}
+                        </span>
+                      </div>
 
-                  {/* 标题 */}
-                  <h3 className="font-medium text-foreground mb-2 text-[14px] leading-tight line-clamp-2">
-                    {doc.title}
-                  </h3>
+                      {/* 标题 */}
+                      <h3 className="font-medium text-foreground mb-2 text-[14px] leading-tight line-clamp-2">
+                        {doc.title}
+                      </h3>
 
-                  {/* 信息 - 垂直排列 */}
-                  <div className="text-[12px] text-muted-foreground space-y-0.5">
-                    <div className="flex">
-                      <span className="w-16 shrink-0">提交人：</span>
-                      <span className="truncate">{doc.submitter}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="w-16 shrink-0">提交时间：</span>
-                      <span>{doc.submitTime}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="w-16 shrink-0">当前节点：</span>
-                      <span>{doc.currentNode}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="w-16 shrink-0">状态：</span>
-                      <span>{doc.status}</span>
-                    </div>
-                  </div>
+                      {/* 信息 - 垂直排列 */}
+                      <div className="text-[12px] text-muted-foreground space-y-0.5">
+                        <div className="flex">
+                          <span className="w-16 shrink-0">提交人：</span>
+                          <span className="truncate">{doc.submitter}</span>
+                        </div>
+                        <div className="flex">
+                          <span className="w-16 shrink-0">提交时间：</span>
+                          <span>{doc.submitTime}</span>
+                        </div>
+                        <div className="flex">
+                          <span className="w-16 shrink-0">当前节点：</span>
+                          <span>{doc.currentNode}</span>
+                        </div>
+                        <div className="flex">
+                          <span className="w-16 shrink-0">状态：</span>
+                          <span>{doc.status}</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* 公文办理 - 简洁样式 */
+                    <>
+                      {/* 标题 */}
+                      <h3 className="font-medium text-foreground text-[14px] leading-tight line-clamp-2 mb-1">
+                        {doc.title}
+                      </h3>
+                      
+                      {/* 提交时间 - 右对齐 */}
+                      <div className="text-[12px] text-muted-foreground text-right">
+                        提交时间：{doc.submitTime}
+                      </div>
+                      
+                      {/* 状态 - 右对齐 */}
+                      <div className="text-[12px] text-muted-foreground text-right mt-1">
+                        状态：{doc.status}
+                      </div>
+                    </>
+                  )}
                 </div>
               ))
             )}
