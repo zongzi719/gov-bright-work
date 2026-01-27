@@ -1,27 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { usePagination } from "@/hooks/use-pagination";
-import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Upload, Image } from "lucide-react";
+import { Upload, Image } from "lucide-react";
 import { toast } from "sonner";
 
 interface Banner {
@@ -33,100 +15,79 @@ interface Banner {
 }
 
 const BannerManagement = () => {
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [banner, setBanner] = useState<Banner | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     image_url: "",
-    title: "",
-    sort_order: 0,
-    is_active: true,
+    title: "导航栏背景",
   });
 
   useEffect(() => {
-    fetchBanners();
+    fetchBanner();
   }, []);
 
-  const fetchBanners = async () => {
+  const fetchBanner = async () => {
     const { data, error } = await supabase
       .from("banners")
       .select("*")
-      .order("sort_order");
+      .order("sort_order")
+      .limit(1)
+      .single();
 
-    if (error) {
-      toast.error("获取轮播图失败");
-      return;
+    if (!error && data) {
+      setBanner(data);
+      setFormData({
+        image_url: data.image_url,
+        title: data.title || "导航栏背景",
+      });
     }
-
-    setBanners(data || []);
     setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (editingBanner) {
-      const { error } = await supabase
-        .from("banners")
-        .update(formData)
-        .eq("id", editingBanner.id);
-
-      if (error) {
-        toast.error("更新失败");
-        return;
-      }
-      toast.success("更新成功");
-    } else {
-      const { error } = await supabase.from("banners").insert(formData);
-
-      if (error) {
-        toast.error("添加失败");
-        return;
-      }
-      toast.success("添加成功");
-    }
-
-    setDialogOpen(false);
-    resetForm();
-    fetchBanners();
-  };
-
-  const handleEdit = (banner: Banner) => {
-    setEditingBanner(banner);
-    setFormData({
-      image_url: banner.image_url,
-      title: banner.title,
-      sort_order: banner.sort_order,
-      is_active: banner.is_active,
-    });
-    setDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("确定要删除这张轮播图吗？")) return;
-
-    const { error } = await supabase.from("banners").delete().eq("id", id);
-
-    if (error) {
-      toast.error("删除失败");
+    
+    if (!formData.image_url) {
+      toast.error("请上传背景图片");
       return;
     }
 
-    toast.success("删除成功");
-    fetchBanners();
-  };
+    setSaving(true);
+    try {
+      if (banner) {
+        // 更新现有记录
+        const { error } = await supabase
+          .from("banners")
+          .update({
+            image_url: formData.image_url,
+            title: formData.title,
+            is_active: true,
+          })
+          .eq("id", banner.id);
 
-  const resetForm = () => {
-    setEditingBanner(null);
-    setFormData({
-      image_url: "",
-      title: "",
-      sort_order: 0,
-      is_active: true,
-    });
+        if (error) throw error;
+        toast.success("背景更新成功");
+      } else {
+        // 创建新记录
+        const { error } = await supabase.from("banners").insert({
+          image_url: formData.image_url,
+          title: formData.title,
+          sort_order: 1,
+          is_active: true,
+        });
+
+        if (error) throw error;
+        toast.success("背景设置成功");
+      }
+      fetchBanner();
+    } catch (error: any) {
+      toast.error("保存失败: " + error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,7 +109,7 @@ const BannerManagement = () => {
     setUploading(true);
     try {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `header-bg-${Date.now()}.${fileExt}`;
       const filePath = `banners/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -177,191 +138,111 @@ const BannerManagement = () => {
     }
   };
 
+  const handleClear = async () => {
+    if (!banner) return;
+    
+    if (!confirm("确定要清除导航栏背景图吗？")) return;
+
+    const { error } = await supabase.from("banners").delete().eq("id", banner.id);
+
+    if (error) {
+      toast.error("清除失败");
+      return;
+    }
+
+    toast.success("已清除背景图");
+    setBanner(null);
+    setFormData({ image_url: "", title: "导航栏背景" });
+  };
+
   return (
     <div className="gov-card">
-      <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-        <h2 className="gov-card-title">轮播图管理</h2>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5">
-              <Plus className="w-4 h-4" />
-              添加轮播图
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingBanner ? "编辑轮播图" : "添加轮播图"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>上传图片</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    {uploading ? "上传中..." : "选择图片"}
-                  </Button>
-                  {formData.image_url && (
-                    <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                      已上传
-                    </span>
-                  )}
-                </div>
-                {formData.image_url && (
-                  <div className="mt-2 relative w-full h-32 bg-muted rounded-lg overflow-hidden">
-                    <img
-                      src={formData.image_url}
-                      alt="预览"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="image_url">或输入图片地址</Label>
-                <Input
-                  id="image_url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="请输入图片URL"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="title">标题</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="请输入轮播图标题"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sort_order">排序（数字越小越靠前）</Label>
-                <Input
-                  id="sort_order"
-                  type="number"
-                  value={formData.sort_order}
-                  onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
-                <Label htmlFor="is_active">启用</Label>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  取消
-                </Button>
-                <Button type="submit">保存</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <div className="px-5 py-4 border-b border-border">
+        <h2 className="gov-card-title">导航栏背景管理</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          设置顶部导航栏的背景图片（只允许上传一张）
+        </p>
       </div>
 
       <div className="p-5">
         {loading ? (
           <div className="text-center text-muted-foreground py-8">加载中...</div>
-        ) : banners.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">暂无轮播图</div>
         ) : (
-          <BannerTable banners={banners} onEdit={handleEdit} onDelete={handleDelete} />
+          <form onSubmit={handleSubmit} className="space-y-6 max-w-xl">
+            {/* 当前背景预览 */}
+            <div className="space-y-2">
+              <Label>当前背景</Label>
+              {formData.image_url ? (
+                <div className="relative w-full h-24 bg-muted rounded-lg overflow-hidden border">
+                  <img
+                    src={formData.image_url}
+                    alt="导航栏背景预览"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary/60 flex items-center px-4">
+                    <span className="text-white font-bold text-lg">一体化政务工作平台</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-24 bg-header-gradient rounded-lg flex items-center px-4 border">
+                  <span className="text-white font-bold text-lg">一体化政务工作平台（默认渐变背景）</span>
+                </div>
+              )}
+            </div>
+
+            {/* 上传新背景 */}
+            <div className="space-y-2">
+              <Label>上传背景图</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  {uploading ? "上传中..." : "选择图片"}
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  建议尺寸：1920×48 像素，支持 JPG/PNG，最大 5MB
+                </span>
+              </div>
+            </div>
+
+            {/* 或输入URL */}
+            <div className="space-y-2">
+              <Label htmlFor="image_url">或输入图片地址</Label>
+              <Input
+                id="image_url"
+                value={formData.image_url}
+                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                placeholder="请输入图片URL"
+              />
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex items-center gap-3 pt-2">
+              <Button type="submit" disabled={saving || !formData.image_url}>
+                {saving ? "保存中..." : "保存设置"}
+              </Button>
+              {banner && (
+                <Button type="button" variant="outline" onClick={handleClear}>
+                  清除背景图
+                </Button>
+              )}
+            </div>
+          </form>
         )}
       </div>
     </div>
-  );
-};
-
-// 抽取表格组件以支持分页
-const BannerTable = ({ 
-  banners, 
-  onEdit, 
-  onDelete 
-}: { 
-  banners: Banner[]; 
-  onEdit: (banner: Banner) => void; 
-  onDelete: (id: string) => void; 
-}) => {
-  const pagination = usePagination(banners);
-
-  return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-20">预览</TableHead>
-            <TableHead>标题</TableHead>
-            <TableHead className="w-20">排序</TableHead>
-            <TableHead className="w-20">状态</TableHead>
-            <TableHead className="w-24">操作</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {pagination.paginatedData.map((banner) => (
-            <TableRow key={banner.id}>
-              <TableCell>
-                <img
-                  src={banner.image_url}
-                  alt={banner.title}
-                  className="w-16 h-10 object-cover rounded"
-                />
-              </TableCell>
-              <TableCell className="font-medium">{banner.title}</TableCell>
-              <TableCell>{banner.sort_order}</TableCell>
-              <TableCell>
-                <span className={`text-xs px-2 py-1 rounded ${banner.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                  {banner.is_active ? "启用" : "禁用"}
-                </span>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(banner)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(banner.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <TablePagination
-        currentPage={pagination.currentPage}
-        totalPages={pagination.totalPages}
-        pageSize={pagination.pageSize}
-        totalItems={pagination.totalItems}
-        startIndex={pagination.startIndex}
-        endIndex={pagination.endIndex}
-        canGoNext={pagination.canGoNext}
-        canGoPrevious={pagination.canGoPrevious}
-        onPageChange={pagination.setCurrentPage}
-        onPageSizeChange={pagination.setPageSize}
-        goToNextPage={pagination.goToNextPage}
-        goToPreviousPage={pagination.goToPreviousPage}
-      />
-    </>
   );
 };
 

@@ -1,5 +1,4 @@
 import Header from "@/components/Header";
-import BannerCarousel from "@/components/BannerCarousel";
 import WorkPanel from "@/components/WorkPanel";
 import NoticeList from "@/components/NoticeList";
 import QuickLinks from "@/components/QuickLinks";
@@ -14,9 +13,7 @@ const Index = () => {
       <Header />
 
       {/* 主体内容区域 */}
-      <main className="pb-3 flex flex-col gap-3">
-        {/* 轮播图Banner - 全屏宽度 */}
-        <BannerCarousel />
+      <main className="pb-3 pt-3 flex flex-col gap-3">
 
         {/* 三栏布局 - 3:4:3 比例 */}
         <div className="px-3 grid grid-cols-1 lg:grid-cols-10 gap-3">
