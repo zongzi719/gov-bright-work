@@ -112,14 +112,14 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId }: PasswordChangeDial
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
+        <DialogHeader className="px-6 py-4 border-b bg-background">
           <DialogTitle>修改密码</DialogTitle>
           <DialogDescription>
             请输入原密码和新密码
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="oldPassword">原密码</Label>
             <div className="relative">
@@ -183,15 +183,16 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId }: PasswordChangeDial
               </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
-              取消
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "保存中..." : "确认修改"}
-            </Button>
-          </DialogFooter>
         </form>
+        {/* 固定底部操作按钮 */}
+        <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+            取消
+          </Button>
+          <Button type="submit" form="password-form" disabled={loading} onClick={handleSubmit as any}>
+            {loading ? "保存中..." : "确认修改"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

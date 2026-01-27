@@ -389,14 +389,14 @@ const SchedulePanel = () => {
 
       {/* 新增/编辑日程对话框 */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
+          <DialogHeader className="px-6 py-4 border-b bg-background">
             <DialogTitle>{editingSchedule ? "编辑日程" : "新增日程"}</DialogTitle>
             <DialogDescription>
               {editingSchedule ? "修改日程信息" : "添加新的日程安排"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="overflow-y-auto px-6 py-4 space-y-4">
             <div className="space-y-2">
               <Label>人员</Label>
               <Input
@@ -458,14 +458,15 @@ const SchedulePanel = () => {
                 rows={2}
               />
             </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={closeDialog}>
-                取消
-              </Button>
-              <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? (editingSchedule ? "保存中..." : "添加中...") : (editingSchedule ? "保存" : "添加")}
-              </Button>
-            </div>
+          </div>
+          {/* 固定底部操作按钮 */}
+          <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
+            <Button variant="outline" onClick={closeDialog}>
+              取消
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? (editingSchedule ? "保存中..." : "添加中...") : (editingSchedule ? "保存" : "添加")}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

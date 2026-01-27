@@ -146,11 +146,11 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
+        <DialogHeader className="px-6 py-4 border-b bg-background">
           <DialogTitle>外出申请</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="overflow-y-auto px-6 py-4 space-y-4">
           {/* 申请人 */}
           <div className="space-y-2">
             <Label>申请人</Label>
@@ -320,16 +320,15 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
               placeholder="其他需要说明的事项"
             />
           </div>
-
-          {/* 操作按钮 */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              取消
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "提交中..." : "提交申请"}
-            </Button>
-          </div>
+        </div>
+        {/* 固定底部操作按钮 */}
+        <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            取消
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "提交中..." : "提交申请"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
