@@ -1,9 +1,8 @@
 import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, ShoppingCart, BookUser } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const QuickLinks = () => {
-  const openInNewWindow = (path: string) => {
-    window.open(path, "_blank");
-  };
+  const navigate = useNavigate();
 
   const modules = [
     {
@@ -11,49 +10,49 @@ const QuickLinks = () => {
       name: "出差申请",
       color: "bg-primary",
       icon: Briefcase,
-      onClick: () => openInNewWindow("/businesstrip"),
+      path: "/businesstrip",
     },
     {
       id: 2,
       name: "请假申请",
       color: "bg-orange-500",
       icon: CalendarOff,
-      onClick: () => openInNewWindow("/leave"),
+      path: "/leave",
     },
     {
       id: 3,
       name: "外出申请",
       color: "bg-purple-500",
       icon: LogOutIcon,
-      onClick: () => openInNewWindow("/out"),
+      path: "/out",
     },
     {
       id: 4,
       name: "领用申请",
       color: "bg-emerald-500",
       icon: Package,
-      onClick: () => openInNewWindow("/requisition"),
+      path: "/requisition",
     },
     {
       id: 5,
       name: "采购申请",
       color: "bg-blue-500",
       icon: ShoppingCart,
-      onClick: () => openInNewWindow("/purchase"),
+      path: "/purchase",
     },
     {
       id: 6,
       name: "通讯录",
       color: "bg-cyan-500",
       icon: BookUser,
-      onClick: () => openInNewWindow("/contacts"),
+      path: "/contacts",
     },
     {
       id: 7,
       name: "领导日程",
       color: "bg-amber-500",
       icon: Star,
-      onClick: () => openInNewWindow("/leader-schedule"),
+      path: "/leader-schedule",
     },
   ];
 
@@ -71,7 +70,7 @@ const QuickLinks = () => {
             <div
               key={module.id}
               className="app-icon cursor-pointer group"
-              onClick={module.onClick}
+              onClick={() => navigate(module.path)}
             >
               <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-11 h-11`}>
                 <module.icon className="w-5 h-5" />
