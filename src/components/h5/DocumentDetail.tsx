@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import DocumentContentViewer from "./DocumentContentViewer";
 
 interface DocumentDetailProps {
   document: {
@@ -83,9 +84,8 @@ const DocumentDetail = ({ document, onBack }: DocumentDetailProps) => {
           <ApprovalSlip document={document} />
         )}
         {activeTab === "content" && (
-          <div className="bg-background rounded-lg p-4">
-            <h3 className="text-center text-lg font-medium mb-4">正文内容</h3>
-            <p className="text-muted-foreground text-center">暂无正文内容</p>
+          <div className="bg-background rounded-lg overflow-hidden h-[calc(100vh-120px)]">
+            <DocumentContentViewer />
           </div>
         )}
         {activeTab === "history" && (
