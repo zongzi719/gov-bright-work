@@ -1368,6 +1368,13 @@ export type Database = {
             Returns: boolean
           }
         | { Args: { _role: string; _user_id: string }; Returns: boolean }
+      sync_contact_status: {
+        Args: never
+        Returns: {
+          details: Json
+          updated_count: number
+        }[]
+      }
       verify_contact_login: {
         Args: { p_mobile: string; p_password: string }
         Returns: {
