@@ -89,11 +89,43 @@ const DocumentDetail = ({ document, onBack }: DocumentDetailProps) => {
           </div>
         )}
         {activeTab === "history" && (
-          <div className="bg-background rounded-lg p-4">
-            <h3 className="text-center text-lg font-medium mb-4">流转记录</h3>
-            <p className="text-muted-foreground text-center">暂无流转记录</p>
-          </div>
+          <CirculationHistory />
         )}
+      </div>
+    </div>
+  );
+};
+
+// 流转记录组件
+const CirculationHistory = () => {
+  const records = [
+    { from: "张三（办公室）", fromTime: "2025-01-15 09:30", to: "李四（综合科）", toTime: "2025-01-15 10:15" },
+    { from: "李四（综合科）", fromTime: "2025-01-15 10:15", to: "王五（财务部）", toTime: "2025-01-15 11:00" },
+    { from: "王五（财务部）", fromTime: "2025-01-15 11:00", to: "赵六（法规科）", toTime: "2025-01-15 14:30" },
+    { from: "赵六（法规科）", fromTime: "2025-01-15 14:30", to: "陈树龙（办公室主任）", toTime: "2025-01-15 16:00" },
+    { from: "陈树龙（办公室主任）", fromTime: "2025-01-15 16:00", to: "刘主任（分管领导）", toTime: "2025-01-16 09:00" },
+    { from: "刘主任（分管领导）", fromTime: "2025-01-16 09:00", to: "周局长（签发）", toTime: "2025-01-16 10:30" },
+  ];
+
+  return (
+    <div className="bg-background rounded-lg p-4">
+      <h3 className="text-center text-base font-medium mb-4">流转记录</h3>
+      <div className="space-y-3">
+        {records.map((record, index) => (
+          <div key={index} className="border-l-2 border-primary/30 pl-3 py-1">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium text-foreground">{record.from}</span>
+              <span className="text-muted-foreground text-xs">{record.fromTime}</span>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground my-1">
+              <span>↓</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium text-foreground">{record.to}</span>
+              <span className="text-muted-foreground text-xs">{record.toTime}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
