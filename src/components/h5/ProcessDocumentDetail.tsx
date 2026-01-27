@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ArrowLeft, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import DocumentContentViewer from "./DocumentContentViewer";
 
 interface ProcessDocumentDetailProps {
   document: {
@@ -75,7 +74,7 @@ const ProcessDocumentDetail = ({ document, onBack }: ProcessDocumentDetailProps)
         )}
         {activeTab === "content" && (
           <div className="bg-background rounded-lg overflow-hidden h-[calc(100vh-120px)]">
-            <DocumentContentViewer />
+            <ProcessContentViewer title={document.title} />
           </div>
         )}
         {activeTab === "history" && (
@@ -205,14 +204,70 @@ const SubmissionSlip = ({ document }: { document: ProcessDocumentDetailProps["do
   );
 };
 
+// 公文办理正文查看器
+const ProcessContentViewer = ({ title }: { title: string }) => {
+  return (
+    <div className="h-full overflow-y-auto p-4">
+      {/* 文件头部 */}
+      <div className="text-center mb-6">
+        <h1 className="text-red-600 text-xl font-bold mb-2">
+          中共昌吉回族自治州委员会办公室
+        </h1>
+        <div className="text-lg font-medium text-foreground">
+          {title}
+        </div>
+        <div className="text-sm text-muted-foreground mt-2">
+          昌州办发〔2025〕16号
+        </div>
+      </div>
+
+      {/* 正文内容 */}
+      <div className="text-sm leading-relaxed space-y-4 text-foreground">
+        <p className="font-medium">各县市党委、人民政府，州直各部门、各人民团体：</p>
+        
+        <p className="text-indent-2">
+          根据《中华人民共和国行政复议法》及相关法律法规的规定，为进一步规范行政复议工作程序，
+          提高行政复议工作质量和效率，现将有关事项通知如下：
+        </p>
+
+        <p className="font-medium mt-4">一、总体要求</p>
+        <p className="text-indent-2">
+          坚持以习近平新时代中国特色社会主义思想为指导，全面贯彻党的二十大精神，
+          深入推进法治政府建设，不断完善行政复议体制机制。
+        </p>
+
+        <p className="font-medium mt-4">二、工作任务</p>
+        <p className="text-indent-2">
+          （一）加强行政复议案件办理规范化建设。严格按照法定程序受理、审理行政复议案件，
+          确保每一起案件都经得起法律和历史的检验。
+        </p>
+        <p className="text-indent-2">
+          （二）健全行政复议与行政诉讼衔接机制。加强与人民法院的沟通协调，
+          推动行政争议实质性化解。
+        </p>
+
+        <p className="font-medium mt-4">三、保障措施</p>
+        <p className="text-indent-2">
+          各地各部门要高度重视，切实加强组织领导，确保各项工作落到实处。
+        </p>
+
+        <div className="mt-8 text-right">
+          <p>中共昌吉回族自治州委员会办公室</p>
+          <p>2025年8月27日</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // 流转记录组件
 const CirculationHistory = () => {
   const records = [
-    { from: "张三（办公室）", fromTime: "2025-01-15 09:30", to: "李四（综合科）", toTime: "2025-01-15 10:15" },
-    { from: "李四（综合科）", fromTime: "2025-01-15 10:15", to: "王五（财务部）", toTime: "2025-01-15 11:00" },
-    { from: "王五（财务部）", fromTime: "2025-01-15 11:00", to: "赵六（法规科）", toTime: "2025-01-15 14:30" },
-    { from: "赵六（法规科）", fromTime: "2025-01-15 14:30", to: "陈树龙（办公室主任）", toTime: "2025-01-15 16:00" },
-    { from: "陈树龙（办公室主任）", fromTime: "2025-01-15 16:00", to: "刘主任（分管领导）", toTime: "2025-01-16 09:00" },
+    { from: "收发室（王小红）", fromTime: "2025-08-27 09:00", to: "办公室（李秘书）", toTime: "2025-08-27 09:30" },
+    { from: "办公室（李秘书）", fromTime: "2025-08-27 09:30", to: "副秘书长（周明）", toTime: "2025-08-27 10:15" },
+    { from: "副秘书长（周明）", fromTime: "2025-08-27 10:15", to: "分管领导（黄清辉）", toTime: "2025-08-27 14:00" },
+    { from: "分管领导（黄清辉）", fromTime: "2025-08-27 14:00", to: "主要领导（陈树龙）", toTime: "2025-08-27 16:30" },
+    { from: "主要领导（陈树龙）", fromTime: "2025-08-27 16:30", to: "办公室（归档）", toTime: "2025-08-28 09:00" },
   ];
 
   return (
