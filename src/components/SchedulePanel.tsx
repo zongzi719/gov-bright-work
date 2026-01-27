@@ -73,8 +73,8 @@ const SchedulePanel = () => {
   });
 
   const today = new Date();
-  // 显示近两周14天
-  const weekDays = Array.from({ length: 14 }, (_, i) => addDays(currentWeekStart, i));
+  // 显示近一周7天
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   // 星期标签
   const weekLabels = ["一", "二", "三", "四", "五", "六", "日"];
 
@@ -87,13 +87,13 @@ const SchedulePanel = () => {
     }
     
     setLoading(true);
-    const twoWeeksEnd = addDays(currentWeekStart, 13);
+    const oneWeekEnd = addDays(currentWeekStart, 6);
     const { data, error } = await supabase
       .from("schedules")
       .select("*, contact:contacts(id, name, department)")
       .eq("contact_id", currentUser.id)
       .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(twoWeeksEnd, "yyyy-MM-dd"))
+      .lte("schedule_date", format(oneWeekEnd, "yyyy-MM-dd"))
       .order("schedule_date")
       .order("start_time");
 
@@ -136,9 +136,9 @@ const SchedulePanel = () => {
     setSelectedDate(date);
   };
 
-  // 周导航（两周）
-  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 2));
-  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 2));
+  // 周导航（一周）
+  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
+  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
 
   // 重置表单
   const resetForm = () => {
@@ -292,7 +292,7 @@ const SchedulePanel = () => {
             <button className="p-1.5 hover:bg-muted rounded" onClick={handlePrevWeek}>
               <ChevronLeft className="w-5 h-5 text-muted-foreground" />
             </button>
-            <span className="text-base text-muted-foreground px-2">近两周</span>
+            <span className="text-base text-muted-foreground px-2">近一周</span>
             <button className="p-1.5 hover:bg-muted rounded" onClick={handleNextWeek}>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -311,25 +311,9 @@ const SchedulePanel = () => {
               </div>
             ))}
           </div>
-          {/* 第一周 */}
+          {/* 一周日期 */}
           <div className="grid grid-cols-7 gap-1">
-            {weekDays.slice(0, 7).map((day) => (
-              <div
-                key={format(day, "yyyy-MM-dd")}
-                onClick={() => handleDateClick(day)}
-                className={`calendar-day cursor-pointer transition-all ${
-                  isSelected(day) ? "ring-2 ring-primary ring-offset-1" : ""
-                } ${isToday(day) ? "calendar-day-today" : ""} ${
-                  hasSchedule(day) && !isToday(day) && !isSelected(day) ? "calendar-day-event" : ""
-                }`}
-              >
-                {format(day, "d")}
-              </div>
-            ))}
-          </div>
-          {/* 第二周 */}
-          <div className="grid grid-cols-7 gap-1 mt-1">
-            {weekDays.slice(7, 14).map((day) => (
+            {weekDays.map((day) => (
               <div
                 key={format(day, "yyyy-MM-dd")}
                 onClick={() => handleDateClick(day)}
