@@ -1,7 +1,7 @@
 import { LogOut, Bell, Key, Home } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useFrontendAuth } from "@/hooks/useFrontendAuth";
 import { useState, useEffect } from "react";
@@ -17,6 +17,7 @@ import {
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading, logout } = useFrontendAuth();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [todoCount, setTodoCount] = useState(0);
@@ -82,16 +83,18 @@ const Header = () => {
               {dateString}
             </span>
 
-            {/* 返回工作台 */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-white hover:bg-white/10 w-8 h-8"
-              onClick={() => window.open("/", "_self")}
-              title="返回工作台"
-            >
-              <Home className="w-4 h-4" />
-            </Button>
+            {/* 返回工作台 - 仅在非首页显示 */}
+            {location.pathname !== "/" && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-white hover:bg-white/10 w-8 h-8"
+                onClick={() => window.open("/", "_self")}
+                title="返回工作台"
+              >
+                <Home className="w-4 h-4" />
+              </Button>
+            )}
 
             {/* 消息通知 */}
             <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 w-8 h-8">
