@@ -10,11 +10,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, differenceInHours, differenceInDays } from "date-fns";
+import { format, differenceInCalendarDays, isBefore, startOfDay } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Contact {
   id: string;
@@ -35,14 +36,18 @@ const transportTypes = [
   { value: "other", label: "其他" },
 ];
 
+type TimeOfDay = "am" | "pm";
+
 const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormProps) => {
   const { startApproval } = useApprovalWorkflow();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [form, setForm] = useState({
     reason: "",
     destination: "",
-    start_time: undefined as Date | undefined,
-    end_time: undefined as Date | undefined,
+    start_date: undefined as Date | undefined,
+    start_time_of_day: "am" as TimeOfDay,
+    end_date: undefined as Date | undefined,
+    end_time_of_day: "pm" as TimeOfDay,
     transport_type: "",
     companions: [] as string[],
     estimated_cost: "",
@@ -65,18 +70,63 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
     if (data) setContacts(data);
   };
 
+  // 计算半天数
   const calculateDuration = () => {
-    if (!form.start_time || !form.end_time) return null;
-    const hours = differenceInHours(form.end_time, form.start_time);
-    const days = differenceInDays(form.end_time, form.start_time);
-    return { hours, days: days > 0 ? days : (hours > 0 ? 1 : 0) };
+    if (!form.start_date || !form.end_date) return null;
+    
+    const daysDiff = differenceInCalendarDays(form.end_date, form.start_date);
+    if (daysDiff < 0) return null;
+    
+    // 计算半天数
+    let halfDays = daysDiff * 2;
+    
+    // 开始时间是下午，减0.5天
+    if (form.start_time_of_day === "pm") {
+      halfDays -= 1;
+    }
+    // 结束时间是上午，减0.5天
+    if (form.end_time_of_day === "am") {
+      halfDays -= 1;
+    }
+    // 加1（包含当天）
+    halfDays += 2;
+    
+    // 最少半天
+    if (halfDays < 1) halfDays = 1;
+    
+    const days = halfDays / 2;
+    return { halfDays, days };
   };
 
   const duration = calculateDuration();
 
+  // 验证结束日期
+  const isEndDateValid = () => {
+    if (!form.start_date || !form.end_date) return true;
+    
+    // 如果结束日期在开始日期之前，无效
+    if (isBefore(startOfDay(form.end_date), startOfDay(form.start_date))) {
+      return false;
+    }
+    
+    // 如果同一天，检查上午/下午
+    if (differenceInCalendarDays(form.end_date, form.start_date) === 0) {
+      if (form.start_time_of_day === "pm" && form.end_time_of_day === "am") {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async () => {
-    if (!currentUser?.id || !form.reason || !form.destination || !form.start_time) {
+    if (!currentUser?.id || !form.reason || !form.destination || !form.start_date || !form.end_date) {
       toast.error("请填写必填项");
+      return;
+    }
+
+    if (!isEndDateValid()) {
+      toast.error("结束时间必须在开始时间之后");
       return;
     }
 
@@ -85,17 +135,27 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
     try {
       const durationData = calculateDuration();
       
+      // 构建实际的开始和结束时间
+      const startHour = form.start_time_of_day === "am" ? 9 : 14;
+      const endHour = form.end_time_of_day === "am" ? 12 : 18;
+      
+      const startTime = new Date(form.start_date);
+      startTime.setHours(startHour, 0, 0, 0);
+      
+      const endTime = new Date(form.end_date);
+      endTime.setHours(endHour, 0, 0, 0);
+      
       const { data: record, error } = await supabase.from("absence_records").insert({
         contact_id: currentUser.id,
         type: "business_trip",
         reason: form.reason,
         destination: form.destination,
-        start_time: form.start_time.toISOString(),
-        end_time: form.end_time?.toISOString() || null,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
         transport_type: form.transport_type || null,
         companions: form.companions.length > 0 ? form.companions : null,
         estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
-        duration_hours: durationData?.hours || null,
+        duration_hours: durationData ? durationData.halfDays * 4 : null,
         duration_days: durationData?.days || null,
         notes: form.notes || null,
         status: "pending",
@@ -116,8 +176,10 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
         formData: {
           reason: form.reason,
           destination: form.destination,
-          start_time: form.start_time.toISOString(),
-          end_time: form.end_time?.toISOString() || null,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          start_time_of_day: form.start_time_of_day,
+          end_time_of_day: form.end_time_of_day,
           transport_type: form.transport_type,
           companions: form.companions,
           estimated_cost: form.estimated_cost,
@@ -131,8 +193,10 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
         setForm({
           reason: "",
           destination: "",
-          start_time: undefined,
-          end_time: undefined,
+          start_date: undefined,
+          start_time_of_day: "am",
+          end_date: undefined,
+          end_time_of_day: "pm",
           transport_type: "",
           companions: [],
           estimated_cost: "",
@@ -160,13 +224,22 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
     return contacts.find(c => c.id === id)?.name || id;
   };
 
+  const formatDuration = (days: number) => {
+    if (days === 0.5) return "半天";
+    if (days % 1 === 0.5) return `${Math.floor(days)}天半`;
+    return `${days}天`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+        {/* 固定顶部标题 */}
+        <DialogHeader className="px-6 py-4 border-b bg-background sticky top-0 z-10 shrink-0">
           <DialogTitle>出差申请</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        
+        {/* 可滚动内容区域 */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* 申请人 */}
           <div className="space-y-2">
             <Label>申请人</Label>
@@ -194,71 +267,147 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
             />
           </div>
 
-          {/* 时间选择 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>开始时间 *</Label>
+          {/* 开始时间选择 */}
+          <div className="space-y-2">
+            <Label>开始时间 *</Label>
+            <div className="flex gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !form.start_time && "text-muted-foreground"
+                      "flex-1 justify-start text-left font-normal",
+                      !form.start_date && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.start_time
-                      ? format(form.start_time, "yyyy-MM-dd", { locale: zhCN })
+                    {form.start_date
+                      ? format(form.start_date, "yyyy-MM-dd", { locale: zhCN })
                       : "选择日期"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={form.start_time}
-                    onSelect={(date) => setForm({ ...form, start_time: date })}
+                    selected={form.start_date}
+                    onSelect={(date) => setForm({ ...form, start_date: date })}
                     locale={zhCN}
                     className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>结束时间 *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
+              <RadioGroup
+                value={form.start_time_of_day}
+                onValueChange={(v) => setForm({ ...form, start_time_of_day: v as TimeOfDay })}
+                className="flex gap-2"
+              >
+                <div className="flex items-center">
+                  <RadioGroupItem value="am" id="start-am" className="sr-only" />
+                  <Label
+                    htmlFor="start-am"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !form.end_time && "text-muted-foreground"
+                      "px-3 py-2 rounded-md border cursor-pointer transition-colors",
+                      form.start_time_of_day === "am"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-accent"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.end_time
-                      ? format(form.end_time, "yyyy-MM-dd", { locale: zhCN })
-                      : "选择日期"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={form.end_time}
-                    onSelect={(date) => setForm({ ...form, end_time: date })}
-                    locale={zhCN}
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+                    上午
+                  </Label>
+                </div>
+                <div className="flex items-center">
+                  <RadioGroupItem value="pm" id="start-pm" className="sr-only" />
+                  <Label
+                    htmlFor="start-pm"
+                    className={cn(
+                      "px-3 py-2 rounded-md border cursor-pointer transition-colors",
+                      form.start_time_of_day === "pm"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-accent"
+                    )}
+                  >
+                    下午
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
           </div>
 
+          {/* 结束时间选择 */}
+          <div className="space-y-2">
+            <Label>结束时间 *</Label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-1 justify-start text-left font-normal",
+                      !form.end_date && "text-muted-foreground",
+                      !isEndDateValid() && "border-destructive text-destructive"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.end_date
+                      ? format(form.end_date, "yyyy-MM-dd", { locale: zhCN })
+                      : "选择日期"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.end_date}
+                    onSelect={(date) => setForm({ ...form, end_date: date })}
+                    disabled={(date) => form.start_date ? isBefore(date, startOfDay(form.start_date)) : false}
+                    locale={zhCN}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              <RadioGroup
+                value={form.end_time_of_day}
+                onValueChange={(v) => setForm({ ...form, end_time_of_day: v as TimeOfDay })}
+                className="flex gap-2"
+              >
+                <div className="flex items-center">
+                  <RadioGroupItem value="am" id="end-am" className="sr-only" />
+                  <Label
+                    htmlFor="end-am"
+                    className={cn(
+                      "px-3 py-2 rounded-md border cursor-pointer transition-colors",
+                      form.end_time_of_day === "am"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-accent"
+                    )}
+                  >
+                    上午
+                  </Label>
+                </div>
+                <div className="flex items-center">
+                  <RadioGroupItem value="pm" id="end-pm" className="sr-only" />
+                  <Label
+                    htmlFor="end-pm"
+                    className={cn(
+                      "px-3 py-2 rounded-md border cursor-pointer transition-colors",
+                      form.end_time_of_day === "pm"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-accent"
+                    )}
+                  >
+                    下午
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+            {!isEndDateValid() && (
+              <p className="text-sm text-destructive">结束时间必须在开始时间之后</p>
+            )}
+          </div>
+
           {/* 时长显示 */}
-          {duration && (
+          {duration && isEndDateValid() && (
             <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
-              预计出差时长：<span className="font-medium text-foreground">{duration.days} 天</span>
+              预计出差时长：<span className="font-medium text-foreground">{formatDuration(duration.days)}</span>
             </div>
           )}
 
@@ -282,7 +431,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
           {/* 同行人员 */}
           <div className="space-y-2">
             <Label>同行人员</Label>
-            <Select onValueChange={handleAddCompanion}>
+            <Select onValueChange={handleAddCompanion} value="">
               <SelectTrigger>
                 <SelectValue placeholder="选择同行人员" />
               </SelectTrigger>
@@ -299,12 +448,16 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
             {form.companions.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {form.companions.map((id) => (
-                  <Badge key={id} variant="secondary" className="gap-1">
+                  <Badge key={id} variant="secondary" className="gap-1 pr-1">
                     {getContactName(id)}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
+                    <button
+                      type="button"
                       onClick={() => handleRemoveCompanion(id)}
-                    />
+                      className="ml-1 rounded-full p-0.5 hover:bg-destructive/20 transition-colors"
+                      aria-label={`移除 ${getContactName(id)}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </Badge>
                 ))}
               </div>
@@ -332,16 +485,16 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
               rows={2}
             />
           </div>
+        </div>
 
-          {/* 操作按钮 */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              取消
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "提交中..." : "提交申请"}
-            </Button>
-          </div>
+        {/* 固定底部操作按钮 */}
+        <div className="px-6 py-4 border-t bg-background sticky bottom-0 z-10 shrink-0 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            取消
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "提交中..." : "提交申请"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
