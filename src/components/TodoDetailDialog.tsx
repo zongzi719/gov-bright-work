@@ -1398,8 +1398,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] !grid !grid-rows-[auto_1fr] p-0 gap-0">
+        <DialogHeader className="px-6 py-4 border-b bg-background">
           <DialogTitle className="flex items-center gap-2">
             <span>{todoItem.title}</span>
             <Badge className={statusConfig[todoItem.status]?.color || ""}>
@@ -1409,11 +1409,11 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         </DialogHeader>
 
         {loading ? (
-          <div className="py-12 text-center text-muted-foreground">
+          <div className="py-12 text-center text-muted-foreground px-6">
             加载中...
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="overflow-y-auto px-6 py-4 space-y-6">
             {/* 表单区域 */}
             <div>
               <h3 className="text-sm font-medium mb-4">申请信息</h3>

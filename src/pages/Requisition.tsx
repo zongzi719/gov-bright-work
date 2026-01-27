@@ -312,11 +312,11 @@ const Requisition = () => {
 
       {/* 新增对话框 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
+          <DialogHeader className="px-6 py-4 border-b bg-background">
             <DialogTitle>新建领用申请</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="overflow-y-auto px-6 py-4 space-y-4">
             {/* 申请人 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -407,13 +407,13 @@ const Requisition = () => {
                 </Table>
               </div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>取消</Button>
-              <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? "提交中..." : "提交申请"}
-              </Button>
-            </div>
+          </div>
+          {/* 固定底部操作按钮 */}
+          <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>取消</Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? "提交中..." : "提交申请"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
