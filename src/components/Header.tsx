@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Header = () => {
+  const [headerBgUrl, setHeaderBgUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, logout } = useFrontendAuth();
@@ -25,6 +26,25 @@ const Header = () => {
   const today = new Date();
   const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
   const dateString = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 星期${weekDays[today.getDay()]}`;
+
+  // Fetch header background image
+  useEffect(() => {
+    const fetchHeaderBg = async () => {
+      const { data, error } = await supabase
+        .from("banners")
+        .select("image_url")
+        .eq("is_active", true)
+        .order("sort_order")
+        .limit(1)
+        .single();
+
+      if (!error && data?.image_url) {
+        setHeaderBgUrl(data.image_url);
+      }
+    };
+
+    fetchHeaderBg();
+  }, []);
 
   // Fetch pending todo count for current user
   useEffect(() => {
@@ -62,9 +82,20 @@ const Header = () => {
   // Get first character of name for avatar
   const avatarChar = user?.name?.charAt(0) || "用";
 
+  const headerStyle = headerBgUrl 
+    ? { 
+        backgroundImage: `linear-gradient(to right, rgba(var(--primary-rgb), 0.85), rgba(var(--primary-rgb), 0.7)), url(${headerBgUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      } 
+    : {};
+
   return (
     <>
-      <header className="bg-header-gradient shadow-header sticky top-0 z-50">
+      <header 
+        className="bg-header-gradient shadow-header sticky top-0 z-50"
+        style={headerStyle}
+      >
         <div className="max-w-[1920px] mx-auto px-4 h-12 flex items-center justify-between">
           {/* 左侧：平台名称 */}
           <div className="flex items-center gap-2">
