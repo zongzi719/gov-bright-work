@@ -28,9 +28,10 @@ interface NoticeImage {
 }
 
 const securityLevelRank: Record<string, number> = {
-  '一般': 1,
-  '秘密': 2,
-  '机密': 3,
+  '公开': 1,
+  '内部': 2,
+  '秘密': 3,
+  '机密': 4,
 };
 
 const NoticeList = () => {
@@ -128,8 +129,8 @@ const NoticeList = () => {
 
   return (
     <div className="gov-card h-full flex flex-col overflow-hidden">
-      {/* 标题栏 */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
+      {/* 标题栏 - 与日程管理保持一致的高度 */}
+      <div className="px-4 py-2 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">通知公告</h2>
         <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
           更多
@@ -137,8 +138,8 @@ const NoticeList = () => {
         </button>
       </div>
 
-      {/* 主内容区：左侧轮播图 + 右侧列表 */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      {/* 主内容区：左侧轮播图 + 右侧列表 - 增加顶部间距 */}
+      <div className="flex-1 flex overflow-hidden min-h-0 mt-1">
         {/* 左侧轮播图 */}
         {hasImages && (
           <div 
@@ -221,9 +222,10 @@ const NoticeList = () => {
                     <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${
                       notice.security_level === '机密' ? 'bg-red-100 text-red-700' : 
                       notice.security_level === '秘密' ? 'bg-orange-100 text-orange-700' : 
+                      notice.security_level === '内部' ? 'bg-blue-100 text-blue-700' :
                       'bg-gray-100 text-gray-500'
                     }`}>
-                      {notice.security_level || '一般'}
+                      {notice.security_level || '公开'}
                     </span>
                     {notice.is_pinned && (
                       <span className="flex-shrink-0 text-xs px-1 py-0 bg-red-100 text-red-700 rounded mt-0.5">
@@ -261,12 +263,14 @@ const NoticeList = () => {
               {selectedNotice?.is_pinned && (
                 <Badge variant="destructive" className="text-xs px-1.5 py-0">置顶</Badge>
               )}
-              <Badge 
-                variant={selectedNotice?.security_level === '机密' ? 'destructive' : selectedNotice?.security_level === '秘密' ? 'secondary' : 'outline'} 
-                className="text-xs px-1.5 py-0"
-              >
-                {selectedNotice?.security_level || '一般'}
-              </Badge>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                selectedNotice?.security_level === '机密' ? 'bg-red-100 text-red-700' : 
+                selectedNotice?.security_level === '秘密' ? 'bg-orange-100 text-orange-700' : 
+                selectedNotice?.security_level === '内部' ? 'bg-blue-100 text-blue-700' :
+                'bg-gray-100 text-gray-500'
+              }`}>
+                {selectedNotice?.security_level || '公开'}
+              </span>
             </div>
             <div className="border-t border-border pt-4">
               <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
