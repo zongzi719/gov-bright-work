@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, RefreshCw, Search, UserCheck } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Search, UserCheck, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -59,6 +59,8 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   const [contactUsers, setContactUsers] = useState<ContactUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredContacts, setFilteredContacts] = useState<ContactUser[]>([]);
 
@@ -211,12 +213,12 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
         if (error) throw error;
       }
 
-      toast.success("权限已添加");
+      toast.success(editMode ? "权限已更新" : "权限已添加");
       setDialogOpen(false);
       resetForm();
       fetchPermissions();
     } catch (error) {
-      toast.error("添加权限失败");
+      toast.error(editMode ? "更新权限失败" : "添加权限失败");
       console.error(error);
     }
   };
@@ -238,6 +240,21 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     fetchPermissions();
   };
 
+  const handleEditUser = (group: GroupedPermission) => {
+    setEditMode(true);
+    setEditingUserId(group.user_id);
+    setFormData({
+      contact_id: group.user_id,
+      selected_leader_ids: group.can_view_all ? [] : permissions
+        .filter(p => p.user_id === group.user_id && p.leader_id)
+        .map(p => p.leader_id!),
+      can_view_all: group.can_view_all,
+    });
+    setSelectedContactName(group.user_name);
+    setSearchTerm(group.user_name);
+    setDialogOpen(true);
+  };
+
   const resetForm = () => {
     setFormData({
       contact_id: "",
@@ -246,6 +263,8 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     });
     setSearchTerm("");
     setSelectedContactName("");
+    setEditMode(false);
+    setEditingUserId(null);
   };
 
   const toggleLeaderSelection = (leaderId: string) => {
@@ -287,41 +306,47 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>添加日程查看权限</DialogTitle>
+                <DialogTitle>{editMode ? "编辑日程查看权限" : "添加日程查看权限"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>用户 *</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="搜索用户名或邮箱..."
-                      className="pl-9"
-                    />
-                    {filteredContacts.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-auto z-50">
-                        {filteredContacts.map((contact) => (
-                          <button
-                            key={contact.id}
-                            className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2"
-                            onClick={() => selectContact(contact)}
-                          >
-                            <UserCheck className="w-4 h-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{contact.name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {contact.position || contact.department || contact.mobile || "-"}
+                  {editMode ? (
+                    <div className="p-2 bg-muted rounded-md text-sm font-medium">
+                      {selectedContactName}
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="搜索用户名或邮箱..."
+                        className="pl-9"
+                      />
+                      {filteredContacts.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-auto z-50">
+                          {filteredContacts.map((contact) => (
+                            <button
+                              key={contact.id}
+                              className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2"
+                              onClick={() => selectContact(contact)}
+                            >
+                              <UserCheck className="w-4 h-4 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{contact.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {contact.position || contact.department || contact.mobile || "-"}
+                                </div>
                               </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {formData.contact_id && (
-                    <p className="text-xs text-green-600">已选择: {selectedContactName}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!editMode && formData.contact_id && (
+                    <p className="text-xs text-primary">已选择: {selectedContactName}</p>
                   )}
                 </div>
 
@@ -331,7 +356,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                     onCheckedChange={(checked) => setFormData({ ...formData, can_view_all: checked, selected_leader_ids: [] })}
                     id="can_view_all"
                   />
-                  <Label>允许查看所有领导日程</Label>
+                  <Label htmlFor="can_view_all">允许查看所有领导日程</Label>
                 </div>
 
                 {!formData.can_view_all && (
@@ -358,7 +383,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                       </div>
                     </ScrollArea>
                     {formData.selected_leader_ids.length > 0 && (
-                      <p className="text-xs text-green-600">
+                      <p className="text-xs text-primary">
                         已选择 {formData.selected_leader_ids.length} 位领导
                       </p>
                     )}
@@ -367,7 +392,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-                  <Button onClick={handleSubmit}>添加</Button>
+                  <Button onClick={handleSubmit}>{editMode ? "保存" : "添加"}</Button>
                 </div>
               </div>
             </DialogContent>
@@ -415,14 +440,24 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                   )}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteUser(group.user_id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditUser(group)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteUser(group.user_id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
