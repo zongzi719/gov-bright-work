@@ -19,6 +19,8 @@ import LeaderSchedule from "./pages/LeaderSchedule";
 import H5OfficialDocument from "./pages/H5OfficialDocument";
 import H5Login from "./pages/H5Login";
 import TodoList from "./pages/TodoList";
+import AbsenceApplication from "./pages/AbsenceApplication";
+import ProcurementApplication from "./pages/ProcurementApplication";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,8 @@ const App = () => (
           <Route path="/h5officialdocument" element={<H5OfficialDocument />} />
           <Route path="/h5login" element={<H5Login />} />
           <Route path="/todo" element={<TodoList />} />
+          <Route path="/absence" element={<AbsenceApplication />} />
+          <Route path="/procurement" element={<ProcurementApplication />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
