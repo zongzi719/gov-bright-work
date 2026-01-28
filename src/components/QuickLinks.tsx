@@ -22,19 +22,31 @@ const QuickLinks = () => {
       }
 
       const user = JSON.parse(storedUser);
+      const userId = user.id; // localStorage stores 'id' not 'contact_id'
       
+      if (!userId) {
+        setHasLeaderSchedulePermission(false);
+        return;
+      }
+
       // 检查是否是领导（领导默认可以看领导日程）
       if (user.is_leader) {
         setHasLeaderSchedulePermission(true);
         return;
       }
 
-      // 检查是否有领导日程查看权限（使用contact_id查询）
-      const { data: permData } = await supabase
+      // 检查是否有领导日程查看权限
+      const { data: permData, error } = await supabase
         .from("leader_schedule_permissions")
         .select("id")
-        .eq("user_id", user.contact_id)
+        .eq("user_id", userId)
         .limit(1);
+
+      if (error) {
+        console.error("查询权限失败:", error);
+        setHasLeaderSchedulePermission(false);
+        return;
+      }
 
       if (permData && permData.length > 0) {
         setHasLeaderSchedulePermission(true);

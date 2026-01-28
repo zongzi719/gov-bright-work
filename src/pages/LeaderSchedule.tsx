@@ -51,6 +51,7 @@ const LeaderSchedule = () => {
     if (!storedUser) return;
 
     const user = JSON.parse(storedUser);
+    const userId = user.id; // localStorage stores 'id' not 'contact_id'
     
     // 如果是领导，可以查看所有领导日程
     if (user.is_leader) {
@@ -58,11 +59,16 @@ const LeaderSchedule = () => {
       return;
     }
 
+    if (!userId) {
+      setAllowedLeaderIds([]);
+      return;
+    }
+
     // 查询该用户的权限记录
     const { data: permData } = await supabase
       .from("leader_schedule_permissions")
       .select("leader_id, can_view_all")
-      .eq("user_id", user.contact_id);
+      .eq("user_id", userId);
 
     if (permData && permData.length > 0) {
       // 检查是否有can_view_all权限

@@ -56,6 +56,13 @@ const Login = () => {
 
       const userData = data[0];
       
+      // Fetch is_leader status from contacts table
+      const { data: contactData } = await supabase
+        .from("contacts")
+        .select("is_leader")
+        .eq("id", userData.contact_id)
+        .single();
+      
       // Store user info in localStorage for session
       const userInfo = {
         id: userData.contact_id,
@@ -65,6 +72,7 @@ const Login = () => {
         department: userData.contact_department,
         organization: userData.organization_name,
         security_level: userData.contact_security_level || "一般",
+        is_leader: contactData?.is_leader || false,
       };
       localStorage.setItem("frontendUser", JSON.stringify(userInfo));
 
