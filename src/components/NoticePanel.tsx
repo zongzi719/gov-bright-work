@@ -143,94 +143,35 @@ const NoticePanel = () => {
         </button>
       </div>
 
-      {/* 内容区域 - 左右两栏 */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* 左侧：轮播图 */}
-        <div className="w-1/2 p-4 flex-shrink-0">
-          <div className="relative h-full rounded-lg overflow-hidden bg-muted">
-            {banners.length > 0 ? (
-              <>
-                <img
-                  src={banners[currentBannerIndex]?.image_url}
-                  alt={banners[currentBannerIndex]?.title}
-                  className="w-full h-full object-cover"
-                />
-                {/* 底部渐变遮罩和标题 */}
-                <div className="absolute inset-x-0 bottom-0 carousel-overlay p-4">
-                  <h3 className="text-white font-bold text-lg line-clamp-2">
-                    {banners[currentBannerIndex]?.title}
-                  </h3>
+      {/* 内容区域 - 公告列表 */}
+      <div className="flex-1 p-4 overflow-hidden">
+        <ScrollArea className="h-full">
+          {loading ? (
+            <div className="py-4 text-center text-muted-foreground text-sm">加载中...</div>
+          ) : notices.length === 0 ? (
+            <div className="py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
+          ) : (
+            <div className="space-y-2">
+              {notices.map((notice) => (
+                <div
+                  key={notice.id}
+                  className="notice-item group"
+                  onClick={() => handleNoticeClick(notice)}
+                >
+                  <span className={getTagStyle(notice)}>
+                    {getTagText(notice)}
+                  </span>
+                  <span className="flex-1 text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                    {notice.title}
+                  </span>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                    {formatDate(notice.created_at)}
+                  </span>
                 </div>
-                {/* 指示点 */}
-                {banners.length > 1 && (
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                    {banners.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentBannerIndex(idx)}
-                        className={`w-2 h-2 rounded-full transition-colors ${
-                          idx === currentBannerIndex ? "bg-white" : "bg-white/50"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-                {/* 左右切换按钮 */}
-                {banners.length > 1 && (
-                  <>
-                    <button
-                      onClick={handlePrevBanner}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={handleNextBanner}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                暂无轮播图
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 右侧：公告列表 */}
-        <div className="w-1/2 p-4 pl-0 overflow-hidden">
-          <ScrollArea className="h-full">
-            {loading ? (
-              <div className="py-4 text-center text-muted-foreground text-sm">加载中...</div>
-            ) : notices.length === 0 ? (
-              <div className="py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
-            ) : (
-              <div className="space-y-1">
-                {notices.map((notice) => (
-                  <div
-                    key={notice.id}
-                    className="notice-item group"
-                    onClick={() => handleNoticeClick(notice)}
-                  >
-                    <span className={getTagStyle(notice)}>
-                      {getTagText(notice)}
-                    </span>
-                    <span className="flex-1 text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                      {notice.title}
-                    </span>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {formatDate(notice.created_at)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
       </div>
 
       {/* 详情弹窗 */}

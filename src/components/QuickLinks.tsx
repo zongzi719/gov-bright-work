@@ -158,8 +158,8 @@ const QuickLinks = () => {
       </div>
 
       {/* 模块网格 - 4x2 */}
-      <div className="p-4">
-        <div className="grid grid-cols-4 gap-4">
+      <div className="p-5">
+        <div className="grid grid-cols-4 gap-x-6 gap-y-5">
           {allModules.map((module) => (
             <div
               key={module.id}
