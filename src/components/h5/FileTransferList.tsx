@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { List, Tag, Empty, FloatingBubble, Popup, Form, Input, Picker, TextArea, Button, DatePicker, Radio, Toast } from "antd-mobile";
+import { Tag, Empty, FloatingBubble, Popup, Form, Input, Picker, TextArea, Button, DatePicker, Radio, Toast } from "antd-mobile";
 import { AddOutline } from "antd-mobile-icons";
 import { format } from "date-fns";
+import FileTransferDetail from "./FileTransferDetail";
 
 interface FileTransferListProps {
   activeTab: "pending" | "completed";
@@ -57,6 +58,8 @@ const mockFileTransfers = [
   },
 ];
 
+type FileTransferData = (typeof mockFileTransfers)[0];
+
 // 选项配置
 const securityLevelOptions = [
   [
@@ -94,6 +97,7 @@ const sendTypeOptions = [
 
 const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
   const [showAddPopup, setShowAddPopup] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileTransferData | null>(null);
   const [securityVisible, setSecurityVisible] = useState(false);
   const [urgencyVisible, setUrgencyVisible] = useState(false);
   const [fileTypeVisible, setFileTypeVisible] = useState(false);
@@ -147,74 +151,81 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  // 获取密级标签颜色
+  const getSecurityColor = (level: string) => {
+    switch (level) {
+      case "机密":
+        return "danger";
+      case "秘密":
+        return "warning";
+      default:
+        return "default";
+    }
+  };
+
+  // 如果选中了文件，显示详情页
+  if (selectedFile) {
+    return (
+      <FileTransferDetail
+        file={selectedFile}
+        onBack={() => setSelectedFile(null)}
+      />
+    );
+  }
+
   return (
     <>
       {filteredFiles.length === 0 ? (
-        <Empty description="暂无文件" style={{ padding: "64px 0" }} />
+        <Empty description="暂无文件" style={{ padding: "48px 0" }} />
       ) : (
-        <List style={{ "--border-top": "none", "--border-bottom": "none" }}>
+        <div className="p-2 space-y-2">
           {filteredFiles.map((file) => (
-            <List.Item
+            <div
               key={file.id}
-              arrow={false}
+              onClick={() => setSelectedFile(file)}
+              className="bg-white rounded-lg p-3 shadow-sm active:bg-slate-50 transition-colors cursor-pointer"
             >
-              <div className="py-2">
-                {/* 文号和密级 */}
-                <div className="flex items-center gap-2 mb-2">
-                  <Tag color="primary" fill="outline" style={{ fontSize: "10px" }}>
-                    {file.docNumber}
+              {/* 标签行 */}
+              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                <Tag color="primary" fill="outline" style={{ fontSize: "10px", padding: "0 4px" }}>
+                  {file.docNumber}
+                </Tag>
+                <Tag
+                  color={getSecurityColor(file.securityLevel) as "danger" | "warning" | "default"}
+                  fill="solid"
+                  style={{ fontSize: "10px", padding: "0 4px" }}
+                >
+                  {file.securityLevel}
+                </Tag>
+                {file.urgency !== "普通" && (
+                  <Tag color="danger" fill="solid" style={{ fontSize: "10px", padding: "0 4px" }}>
+                    {file.urgency}
                   </Tag>
-                  <Tag
-                    color={
-                      file.securityLevel === "机密"
-                        ? "danger"
-                        : file.securityLevel === "秘密"
-                        ? "warning"
-                        : "default"
-                    }
-                    fill="solid"
-                    style={{ fontSize: "10px" }}
-                  >
-                    {file.securityLevel}
-                  </Tag>
-                  {file.urgency !== "普通" && (
-                    <Tag color="danger" fill="solid" style={{ fontSize: "10px" }}>
-                      {file.urgency}
-                    </Tag>
-                  )}
-                </div>
-
-                {/* 标题 */}
-                <div className="font-medium text-foreground text-sm leading-snug mb-2 line-clamp-2">
-                  {file.title}
-                </div>
-
-                {/* 详情 */}
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="flex justify-between">
-                    <span>发文单位：{file.sendUnit}</span>
-                    <span>份数：{file.copies}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>
-                      联系人：{file.contactPerson} {file.contactPhone}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>签发：{file.signLeader} ({file.signDate})</span>
-                    <Tag
-                      color={file.status === "待签收" ? "warning" : "success"}
-                      fill="outline"
-                      style={{ fontSize: "10px" }}
-                    >
-                      {file.status}
-                    </Tag>
-                  </div>
-                </div>
+                )}
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded ml-auto"
+                  style={{
+                    backgroundColor: file.status === "待签收" ? "#fef3c715" : "#dcfce715",
+                    color: file.status === "待签收" ? "#f59e0b" : "#16a34a",
+                  }}
+                >
+                  {file.status}
+                </span>
               </div>
-            </List.Item>
+
+              {/* 标题 */}
+              <h3 className="font-medium text-slate-800 text-sm leading-snug mb-2 line-clamp-2">
+                {file.title}
+              </h3>
+
+              {/* 信息行 */}
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>{file.sendUnit}</span>
+                <span>{file.signDate}</span>
+              </div>
+            </div>
           ))}
-        </List>
+        </div>
       )}
 
       {/* 新增按钮 */}
@@ -223,10 +234,11 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
           "--initial-position-bottom": "24px",
           "--initial-position-right": "24px",
           "--edge-distance": "24px",
+          "--background": "#1e40af",
         }}
         onClick={() => setShowAddPopup(true)}
       >
-        <AddOutline fontSize={24} />
+        <AddOutline fontSize={24} color="white" />
       </FloatingBubble>
 
       {/* 新增弹窗 */}
@@ -236,9 +248,9 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
         position="right"
         bodyStyle={{ width: "100vw", height: "100vh", overflow: "auto" }}
       >
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-slate-50">
           {/* 头部 */}
-          <div className="sticky top-0 z-10 bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
+          <div className="sticky top-0 z-10 bg-blue-800 text-white px-4 py-3 flex items-center justify-between">
             <span className="font-medium">新增文件</span>
             <div className="flex gap-2">
               <Button
@@ -264,7 +276,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
 
           {/* 表单 */}
           <Form layout="horizontal" style={{ "--prefix-width": "5.5em" }}>
-            {/* 文件标题 */}
             <Form.Item label="文件标题" required>
               <Input
                 placeholder="请输入"
@@ -273,7 +284,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 发文单位 */}
             <Form.Item label="发文单位" required>
               <Input
                 placeholder="请输入"
@@ -282,7 +292,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 发文字号 */}
             <Form.Item label="发文字号" required>
               <Input
                 placeholder="请输入"
@@ -291,7 +300,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 密级 */}
             <Form.Item
               label="密级"
               required
@@ -311,7 +319,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               onConfirm={(v) => updateFormData("securityLevel", v)}
             />
 
-            {/* 紧急程度 */}
             <Form.Item
               label="紧急程度"
               onClick={() => setUrgencyVisible(true)}
@@ -330,7 +337,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               onConfirm={(v) => updateFormData("urgency", v)}
             />
 
-            {/* 来文单位 */}
             <Form.Item label="来文单位">
               <Input
                 placeholder="请输入"
@@ -339,7 +345,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 发件类型 */}
             <Form.Item
               label="发件类型"
               required
@@ -359,7 +364,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               onConfirm={(v) => updateFormData("sendType", v)}
             />
 
-            {/* 联系人 */}
             <Form.Item label="联系人">
               <Input
                 placeholder="请输入"
@@ -368,7 +372,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 联系电话 */}
             <Form.Item label="联系电话">
               <Input
                 placeholder="请输入"
@@ -377,7 +380,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 成文日期 */}
             <Form.Item
               label="成文日期"
               onClick={() => setDocumentDateVisible(true)}
@@ -395,7 +397,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               onConfirm={(v) => updateFormData("documentDate", v)}
             />
 
-            {/* 总份数 */}
             <Form.Item label="总份数">
               <Input
                 type="number"
@@ -405,7 +406,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 保密期限 */}
             <Form.Item label="保密期限">
               <div className="flex items-center gap-2">
                 <Input
@@ -414,11 +414,10 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
                   onChange={(v) => updateFormData("confidentialPeriod", v)}
                   style={{ flex: 1 }}
                 />
-                <span className="text-muted-foreground text-sm">年</span>
+                <span className="text-slate-500 text-sm">年</span>
               </div>
             </Form.Item>
 
-            {/* 主送单位 */}
             <Form.Item label="主送单位">
               <Input
                 placeholder="请输入"
@@ -427,7 +426,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 签发领导 */}
             <Form.Item label="签发领导">
               <Input
                 placeholder="请输入"
@@ -436,7 +434,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 签发日期 */}
             <Form.Item
               label="签发日期"
               onClick={() => setSignDateVisible(true)}
@@ -454,7 +451,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               onConfirm={(v) => updateFormData("signDate", v)}
             />
 
-            {/* 文件类型 */}
             <Form.Item
               label="文件类型"
               onClick={() => setFileTypeVisible(true)}
@@ -473,7 +469,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               onConfirm={(v) => updateFormData("fileType", v)}
             />
 
-            {/* 消息通知 */}
             <Form.Item label="消息通知">
               <Radio.Group
                 value={formData.notifyType}
@@ -484,7 +479,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               </Radio.Group>
             </Form.Item>
 
-            {/* 抄送单位 */}
             <Form.Item label="抄送单位">
               <Input
                 placeholder="请输入"
@@ -493,7 +487,6 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            {/* 发文说明 */}
             <Form.Item label="发文说明">
               <TextArea
                 placeholder="请输入"

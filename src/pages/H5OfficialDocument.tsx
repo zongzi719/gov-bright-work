@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { NavBar, SearchBar, Badge, List, Tag, Empty, Skeleton } from "antd-mobile";
+import { NavBar, SearchBar, List, Tag, Empty, Skeleton } from "antd-mobile";
 import { FileOutline, SendOutline, ReceivePaymentOutline } from "antd-mobile-icons";
 import DocumentDetail from "@/components/h5/DocumentDetail";
 import ProcessDocumentDetail from "@/components/h5/ProcessDocumentDetail";
@@ -11,11 +11,11 @@ const mockDocuments = [
   {
     id: "1",
     category: "send",
-    flowName: "党委办公室发文流程(暂未开放)",
+    flowName: "党委办公室发文",
     flowColor: "warning",
     title: "关于印发《2025年度党风廉政建设工作要点》的通知",
     submitter: "黄思艺",
-    submitTime: "2025-11-17 10:44:53",
+    submitTime: "2025-01-17 10:44",
     currentNode: "审核领导",
     status: "待办",
   },
@@ -26,7 +26,7 @@ const mockDocuments = [
     flowColor: "success",
     title: "关于召开2025年度工作总结暨表彰大会的通知",
     submitter: "张玉",
-    submitTime: "2025-09-04 18:53:43",
+    submitTime: "2025-01-04 18:53",
     currentNode: "核稿",
     status: "在办",
   },
@@ -37,18 +37,18 @@ const mockDocuments = [
     flowColor: "success",
     title: "关于开展安全生产大检查工作的紧急通知",
     submitter: "李明华",
-    submitTime: "2025-09-04 18:06:08",
+    submitTime: "2025-01-04 18:06",
     currentNode: "核稿",
     status: "在办",
   },
   {
     id: "4",
     category: "send",
-    flowName: "党委办公室发文流程(暂未开放)",
+    flowName: "党委办公室发文",
     flowColor: "warning",
     title: "关于调整领导班子成员分工的通知",
     submitter: "王秀英",
-    submitTime: "2025-08-15 09:30:22",
+    submitTime: "2025-01-15 09:30",
     currentNode: "签发",
     status: "待办",
   },
@@ -59,7 +59,7 @@ const mockDocuments = [
     flowColor: "",
     title: "关于推进各类改革试点协同配合的通知",
     submitter: "张玉",
-    submitTime: "2025-09-04 12:31:54",
+    submitTime: "2025-01-04 12:31",
     currentNode: "",
     status: "未批阅",
   },
@@ -70,7 +70,7 @@ const mockDocuments = [
     flowColor: "",
     title: "国务院办公厅关于加强政务新媒体管理工作的意见",
     submitter: "张玉",
-    submitTime: "2025-09-04 12:27:08",
+    submitTime: "2025-01-04 12:27",
     currentNode: "",
     status: "未批阅",
   },
@@ -79,9 +79,9 @@ const mockDocuments = [
     category: "process",
     flowName: "",
     flowColor: "",
-    title: "中华人民共和国行政复议法实施条例(修订稿)",
+    title: "中华人民共和国行政复议法实施条例",
     submitter: "张玉",
-    submitTime: "2025-08-27 16:34:29",
+    submitTime: "2025-01-27 16:34",
     currentNode: "",
     status: "未批阅",
   },
@@ -90,9 +90,9 @@ const mockDocuments = [
     category: "process",
     flowName: "",
     flowColor: "",
-    title: "关于进一步加强基层治理体系和治理能力现代化建设的意见",
+    title: "关于进一步加强基层治理体系建设的意见",
     submitter: "陈伟",
-    submitTime: "2025-08-25 14:20:15",
+    submitTime: "2025-01-25 14:20",
     currentNode: "",
     status: "未批阅",
   },
@@ -157,6 +157,15 @@ const H5OfficialDocument = () => {
     navigate("/h5login");
   };
 
+  // 计算各分类的待办数量
+  const getCategoryCount = (category: string) => {
+    return mockDocuments.filter(
+      (doc) =>
+        doc.category === category &&
+        (doc.status === "待办" || doc.status === "在办" || doc.status === "未批阅")
+    ).length;
+  };
+
   // 如果选中了文档，根据分类显示不同详情页
   if (selectedDocument) {
     if (selectedDocument.category === "process") {
@@ -177,7 +186,7 @@ const H5OfficialDocument = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4">
+      <div className="min-h-screen bg-slate-50 p-4">
         <Skeleton.Title animated />
         <Skeleton.Paragraph lineCount={5} animated />
       </div>
@@ -186,92 +195,110 @@ const H5OfficialDocument = () => {
 
   // 分类配置
   const categories = [
-    { key: "send", title: "发文审签", icon: <SendOutline fontSize={20} />, count: 4 },
-    { key: "process", title: "公文办理", icon: <FileOutline fontSize={20} />, count: 4 },
-    { key: "transfer", title: "文件收发", icon: <ReceivePaymentOutline fontSize={20} />, count: 2 },
+    { key: "send", title: "发文审签", icon: <SendOutline fontSize={18} />, count: getCategoryCount("send") },
+    { key: "process", title: "公文办理", icon: <FileOutline fontSize={18} />, count: getCategoryCount("process") },
+    { key: "transfer", title: "文件收发", icon: <ReceivePaymentOutline fontSize={18} />, count: 2 },
   ];
 
+  // 获取状态标签颜色
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "待办":
+      case "未批阅":
+        return "#dc2626"; // red
+      case "在办":
+        return "#f59e0b"; // amber
+      case "已办":
+      case "已批阅":
+        return "#16a34a"; // green
+      default:
+        return "#6b7280"; // gray
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#8B7355] flex flex-col">
-      {/* 顶部导航 */}
-      <NavBar
-        backIcon={<span className="text-white text-lg">←</span>}
-        onBack={() => navigate(-1)}
-        right={
-          <span className="text-sm text-white/80" onClick={handleLogout}>
-            退出
-          </span>
-        }
-        style={{
-          "--height": "44px",
-          "--border-bottom": "none",
-          background: "transparent",
-        }}
-      >
-        {/* 待办/已办切换 */}
-        <div className="flex justify-center">
-          <div className="inline-flex rounded-full overflow-hidden border border-amber-400">
+    <div className="h-screen bg-slate-100 flex flex-col overflow-hidden">
+      {/* 顶部导航栏 - 政务蓝 */}
+      <div className="bg-blue-800 text-white shrink-0">
+        <NavBar
+          backIcon={<span className="text-white text-base">←</span>}
+          onBack={() => navigate(-1)}
+          right={
+            <span className="text-xs text-white/80" onClick={handleLogout}>
+              退出
+            </span>
+          }
+          style={{
+            "--height": "40px",
+            "--border-bottom": "none",
+            background: "transparent",
+          }}
+        >
+          {/* 待办/已办切换 */}
+          <div className="flex items-center justify-center gap-1">
             <button
-              className={`px-6 py-1.5 text-sm font-medium transition-colors ${
+              className={`px-4 py-1 text-xs font-medium rounded-full transition-all ${
                 activeTab === "pending"
-                  ? "bg-amber-500 text-white"
-                  : "bg-transparent text-white"
+                  ? "bg-white text-blue-800"
+                  : "bg-transparent text-white/90 border border-white/40"
               }`}
               onClick={() => setActiveTab("pending")}
             >
-              待 办
+              待办 ({mockDocuments.filter(d => d.status === "待办" || d.status === "在办" || d.status === "未批阅").length})
             </button>
             <button
-              className={`px-6 py-1.5 text-sm font-medium transition-colors ${
+              className={`px-4 py-1 text-xs font-medium rounded-full transition-all ${
                 activeTab === "completed"
-                  ? "bg-amber-500 text-white"
-                  : "bg-transparent text-white"
+                  ? "bg-white text-blue-800"
+                  : "bg-transparent text-white/90 border border-white/40"
               }`}
               onClick={() => setActiveTab("completed")}
             >
-              已 办
+              已办 (0)
             </button>
           </div>
-        </div>
-      </NavBar>
+        </NavBar>
+      </div>
 
       {/* 搜索框 */}
-      <div className="px-3 py-2">
+      <div className="px-3 py-2 bg-white border-b border-slate-200 shrink-0">
         <SearchBar
-          placeholder="请输入搜索内容"
+          placeholder="搜索标题、提交人、关键词"
           value={searchText}
           onChange={setSearchText}
           style={{
-            "--background": "rgba(255,255,255,0.15)",
-            "--border-radius": "20px",
-            "--height": "36px",
-            "--placeholder-color": "rgba(255,255,255,0.6)",
+            "--background": "#f1f5f9",
+            "--border-radius": "8px",
+            "--height": "32px",
+            "--placeholder-color": "#94a3b8",
           }}
         />
       </div>
 
       {/* 主内容区：左侧分类 + 右侧列表 */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* 左侧分类栏 */}
-        <div className="w-20 bg-[#7A6548] flex flex-col py-2">
+        <div className="w-16 bg-white border-r border-slate-200 flex flex-col shrink-0">
           {categories.map((cat) => (
             <button
               key={cat.key}
               onClick={() => setActiveCategory(cat.key)}
-              className={`flex flex-col items-center gap-1 py-4 px-2 relative transition-colors ${
+              className={`relative flex flex-col items-center justify-center py-3 px-1 transition-all ${
                 activeCategory === cat.key
-                  ? "bg-[#F5F0E8] text-amber-700"
-                  : "text-white/90 hover:bg-white/10"
+                  ? "bg-blue-50 text-blue-800 border-l-2 border-blue-800"
+                  : "text-slate-500 hover:bg-slate-50"
               }`}
             >
               {/* 红点徽章 */}
               {cat.count > 0 && (
-                <span className="absolute top-2 right-3 min-w-[18px] h-[18px] bg-red-500 text-white text-xs rounded-full flex items-center justify-center px-1">
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center px-1">
                   {cat.count}
                 </span>
               )}
-              <span className="text-xl">{cat.icon}</span>
-              <span className="text-xs font-medium leading-tight text-center">
+              <span className={`${activeCategory === cat.key ? "text-blue-800" : "text-slate-400"}`}>
+                {cat.icon}
+              </span>
+              <span className="text-[10px] font-medium mt-1 leading-tight text-center whitespace-nowrap">
                 {cat.title}
               </span>
             </button>
@@ -279,73 +306,76 @@ const H5OfficialDocument = () => {
         </div>
 
         {/* 右侧内容区 */}
-        <div className="flex-1 bg-[#F5F0E8] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-slate-100 min-h-0">
           {activeCategory === "transfer" ? (
             <FileTransferList activeTab={activeTab} searchText={searchText} />
           ) : filteredDocuments.length === 0 ? (
-            <Empty description="暂无数据" style={{ padding: "64px 0" }} />
+            <Empty description="暂无数据" style={{ padding: "48px 0" }} />
           ) : (
-            <List style={{ "--border-top": "none", "--border-bottom": "none" }}>
+            <div className="p-2 space-y-2">
               {filteredDocuments.map((doc) => (
-                <List.Item
+                <div
                   key={doc.id}
                   onClick={() => setSelectedDocument(doc)}
-                  arrow={false}
-                  style={{ 
-                    padding: "12px", 
-                    borderBottom: "8px solid #E8E0D0",
-                    background: "#fff"
-                  }}
+                  className="bg-white rounded-lg p-3 shadow-sm active:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div>
-                    {/* 发文审签样式 */}
-                    {activeCategory === "send" && (
-                      <>
+                  {/* 发文审签样式 */}
+                  {activeCategory === "send" && (
+                    <>
+                      <div className="flex items-center gap-1.5 mb-2">
                         <Tag
                           color={doc.flowColor as "warning" | "success" | "default"}
-                          fill="solid"
-                          style={{ marginBottom: "8px", fontSize: "12px" }}
+                          fill="outline"
+                          style={{ fontSize: "10px", padding: "0 4px" }}
                         >
                           {doc.flowName}
                         </Tag>
-                        <div className="font-medium text-foreground text-sm leading-relaxed mb-3">
-                          {doc.title}
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-2">
-                          <div className="flex justify-between">
-                            <span>提交人：{doc.submitter}</span>
-                            <span>提交时间：{doc.submitTime}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>当前节点：{doc.currentNode}</span>
-                            <span>状态：{doc.status}</span>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: `${getStatusColor(doc.status)}15`,
+                            color: getStatusColor(doc.status),
+                          }}
+                        >
+                          {doc.status}
+                        </span>
+                      </div>
+                      <h3 className="font-medium text-slate-800 text-sm leading-snug mb-2 line-clamp-2">
+                        {doc.title}
+                      </h3>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>{doc.submitter}</span>
+                        <span>{doc.submitTime}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-1">
+                        当前节点：<span className="text-blue-600">{doc.currentNode}</span>
+                      </div>
+                    </>
+                  )}
 
-                    {/* 公文办理样式 */}
-                    {activeCategory === "process" && (
-                      <>
-                        <div className="font-medium text-foreground text-sm leading-relaxed mb-3">
-                          {doc.title}
-                        </div>
-                        <div className="flex justify-between items-center text-xs text-muted-foreground">
-                          <span>{doc.submitTime}</span>
-                          <Tag
-                            color={doc.status === "未批阅" ? "warning" : "success"}
-                            fill="outline"
-                            style={{ fontSize: "11px" }}
-                          >
-                            {doc.status}
-                          </Tag>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </List.Item>
+                  {/* 公文办理样式 */}
+                  {activeCategory === "process" && (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: `${getStatusColor(doc.status)}15`,
+                            color: getStatusColor(doc.status),
+                          }}
+                        >
+                          {doc.status}
+                        </span>
+                        <span className="text-[11px] text-slate-400">{doc.submitTime}</span>
+                      </div>
+                      <h3 className="font-medium text-slate-800 text-sm leading-snug line-clamp-2">
+                        {doc.title}
+                      </h3>
+                    </>
+                  )}
+                </div>
               ))}
-            </List>
+            </div>
           )}
         </div>
       </div>
