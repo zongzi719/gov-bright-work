@@ -1,7 +1,16 @@
 import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,9 +55,7 @@ const SchedulePanel = () => {
 
   const currentUser = getCurrentUser();
 
-  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
-    startOfWeek(new Date(), { weekStartsOn: 1 })
-  );
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,7 +64,7 @@ const SchedulePanel = () => {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
-  
+
   const [formData, setFormData] = useState({
     contact_id: currentUser?.id || "",
     title: "",
@@ -79,7 +86,7 @@ const SchedulePanel = () => {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     // 获取两周的数据
     const twoWeeksEnd = addDays(currentWeekStart, 13);
@@ -168,7 +175,7 @@ const SchedulePanel = () => {
 
   const handleSubmit = async () => {
     if (submitting) return;
-    
+
     const contactId = currentUser?.id;
     if (!contactId || !formData.title || !formData.schedule_date) {
       toast.error("请填写必填项（日程标题和日期）");
@@ -176,7 +183,7 @@ const SchedulePanel = () => {
     }
 
     setSubmitting(true);
-    
+
     try {
       if (editingSchedule) {
         const { error } = await supabase
@@ -233,10 +240,7 @@ const SchedulePanel = () => {
   const confirmDelete = async () => {
     if (!scheduleToDelete) return;
 
-    const { error } = await supabase
-      .from("schedules")
-      .delete()
-      .eq("id", scheduleToDelete.id);
+    const { error } = await supabase.from("schedules").delete().eq("id", scheduleToDelete.id);
 
     if (error) {
       toast.error("删除日程失败");
@@ -245,7 +249,7 @@ const SchedulePanel = () => {
       toast.success("日程已删除");
       fetchSchedules();
     }
-    
+
     setDeleteDialogOpen(false);
     setScheduleToDelete(null);
   };
@@ -287,12 +291,12 @@ const SchedulePanel = () => {
                 <div
                   onClick={() => handleDateClick(weekDays[idx])}
                   className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center cursor-pointer text-xs transition-all ${
-                    isSelected(weekDays[idx]) 
-                      ? "bg-primary text-primary-foreground" 
-                      : isToday(weekDays[idx]) 
-                        ? "bg-primary/20 text-primary font-medium" 
-                        : hasSchedule(weekDays[idx]) 
-                          ? "bg-accent text-accent-foreground" 
+                    isSelected(weekDays[idx])
+                      ? "bg-primary text-primary-foreground"
+                      : isToday(weekDays[idx])
+                        ? "bg-primary/20 text-primary font-medium"
+                        : hasSchedule(weekDays[idx])
+                          ? "bg-accent text-accent-foreground"
                           : "hover:bg-muted"
                   }`}
                 >
@@ -308,12 +312,12 @@ const SchedulePanel = () => {
                 <div
                   onClick={() => handleDateClick(weekDays[idx + 7])}
                   className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center cursor-pointer text-xs transition-all ${
-                    isSelected(weekDays[idx + 7]) 
-                      ? "bg-primary text-primary-foreground" 
-                      : isToday(weekDays[idx + 7]) 
-                        ? "bg-primary/20 text-primary font-medium" 
-                        : hasSchedule(weekDays[idx + 7]) 
-                          ? "bg-accent text-accent-foreground" 
+                    isSelected(weekDays[idx + 7])
+                      ? "bg-primary text-primary-foreground"
+                      : isToday(weekDays[idx + 7])
+                        ? "bg-primary/20 text-primary font-medium"
+                        : hasSchedule(weekDays[idx + 7])
+                          ? "bg-accent text-accent-foreground"
                           : "hover:bg-muted"
                   }`}
                 >
@@ -325,11 +329,11 @@ const SchedulePanel = () => {
         </div>
 
         {/* 选中日期标题 - 紧凑 */}
-        <div className="mt-3 pt-2 flex-shrink-0 border-t border-border">
+        {/* <div className="mt-3 pt-2 flex-shrink-0 border-t border-border">
           <span className="text-xs font-medium text-muted-foreground">
             {format(selectedDate, "M月d日 EEEE", { locale: zhCN })}
           </span>
-        </div>
+        </div> */}
 
         {/* 日程列表 - 可滚动 */}
         <ScrollArea className="flex-1 mt-2">
@@ -340,8 +344,8 @@ const SchedulePanel = () => {
           ) : (
             <div className="space-y-1.5 pr-2">
               {selectedDateSchedules.map((item) => (
-                <div 
-                  key={item.id} 
+                <div
+                  key={item.id}
                   onClick={() => openEditDialog(item)}
                   className="flex items-center gap-2 text-sm group hover:bg-muted/50 rounded px-2 py-1.5 transition-colors cursor-pointer"
                 >
@@ -350,9 +354,7 @@ const SchedulePanel = () => {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-foreground truncate text-sm">{item.title}</div>
-                    {item.location && (
-                      <div className="text-muted-foreground text-xs truncate">{item.location}</div>
-                    )}
+                    {item.location && <div className="text-muted-foreground text-xs truncate">{item.location}</div>}
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity flex-shrink-0">
                     <button
@@ -364,10 +366,7 @@ const SchedulePanel = () => {
                     >
                       <Pencil className="w-3.5 h-3.5 text-primary" />
                     </button>
-                    <button
-                      onClick={(e) => openDeleteDialog(item, e)}
-                      className="p-1 hover:bg-destructive/10 rounded"
-                    >
+                    <button onClick={(e) => openDeleteDialog(item, e)} className="p-1 hover:bg-destructive/10 rounded">
                       <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </button>
                   </div>
@@ -383,18 +382,12 @@ const SchedulePanel = () => {
         <DialogContent className="max-w-lg max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
           <DialogHeader className="px-6 py-4 border-b bg-background">
             <DialogTitle>{editingSchedule ? "编辑日程" : "新增日程"}</DialogTitle>
-            <DialogDescription>
-              {editingSchedule ? "修改日程信息" : "添加新的日程安排"}
-            </DialogDescription>
+            <DialogDescription>{editingSchedule ? "修改日程信息" : "添加新的日程安排"}</DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto px-6 py-4 space-y-4">
             <div className="space-y-2">
               <Label>人员</Label>
-              <Input
-                value={currentUser?.name || ""}
-                disabled
-                className="bg-muted"
-              />
+              <Input value={currentUser?.name || ""} disabled className="bg-muted" />
             </div>
             <div className="space-y-2">
               <Label>日程标题 *</Label>
@@ -455,7 +448,7 @@ const SchedulePanel = () => {
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (editingSchedule ? "保存中..." : "添加中...") : (editingSchedule ? "保存" : "添加")}
+              {submitting ? (editingSchedule ? "保存中..." : "添加中...") : editingSchedule ? "保存" : "添加"}
             </Button>
           </div>
         </DialogContent>
@@ -472,7 +465,10 @@ const SchedulePanel = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               删除
             </AlertDialogAction>
           </AlertDialogFooter>
