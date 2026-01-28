@@ -138,8 +138,8 @@ const NoticeList = () => {
         </button>
       </div>
 
-      {/* 主内容区：左侧轮播图 + 右侧列表 - 增加顶部间距 */}
-      <div className="flex-1 flex overflow-hidden min-h-0 mt-1">
+      {/* 主内容区：左侧轮播图 + 右侧列表 */}
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* 左侧轮播图 */}
         {hasImages && (
           <div 
