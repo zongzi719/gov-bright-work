@@ -15,9 +15,9 @@ const ExternalLinks = () => {
         <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
           人民网资料库
         </div>
-        <div className="text-xs text-muted-foreground truncate">
+        {/* <div className="text-xs text-muted-foreground truncate">
           www.people.com.cn
-        </div>
+        </div> */}
       </div>
       <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
     </a>
