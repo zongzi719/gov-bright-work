@@ -40,6 +40,7 @@ const NoticeList = () => {
   const [selectedNotice, setSelectedNotice] = useState<NoticeItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -47,12 +48,12 @@ const NoticeList = () => {
 
   // 自动轮播
   useEffect(() => {
-    if (images.length <= 1) return;
+    if (images.length <= 1 || isHovered) return;
     const timer = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }, 4000);
     return () => clearInterval(timer);
-  }, [images.length]);
+  }, [images.length, isHovered]);
 
   const fetchData = async () => {
     await Promise.all([fetchNotices(), fetchImages()]);
@@ -137,10 +138,14 @@ const NoticeList = () => {
       </div>
 
       {/* 主内容区：左侧轮播图 + 右侧列表 */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* 左侧轮播图 */}
         {hasImages && (
-          <div className="w-[200px] flex-shrink-0 relative group">
+          <div 
+            className="w-[180px] flex-shrink-0 relative group bg-muted"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             {images.map((image, index) => (
               <div
                 key={image.id}
@@ -196,34 +201,34 @@ const NoticeList = () => {
         )}
 
         {/* 右侧通知列表 */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 border-l border-border">
           {loading ? (
             <div className="px-4 py-4 text-center text-muted-foreground text-sm">加载中...</div>
           ) : notices.length === 0 ? (
             <div className="px-4 py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
           ) : (
             <div className="divide-y divide-border">
-              {notices.map((notice) => (
+              {notices.map((notice, index) => (
                 <div
                   key={notice.id}
-                  className="px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors group"
+                  className="px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors group"
                   onClick={() => handleNoticeClick(notice)}
                 >
                   {/* 标题行 */}
-                  <div className="flex items-start gap-1.5 mb-1">
+                  <div className="flex items-start gap-1.5 mb-0.5">
                     {notice.is_pinned && (
-                      <Badge variant="destructive" className="flex-shrink-0 text-xs px-1 py-0 h-4">
+                      <Badge variant="destructive" className="flex-shrink-0 text-xs px-1 py-0 h-4 mt-0.5">
                         顶
                       </Badge>
                     )}
-                    <span className="text-sm text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-1">
+                    <span className="text-sm text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-1">
                       {notice.title}
                     </span>
                   </div>
                   {/* 信息行：发布单位 + 日期 */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>发布单位：{notice.department}</span>
-                    <span>{formatDate(notice.created_at)}</span>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pl-0">
+                    <span className="truncate max-w-[140px]">发布单位：{notice.department}</span>
+                    <span className="flex-shrink-0">{formatDate(notice.created_at)}</span>
                   </div>
                 </div>
               ))}
