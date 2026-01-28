@@ -46,7 +46,7 @@ const scheduleTypeColors: Record<string, { bg: string; text: string; label: stri
 const LeaderScheduleManagement = () => {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]); // For list view
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,12 +54,10 @@ const LeaderScheduleManagement = () => {
   const [activeTab, setActiveTab] = useState("schedule");
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   
-  // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [leaderFilter, setLeaderFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // 表单状态
   const [formData, setFormData] = useState({
     leader_id: "",
     title: "",
@@ -87,12 +85,13 @@ const LeaderScheduleManagement = () => {
     setLoading(false);
   };
 
+  // 只获取领导状态为"是"的人员
   const fetchLeaders = async () => {
     const { data, error } = await supabase
       .from("contacts")
       .select("id, name, position")
       .eq("is_active", true)
-      .or("position.ilike.%长%,position.ilike.%书记%,position.ilike.%主任%,position.ilike.%处长%")
+      .eq("is_leader", true)  // 只获取领导
       .order("sort_order");
 
     if (error) {
@@ -240,17 +239,14 @@ const LeaderScheduleManagement = () => {
     setDialogOpen(true);
   };
 
-  // 获取一周的日期
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
-  // 获取某个领导某天的日程
   const getSchedulesForLeaderAndDay = (leaderId: string, date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
     return schedules.filter(s => s.leader_id === leaderId && s.schedule_date === dateStr);
   };
 
-  // Filter schedules for list view
   const filteredSchedules = allSchedules.filter((schedule) => {
     const matchesSearch =
       schedule.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -261,7 +257,6 @@ const LeaderScheduleManagement = () => {
     return matchesSearch && matchesLeader && matchesType;
   });
 
-  // Pagination for list view
   const pagination = usePagination<Schedule>(filteredSchedules, { defaultPageSize: 10 });
   const paginatedSchedules = pagination.paginatedData;
 
@@ -287,10 +282,8 @@ const LeaderScheduleManagement = () => {
           </TabsList>
 
           <TabsContent value="schedule">
-            {/* 工具栏 */}
             <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
               <div className="flex items-center gap-2">
-                {/* 视图切换 */}
                 <div className="flex items-center border rounded-md">
                   <Button
                     variant={viewMode === "calendar" ? "secondary" : "ghost"}
@@ -311,7 +304,6 @@ const LeaderScheduleManagement = () => {
                     列表
                   </Button>
                 </div>
-                {/* 图例 */}
                 {viewMode === "calendar" && (
                   <div className="flex items-center gap-4 ml-4">
                     {Object.entries(scheduleTypeColors).map(([key, value]) => (
@@ -329,7 +321,6 @@ const LeaderScheduleManagement = () => {
               </Button>
             </div>
 
-            {/* 列表视图的搜索和筛选 */}
             {viewMode === "list" && (
               <div className="flex items-center gap-4 mb-4 flex-wrap">
                 <div className="relative flex-1 min-w-[200px]">
@@ -370,7 +361,6 @@ const LeaderScheduleManagement = () => {
 
             {viewMode === "calendar" ? (
               <>
-                {/* 周导航 */}
                 <div className="flex items-center justify-between mb-4 px-2">
                   <Button variant="ghost" size="sm" onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}>
                     <ChevronLeft className="w-4 h-4 mr-1" />
@@ -389,12 +379,10 @@ const LeaderScheduleManagement = () => {
                   <div className="text-center py-8 text-muted-foreground">加载中...</div>
                 ) : leaders.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    暂无领导数据，请先在通讯录中添加领导信息
+                    暂无领导数据，请先在通讯录中将人员的"是否领导"设置为"是"
                   </div>
                 ) : (
-                  /* 日程表格 */
                   <div className="border rounded-lg overflow-hidden">
-                    {/* 表头 - 日期 */}
                     <div className="grid bg-red-800 text-white" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
                       <div className="p-2 border-r border-red-700 text-center font-medium">姓名</div>
                       {weekDays.map((day, idx) => (
@@ -405,7 +393,6 @@ const LeaderScheduleManagement = () => {
                       ))}
                     </div>
 
-                    {/* 表头 - 上午/下午 */}
                     <div className="grid bg-muted border-b" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
                       <div className="p-1 border-r text-center text-xs text-muted-foreground"></div>
                       {weekDays.map((_, idx) => (
@@ -416,7 +403,6 @@ const LeaderScheduleManagement = () => {
                       ))}
                     </div>
 
-                    {/* 领导日程行 */}
                     {leaders.map((leader) => (
                       <div key={leader.id} className="grid border-b last:border-b-0" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
                         <div className="p-2 border-r bg-muted/50 flex items-center justify-center">
@@ -426,13 +412,11 @@ const LeaderScheduleManagement = () => {
                           const daySchedules = getSchedulesForLeaderAndDay(leader.id, day);
                           return (
                             <div key={dayIdx} className="relative border-r last:border-r-0 min-h-[60px] p-1">
-                              {/* 时间分隔线 */}
                               <div className="absolute inset-0 grid grid-cols-10">
                                 {Array.from({ length: 10 }).map((_, i) => (
                                   <div key={i} className="border-r border-dashed border-muted-foreground/20 last:border-r-0"></div>
                                 ))}
                               </div>
-                              {/* 日程块 */}
                               <div className="relative z-10 space-y-1">
                                 {daySchedules.map((schedule) => {
                                   const colors = scheduleTypeColors[schedule.schedule_type] || scheduleTypeColors.internal_meeting;
@@ -468,7 +452,6 @@ const LeaderScheduleManagement = () => {
                 )}
               </>
             ) : (
-              /* 列表视图 */
               <>
                 <div className="rounded-md border">
                   <Table>
@@ -553,7 +536,6 @@ const LeaderScheduleManagement = () => {
           </TabsContent>
         </Tabs>
 
-        {/* 添加/编辑日程对话框 */}
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();

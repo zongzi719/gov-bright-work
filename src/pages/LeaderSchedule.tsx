@@ -44,12 +44,13 @@ const LeaderSchedule = () => {
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
+  // 只获取领导状态为"是"的人员
   const fetchLeaders = async () => {
     const { data } = await supabase
       .from("contacts")
       .select("id, name, position")
       .eq("is_active", true)
-      .or("position.ilike.%长%,position.ilike.%书记%,position.ilike.%主任%,position.ilike.%处长%")
+      .eq("is_leader", true)  // 只获取领导
       .order("sort_order");
 
     if (data) {

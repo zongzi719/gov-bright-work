@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -19,7 +20,6 @@ interface NoticeItem {
   security_level: string;
 }
 
-// 密级等级映射，数值越大权限越高
 const securityLevelRank: Record<string, number> = {
   '一般': 1,
   '秘密': 2,
@@ -37,7 +37,6 @@ const NoticeList = () => {
   }, []);
 
   const fetchNotices = async () => {
-    // 获取当前登录用户的密级
     const storedUser = localStorage.getItem("frontendUser");
     let userSecurityLevel = "一般";
     if (storedUser) {
@@ -49,10 +48,8 @@ const NoticeList = () => {
       }
     }
 
-    // 获取用户密级对应的等级
     const userRank = securityLevelRank[userSecurityLevel] || 1;
 
-    // 查询所有已发布的通知
     const { data, error } = await supabase
       .from("notices")
       .select("id, title, department, content, created_at, is_pinned, security_level")
@@ -62,7 +59,6 @@ const NoticeList = () => {
       .limit(20);
 
     if (!error && data) {
-      // 根据用户密级过滤通知：用户只能看到等级 <= 自己密级的通知
       const filteredNotices = data.filter((notice) => {
         const noticeRank = securityLevelRank[notice.security_level] || 1;
         return noticeRank <= userRank;
@@ -74,10 +70,9 @@ const NoticeList = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("zh-CN", {
-      year: "numeric",
       month: "2-digit",
       day: "2-digit",
-    }).replace(/\//g, "-");
+    });
   };
 
   const handleNoticeClick = (notice: NoticeItem) => {
@@ -86,53 +81,55 @@ const NoticeList = () => {
   };
 
   return (
-    <div className="gov-card h-full flex flex-col">
+    <div className="gov-card h-full flex flex-col overflow-hidden">
       {/* 标题栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
         <h2 className="gov-card-title text-base">通知公告</h2>
-        <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
+        <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
           更多
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3 h-3" />
         </button>
       </div>
 
       {/* 通知列表 */}
-      <div className="divide-y divide-border flex-1 overflow-auto">
+      <ScrollArea className="flex-1">
         {loading ? (
-          <div className="px-4 py-6 text-center text-muted-foreground text-sm">加载中...</div>
+          <div className="px-4 py-4 text-center text-muted-foreground text-sm">加载中...</div>
         ) : notices.length === 0 ? (
-          <div className="px-4 py-6 text-center text-muted-foreground text-sm">暂无通知公告</div>
+          <div className="px-4 py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
         ) : (
-          notices.map((notice) => (
-            <div
-              key={notice.id}
-              className="px-4 py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-muted/50 transition-colors group"
-              onClick={() => handleNoticeClick(notice)}
-            >
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                {notice.is_pinned && (
-                  <Badge variant="destructive" className="flex-shrink-0 text-sm px-2 py-0.5">
-                    置顶
+          <div className="divide-y divide-border">
+            {notices.map((notice) => (
+              <div
+                key={notice.id}
+                className="px-3 py-2 flex items-center justify-between gap-2 cursor-pointer hover:bg-muted/50 transition-colors group"
+                onClick={() => handleNoticeClick(notice)}
+              >
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  {notice.is_pinned && (
+                    <Badge variant="destructive" className="flex-shrink-0 text-xs px-1.5 py-0 h-5">
+                      顶
+                    </Badge>
+                  )}
+                  <Badge 
+                    variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
+                    className="flex-shrink-0 text-xs px-1.5 py-0 h-5"
+                  >
+                    {notice.security_level?.charAt(0) || '普'}
                   </Badge>
-                )}
-                <Badge 
-                  variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
-                  className="flex-shrink-0 text-sm px-2 py-0.5"
-                >
-                  {notice.security_level || '一般'}
-                </Badge>
-                <span className="text-base text-foreground truncate group-hover:text-primary transition-colors">
-                  {notice.title}
-                </span>
+                  <span className="text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                    {notice.title}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
+                  <span className="hidden sm:inline whitespace-nowrap max-w-[80px] truncate">{notice.department}</span>
+                  <span>{formatDate(notice.created_at)}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-shrink-0">
-                <span className="whitespace-nowrap">{notice.department}</span>
-                <span className="w-24 text-right">{formatDate(notice.created_at)}</span>
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
-      </div>
+      </ScrollArea>
 
       {/* 详情弹窗 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -145,7 +142,7 @@ const NoticeList = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>发布单位：{selectedNotice?.department}</span>
-              <span>发布时间：{selectedNotice ? formatDate(selectedNotice.created_at) : ""}</span>
+              <span>发布时间：{selectedNotice ? new Date(selectedNotice.created_at).toLocaleDateString("zh-CN") : ""}</span>
               {selectedNotice?.is_pinned && (
                 <Badge variant="destructive" className="text-xs px-1.5 py-0">置顶</Badge>
               )}
