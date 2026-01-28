@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowLeft, Eye, FileText, Pencil, Eraser, Save } from "lucide-react";
+import { ArrowLeft, Pencil, Eraser, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -20,57 +20,56 @@ const ProcessDocumentDetail = ({ document, onBack }: ProcessDocumentDetailProps)
   const [activeTab, setActiveTab] = useState<TabType>("approval");
 
   const tabs = [
-    { id: "approval" as TabType, label: "呈批单", icon: "📋" },
-    { id: "content" as TabType, label: "正文", icon: "📄" },
-    { id: "history" as TabType, label: "流转记录", icon: "📝" },
+    { id: "approval" as TabType, label: "呈批单" },
+    { id: "content" as TabType, label: "正文" },
+    { id: "history" as TabType, label: "流转记录" },
   ];
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
-      {/* 顶部导航 */}
-      <div className="bg-background sticky top-0 z-20 border-b">
-        <div className="flex items-center justify-between px-3 py-3">
-          <div className="flex items-center gap-2">
-            <button onClick={onBack} className="p-1">
-              <ArrowLeft className="w-5 h-5" />
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
+      {/* 顶部固定操作栏 - 紧凑设计 */}
+      <div className="bg-white border-b border-slate-200 shrink-0">
+        <div className="flex items-center justify-between h-11 px-2">
+          {/* 左侧：返回 + 标签导航 */}
+          <div className="flex items-center">
+            <button onClick={onBack} className="p-2 -ml-1">
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
             
-            {/* 标签导航 - 不压缩 */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center ml-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors whitespace-nowrap",
+                    "px-3 py-1.5 text-sm font-medium rounded transition-colors",
                     activeTab === tab.id
-                      ? "text-amber-600 bg-amber-50 font-medium"
-                      : "text-muted-foreground hover:bg-muted"
+                      ? "text-red-700 bg-red-50"
+                      : "text-slate-500 hover:text-slate-700"
                   )}
                 >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
+                  {tab.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 右侧按钮 - 只有发送 */}
-          <div className="flex items-center gap-2">
-            <button className="px-5 py-1.5 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg">
+          {/* 右侧操作按钮 */}
+          <div className="flex items-center">
+            <button className="px-4 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded">
               发送
             </button>
           </div>
         </div>
       </div>
 
-      {/* 内容区 */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      {/* 内容区 - 填满剩余空间 */}
+      <div className="flex-1 overflow-y-auto">
         {activeTab === "approval" && (
           <SubmissionSlip document={document} />
         )}
         {activeTab === "content" && (
-          <div className="bg-background rounded-lg overflow-hidden h-[calc(100vh-140px)]">
+          <div className="h-full">
             <ProcessContentViewer title={document.title} />
           </div>
         )}
@@ -82,128 +81,113 @@ const ProcessDocumentDetail = ({ document, onBack }: ProcessDocumentDetailProps)
   );
 };
 
-// 呈批单组件 - 公文办理专用
+// 呈批单组件 - 优化布局
 const SubmissionSlip = ({ document }: { document: ProcessDocumentDetailProps["document"] }) => {
   return (
-    <div className="bg-background rounded-lg p-5">
-      {/* 红色标题 */}
-      <h2 className="text-center text-lg font-bold text-red-600 mb-4">
-        中共昌吉回族自治州委员会办公室文件呈批单
-      </h2>
+    <div className="p-3">
+      <div className="bg-white rounded-lg p-3">
+        {/* 红色标题 */}
+        <h2 className="text-center text-base font-bold text-red-600 mb-2">
+          文件呈批单
+        </h2>
 
-      {/* 承办号和收文时间 */}
-      <div className="flex justify-between text-sm text-muted-foreground mb-4">
-        <span>承办号：2025-16号</span>
-        <span>收文时间：2025年8月27日</span>
-      </div>
-
-      {/* 主表格 */}
-      <div className="border-2 border-red-400 text-sm">
-        {/* 第一行：来文单位、文号、主送、密级 */}
-        <div className="flex border-b border-red-400">
-          <div className="w-16 shrink-0 border-r border-red-400 p-2.5 text-red-600 font-medium flex flex-col items-center justify-center text-center leading-tight">
-            <span>来文</span>
-            <span>单位</span>
-          </div>
-          <div className="flex-1 border-r border-red-400 p-2.5">
-            <span>国务院办公厅</span>
-          </div>
-          <div className="w-12 shrink-0 border-r border-red-400 p-2.5 text-red-600 font-medium flex items-center justify-center">
-            文号
-          </div>
-          <div className="flex-1 border-r border-red-400 p-2.5">
-            <span>国办发〔2025〕18号</span>
-          </div>
-          <div className="w-12 shrink-0 border-r border-red-400 p-2.5 text-red-600 font-medium flex items-center justify-center">
-            密级
-          </div>
-          <div className="w-14 shrink-0 p-2.5 text-center">
-            内部
-          </div>
+        {/* 承办号和收文时间 */}
+        <div className="flex justify-between text-xs text-slate-500 mb-3">
+          <span>承办号：2025-16号</span>
+          <span>收文时间：2025年01月27日</span>
         </div>
 
-        {/* 第二行：标题 */}
-        <div className="flex border-b border-red-400">
-          <div className="w-16 shrink-0 border-r border-red-400 p-2.5 text-red-600 font-medium flex items-center justify-center">
-            标题
-          </div>
-          <div className="flex-1 p-3">
-            {document.title}
-          </div>
-        </div>
-
-        {/* 领导批示区域 */}
-        <div className="border-b border-red-400">
-          <div className="p-2.5 text-red-600 font-medium border-b border-red-400">
-            领导批示：
-          </div>
-          <div className="min-h-36 p-4 relative">
-            {/* 签章图标 */}
-            <div className="absolute right-4 top-4 flex gap-2">
-              <Eye className="w-5 h-5 text-red-400" />
-              <FileText className="w-5 h-5 text-red-400" />
+        {/* 主表格 */}
+        <div className="border border-red-400 text-xs">
+          {/* 第一行：来文单位、文号、密级 */}
+          <div className="flex border-b border-red-400">
+            <div className="w-14 shrink-0 border-r border-red-400 p-2 flex items-center justify-center bg-red-50">
+              <span className="text-red-600 font-medium text-center leading-tight">来文单位</span>
             </div>
-            {/* 批示内容 */}
-            <p className="text-sm text-muted-foreground leading-relaxed mb-8">
-              请办公室会同相关部门认真研究，结合我州实际情况提出贯彻落实意见。
-            </p>
-            {/* 签名 */}
-            <div className="absolute bottom-4 right-4 text-right">
-              <div className="bg-muted/30 px-4 py-2 rounded inline-block">
-                <span className="text-sm text-muted-foreground">陈树龙 2025.08.27</span>
+            <div className="flex-1 border-r border-red-400 p-2 text-slate-700">
+              国务院办公厅
+            </div>
+            <div className="w-10 shrink-0 border-r border-red-400 p-2 flex items-center justify-center bg-red-50">
+              <span className="text-red-600 font-medium">文号</span>
+            </div>
+            <div className="flex-1 border-r border-red-400 p-2 text-slate-700">
+              国办发〔2025〕18号
+            </div>
+            <div className="w-10 shrink-0 border-r border-red-400 p-2 flex items-center justify-center bg-red-50">
+              <span className="text-red-600 font-medium">密级</span>
+            </div>
+            <div className="w-12 shrink-0 p-2 text-center text-slate-700">
+              内部
+            </div>
+          </div>
+
+          {/* 第二行：标题 */}
+          <div className="flex border-b border-red-400">
+            <div className="w-14 shrink-0 border-r border-red-400 p-2 flex items-center justify-center bg-red-50">
+              <span className="text-red-600 font-medium">标题</span>
+            </div>
+            <div className="flex-1 p-2 text-slate-800 leading-snug">
+              {document.title}
+            </div>
+          </div>
+
+          {/* 领导批示区域 */}
+          <div className="border-b border-red-400">
+            <div className="p-2 text-red-600 font-medium border-b border-red-400 bg-red-50">
+              领导批示：
+            </div>
+            <div className="min-h-[60px] p-3 relative">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                请办公室会同相关部门认真研究，结合我州实际情况提出贯彻落实意见。
+              </p>
+              <div className="text-right mt-3">
+                <span className="text-xs text-slate-400">钱国庆 2025.01.27</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 分管领导意见 */}
-        <div className="border-b border-red-400">
-          <div className="p-2.5 text-red-600 font-medium border-b border-red-400">
-            分管领导意见：
-          </div>
-          <div className="min-h-32 p-4 relative">
-            {/* 签名 */}
-            <div className="absolute bottom-4 right-4 text-right">
-              <div className="text-sm text-muted-foreground">
-                <span className="mr-6">同意，请按领导批示执行</span>
-                <span>黄清辉 2025.08.27</span>
+          {/* 分管领导意见 */}
+          <div className="border-b border-red-400">
+            <div className="p-2 text-red-600 font-medium border-b border-red-400 bg-red-50">
+              分管领导意见：
+            </div>
+            <div className="min-h-[50px] p-3 relative">
+              <p className="text-xs text-slate-600">同意，请按领导批示执行</p>
+              <div className="text-right mt-2">
+                <span className="text-xs text-slate-400">何振国 2025.01.27</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 副秘书长意见 */}
-        <div className="border-b border-red-400">
-          <div className="p-2.5 text-red-600 font-medium border-b border-red-400">
-            副秘书长意见：
-          </div>
-          <div className="min-h-28 p-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              该文件内容规范，与我州现行政策一致。建议由政策法规科牵头，会同相关业务科室在15个工作日内提出具体贯彻意见，报分管领导审核后实施。
-            </p>
-            <div className="text-right mt-4">
-              <span className="text-sm text-muted-foreground">周明 2025.08.27</span>
+          {/* 副秘书长意见 */}
+          <div className="border-b border-red-400">
+            <div className="p-2 text-red-600 font-medium border-b border-red-400 bg-red-50">
+              拟办意见：
+            </div>
+            <div className="min-h-[50px] p-3">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                建议由政策法规科牵头，会同相关业务科室在15个工作日内提出具体贯彻意见。
+              </p>
+              <div className="text-right mt-2">
+                <span className="text-xs text-slate-400">冯志远 2025.01.27</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* 底部信息栏 */}
-        <div className="flex">
-          <div className="flex-1 border-r border-red-400 p-2.5">
-            <span className="text-muted-foreground">拟办时间：</span>
-            <span className="ml-1">2025-08-27</span>
-          </div>
-          <div className="flex-1 border-r border-red-400 p-2.5">
-            <span className="text-muted-foreground">经办人：</span>
-            <span className="ml-1">张玉</span>
-          </div>
-          <div className="flex-1 border-r border-red-400 p-2.5">
-            <span className="text-muted-foreground">审核人：</span>
-            <span className="ml-1">李秘书</span>
-          </div>
-          <div className="flex-1 p-2.5">
-            <span className="text-muted-foreground">归档：</span>
-            <span className="ml-1">待归档</span>
+          {/* 底部信息栏 */}
+          <div className="flex">
+            <div className="flex-1 border-r border-red-400 p-2">
+              <span className="text-slate-500">经办人：</span>
+              <span className="text-slate-700">李明华</span>
+            </div>
+            <div className="flex-1 border-r border-red-400 p-2">
+              <span className="text-slate-500">审核：</span>
+              <span className="text-slate-700">刘晓燕</span>
+            </div>
+            <div className="flex-1 p-2">
+              <span className="text-slate-500">归档：</span>
+              <span className="text-slate-700">待归档</span>
+            </div>
           </div>
         </div>
       </div>
@@ -211,7 +195,7 @@ const SubmissionSlip = ({ document }: { document: ProcessDocumentDetailProps["do
   );
 };
 
-// 公文办理正文查看器 - OFD格式带批注功能
+// 正文查看器 - 修复批注保存
 type ToolType = "pencil" | "eraser" | null;
 
 interface Point {
@@ -226,6 +210,8 @@ interface DrawPath {
   lineWidth: number;
 }
 
+const STORAGE_KEY = "document_annotations_process";
+
 const ProcessContentViewer = ({ title }: { title: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -234,24 +220,28 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
 
-  // 公文办理的OFD文档内容 - 行政复议法相关
+  // 从localStorage加载保存的批注
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        setPaths(JSON.parse(saved));
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
   const documentContent = `中华人民共和国行政复议法
 
 （1999年4月29日第九届全国人民代表大会常务委员会第九次会议通过　2023年9月1日第十四届全国人民代表大会常务委员会第五次会议修订）
 
-第一章　总　则
+第一章　总则
 
-第一条　为了防止和纠正违法的或者不当的行政行为，保护公民、法人和其他组织的合法权益，监督和保障行政机关依法行使职权，发挥行政复议化解行政争议的主渠道作用，推进法治政府建设，根据宪法，制定本法。
+　　第一条　为了防止和纠正违法的或者不当的行政行为，保护公民、法人和其他组织的合法权益，监督和保障行政机关依法行使职权，发挥行政复议化解行政争议的主渠道作用，推进法治政府建设，根据宪法，制定本法。
 
-第二条　公民、法人或者其他组织认为行政机关的行政行为侵犯其合法权益，向行政复议机关提出行政复议申请，行政复议机关办理行政复议案件，适用本法。
+　　第二条　公民、法人或者其他组织认为行政机关的行政行为侵犯其合法权益，向行政复议机关提出行政复议申请，行政复议机关办理行政复议案件，适用本法。`;
 
-第三条　行政复议工作应当坚持中国共产党的领导，坚持以人民为中心，遵循合法、公正、公开、高效、便民、为民的原则，坚持有错必纠，保障法律、法规、规章的正确实施。
-
-第四条　县级以上各级人民政府应当加强对行政复议工作的领导。
-
-行政复议机关应当加强行政复议工作规范化、专业化、信息化建设。`;
-
-  // Resize canvas to match container
   useEffect(() => {
     const resizeCanvas = () => {
       const canvas = canvasRef.current;
@@ -260,7 +250,7 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
 
       const rect = container.getBoundingClientRect();
       canvas.width = rect.width;
-      canvas.height = rect.height;
+      canvas.height = Math.max(rect.height, 600);
       redrawCanvas();
     };
 
@@ -269,7 +259,6 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
     return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
 
-  // Redraw all paths
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -340,7 +329,6 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
     const newPath = [...currentPath, point];
     setCurrentPath(newPath);
 
-    // Draw current stroke
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -364,7 +352,7 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
     if (!isDrawing || !activeTool) return;
 
     if (currentPath.length > 1) {
-      setPaths([
+      const newPaths = [
         ...paths,
         {
           points: currentPath,
@@ -372,7 +360,8 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
           color: "#ff0000",
           lineWidth: activeTool === "eraser" ? 20 : 2,
         },
-      ]);
+      ];
+      setPaths(newPaths);
     }
 
     setIsDrawing(false);
@@ -380,64 +369,59 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
   };
 
   const handleSave = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(paths));
     toast.success("批注已保存");
   };
 
   const tools = [
     { id: "pencil" as ToolType, label: "铅笔", icon: Pencil },
-    { id: "eraser" as ToolType, label: "橡皮擦", icon: Eraser },
+    { id: "eraser" as ToolType, label: "橡皮", icon: Eraser },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Toolbar */}
-      <div className="flex items-center justify-end gap-5 px-5 py-3 border-b bg-muted/30">
+    <div className="flex flex-col h-full bg-white">
+      {/* 工具栏 */}
+      <div className="flex items-center justify-end gap-3 px-3 py-2 border-b bg-slate-50 shrink-0">
         {tools.map((tool) => (
           <button
             key={tool.id}
             onClick={() => setActiveTool(activeTool === tool.id ? null : tool.id)}
             className={cn(
-              "flex flex-col items-center gap-1.5 p-2.5 rounded-lg transition-colors",
+              "flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
               activeTool === tool.id
                 ? "text-red-500 bg-red-50"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-slate-500 hover:text-slate-700"
             )}
           >
-            <tool.icon className="w-5 h-5" />
-            <span className="text-xs">{tool.label}</span>
+            <tool.icon className="w-4 h-4" />
+            <span>{tool.label}</span>
           </button>
         ))}
         <button
           onClick={handleSave}
-          className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-slate-500 hover:text-slate-700 transition-colors"
         >
-          <Save className="w-5 h-5" />
-          <span className="text-xs">保存</span>
+          <Save className="w-4 h-4" />
+          <span>保存</span>
         </button>
       </div>
 
-      {/* Document Content with Canvas Overlay */}
+      {/* 文档内容 */}
       <div 
         ref={containerRef}
-        className="flex-1 relative overflow-auto bg-white"
+        className="flex-1 relative overflow-auto"
       >
-        {/* Document Text Layer */}
-        <div className="p-5 text-sm leading-relaxed text-foreground whitespace-pre-wrap select-none">
-          <div className="text-sm text-muted-foreground mb-5 border-b pb-3">
-            {title} &nbsp;&nbsp;&nbsp;&nbsp; 收文编号：2025-16号
+        <div className="p-4 text-sm leading-relaxed text-slate-800 whitespace-pre-wrap select-none min-h-[600px]">
+          <div className="text-xs text-slate-400 mb-3 pb-2 border-b">
+            {title} &nbsp;&nbsp; 收文编号：2025-16号
           </div>
-          {documentContent.split('\n\n').map((paragraph, index) => (
-            <p key={index} className="mb-5 text-justify indent-8">
-              {paragraph}
-            </p>
-          ))}
-          <div className="text-sm text-muted-foreground mt-10 pt-3 border-t flex justify-between">
+          {documentContent}
+          <div className="text-xs text-slate-400 mt-6 pt-2 border-t flex justify-between">
             <span>第1页 共12页</span>
-            <span>2025/8/27 09:00</span>
+            <span>2025/01/27 16:34</span>
           </div>
         </div>
 
-        {/* Canvas Drawing Layer */}
         <canvas
           ref={canvasRef}
           className={cn(
@@ -457,35 +441,75 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
   );
 };
 
-// 流转记录组件
+// 流转记录组件 - 使用真实领导数据
 const CirculationHistory = () => {
   const records = [
-    { from: "收发室（王小红）", fromTime: "2025-08-27 09:00", to: "办公室（李秘书）", toTime: "2025-08-27 09:30" },
-    { from: "办公室（李秘书）", fromTime: "2025-08-27 09:30", to: "副秘书长（周明）", toTime: "2025-08-27 10:15" },
-    { from: "副秘书长（周明）", fromTime: "2025-08-27 10:15", to: "分管领导（黄清辉）", toTime: "2025-08-27 14:00" },
-    { from: "分管领导（黄清辉）", fromTime: "2025-08-27 14:00", to: "主要领导（陈树龙）", toTime: "2025-08-27 16:30" },
-    { from: "主要领导（陈树龙）", fromTime: "2025-08-27 16:30", to: "办公室（归档）", toTime: "2025-08-28 09:00" },
+    { 
+      from: "收发室（卫国强）", 
+      fromTime: "2025-01-27 09:00", 
+      to: "办公室（李明华）", 
+      toTime: "2025-01-27 09:30",
+      action: "请登记处理"
+    },
+    { 
+      from: "李明华（主任）", 
+      fromTime: "2025-01-27 09:30", 
+      to: "冯志远（局长）", 
+      toTime: "2025-01-27 10:15",
+      action: "呈领导阅示"
+    },
+    { 
+      from: "冯志远（局长）", 
+      fromTime: "2025-01-27 10:15", 
+      to: "何振国（局长）", 
+      toTime: "2025-01-27 14:00",
+      action: "请分管领导审核"
+    },
+    { 
+      from: "何振国（局长）", 
+      fromTime: "2025-01-27 14:00", 
+      to: "钱国庆（局长）", 
+      toTime: "2025-01-27 16:30",
+      action: "呈主要领导批示"
+    },
+    { 
+      from: "钱国庆（局长）", 
+      fromTime: "2025-01-27 16:30", 
+      to: "刘晓燕（副主任）", 
+      toTime: "2025-01-28 09:00",
+      action: "请按批示办理归档"
+    },
   ];
 
   return (
-    <div className="bg-background rounded-lg p-5">
-      <h3 className="text-center text-lg font-medium mb-5">流转记录</h3>
-      <div className="space-y-4">
-        {records.map((record, index) => (
-          <div key={index} className="border-l-2 border-primary/30 pl-4 py-2">
-            <div className="flex items-center gap-3 text-sm">
-              <span className="font-medium text-foreground">{record.from}</span>
-              <span className="text-muted-foreground">{record.fromTime}</span>
+    <div className="p-3">
+      <div className="bg-white rounded-lg">
+        <h3 className="text-center text-base font-medium py-3 border-b border-slate-100">流转记录</h3>
+        <div className="p-3">
+          {records.map((record, index) => (
+            <div key={index} className="relative pl-4 pb-4 last:pb-0">
+              {/* 时间线 */}
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-red-200" />
+              <div className="absolute left-[-3px] top-1.5 w-2 h-2 rounded-full bg-red-500" />
+              
+              {/* 内容 */}
+              <div className="text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-slate-800">{record.from}</span>
+                  <span className="text-slate-400">{record.fromTime}</span>
+                </div>
+                {record.action && (
+                  <div className="text-slate-500 italic">"{record.action}"</div>
+                )}
+                <div className="flex items-center gap-1 text-slate-400">
+                  <span>→</span>
+                  <span>{record.to}</span>
+                  <span className="ml-2">{record.toTime}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-muted-foreground my-2 ml-2">
-              <span>↓</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <span className="font-medium text-foreground">{record.to}</span>
-              <span className="text-muted-foreground">{record.toTime}</span>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
