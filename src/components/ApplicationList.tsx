@@ -33,6 +33,7 @@ interface ApplicationListProps {
   searchPlaceholder?: string;
   emptyText?: string;
   statusConfig?: Record<string, StatusConfig>;
+  hideTitle?: boolean;
 }
 
 const defaultStatusConfig: Record<string, StatusConfig> = {
@@ -54,27 +55,30 @@ const ApplicationList = ({
   searchPlaceholder = "搜索...",
   emptyText = "暂无记录",
   statusConfig = defaultStatusConfig,
+  hideTitle = false,
 }: ApplicationListProps) => {
   const getStatusConfig = (status: string) => {
     return statusConfig[status] || defaultStatusConfig[status] || { label: status, variant: "secondary" as const };
   };
 
   return (
-    <Card className="border-0 shadow-sm bg-card/80 backdrop-blur-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6 border-b border-border/50">
-        <CardTitle className="text-xl font-semibold tracking-tight">{title}</CardTitle>
-        <Button 
-          onClick={onAddClick}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          新增申请
-        </Button>
-      </CardHeader>
-      <CardContent className="pt-6">
-        {/* 搜索栏 */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
+    <Card className={cn("border-0 shadow-sm bg-card/80 backdrop-blur-sm", hideTitle && "shadow-none bg-transparent")}>
+      {!hideTitle && (
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6 border-b border-border/50">
+          <CardTitle className="text-xl font-semibold tracking-tight">{title}</CardTitle>
+          <Button 
+            onClick={onAddClick}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            新增申请
+          </Button>
+        </CardHeader>
+      )}
+      <CardContent className={cn("pt-6", hideTitle && "pt-4 px-4")}>
+        {/* 搜索栏 + 新增按钮 */}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
@@ -83,6 +87,15 @@ const ApplicationList = ({
               className="pl-10 h-10 bg-muted/30 border-border/50 focus:border-primary/50 transition-colors"
             />
           </div>
+          {hideTitle && (
+            <Button 
+              onClick={onAddClick}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-md shrink-0"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              新增申请
+            </Button>
+          )}
         </div>
 
         {/* 列表 */}
