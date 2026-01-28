@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, ShoppingCart, BookUser, FileText, Users, Newspaper, Settings } from "lucide-react";
+import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, ShoppingCart, BookUser } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const QuickLinks = () => {
   const navigate = useNavigate();
   const [hasLeaderSchedulePermission, setHasLeaderSchedulePermission] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
 
   // 检查当前用户是否有领导日程权限
   useEffect(() => {
@@ -16,6 +14,7 @@ const QuickLinks = () => {
 
   const checkLeaderSchedulePermission = async () => {
     try {
+      // 获取当前登录用户（前台用户基于contacts表）
       const storedUser = localStorage.getItem("frontendUser");
       if (!storedUser) {
         setHasLeaderSchedulePermission(false);
@@ -23,18 +22,20 @@ const QuickLinks = () => {
       }
 
       const user = JSON.parse(storedUser);
-      const userId = user.id;
+      const userId = user.id; // localStorage stores 'id' not 'contact_id'
       
       if (!userId) {
         setHasLeaderSchedulePermission(false);
         return;
       }
 
+      // 检查是否是领导（领导默认可以看领导日程）
       if (user.is_leader) {
         setHasLeaderSchedulePermission(true);
         return;
       }
 
+      // 检查是否有领导日程查看权限
       const { data: permData, error } = await supabase
         .from("leader_schedule_permissions")
         .select("id")
@@ -112,64 +113,31 @@ const QuickLinks = () => {
     path: "/leader-schedule",
   };
 
-  // 额外的系统应用（占位）
-  const additionalModules = [
-    { id: 8, name: "公文管理", color: "bg-rose-500", icon: FileText, path: "#" },
-    { id: 9, name: "会议管理", color: "bg-indigo-500", icon: Users, path: "#" },
-    { id: 10, name: "信息发布", color: "bg-teal-500", icon: Newspaper, path: "#" },
-    { id: 11, name: "系统设置", color: "bg-slate-500", icon: Settings, path: "#" },
-  ];
-
   // 根据权限决定是否显示领导日程模块
-  const coreModules = hasLeaderSchedulePermission 
+  const modules = hasLeaderSchedulePermission 
     ? [...baseModules, leaderScheduleModule] 
     : baseModules;
 
-  // 合并所有模块，确保显示8个（4x2网格）
-  const allModules = [...coreModules, ...additionalModules].slice(0, 8);
-
   return (
-    <div className="gov-card flex flex-col">
+    <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <h2 className="gov-card-title text-base">全部应用</h2>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-transparent h-auto p-0 gap-1">
-            <TabsTrigger 
-              value="all" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1 text-xs rounded"
-            >
-              全部应用
-            </TabsTrigger>
-            <TabsTrigger 
-              value="personal" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1 text-xs rounded"
-            >
-              个人应用
-            </TabsTrigger>
-            <TabsTrigger 
-              value="public" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1 text-xs rounded"
-            >
-              公共应用
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="px-4 py-3 border-b border-border">
+        <h2 className="gov-card-title text-base">快捷入口</h2>
       </div>
 
-      {/* 模块网格 - 4x2 */}
-      <div className="p-6">
-        <div className="grid grid-cols-4 gap-x-8 gap-y-6">
-          {allModules.map((module) => (
+      {/* 模块网格 */}
+      <div className="p-4 flex-1 flex items-center justify-center">
+        <div className="grid grid-cols-4 gap-4 w-full">
+          {modules.map((module) => (
             <div
               key={module.id}
-              className="app-icon"
-              onClick={() => module.path !== "#" && navigate(module.path)}
+              className="app-icon cursor-pointer group"
+              onClick={() => navigate(module.path)}
             >
-              <div className={`app-icon-box ${module.color}`}>
-                <module.icon className="w-6 h-6" />
+              <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-11 h-11`}>
+                <module.icon className="w-5 h-5" />
               </div>
-              <span className="text-sm text-muted-foreground text-center">
+              <span className="text-sm text-muted-foreground text-center leading-tight">
                 {module.name}
               </span>
             </div>

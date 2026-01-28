@@ -1,23 +1,18 @@
-import { ExternalLink } from "lucide-react";
-
 const ExternalLinks = () => {
   return (
-    <a
-      href="http://www.people.com.cn"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="gov-card flex items-center justify-between px-4 py-3 group cursor-pointer hover:shadow-card-hover transition-shadow"
-    >
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-          <span className="text-white text-xs font-bold">人</span>
-        </div>
-        <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-          人民网资料库
+    <div className="bg-card rounded-md shadow-[var(--shadow-card)] border border-border">
+      <a
+        href="http://www.people.com.cn"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-3 px-5 py-3 transition-colors group rounded-md"
+      >
+        <span className="px-3 py-1 bg-primary text-primary-foreground text-sm rounded font-medium">
+          人民网
         </span>
-      </div>
-      <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-    </a>
+        <span className="text-sm text-foreground group-hover:text-primary">人民网资料库</span>
+      </a>
+    </div>
   );
 };
 

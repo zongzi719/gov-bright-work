@@ -1,16 +1,7 @@
 import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,19 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  addDays,
-  addMonths,
-  subMonths,
-  isSameMonth,
-  isSameDay,
-} from "date-fns";
+import { format, startOfWeek, addDays, subWeeks, addWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
+
+interface Contact {
+  id: string;
+  name: string;
+  department: string | null;
+  organization?: { name: string } | null;
+}
 
 interface Schedule {
   id: string;
@@ -41,6 +28,7 @@ interface Schedule {
   end_time: string;
   location: string | null;
   notes: string | null;
+  contact?: Contact;
 }
 
 const SchedulePanel = () => {
@@ -58,7 +46,9 @@ const SchedulePanel = () => {
 
   const currentUser = getCurrentUser();
 
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -67,7 +57,7 @@ const SchedulePanel = () => {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
-
+  
   const [formData, setFormData] = useState({
     contact_id: currentUser?.id || "",
     title: "",
@@ -79,25 +69,8 @@ const SchedulePanel = () => {
   });
 
   const today = new Date();
-
-  // 生成月历日期
-  const generateCalendarDays = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-
-    const days: Date[] = [];
-    let day = calendarStart;
-    while (day <= calendarEnd) {
-      days.push(day);
-      day = addDays(day, 1);
-    }
-    return days;
-  };
-
-  const calendarDays = generateCalendarDays();
-  const weekLabels = ["日", "一", "二", "三", "四", "五", "六"];
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  const weekLabels = ["一", "二", "三", "四", "五", "六", "日"];
 
   const fetchSchedules = async () => {
     if (!currentUser?.id) {
@@ -105,17 +78,15 @@ const SchedulePanel = () => {
       setLoading(false);
       return;
     }
-
+    
     setLoading(true);
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-
+    const oneWeekEnd = addDays(currentWeekStart, 6);
     const { data, error } = await supabase
       .from("schedules")
-      .select("*")
+      .select("*, contact:contacts(id, name, department)")
       .eq("contact_id", currentUser.id)
-      .gte("schedule_date", format(monthStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(monthEnd, "yyyy-MM-dd"))
+      .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
+      .lte("schedule_date", format(oneWeekEnd, "yyyy-MM-dd"))
       .order("schedule_date")
       .order("start_time");
 
@@ -127,7 +98,7 @@ const SchedulePanel = () => {
 
   useEffect(() => {
     fetchSchedules();
-  }, [currentMonth, currentUser?.id]);
+  }, [currentWeekStart, currentUser?.id]);
 
   const getSchedulesForDay = (date: Date): Schedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
@@ -139,11 +110,11 @@ const SchedulePanel = () => {
   };
 
   const isToday = (date: Date): boolean => {
-    return isSameDay(date, today);
+    return format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
   };
 
   const isSelected = (date: Date): boolean => {
-    return isSameDay(date, selectedDate);
+    return format(date, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
   };
 
   const selectedDateSchedules = getSchedulesForDay(selectedDate);
@@ -152,8 +123,8 @@ const SchedulePanel = () => {
     setSelectedDate(date);
   };
 
-  const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
-  const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
+  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
 
   const resetForm = () => {
     setFormData({
@@ -170,7 +141,6 @@ const SchedulePanel = () => {
 
   const openAddDialog = () => {
     resetForm();
-    setFormData((prev) => ({ ...prev, schedule_date: format(selectedDate, "yyyy-MM-dd") }));
     setDialogOpen(true);
   };
 
@@ -195,7 +165,7 @@ const SchedulePanel = () => {
 
   const handleSubmit = async () => {
     if (submitting) return;
-
+    
     const contactId = currentUser?.id;
     if (!contactId || !formData.title || !formData.schedule_date) {
       toast.error("请填写必填项（日程标题和日期）");
@@ -203,7 +173,7 @@ const SchedulePanel = () => {
     }
 
     setSubmitting(true);
-
+    
     try {
       if (editingSchedule) {
         const { error } = await supabase
@@ -260,7 +230,10 @@ const SchedulePanel = () => {
   const confirmDelete = async () => {
     if (!scheduleToDelete) return;
 
-    const { error } = await supabase.from("schedules").delete().eq("id", scheduleToDelete.id);
+    const { error } = await supabase
+      .from("schedules")
+      .delete()
+      .eq("id", scheduleToDelete.id);
 
     if (error) {
       toast.error("删除日程失败");
@@ -269,112 +242,92 @@ const SchedulePanel = () => {
       toast.success("日程已删除");
       fetchSchedules();
     }
-
+    
     setDeleteDialogOpen(false);
     setScheduleToDelete(null);
   };
 
   return (
-    <div className="gov-card h-full min-h-[420px] flex flex-col overflow-hidden">
+    <div className="gov-card h-full flex flex-col overflow-hidden">
       {/* 标题栏 */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
+      <div className="px-4 py-2 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">日程管理</h2>
-        <Button size="sm" onClick={openAddDialog} className="h-7 text-xs gap-1">
-          <Plus className="w-3.5 h-3.5" />
-          新建日程
+        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-7 w-7 p-0">
+          <Plus className="w-4 h-4" />
         </Button>
       </div>
 
       <div className="p-3 flex-1 flex flex-col overflow-hidden">
-        {/* 统计数字 */}
-        <div className="grid grid-cols-2 gap-3 mb-3 flex-shrink-0">
-          <div className="text-center p-2 bg-primary/5 rounded-lg">
-            <div className="text-xl font-bold text-primary">{pendingSchedulesCount(schedules)}</div>
-            <div className="text-xs text-muted-foreground">待办日程</div>
-          </div>
-          <div className="text-center p-2 bg-orange-50 rounded-lg">
-            <div className="text-xl font-bold text-orange-500">{overdueSchedulesCount(schedules, today)}</div>
-            <div className="text-xs text-muted-foreground">超期日程</div>
-          </div>
-        </div>
-
-        {/* 月历头部 */}
-        <div className="flex items-center justify-between mb-2 flex-shrink-0">
-          <button className="p-1 hover:bg-muted rounded" onClick={handlePrevMonth}>
-            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-          </button>
-          <span className="font-medium text-sm text-foreground">
-            {format(currentMonth, "yyyy年M月", { locale: zhCN })}
+        {/* 日历头部 */}
+        <div className="flex items-center justify-between flex-shrink-0">
+          <span className="font-medium text-foreground text-sm">
+            {format(currentWeekStart, "yyyy年M月", { locale: zhCN })}
           </span>
-          <button className="p-1 hover:bg-muted rounded" onClick={handleNextMonth}>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <span className="text-xs text-muted-foreground px-1">本周</span>
+            <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
 
-        {/* 星期标题 */}
-        <div className="grid grid-cols-7 gap-0.5 mb-1 flex-shrink-0">
-          {weekLabels.map((label) => (
-            <div key={label} className="text-center text-xs text-muted-foreground py-1">
-              {label}
-            </div>
-          ))}
-        </div>
-
-        {/* 日历网格 */}
-        <div className="grid grid-cols-7 gap-0.5 flex-shrink-0">
-          {calendarDays.map((day, idx) => {
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const dayHasSchedule = hasSchedule(day);
-
-            return (
-              <div
-                key={idx}
-                onClick={() => handleDateClick(day)}
-                className={`
-                  aspect-square flex items-center justify-center text-xs cursor-pointer rounded relative
-                  ${!isCurrentMonth ? "text-muted-foreground/40" : "text-foreground"}
-                  ${isToday(day) ? "bg-primary text-white font-bold" : ""}
-                  ${isSelected(day) && !isToday(day) ? "ring-1 ring-primary" : ""}
-                  ${!isToday(day) && !isSelected(day) ? "hover:bg-muted" : ""}
-                `}
-              >
-                {format(day, "d")}
-                {dayHasSchedule && !isToday(day) && (
-                  <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 我的日程标题 */}
-        <div className="mt-3 pt-2 border-t border-border flex items-center justify-between flex-shrink-0">
-          <span className="text-sm font-medium text-foreground">我的日程</span>
-          <span className="text-xs text-muted-foreground">{format(selectedDate, "M月d日", { locale: zhCN })}</span>
-        </div>
-
-        {/* 日程列表 - 确保最少能显示1条日程 */}
-        <ScrollArea className="flex-1 mt-2 min-h-[60px]">
-          {loading ? (
-            <div className="text-xs text-muted-foreground text-center py-4">加载中...</div>
-          ) : selectedDateSchedules.length === 0 ? (
-            <div className="text-xs text-muted-foreground text-center py-4">暂无日程</div>
-          ) : (
-            <div className="space-y-1.5">
-              {selectedDateSchedules.map((item) => (
+        {/* 星期和日期 */}
+        <div className="mt-2 flex-shrink-0">
+          <div className="grid grid-cols-7 gap-1">
+            {weekLabels.map((label, idx) => (
+              <div key={label} className="text-center">
+                <div className="text-xs text-muted-foreground mb-1">{label}</div>
                 <div
-                  key={item.id}
-                  onClick={() => openEditDialog(item)}
-                  className="flex items-start gap-2 text-sm group hover:bg-muted/50 rounded px-2 py-1.5 transition-colors cursor-pointer"
+                  onClick={() => handleDateClick(weekDays[idx])}
+                  className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center cursor-pointer text-sm transition-all ${
+                    isSelected(weekDays[idx]) 
+                      ? "bg-primary text-primary-foreground" 
+                      : isToday(weekDays[idx]) 
+                        ? "bg-primary/20 text-primary font-medium" 
+                        : hasSchedule(weekDays[idx]) 
+                          ? "bg-accent text-accent-foreground" 
+                          : "hover:bg-muted"
+                  }`}
                 >
+                  {format(weekDays[idx], "d")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 选中日期标题 - 紧凑 */}
+        <div className="mt-3 pt-2 flex-shrink-0 border-t border-border">
+          <span className="text-xs font-medium text-muted-foreground">
+            {format(selectedDate, "M月d日 EEEE", { locale: zhCN })}
+          </span>
+        </div>
+
+        {/* 日程列表 - 可滚动 */}
+        <ScrollArea className="flex-1 mt-2">
+          {loading ? (
+            <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
+          ) : selectedDateSchedules.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-4">暂无日程</div>
+          ) : (
+            <div className="space-y-1.5 pr-2">
+              {selectedDateSchedules.map((item) => (
+                <div 
+                  key={item.id} 
+                  onClick={() => openEditDialog(item)}
+                  className="flex items-center gap-2 text-sm group hover:bg-muted/50 rounded px-2 py-1.5 transition-colors cursor-pointer"
+                >
+                  <span className="text-primary font-medium w-12 flex-shrink-0 text-xs">
+                    {item.start_time.slice(0, 5)}
+                  </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-foreground text-sm truncate">{item.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      <span className="text-primary">
-                        {item.start_time.slice(0, 5)}-{item.end_time.slice(0, 5)}
-                      </span>
-                      {item.location && <span> · {item.location}</span>}
-                    </div>
+                    <div className="text-foreground truncate text-sm">{item.title}</div>
+                    {item.location && (
+                      <div className="text-muted-foreground text-xs truncate">{item.location}</div>
+                    )}
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity flex-shrink-0">
                     <button
@@ -384,10 +337,13 @@ const SchedulePanel = () => {
                       }}
                       className="p-1 hover:bg-primary/10 rounded"
                     >
-                      <Pencil className="w-3 h-3 text-primary" />
+                      <Pencil className="w-3.5 h-3.5 text-primary" />
                     </button>
-                    <button onClick={(e) => openDeleteDialog(item, e)} className="p-1 hover:bg-destructive/10 rounded">
-                      <Trash2 className="w-3 h-3 text-destructive" />
+                    <button
+                      onClick={(e) => openDeleteDialog(item, e)}
+                      className="p-1 hover:bg-destructive/10 rounded"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </button>
                   </div>
                 </div>
@@ -399,12 +355,22 @@ const SchedulePanel = () => {
 
       {/* 新增/编辑日程对话框 */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
+          <DialogHeader className="px-6 py-4 border-b bg-background">
             <DialogTitle>{editingSchedule ? "编辑日程" : "新增日程"}</DialogTitle>
-            <DialogDescription>{editingSchedule ? "修改日程信息" : "添加新的日程安排"}</DialogDescription>
+            <DialogDescription>
+              {editingSchedule ? "修改日程信息" : "添加新的日程安排"}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="overflow-y-auto px-6 py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>人员</Label>
+              <Input
+                value={currentUser?.name || ""}
+                disabled
+                className="bg-muted"
+              />
+            </div>
             <div className="space-y-2">
               <Label>日程标题 *</Label>
               <Input
@@ -459,12 +425,12 @@ const SchedulePanel = () => {
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-4">
+          <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
             <Button variant="outline" onClick={closeDialog}>
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (editingSchedule ? "保存中..." : "添加中...") : editingSchedule ? "保存" : "添加"}
+              {submitting ? (editingSchedule ? "保存中..." : "添加中...") : (editingSchedule ? "保存" : "添加")}
             </Button>
           </div>
         </DialogContent>
@@ -481,10 +447,7 @@ const SchedulePanel = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               删除
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -492,18 +455,6 @@ const SchedulePanel = () => {
       </AlertDialog>
     </div>
   );
-};
-
-// 计算待办日程数量
-const pendingSchedulesCount = (schedules: Schedule[]) => {
-  const today = format(new Date(), "yyyy-MM-dd");
-  return schedules.filter((s) => s.schedule_date >= today).length;
-};
-
-// 计算超期日程数量
-const overdueSchedulesCount = (schedules: Schedule[], today: Date) => {
-  const todayStr = format(today, "yyyy-MM-dd");
-  return schedules.filter((s) => s.schedule_date < todayStr).length;
 };
 
 export default SchedulePanel;
