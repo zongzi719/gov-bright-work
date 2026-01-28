@@ -7,6 +7,7 @@ import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calend
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
+import NoticeImageManagement from "@/components/admin/NoticeImageManagement";
 import MenuManagement from "@/components/admin/MenuManagement";
 import ContactManagement from "@/components/admin/ContactManagement";
 import AbsenceManagement from "@/components/admin/AbsenceManagement";
@@ -16,6 +17,7 @@ import SystemManagement from "@/components/admin/SystemManagement";
 import LeaderScheduleManagement from "@/components/admin/LeaderScheduleManagement";
 import ScheduleManagement from "@/components/admin/ScheduleManagement";
 import ApprovalSettings from "@/components/admin/ApprovalSettings";
+
 const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -159,7 +161,10 @@ const Admin = () => {
               </TabsContent>
 
               <TabsContent value="notices" className="mt-0">
-                <NoticeManagement />
+                <div className="space-y-4">
+                  <NoticeImageManagement />
+                  <NoticeManagement />
+                </div>
               </TabsContent>
 
               <TabsContent value="menus" className="mt-0">

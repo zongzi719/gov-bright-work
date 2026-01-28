@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface NoticeItem {
   id: string;
@@ -20,6 +21,12 @@ interface NoticeItem {
   security_level: string;
 }
 
+interface NoticeImage {
+  id: string;
+  image_url: string;
+  title: string;
+}
+
 const securityLevelRank: Record<string, number> = {
   '一般': 1,
   '秘密': 2,
@@ -28,13 +35,41 @@ const securityLevelRank: Record<string, number> = {
 
 const NoticeList = () => {
   const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [images, setImages] = useState<NoticeImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedNotice, setSelectedNotice] = useState<NoticeItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    fetchNotices();
+    fetchData();
   }, []);
+
+  // 自动轮播
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [images.length]);
+
+  const fetchData = async () => {
+    await Promise.all([fetchNotices(), fetchImages()]);
+    setLoading(false);
+  };
+
+  const fetchImages = async () => {
+    const { data, error } = await supabase
+      .from("notice_images")
+      .select("id, image_url, title")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (!error && data) {
+      setImages(data);
+    }
+  };
 
   const fetchNotices = async () => {
     const storedUser = localStorage.getItem("frontendUser");
@@ -65,11 +100,11 @@ const NoticeList = () => {
       });
       setNotices(filteredNotices.slice(0, 10));
     }
-    setLoading(false);
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("zh-CN", {
+      year: "numeric",
       month: "2-digit",
       day: "2-digit",
     });
@@ -79,6 +114,16 @@ const NoticeList = () => {
     setSelectedNotice(notice);
     setDialogOpen(true);
   };
+
+  const goToPrevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const goToNextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const hasImages = images.length > 0;
 
   return (
     <div className="gov-card h-full flex flex-col overflow-hidden">
@@ -91,45 +136,101 @@ const NoticeList = () => {
         </button>
       </div>
 
-      {/* 通知列表 */}
-      <ScrollArea className="flex-1">
-        {loading ? (
-          <div className="px-4 py-4 text-center text-muted-foreground text-sm">加载中...</div>
-        ) : notices.length === 0 ? (
-          <div className="px-4 py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
-        ) : (
-          <div className="divide-y divide-border">
-            {notices.map((notice) => (
+      {/* 主内容区：左侧轮播图 + 右侧列表 */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* 左侧轮播图 */}
+        {hasImages && (
+          <div className="w-[200px] flex-shrink-0 relative group">
+            {images.map((image, index) => (
               <div
-                key={notice.id}
-                className="px-3 py-2 flex items-center justify-between gap-2 cursor-pointer hover:bg-muted/50 transition-colors group"
-                onClick={() => handleNoticeClick(notice)}
+                key={image.id}
+                className={`absolute inset-0 transition-opacity duration-500 ${
+                  index === currentImageIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+                }`}
               >
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                  {notice.is_pinned && (
-                    <Badge variant="destructive" className="flex-shrink-0 text-xs px-1.5 py-0 h-5">
-                      顶
-                    </Badge>
-                  )}
-                  <Badge 
-                    variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
-                    className="flex-shrink-0 text-xs px-1.5 py-0 h-5"
-                  >
-                    {notice.security_level?.charAt(0) || '普'}
-                  </Badge>
-                  <span className="text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                    {notice.title}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
-                  <span className="hidden sm:inline whitespace-nowrap max-w-[80px] truncate">{notice.department}</span>
-                  <span>{formatDate(notice.created_at)}</span>
-                </div>
+                <img
+                  src={image.image_url}
+                  alt={image.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
             ))}
+            
+            {/* 轮播控制按钮 */}
+            {images.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-1 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white rounded-full w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={goToPrevImage}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white rounded-full w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={goToNextImage}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+
+                {/* 底部指示器 */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex gap-1">
+                  {images.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${
+                        index === currentImageIndex
+                          ? "bg-white"
+                          : "bg-white/50 hover:bg-white/70"
+                      }`}
+                      onClick={() => setCurrentImageIndex(index)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
-      </ScrollArea>
+
+        {/* 右侧通知列表 */}
+        <ScrollArea className="flex-1">
+          {loading ? (
+            <div className="px-4 py-4 text-center text-muted-foreground text-sm">加载中...</div>
+          ) : notices.length === 0 ? (
+            <div className="px-4 py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
+          ) : (
+            <div className="divide-y divide-border">
+              {notices.map((notice) => (
+                <div
+                  key={notice.id}
+                  className="px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors group"
+                  onClick={() => handleNoticeClick(notice)}
+                >
+                  {/* 标题行 */}
+                  <div className="flex items-start gap-1.5 mb-1">
+                    {notice.is_pinned && (
+                      <Badge variant="destructive" className="flex-shrink-0 text-xs px-1 py-0 h-4">
+                        顶
+                      </Badge>
+                    )}
+                    <span className="text-sm text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-1">
+                      {notice.title}
+                    </span>
+                  </div>
+                  {/* 信息行：发布单位 + 日期 */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>发布单位：{notice.department}</span>
+                    <span>{formatDate(notice.created_at)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
 
       {/* 详情弹窗 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
