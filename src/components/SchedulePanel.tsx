@@ -275,7 +275,7 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card h-full flex flex-col overflow-hidden">
+    <div className="gov-card h-full min-h-[420px] flex flex-col overflow-hidden">
       {/* 标题栏 */}
       <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">日程管理</h2>
