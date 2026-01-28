@@ -53,10 +53,22 @@ const statusToDisplay = (status: string, processResult: string | null): { label:
 
 const businessTypeLabels: Record<string, string> = {
   business_trip: "出差申请",
-  absence: "请假/外出",
+  absence: "请假申请",
   supply_requisition: "领用申请",
   purchase_request: "采购申请",
   external_approval: "外部审批",
+};
+
+// 根据业务类型和标题智能判断具体申请类型
+const getApplicationLabel = (businessType: string, title: string): string => {
+  if (businessType === "absence") {
+    // 根据标题关键词区分请假和外出
+    if (title.includes("外出")) {
+      return "外出申请";
+    }
+    return "请假申请";
+  }
+  return businessTypeLabels[businessType] || "内部审批";
 };
 
 const WorkPanel = () => {
@@ -183,7 +195,7 @@ const WorkPanel = () => {
   // 获取应用来源标签
   const getSourceLabel = (item: TodoItem): string => {
     if (item.source_system) return item.source_system;
-    return businessTypeLabels[item.business_type] || "内部系统";
+    return getApplicationLabel(item.business_type, item.title);
   };
 
   // 检查待办是否已读（已被点击过）
