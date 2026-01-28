@@ -131,30 +131,8 @@ const QuickLinks = () => {
   return (
     <div className="gov-card flex flex-col">
       {/* 标题栏 */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-border">
         <h2 className="gov-card-title text-base">全部应用</h2>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-transparent h-auto p-0 gap-1">
-            <TabsTrigger 
-              value="all" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1 text-xs rounded"
-            >
-              全部应用
-            </TabsTrigger>
-            <TabsTrigger 
-              value="personal" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1 text-xs rounded"
-            >
-              个人应用
-            </TabsTrigger>
-            <TabsTrigger 
-              value="public" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1 text-xs rounded"
-            >
-              公共应用
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
 
       {/* 模块网格 - 4x2 */}
