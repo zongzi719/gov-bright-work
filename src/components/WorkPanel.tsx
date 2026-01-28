@@ -174,9 +174,46 @@ const WorkPanel = () => {
     return { system, department };
   };
 
+  // 从标题中提取事由（去掉"xxx申请 - "前缀）
+  const extractReason = (title: string): string => {
+    const match = title.match(/^[^-]+\s*-\s*(.+)$/);
+    return match ? match[1] : title;
+  };
+
+  // 获取应用来源标签
+  const getSourceLabel = (item: TodoItem): string => {
+    if (item.source_system) return item.source_system;
+    return businessTypeLabels[item.business_type] || "内部系统";
+  };
+
+  // 检查待办是否已读（已被点击过）
+  const isItemRead = (itemId: string): boolean => {
+    try {
+      const readItems = JSON.parse(localStorage.getItem("readTodoItems") || "[]");
+      return readItems.includes(itemId);
+    } catch {
+      return false;
+    }
+  };
+
+  // 标记待办为已读
+  const markAsRead = (itemId: string) => {
+    try {
+      const readItems = JSON.parse(localStorage.getItem("readTodoItems") || "[]");
+      if (!readItems.includes(itemId)) {
+        readItems.push(itemId);
+        localStorage.setItem("readTodoItems", JSON.stringify(readItems));
+      }
+    } catch {
+      localStorage.setItem("readTodoItems", JSON.stringify([itemId]));
+    }
+  };
+
   const renderPendingItem = (item: TodoItem) => {
     const displayStatus = priorityToStatus(item.priority, item.status);
-    const { system, department } = getDisplayInfo(item);
+    const reason = extractReason(item.title);
+    const sourceLabel = getSourceLabel(item);
+    const isRead = isItemRead(item.id);
 
     return (
       <div
@@ -186,7 +223,10 @@ const WorkPanel = () => {
             ? "bg-primary/5 border-l-primary"
             : "border-l-transparent hover:bg-muted/50"
         }`}
-        onClick={() => handleItemClick(item)}
+        onClick={() => {
+          markAsRead(item.id);
+          handleItemClick(item);
+        }}
       >
         <div className="flex items-start gap-2">
           <div
@@ -199,13 +239,13 @@ const WorkPanel = () => {
             }`}
           />
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium leading-tight mb-1 text-foreground line-clamp-1">
-              {item.title}
+            <h3 className={`text-sm leading-tight mb-1 line-clamp-1 ${
+              isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
+            }`}>
+              {reason}
             </h3>
             <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
+              <span className="text-primary/80">{sourceLabel}</span>
               <span>·</span>
               <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
             </div>
