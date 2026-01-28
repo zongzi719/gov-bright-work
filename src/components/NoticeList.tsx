@@ -142,7 +142,7 @@ const NoticeList = () => {
         {/* 左侧轮播图 */}
         {hasImages && (
           <div 
-            className="w-[180px] flex-shrink-0 relative group bg-muted"
+            className="w-[240px] max-w-[40%] flex-shrink-0 relative group bg-muted"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
