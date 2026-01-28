@@ -29,9 +29,16 @@ interface NoticeImage {
 
 const securityLevelRank: Record<string, number> = {
   '公开': 1,
+  '一般': 1, // 兼容旧数据，映射到公开
   '内部': 2,
   '秘密': 3,
   '机密': 4,
+};
+
+// 获取显示用的密级名称（将旧的"一般"转换为"公开"）
+const getDisplaySecurityLevel = (level: string | null | undefined): string => {
+  if (!level || level === '一般') return '公开';
+  return level;
 };
 
 const NoticeList = () => {
@@ -217,15 +224,14 @@ const NoticeList = () => {
                   }`}
                   onClick={() => handleNoticeClick(notice)}
                 >
-                  {/* 标题行 */}
                   <div className="flex items-start gap-1.5 mb-0.5">
                     <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${
-                      notice.security_level === '机密' ? 'bg-red-100 text-red-700' : 
-                      notice.security_level === '秘密' ? 'bg-orange-100 text-orange-700' : 
-                      notice.security_level === '内部' ? 'bg-blue-100 text-blue-700' :
+                      getDisplaySecurityLevel(notice.security_level) === '机密' ? 'bg-red-100 text-red-700' : 
+                      getDisplaySecurityLevel(notice.security_level) === '秘密' ? 'bg-orange-100 text-orange-700' : 
+                      getDisplaySecurityLevel(notice.security_level) === '内部' ? 'bg-blue-100 text-blue-700' :
                       'bg-gray-100 text-gray-500'
                     }`}>
-                      {notice.security_level || '公开'}
+                      {getDisplaySecurityLevel(notice.security_level)}
                     </span>
                     {notice.is_pinned && (
                       <span className="flex-shrink-0 text-xs px-1 py-0 bg-red-100 text-red-700 rounded mt-0.5">
@@ -264,12 +270,12 @@ const NoticeList = () => {
                 <Badge variant="destructive" className="text-xs px-1.5 py-0">置顶</Badge>
               )}
               <span className={`text-xs px-1.5 py-0.5 rounded ${
-                selectedNotice?.security_level === '机密' ? 'bg-red-100 text-red-700' : 
-                selectedNotice?.security_level === '秘密' ? 'bg-orange-100 text-orange-700' : 
-                selectedNotice?.security_level === '内部' ? 'bg-blue-100 text-blue-700' :
+                getDisplaySecurityLevel(selectedNotice?.security_level) === '机密' ? 'bg-red-100 text-red-700' : 
+                getDisplaySecurityLevel(selectedNotice?.security_level) === '秘密' ? 'bg-orange-100 text-orange-700' : 
+                getDisplaySecurityLevel(selectedNotice?.security_level) === '内部' ? 'bg-blue-100 text-blue-700' :
                 'bg-gray-100 text-gray-500'
               }`}>
-                {selectedNotice?.security_level || '公开'}
+                {getDisplaySecurityLevel(selectedNotice?.security_level)}
               </span>
             </div>
             <div className="border-t border-border pt-4">
