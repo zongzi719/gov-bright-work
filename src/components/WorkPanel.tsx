@@ -240,27 +240,16 @@ const WorkPanel = () => {
           handleItemClick(item);
         }}
       >
-        <div className="flex items-start gap-2">
-          <div
-            className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-              displayStatus === "urgent"
-                ? "bg-destructive"
-                : displayStatus === "normal"
-                ? "bg-primary"
-                : "bg-muted-foreground"
-            }`}
-          />
-          <div className="flex-1 min-w-0">
-            <h3 className={`text-sm leading-tight mb-1 line-clamp-1 ${
-              isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
-            }`}>
-              {reason}
-            </h3>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span className="text-primary/80">{sourceLabel}</span>
-              <span>·</span>
-              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
-            </div>
+        <div className="flex-1 min-w-0">
+          <h3 className={`text-sm leading-tight mb-1 line-clamp-1 ${
+            isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
+          }`}>
+            {reason}
+          </h3>
+          <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            <span className="text-primary/80">{sourceLabel}</span>
+            <span>·</span>
+            <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
           </div>
         </div>
       </div>
@@ -282,24 +271,21 @@ const WorkPanel = () => {
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-2">
-          <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-muted-foreground" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-medium leading-tight text-muted-foreground line-clamp-1 flex-1">
-                {reason}
-              </h3>
-              <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
-            </div>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span className="text-primary/80">{sourceLabel}</span>
-              <span>·</span>
-              <span>
-                {item.processed_at
-                  ? format(new Date(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
-                  : format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
-              </span>
-            </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-sm font-normal leading-tight text-muted-foreground line-clamp-1 flex-1">
+              {reason}
+            </h3>
+            <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
+          </div>
+          <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            <span className="text-primary/80">{sourceLabel}</span>
+            <span>·</span>
+            <span>
+              {item.processed_at
+                ? format(new Date(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
+                : format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
+            </span>
           </div>
         </div>
       </div>
@@ -321,26 +307,23 @@ const WorkPanel = () => {
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-2">
-          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isRead ? "bg-muted-foreground" : "bg-primary"}`} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className={`text-sm leading-tight line-clamp-1 flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
-                {reason}
-              </h3>
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
-                  isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                }`}
-              >
-                {isRead ? "已阅" : "未阅"}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span className="text-primary/80">{sourceLabel}</span>
-              <span>·</span>
-              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
-            </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={`text-sm leading-tight line-clamp-1 flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
+              {reason}
+            </h3>
+            <span
+              className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
+                isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+              }`}
+            >
+              {isRead ? "已阅" : "未阅"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            <span className="text-primary/80">{sourceLabel}</span>
+            <span>·</span>
+            <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
           </div>
         </div>
       </div>
