@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, subWeeks, addWeeks } from "date-fns";
@@ -31,7 +32,6 @@ interface Schedule {
 }
 
 const SchedulePanel = () => {
-  // Get current user from localStorage
   const getCurrentUser = () => {
     try {
       const userStr = localStorage.getItem("frontendUser");
@@ -54,11 +54,7 @@ const SchedulePanel = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  // 编辑相关状态
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
-  
-  // 删除确认相关状态
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
   
@@ -73,12 +69,9 @@ const SchedulePanel = () => {
   });
 
   const today = new Date();
-  // 显示近一周7天
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
-  // 星期标签
   const weekLabels = ["一", "二", "三", "四", "五", "六", "日"];
 
-  // 获取日程 - 只获取当前登录用户的日程
   const fetchSchedules = async () => {
     if (!currentUser?.id) {
       setSchedules([]);
@@ -107,40 +100,32 @@ const SchedulePanel = () => {
     fetchSchedules();
   }, [currentWeekStart, currentUser?.id]);
 
-  // 获取某天的日程
   const getSchedulesForDay = (date: Date): Schedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
     return schedules.filter((s) => s.schedule_date === dateStr);
   };
 
-  // 检查日期是否有日程
   const hasSchedule = (date: Date): boolean => {
     return getSchedulesForDay(date).length > 0;
   };
 
-  // 检查是否是今天
   const isToday = (date: Date): boolean => {
     return format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
   };
 
-  // 检查是否是选中的日期
   const isSelected = (date: Date): boolean => {
     return format(date, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
   };
 
-  // 获取选中日期的日程
   const selectedDateSchedules = getSchedulesForDay(selectedDate);
 
-  // 点击日期
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
   };
 
-  // 周导航（一周）
   const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
   const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
 
-  // 重置表单
   const resetForm = () => {
     setFormData({
       contact_id: currentUser?.id || "",
@@ -154,13 +139,11 @@ const SchedulePanel = () => {
     setEditingSchedule(null);
   };
 
-  // 打开新增对话框
   const openAddDialog = () => {
     resetForm();
     setDialogOpen(true);
   };
 
-  // 打开编辑对话框
   const openEditDialog = (schedule: Schedule) => {
     setEditingSchedule(schedule);
     setFormData({
@@ -175,13 +158,11 @@ const SchedulePanel = () => {
     setDialogOpen(true);
   };
 
-  // 关闭对话框
   const closeDialog = () => {
     setDialogOpen(false);
     resetForm();
   };
 
-  // 提交日程（新增或编辑）
   const handleSubmit = async () => {
     if (submitting) return;
     
@@ -195,7 +176,6 @@ const SchedulePanel = () => {
     
     try {
       if (editingSchedule) {
-        // 编辑模式
         const { error } = await supabase
           .from("schedules")
           .update({
@@ -217,7 +197,6 @@ const SchedulePanel = () => {
           fetchSchedules();
         }
       } else {
-        // 新增模式
         const { error } = await supabase.from("schedules").insert({
           contact_id: contactId,
           title: formData.title,
@@ -242,14 +221,12 @@ const SchedulePanel = () => {
     }
   };
 
-  // 打开删除确认对话框
   const openDeleteDialog = (schedule: Schedule, e: React.MouseEvent) => {
     e.stopPropagation();
     setScheduleToDelete(schedule);
     setDeleteDialogOpen(true);
   };
 
-  // 确认删除日程
   const confirmDelete = async () => {
     if (!scheduleToDelete) return;
 
@@ -271,120 +248,109 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card min-h-[420px] flex flex-col">
+    <div className="gov-card h-full flex flex-col overflow-hidden">
       {/* 标题栏 */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
+      <div className="px-4 py-2 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">日程管理</h2>
-        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-8 w-8 p-0">
-          <Plus className="w-5 h-5" />
+        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-7 w-7 p-0">
+          <Plus className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="p-3 flex-1 flex flex-col">
+      <div className="p-3 flex-1 flex flex-col overflow-hidden">
         {/* 日历头部 */}
         <div className="flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground text-base">
-              {format(currentWeekStart, "yyyy年M月", { locale: zhCN })}
-            </span>
-          </div>
+          <span className="font-medium text-foreground text-sm">
+            {format(currentWeekStart, "yyyy年M月", { locale: zhCN })}
+          </span>
           <div className="flex items-center gap-1">
-            <button className="p-1.5 hover:bg-muted rounded" onClick={handlePrevWeek}>
-              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
-            <span className="text-base text-muted-foreground px-2">近一周</span>
-            <button className="p-1.5 hover:bg-muted rounded" onClick={handleNextWeek}>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground px-1">本周</span>
+            <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
 
-        {/* 星期标签 - 两行日期 */}
-        <div className="mt-3 flex-shrink-0">
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {weekLabels.map((label) => (
-              <div 
-                key={label} 
-                className="text-center text-sm text-muted-foreground py-1"
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-          {/* 一周日期 */}
+        {/* 星期和日期 */}
+        <div className="mt-2 flex-shrink-0">
           <div className="grid grid-cols-7 gap-1">
-            {weekDays.map((day) => (
-              <div
-                key={format(day, "yyyy-MM-dd")}
-                onClick={() => handleDateClick(day)}
-                className={`calendar-day cursor-pointer transition-all ${
-                  isSelected(day) ? "ring-2 ring-primary ring-offset-1" : ""
-                } ${isToday(day) ? "calendar-day-today" : ""} ${
-                  hasSchedule(day) && !isToday(day) && !isSelected(day) ? "calendar-day-event" : ""
-                }`}
-              >
-                {format(day, "d")}
+            {weekLabels.map((label, idx) => (
+              <div key={label} className="text-center">
+                <div className="text-xs text-muted-foreground mb-1">{label}</div>
+                <div
+                  onClick={() => handleDateClick(weekDays[idx])}
+                  className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center cursor-pointer text-sm transition-all ${
+                    isSelected(weekDays[idx]) 
+                      ? "bg-primary text-primary-foreground" 
+                      : isToday(weekDays[idx]) 
+                        ? "bg-primary/20 text-primary font-medium" 
+                        : hasSchedule(weekDays[idx]) 
+                          ? "bg-accent text-accent-foreground" 
+                          : "hover:bg-muted"
+                  }`}
+                >
+                  {format(weekDays[idx], "d")}
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* 选中日期的标题 */}
-        <div className="mt-3 mb-2 flex-shrink-0 border-t border-border pt-3">
-          <span className="text-sm font-medium text-foreground">
-            {format(selectedDate, "M月d日 EEEE", { locale: zhCN })} 日程
+        {/* 选中日期标题 - 紧凑 */}
+        <div className="mt-3 pt-2 flex-shrink-0 border-t border-border">
+          <span className="text-xs font-medium text-muted-foreground">
+            {format(selectedDate, "M月d日 EEEE", { locale: zhCN })}
           </span>
         </div>
 
-        {/* 选中日期的日程列表 */}
-        <div className="flex-1 overflow-hidden space-y-2 min-h-[100px]">
+        {/* 日程列表 - 可滚动 */}
+        <ScrollArea className="flex-1 mt-2">
           {loading ? (
-            <div className="text-base text-muted-foreground text-center py-4">加载中...</div>
+            <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
-            <div className="text-base text-muted-foreground text-center py-4">该日暂无日程</div>
+            <div className="text-sm text-muted-foreground text-center py-4">暂无日程</div>
           ) : (
-            selectedDateSchedules.map((item) => (
-              <div 
-                key={item.id} 
-                onClick={() => openEditDialog(item)}
-                className="flex items-start gap-3 text-base group hover:bg-muted/50 rounded-md p-2 -mx-2 transition-colors cursor-pointer"
-              >
-                <span className="text-primary font-medium w-14 flex-shrink-0">
-                  {item.start_time.slice(0, 5)}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-foreground line-clamp-2">
-                    {item.title}
+            <div className="space-y-1.5 pr-2">
+              {selectedDateSchedules.map((item) => (
+                <div 
+                  key={item.id} 
+                  onClick={() => openEditDialog(item)}
+                  className="flex items-center gap-2 text-sm group hover:bg-muted/50 rounded px-2 py-1.5 transition-colors cursor-pointer"
+                >
+                  <span className="text-primary font-medium w-12 flex-shrink-0 text-xs">
+                    {item.start_time.slice(0, 5)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-foreground truncate text-sm">{item.title}</div>
+                    {item.location && (
+                      <div className="text-muted-foreground text-xs truncate">{item.location}</div>
+                    )}
                   </div>
-                  {item.location && (
-                    <div className="text-muted-foreground text-sm mt-0.5 truncate">
-                      {item.location}
-                    </div>
-                  )}
+                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity flex-shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(item);
+                      }}
+                      className="p-1 hover:bg-primary/10 rounded"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-primary" />
+                    </button>
+                    <button
+                      onClick={(e) => openDeleteDialog(item, e)}
+                      className="p-1 hover:bg-destructive/10 rounded"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </button>
+                  </div>
                 </div>
-                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditDialog(item);
-                    }}
-                    className="p-1 hover:bg-primary/10 rounded"
-                    title="编辑日程"
-                  >
-                    <Pencil className="w-4 h-4 text-primary" />
-                  </button>
-                  <button
-                    onClick={(e) => openDeleteDialog(item, e)}
-                    className="p-1 hover:bg-destructive/10 rounded"
-                    title="删除日程"
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </button>
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
-        </div>
+        </ScrollArea>
       </div>
 
       {/* 新增/编辑日程对话框 */}
@@ -459,7 +425,6 @@ const SchedulePanel = () => {
               />
             </div>
           </div>
-          {/* 固定底部操作按钮 */}
           <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
             <Button variant="outline" onClick={closeDialog}>
               取消

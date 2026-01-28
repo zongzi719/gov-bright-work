@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import TodoDetailDialog from "./TodoDetailDialog";
 
 interface TodoItem {
@@ -68,7 +69,6 @@ const WorkPanel = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<TodoItem | null>(null);
 
-  // Get current user from localStorage
   const getCurrentUser = () => {
     try {
       const userStr = localStorage.getItem("frontendUser");
@@ -83,7 +83,6 @@ const WorkPanel = () => {
 
   const currentUser = getCurrentUser();
 
-  // Fetch all items
   const fetchAllItems = async () => {
     if (!currentUser?.id) {
       setLoading(false);
@@ -92,7 +91,6 @@ const WorkPanel = () => {
 
     setLoading(true);
 
-    // Fetch pending items
     const { data: pendingData } = await supabase
       .from("todo_items")
       .select(`
@@ -106,13 +104,11 @@ const WorkPanel = () => {
       .order("created_at", { ascending: false })
       .limit(20);
 
-    // Filter out CC items from pending
     const filteredPending = (pendingData || []).filter(
       (item) => !item.process_result || item.process_result !== "cc_notified"
     );
     setPendingItems(filteredPending as unknown as TodoItem[]);
 
-    // Fetch completed items
     const { data: completedData } = await supabase
       .from("todo_items")
       .select(`
@@ -129,7 +125,6 @@ const WorkPanel = () => {
 
     setCompletedItems((completedData || []) as unknown as TodoItem[]);
 
-    // Fetch CC items
     const { data: ccData } = await supabase
       .from("todo_items")
       .select(`
@@ -158,13 +153,11 @@ const WorkPanel = () => {
   const handleItemClick = (item: TodoItem) => {
     setSelectedId(item.id);
 
-    // 如果是外部系统的待办，跳转到外部链接
     if (item.action_url) {
       window.open(item.action_url, "_blank");
       return;
     }
 
-    // 内部待办打开详情弹窗
     if (item.approval_instance_id) {
       setSelectedTodo(item);
       setDetailOpen(true);
@@ -188,7 +181,7 @@ const WorkPanel = () => {
     return (
       <div
         key={item.id}
-        className={`relative px-4 py-2.5 cursor-pointer transition-all border-l-3 ${
+        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
           selectedId === item.id
             ? "bg-primary/5 border-l-primary"
             : "border-l-transparent hover:bg-muted/50"
@@ -197,30 +190,26 @@ const WorkPanel = () => {
       >
         <div className="flex items-start gap-2">
           <div
-            className={`status-dot mt-1.5 ${
+            className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
               displayStatus === "urgent"
-                ? "status-dot-urgent"
+                ? "bg-destructive"
                 : displayStatus === "normal"
-                ? "status-dot-normal"
-                : "status-dot-done"
+                ? "bg-primary"
+                : "bg-muted-foreground"
             }`}
           />
-            <div className="flex-1 min-w-0">
-              <h3
-                className={`text-base font-medium leading-relaxed mb-1.5 ${
-                  selectedId === item.id ? "text-primary" : "text-foreground"
-                }`}
-              >
-                {item.title}
-              </h3>
-              <div className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
-                <span>• 系统：{system}</span>
-                <span>• 部门：{department}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-              </p>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium leading-tight mb-1 text-foreground line-clamp-1">
+              {item.title}
+            </h3>
+            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+              <span>{system}</span>
+              <span>·</span>
+              <span>{department}</span>
+              <span>·</span>
+              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
             </div>
+          </div>
         </div>
       </div>
     );
@@ -233,7 +222,7 @@ const WorkPanel = () => {
     return (
       <div
         key={item.id}
-        className={`relative px-4 py-2.5 cursor-pointer transition-all border-l-3 ${
+        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
           selectedId === item.id
             ? "bg-primary/5 border-l-primary"
             : "border-l-transparent hover:bg-muted/50"
@@ -241,29 +230,26 @@ const WorkPanel = () => {
         onClick={() => handleItemClick(item)}
       >
         <div className="flex items-start gap-2">
-          <div className="status-dot mt-1.5 status-dot-done" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3
-                  className={`text-base font-medium leading-relaxed mb-1.5 ${
-                    selectedId === item.id ? "text-primary" : "text-foreground"
-                  }`}
-                >
-                  {item.title}
-                </h3>
-                <span className={`text-sm px-2 py-0.5 rounded ${color}`}>{label}</span>
-              </div>
-              <div className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
-                <span>• 系统：{system}</span>
-                <span>• 部门：{department}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                • 处理时间：
-                {item.processed_at
-                  ? format(new Date(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
-                  : format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-              </p>
+          <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-muted-foreground" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
+                {item.title}
+              </h3>
+              <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
             </div>
+            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+              <span>{system}</span>
+              <span>·</span>
+              <span>{department}</span>
+              <span>·</span>
+              <span>
+                {item.processed_at
+                  ? format(new Date(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
+                  : format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -276,7 +262,7 @@ const WorkPanel = () => {
     return (
       <div
         key={item.id}
-        className={`relative px-4 py-2.5 cursor-pointer transition-all border-l-3 ${
+        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
           selectedId === item.id
             ? "bg-primary/5 border-l-primary"
             : "border-l-transparent hover:bg-muted/50"
@@ -284,126 +270,132 @@ const WorkPanel = () => {
         onClick={() => handleItemClick(item)}
       >
         <div className="flex items-start gap-2">
-          <div className={`status-dot mt-1.5 ${isRead ? "status-dot-done" : "status-dot-normal"}`} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3
-                  className={`text-base font-medium leading-relaxed mb-1.5 ${
-                    selectedId === item.id ? "text-primary" : "text-foreground"
-                  }`}
-                >
-                  {item.title.replace(/^\[抄送\]\s*/, "")}
-                </h3>
-                <span
-                  className={`text-sm px-2 py-0.5 rounded ${
-                    isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                  }`}
-                >
-                  {isRead ? "已阅" : "未阅"}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
-                <span>• 系统：{system}</span>
-                <span>• 部门：{department}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                • 时间：{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
-              </p>
+          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isRead ? "bg-muted-foreground" : "bg-primary"}`} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
+                {item.title.replace(/^\[抄送\]\s*/, "")}
+              </h3>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
+                  isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                }`}
+              >
+                {isRead ? "已阅" : "未阅"}
+              </span>
             </div>
+            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+              <span>{system}</span>
+              <span>·</span>
+              <span>{department}</span>
+              <span>·</span>
+              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
+            </div>
+          </div>
         </div>
       </div>
     );
   };
 
-  // 移除单独的 loading 状态返回，直接在主体中显示加载状态
-  // 这样Tab标签始终可见，只是内容区域显示"加载中"
+  // 无数据时压缩显示高度
+  const getEmptyHeight = () => {
+    if (activeTab === "pending" && pendingItems.length === 0) return "h-20";
+    if (activeTab === "completed" && completedItems.length === 0) return "h-20";
+    if (activeTab === "cc" && ccItems.length === 0) return "h-20";
+    return "h-32";
+  };
 
   return (
     <>
-      <div className="gov-card h-full flex flex-col">
+      <div className="gov-card h-full flex flex-col overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* 标题栏 + Tab切换 */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-            <TabsList className="bg-transparent gap-1 p-0 h-auto">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
+            <TabsList className="bg-transparent gap-0.5 p-0 h-auto">
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
               >
-                待办事项
+                待办
                 {pendingCount > 0 && (
-                  <span className="ml-1.5 gov-badge text-xs px-1.5">{pendingCount}</span>
+                  <span className="ml-1 gov-badge text-xs px-1">{pendingCount}</span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
               >
-                已办理
+                已办
               </TabsTrigger>
               <TabsTrigger
                 value="cc"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-3 py-1.5 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
               >
                 抄送
                 {ccUnreadCount > 0 && (
-                  <span className="ml-1.5 gov-badge text-xs px-1.5">{ccUnreadCount}</span>
+                  <span className="ml-1 gov-badge text-xs px-1">{ccUnreadCount}</span>
                 )}
               </TabsTrigger>
             </TabsList>
-            <button className="text-sm text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
+            <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
               更多
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* 待办事项列表 */}
-          <TabsContent value="pending" className="flex-1 overflow-y-auto m-0">
+          <TabsContent value="pending" className="flex-1 m-0 overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">
                 加载中...
               </div>
             ) : pendingItems.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">
                 暂无待办事项
               </div>
             ) : (
-              pendingItems.map(renderPendingItem)
+              <ScrollArea className="h-full">
+                {pendingItems.map(renderPendingItem)}
+              </ScrollArea>
             )}
           </TabsContent>
 
           {/* 已办理列表 */}
-          <TabsContent value="completed" className="flex-1 overflow-y-auto m-0">
+          <TabsContent value="completed" className="flex-1 m-0 overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">
                 加载中...
               </div>
             ) : completedItems.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">
                 暂无已办理事项
               </div>
             ) : (
-              completedItems.map(renderCompletedItem)
+              <ScrollArea className="h-full">
+                {completedItems.map(renderCompletedItem)}
+              </ScrollArea>
             )}
           </TabsContent>
 
           {/* 抄送列表 */}
-          <TabsContent value="cc" className="flex-1 overflow-y-auto m-0">
+          <TabsContent value="cc" className="flex-1 m-0 overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">
                 加载中...
               </div>
             ) : ccItems.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">
                 暂无抄送
               </div>
             ) : (
-              ccItems.map(renderCCItem)
+              <ScrollArea className="h-full">
+                {ccItems.map(renderCCItem)}
+              </ScrollArea>
             )}
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* 详情弹窗 */}
       <TodoDetailDialog
         open={detailOpen}
         onOpenChange={setDetailOpen}

@@ -1,10 +1,70 @@
+import { useState, useEffect } from "react";
 import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, ShoppingCart, BookUser } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const QuickLinks = () => {
   const navigate = useNavigate();
+  const [hasLeaderSchedulePermission, setHasLeaderSchedulePermission] = useState(false);
 
-  const modules = [
+  // 检查当前用户是否有领导日程权限
+  useEffect(() => {
+    checkLeaderSchedulePermission();
+  }, []);
+
+  const checkLeaderSchedulePermission = async () => {
+    try {
+      // 获取当前登录用户
+      const storedUser = localStorage.getItem("frontendUser");
+      if (!storedUser) {
+        setHasLeaderSchedulePermission(false);
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+      
+      // 检查是否是领导（领导默认可以看领导日程）
+      if (user.is_leader) {
+        setHasLeaderSchedulePermission(true);
+        return;
+      }
+
+      // 检查是否有后台管理员权限
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.session.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        if (roleData) {
+          setHasLeaderSchedulePermission(true);
+          return;
+        }
+
+        // 检查是否有领导日程查看权限
+        const { data: permData } = await supabase
+          .from("leader_schedule_permissions")
+          .select("id")
+          .eq("user_id", session.session.user.id)
+          .limit(1);
+
+        if (permData && permData.length > 0) {
+          setHasLeaderSchedulePermission(true);
+          return;
+        }
+      }
+
+      setHasLeaderSchedulePermission(false);
+    } catch (e) {
+      console.error("检查领导日程权限失败:", e);
+      setHasLeaderSchedulePermission(false);
+    }
+  };
+
+  const baseModules = [
     {
       id: 1,
       name: "出差申请",
@@ -47,14 +107,20 @@ const QuickLinks = () => {
       icon: BookUser,
       path: "/contacts",
     },
-    {
-      id: 7,
-      name: "领导日程",
-      color: "bg-amber-500",
-      icon: Star,
-      path: "/leader-schedule",
-    },
   ];
+
+  const leaderScheduleModule = {
+    id: 7,
+    name: "领导日程",
+    color: "bg-amber-500",
+    icon: Star,
+    path: "/leader-schedule",
+  };
+
+  // 根据权限决定是否显示领导日程模块
+  const modules = hasLeaderSchedulePermission 
+    ? [...baseModules, leaderScheduleModule] 
+    : baseModules;
 
   return (
     <div className="gov-card h-full flex flex-col">
