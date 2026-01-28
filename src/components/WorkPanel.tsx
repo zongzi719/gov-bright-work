@@ -257,7 +257,8 @@ const WorkPanel = () => {
 
   const renderCompletedItem = (item: TodoItem) => {
     const { label, color } = statusToDisplay(item.status, item.process_result);
-    const { system, department } = getDisplayInfo(item);
+    const reason = extractReason(item.title);
+    const sourceLabel = getSourceLabel(item);
 
     return (
       <div
@@ -273,15 +274,13 @@ const WorkPanel = () => {
           <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-muted-foreground" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
-                {item.title}
+              <h3 className="text-sm font-medium leading-tight text-muted-foreground line-clamp-1 flex-1">
+                {reason}
               </h3>
               <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
             </div>
             <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
+              <span className="text-primary/80">{sourceLabel}</span>
               <span>·</span>
               <span>
                 {item.processed_at
@@ -297,7 +296,8 @@ const WorkPanel = () => {
 
   const renderCCItem = (item: TodoItem) => {
     const isRead = item.status !== "pending";
-    const { system, department } = getDisplayInfo(item);
+    const reason = extractReason(item.title.replace(/^\[抄送\]\s*/, ""));
+    const sourceLabel = getSourceLabel(item);
 
     return (
       <div
@@ -313,8 +313,8 @@ const WorkPanel = () => {
           <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isRead ? "bg-muted-foreground" : "bg-primary"}`} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
-                {item.title.replace(/^\[抄送\]\s*/, "")}
+              <h3 className={`text-sm leading-tight line-clamp-1 flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
+                {reason}
               </h3>
               <span
                 className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
@@ -325,9 +325,7 @@ const WorkPanel = () => {
               </span>
             </div>
             <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
+              <span className="text-primary/80">{sourceLabel}</span>
               <span>·</span>
               <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
             </div>
