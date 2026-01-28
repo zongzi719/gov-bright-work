@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, FileText } from "lucide-react";
+import { ChevronRight, Plane, CalendarX2, DoorOpen, Package, ShoppingCart, ClipboardCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -36,19 +36,36 @@ const businessTypeLabels: Record<string, string> = {
   external_approval: "外部审批",
 };
 
-// 图标组件
+// 业务类型图标映射
+const businessTypeIcons: Record<string, React.ElementType> = {
+  business_trip: Plane,
+  absence: CalendarX2,
+  leave: CalendarX2,
+  out: DoorOpen,
+  supply_requisition: Package,
+  purchase_request: ShoppingCart,
+  external_approval: ClipboardCheck,
+};
+
+// 业务类型颜色映射 - 使用渐变色
+const businessTypeColors: Record<string, string> = {
+  business_trip: "from-blue-500 to-blue-600",
+  absence: "from-orange-400 to-orange-500",
+  leave: "from-amber-400 to-amber-500",
+  out: "from-violet-500 to-violet-600",
+  supply_requisition: "from-emerald-500 to-emerald-600",
+  purchase_request: "from-indigo-500 to-indigo-600",
+  external_approval: "from-slate-500 to-slate-600",
+};
+
+// 图标组件 - 更精致的设计
 const TodoIcon = ({ type }: { type: string }) => {
-  const colors: Record<string, string> = {
-    business_trip: "bg-blue-500",
-    absence: "bg-orange-500",
-    supply_requisition: "bg-green-500",
-    purchase_request: "bg-purple-500",
-    external_approval: "bg-gray-500",
-  };
+  const IconComponent = businessTypeIcons[type] || ClipboardCheck;
+  const colorClass = businessTypeColors[type] || "from-primary to-primary";
   
   return (
-    <div className={`w-10 h-10 rounded-lg ${colors[type] || "bg-primary"} flex items-center justify-center flex-shrink-0`}>
-      <FileText className="w-5 h-5 text-white" />
+    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+      <IconComponent className="w-5 h-5 text-white" strokeWidth={1.8} />
     </div>
   );
 };
