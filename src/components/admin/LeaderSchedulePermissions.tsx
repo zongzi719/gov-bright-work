@@ -30,11 +30,12 @@ interface Permission {
   } | null;
 }
 
-interface Profile {
+interface ContactUser {
   id: string;
-  user_id: string;
-  display_name: string | null;
-  email: string | null;
+  name: string;
+  position: string | null;
+  department: string | null;
+  mobile: string | null;
 }
 
 interface LeaderSchedulePermissionsProps {
@@ -43,39 +44,41 @@ interface LeaderSchedulePermissionsProps {
 
 const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [contactUsers, setContactUsers] = useState<ContactUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<ContactUser[]>([]);
 
   // 表单状态
   const [formData, setFormData] = useState({
-    user_id: "",
+    contact_id: "",
     leader_id: "",
     can_view_all: false,
   });
+  const [selectedContactName, setSelectedContactName] = useState("");
 
   useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    if (searchTerm.length >= 2) {
-      const filtered = profiles.filter(
-        (p) =>
-          p.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    if (searchTerm.length >= 1) {
+      const filtered = contactUsers.filter(
+        (c) =>
+          c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.department?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredProfiles(filtered);
+      setFilteredContacts(filtered);
     } else {
-      setFilteredProfiles([]);
+      setFilteredContacts([]);
     }
-  }, [searchTerm, profiles]);
+  }, [searchTerm, contactUsers]);
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchPermissions(), fetchProfiles()]);
+    await Promise.all([fetchPermissions(), fetchContactUsers()]);
     setLoading(false);
   };
 
@@ -93,18 +96,21 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
       return;
     }
 
-    // 获取用户信息
+    // 获取用户信息 - 从contacts表获取
     if (data && data.length > 0) {
       const userIds = [...new Set(data.map((p) => p.user_id))];
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, email")
-        .in("user_id", userIds);
+      const { data: contactsData } = await supabase
+        .from("contacts")
+        .select("id, name, mobile")
+        .in("id", userIds);
 
-      const profileMap = new Map(profilesData?.map((p) => [p.user_id, p]) || []);
+      const contactMap = new Map(contactsData?.map((c) => [c.id, c]) || []);
       const enrichedData = data.map((p) => ({
         ...p,
-        profile: profileMap.get(p.user_id) || { display_name: null, email: null },
+        profile: {
+          display_name: contactMap.get(p.user_id)?.name || null,
+          email: contactMap.get(p.user_id)?.mobile || null,
+        },
       }));
       setPermissions(enrichedData);
     } else {
@@ -112,21 +118,22 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     }
   };
 
-  const fetchProfiles = async () => {
+  const fetchContactUsers = async () => {
     const { data, error } = await supabase
-      .from("profiles")
-      .select("id, user_id, display_name, email")
-      .order("display_name");
+      .from("contacts")
+      .select("id, name, position, department, mobile")
+      .eq("is_active", true)
+      .order("name");
 
     if (error) {
-      console.error("获取用户列表失败:", error);
+      console.error("获取通讯录用户列表失败:", error);
       return;
     }
-    setProfiles(data || []);
+    setContactUsers(data || []);
   };
 
   const handleSubmit = async () => {
-    if (!formData.user_id) {
+    if (!formData.contact_id) {
       toast.error("请选择用户");
       return;
     }
@@ -137,7 +144,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     }
 
     const permissionData = {
-      user_id: formData.user_id,
+      user_id: formData.contact_id,
       leader_id: formData.can_view_all ? null : formData.leader_id,
       can_view_all: formData.can_view_all,
     };
@@ -181,17 +188,19 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
 
   const resetForm = () => {
     setFormData({
-      user_id: "",
+      contact_id: "",
       leader_id: "",
       can_view_all: false,
     });
     setSearchTerm("");
+    setSelectedContactName("");
   };
 
-  const selectUser = (profile: Profile) => {
-    setFormData({ ...formData, user_id: profile.user_id });
-    setSearchTerm(profile.display_name || profile.email || "");
-    setFilteredProfiles([]);
+  const selectContact = (contact: ContactUser) => {
+    setFormData({ ...formData, contact_id: contact.id });
+    setSelectedContactName(contact.name);
+    setSearchTerm(contact.name);
+    setFilteredContacts([]);
   };
 
   return (
@@ -230,26 +239,28 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                       placeholder="搜索用户名或邮箱..."
                       className="pl-9"
                     />
-                    {filteredProfiles.length > 0 && (
+                    {filteredContacts.length > 0 && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-auto z-50">
-                        {filteredProfiles.map((profile) => (
+                        {filteredContacts.map((contact) => (
                           <button
-                            key={profile.id}
+                            key={contact.id}
                             className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2"
-                            onClick={() => selectUser(profile)}
+                            onClick={() => selectContact(contact)}
                           >
                             <UserCheck className="w-4 h-4 text-muted-foreground" />
                             <div>
-                              <div className="font-medium">{profile.display_name || "未设置"}</div>
-                              <div className="text-xs text-muted-foreground">{profile.email}</div>
+                              <div className="font-medium">{contact.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {contact.position || contact.department || contact.mobile || "-"}
+                              </div>
                             </div>
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
-                  {formData.user_id && (
-                    <p className="text-xs text-green-600">已选择用户</p>
+                  {formData.contact_id && (
+                    <p className="text-xs text-green-600">已选择: {selectedContactName}</p>
                   )}
                 </div>
 
@@ -257,6 +268,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                   <Switch
                     checked={formData.can_view_all}
                     onCheckedChange={(checked) => setFormData({ ...formData, can_view_all: checked, leader_id: "" })}
+                    id="can_view_all"
                   />
                   <Label>允许查看所有领导日程</Label>
                 </div>

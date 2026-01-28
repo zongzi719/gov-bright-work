@@ -148,7 +148,7 @@ const Contacts = () => {
                   return (
                     <div
                       key={contact.id}
-                      className="group relative bg-card border rounded-xl p-4 hover:shadow-lg hover:border-primary/30 cursor-pointer transition-all duration-200"
+                      className="group relative bg-card border rounded-xl p-4 hover:shadow-lg hover:border-primary/30 cursor-pointer transition-all duration-200 overflow-visible"
                       onClick={() => handleViewDetail(contact)}
                     >
                       {/* 领导标识 */}
