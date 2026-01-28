@@ -7,6 +7,7 @@ import { useFrontendAuth } from "@/hooks/useFrontendAuth";
 import { useState, useEffect } from "react";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import { supabase } from "@/integrations/supabase/client";
+import partyEmblem from "@/assets/party-emblem.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,8 +97,8 @@ const Header = () => {
         <div className="max-w-[1920px] mx-auto px-4 h-12 flex items-center justify-between">
           {/* 左侧：平台名称 */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-white text-lg font-bold">政</span>
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center overflow-hidden p-1">
+              <img src={partyEmblem} alt="党徽" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-xl font-bold text-white tracking-wide">xx州党政办公平台</h1>
           </div>
