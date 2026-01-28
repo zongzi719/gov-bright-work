@@ -142,7 +142,7 @@ const NoticeList = () => {
         {/* 左侧轮播图 */}
         {hasImages && (
           <div 
-            className="w-[240px] max-w-[40%] flex-shrink-0 relative group bg-muted"
+            className="w-[240px] max-w-[40%] flex-shrink-0 relative group bg-muted ml-3"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -225,15 +225,15 @@ const NoticeList = () => {
                       {notice.title}
                     </span>
                   </div>
-                  {/* 信息行：发布单位 + 密级 + 日期 */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pl-0 flex-wrap">
-                    <span className="flex-shrink-0">发布单位：{notice.department}</span>
+                  {/* 信息行：密级 + 发布单位 + 日期 */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground pl-0 flex-wrap">
                     <Badge 
                       variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
-                      className="text-xs px-1 py-0 h-4 flex-shrink-0"
+                      className="text-xs px-1.5 py-0.5 h-5 flex-shrink-0"
                     >
                       {notice.security_level || '一般'}
                     </Badge>
+                    <span className="flex-shrink-0">{notice.department}</span>
                     <span className="flex-shrink-0 ml-auto">{formatDate(notice.created_at)}</span>
                   </div>
                 </div>

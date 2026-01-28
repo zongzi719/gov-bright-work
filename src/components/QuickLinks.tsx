@@ -125,13 +125,13 @@ const QuickLinks = () => {
 
       {/* 模块网格 */}
       <div className="p-4 flex-1 flex items-center justify-center">
-        <div className="grid grid-cols-4 gap-4 w-full">
+        <div className="grid grid-cols-4 gap-6 w-full">
           {modules.map((module) => (
             <div key={module.id} className="app-icon cursor-pointer group" onClick={() => navigate(module.path)}>
-              <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-11 h-11`}>
-                <module.icon className="w-5 h-5" />
+              <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-14 h-14`}>
+                <module.icon className="w-7 h-7" />
               </div>
-              <span className="text-sm text-muted-foreground text-center leading-tight">{module.name}</span>
+              <span className="text-base text-muted-foreground text-center leading-tight">{module.name}</span>
             </div>
           ))}
         </div>
