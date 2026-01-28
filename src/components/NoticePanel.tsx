@@ -151,7 +151,7 @@ const NoticePanel = () => {
           ) : notices.length === 0 ? (
             <div className="py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {notices.map((notice) => (
                 <div
                   key={notice.id}
