@@ -41,6 +41,7 @@ const LeaderSchedule = () => {
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const [loading, setLoading] = useState(true);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [allowedLeaderIds, setAllowedLeaderIds] = useState<string[] | null>(null);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
@@ -48,19 +49,25 @@ const LeaderSchedule = () => {
   // 获取当前用户可查看的领导列表
   const fetchUserPermissions = async () => {
     const storedUser = localStorage.getItem("frontendUser");
-    if (!storedUser) return;
+    if (!storedUser) {
+      setAllowedLeaderIds([]);
+      setPermissionsLoaded(true);
+      return;
+    }
 
     const user = JSON.parse(storedUser);
-    const userId = user.id; // localStorage stores 'id' not 'contact_id'
+    const userId = user.id;
     
     // 如果是领导，可以查看所有领导日程
     if (user.is_leader) {
       setAllowedLeaderIds(null); // null表示可以查看所有
+      setPermissionsLoaded(true);
       return;
     }
 
     if (!userId) {
       setAllowedLeaderIds([]);
+      setPermissionsLoaded(true);
       return;
     }
 
@@ -85,24 +92,31 @@ const LeaderSchedule = () => {
     } else {
       setAllowedLeaderIds([]); // 无权限
     }
+    setPermissionsLoaded(true);
   };
 
-  // 只获取领导状态为"是"的人员，并根据权限过滤
-  const fetchLeaders = async () => {
-    const { data } = await supabase
+  // 只获取领导状态为"是"的人员，并根据权限过滤（服务端过滤）
+  const fetchLeaders = async (leaderIds: string[] | null) => {
+    let query = supabase
       .from("contacts")
       .select("id, name, position")
       .eq("is_active", true)
-      .eq("is_leader", true)
-      .order("sort_order");
+      .eq("is_leader", true);
+
+    // 服务端过滤：只获取有权限查看的领导
+    if (leaderIds !== null && leaderIds.length > 0) {
+      query = query.in("id", leaderIds);
+    } else if (leaderIds !== null && leaderIds.length === 0) {
+      // 无权限时不获取任何领导
+      setLeaders([]);
+      return;
+    }
+    // leaderIds === null 表示可查看全部，不加过滤条件
+
+    const { data } = await query.order("sort_order");
 
     if (data) {
-      // 根据权限过滤领导列表
-      if (allowedLeaderIds === null) {
-        setLeaders(data); // 可以查看所有
-      } else {
-        setLeaders(data.filter(l => allowedLeaderIds.includes(l.id)));
-      }
+      setLeaders(data);
     }
   };
 
@@ -155,16 +169,15 @@ const LeaderSchedule = () => {
   }, []);
 
   useEffect(() => {
-    if (allowedLeaderIds !== undefined) {
-      fetchLeaders();
-      // 权限确定后立即获取日程，带上过滤条件
+    if (permissionsLoaded) {
+      fetchLeaders(allowedLeaderIds);
       fetchLeaderSchedules(allowedLeaderIds);
     }
-  }, [allowedLeaderIds]);
+  }, [permissionsLoaded]);
 
   useEffect(() => {
     // 周切换时重新获取日程，需等权限加载完成
-    if (allowedLeaderIds !== undefined) {
+    if (permissionsLoaded) {
       fetchLeaderSchedules(allowedLeaderIds);
     }
   }, [currentWeekStart]);
@@ -198,7 +211,7 @@ const LeaderSchedule = () => {
             ))}
           </div>
 
-          {loading ? (
+          {!permissionsLoaded || loading ? (
             <div className="text-center py-8 text-muted-foreground">加载中...</div>
           ) : leaders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无领导信息</div>
