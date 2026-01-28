@@ -27,36 +27,37 @@ const ProcessDocumentDetail = ({ document, onBack }: ProcessDocumentDetailProps)
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
-      {/* 顶部固定操作栏 - 紧凑设计 */}
+      {/* 顶部固定操作栏 */}
       <div className="bg-white border-b border-slate-200 shrink-0">
-        <div className="flex items-center justify-between h-11 px-2">
-          {/* 左侧：返回 + 标签导航 */}
-          <div className="flex items-center">
-            <button onClick={onBack} className="p-2 -ml-1">
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
-            </button>
-            
-            <div className="flex items-center ml-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "px-3 py-1.5 text-sm font-medium rounded transition-colors",
-                    activeTab === tab.id
-                      ? "text-red-700 bg-red-50"
-                      : "text-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        {/* 第一行：返回 + 标题 */}
+        <div className="flex items-center h-11 px-2 border-b border-slate-100">
+          <button onClick={onBack} className="p-2 -ml-1 shrink-0">
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </button>
+          <span className="text-sm font-medium text-slate-800 truncate flex-1">公文办理</span>
+        </div>
+        
+        {/* 第二行：标签导航 + 操作按钮 */}
+        <div className="flex items-center justify-between h-10 px-2">
+          <div className="flex items-center gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap",
+                  activeTab === tab.id
+                    ? "text-red-700 bg-red-50"
+                    : "text-slate-500 hover:text-slate-700"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* 右侧操作按钮 */}
-          <div className="flex items-center">
-            <button className="px-4 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded">
+          <div className="flex items-center shrink-0">
+            <button className="px-3 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded whitespace-nowrap">
               发送
             </button>
           </div>
@@ -271,7 +272,14 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
       if (path.points.length < 2) return;
       
       ctx.beginPath();
-      ctx.strokeStyle = path.tool === "eraser" ? "#ffffff" : path.color;
+      
+      if (path.tool === "eraser") {
+        ctx.globalCompositeOperation = "destination-out";
+      } else {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = path.color;
+      }
+      
       ctx.lineWidth = path.lineWidth;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -281,6 +289,7 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
         ctx.lineTo(path.points[i].x, path.points[i].y);
       }
       ctx.stroke();
+      ctx.globalCompositeOperation = "source-over";
     });
   }, [paths]);
 
@@ -336,8 +345,16 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
 
     if (newPath.length >= 2) {
       ctx.beginPath();
-      ctx.strokeStyle = activeTool === "eraser" ? "#ffffff" : "#ff0000";
-      ctx.lineWidth = activeTool === "eraser" ? 20 : 2;
+      
+      if (activeTool === "eraser") {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.lineWidth = 20;
+      } else {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = "#ff0000";
+        ctx.lineWidth = 2;
+      }
+      
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
@@ -345,6 +362,8 @@ const ProcessContentViewer = ({ title }: { title: string }) => {
       ctx.moveTo(newPath[lastIndex - 1].x, newPath[lastIndex - 1].y);
       ctx.lineTo(newPath[lastIndex].x, newPath[lastIndex].y);
       ctx.stroke();
+      
+      ctx.globalCompositeOperation = "source-over";
     }
   };
 
