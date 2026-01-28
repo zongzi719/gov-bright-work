@@ -263,78 +263,91 @@ const AbsenceApplication = () => {
 
   return (
     <PageLayout>
-      <div className="gov-card h-full flex flex-col overflow-hidden">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <TabsList className="grid w-fit grid-cols-3 bg-muted/50">
-              <TabsTrigger value="business-trip" className="gap-2">
+      <div className="gov-card h-full flex overflow-hidden">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-row h-full w-full" orientation="vertical">
+          {/* 左侧垂直标签栏 */}
+          <div className="w-36 border-r border-border bg-muted/30 flex-shrink-0">
+            <TabsList className="flex flex-col h-auto w-full bg-transparent p-2 gap-1">
+              <TabsTrigger 
+                value="business-trip" 
+                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
                 <Briefcase className="w-4 h-4" />
                 出差申请
               </TabsTrigger>
-              <TabsTrigger value="leave" className="gap-2">
+              <TabsTrigger 
+                value="leave" 
+                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
                 <CalendarOff className="w-4 h-4" />
                 请假申请
               </TabsTrigger>
-              <TabsTrigger value="out" className="gap-2">
+              <TabsTrigger 
+                value="out" 
+                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
                 <LogOut className="w-4 h-4" />
                 外出申请
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="business-trip" className="flex-1 m-0 overflow-auto">
-            <ApplicationList
-              title="出差申请"
-              items={tripListItems}
-              loading={tripLoading}
-              search={tripSearch}
-              onSearchChange={setTripSearch}
-              onAddClick={() => setTripFormOpen(true)}
-              onItemClick={(item) => {
-                const record = tripRecords.find(r => r.id === item.id);
-                if (record) { setSelectedTrip(record); setTripDetailOpen(true); }
-              }}
-              searchPlaceholder="搜索目的地或事由..."
-              emptyText="暂无出差记录"
-              hideTitle
-            />
-          </TabsContent>
+          {/* 右侧内容区 */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <TabsContent value="business-trip" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
+              <ApplicationList
+                title="出差申请"
+                items={tripListItems}
+                loading={tripLoading}
+                search={tripSearch}
+                onSearchChange={setTripSearch}
+                onAddClick={() => setTripFormOpen(true)}
+                onItemClick={(item) => {
+                  const record = tripRecords.find(r => r.id === item.id);
+                  if (record) { setSelectedTrip(record); setTripDetailOpen(true); }
+                }}
+                searchPlaceholder="搜索目的地或事由..."
+                emptyText="暂无出差记录"
+                hideTitle
+              />
+            </TabsContent>
 
-          <TabsContent value="leave" className="flex-1 m-0 overflow-auto">
-            <ApplicationList
-              title="请假申请"
-              items={leaveListItems}
-              loading={leaveLoading}
-              search={leaveSearch}
-              onSearchChange={setLeaveSearch}
-              onAddClick={() => setLeaveFormOpen(true)}
-              onItemClick={(item) => {
-                const record = leaveRecords.find(r => r.id === item.id);
-                if (record) { setSelectedLeave(record); setLeaveDetailOpen(true); }
-              }}
-              searchPlaceholder="搜索请假类型或事由..."
-              emptyText="暂无请假记录"
-              hideTitle
-            />
-          </TabsContent>
+            <TabsContent value="leave" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
+              <ApplicationList
+                title="请假申请"
+                items={leaveListItems}
+                loading={leaveLoading}
+                search={leaveSearch}
+                onSearchChange={setLeaveSearch}
+                onAddClick={() => setLeaveFormOpen(true)}
+                onItemClick={(item) => {
+                  const record = leaveRecords.find(r => r.id === item.id);
+                  if (record) { setSelectedLeave(record); setLeaveDetailOpen(true); }
+                }}
+                searchPlaceholder="搜索请假类型或事由..."
+                emptyText="暂无请假记录"
+                hideTitle
+              />
+            </TabsContent>
 
-          <TabsContent value="out" className="flex-1 m-0 overflow-auto">
-            <ApplicationList
-              title="外出申请"
-              items={outListItems}
-              loading={outLoading}
-              search={outSearch}
-              onSearchChange={setOutSearch}
-              onAddClick={() => setOutFormOpen(true)}
-              onItemClick={(item) => {
-                const record = outRecords.find(r => r.id === item.id);
-                if (record) { setSelectedOut(record); setOutDetailOpen(true); }
-              }}
-              searchPlaceholder="搜索外出类型、地点或事由..."
-              emptyText="暂无外出记录"
-              hideTitle
-            />
-          </TabsContent>
+            <TabsContent value="out" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
+              <ApplicationList
+                title="外出申请"
+                items={outListItems}
+                loading={outLoading}
+                search={outSearch}
+                onSearchChange={setOutSearch}
+                onAddClick={() => setOutFormOpen(true)}
+                onItemClick={(item) => {
+                  const record = outRecords.find(r => r.id === item.id);
+                  if (record) { setSelectedOut(record); setOutDetailOpen(true); }
+                }}
+                searchPlaceholder="搜索外出类型、地点或事由..."
+                emptyText="暂无外出记录"
+                hideTitle
+              />
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
 

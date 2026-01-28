@@ -28,36 +28,49 @@ const ProcurementApplication = () => {
 
   return (
     <PageLayout>
-      <div className="gov-card h-full flex flex-col overflow-hidden">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col h-full">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <TabsList className="grid w-fit grid-cols-3 bg-muted/50">
-              <TabsTrigger value="requisition" className="gap-2">
+      <div className="gov-card h-full flex overflow-hidden">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-row h-full w-full" orientation="vertical">
+          {/* 左侧垂直标签栏 */}
+          <div className="w-36 border-r border-border bg-muted/30 flex-shrink-0">
+            <TabsList className="flex flex-col h-auto w-full bg-transparent p-2 gap-1">
+              <TabsTrigger 
+                value="requisition" 
+                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
                 <Package className="w-4 h-4" />
                 领用申请
               </TabsTrigger>
-              <TabsTrigger value="purchase" className="gap-2">
+              <TabsTrigger 
+                value="purchase" 
+                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
                 <ShoppingCart className="w-4 h-4" />
                 采购申请
               </TabsTrigger>
-              <TabsTrigger value="supplies-purchase" className="gap-2">
+              <TabsTrigger 
+                value="supplies-purchase" 
+                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
                 <Package className="w-4 h-4" />
                 办公采购
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="requisition" className="flex-1 m-0 overflow-auto">
-            <RequisitionContent />
-          </TabsContent>
+          {/* 右侧内容区 */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <TabsContent value="requisition" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
+              <RequisitionContent />
+            </TabsContent>
 
-          <TabsContent value="purchase" className="flex-1 m-0 overflow-auto">
-            <PurchaseContent />
-          </TabsContent>
+            <TabsContent value="purchase" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
+              <PurchaseContent />
+            </TabsContent>
 
-          <TabsContent value="supplies-purchase" className="flex-1 m-0 overflow-auto">
-            <SuppliesPurchaseContent />
-          </TabsContent>
+            <TabsContent value="supplies-purchase" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
+              <SuppliesPurchaseContent />
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
     </PageLayout>
