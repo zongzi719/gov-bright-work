@@ -82,8 +82,8 @@ const NoticeList = () => {
 
   return (
     <div className="gov-card h-full flex flex-col overflow-hidden">
-      {/* 标题栏 - 紧凑型 */}
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border flex-shrink-0">
+      {/* 标题栏 */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
         <h2 className="gov-card-title text-base">通知公告</h2>
         <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
           更多
@@ -91,29 +91,29 @@ const NoticeList = () => {
         </button>
       </div>
 
-      {/* 通知列表 - 高密度 */}
+      {/* 通知列表 */}
       <ScrollArea className="flex-1">
         {loading ? (
-          <div className="px-2 py-3 text-center text-muted-foreground text-sm">加载中...</div>
+          <div className="px-4 py-4 text-center text-muted-foreground text-sm">加载中...</div>
         ) : notices.length === 0 ? (
-          <div className="px-2 py-3 text-center text-muted-foreground text-sm">暂无通知公告</div>
+          <div className="px-4 py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
         ) : (
-          <div className="py-1">
+          <div className="divide-y divide-border">
             {notices.map((notice) => (
               <div
                 key={notice.id}
-                className="px-2 py-1.5 flex items-center justify-between gap-2 cursor-pointer hover:bg-muted/30 transition-colors group"
+                className="px-3 py-2 flex items-center justify-between gap-2 cursor-pointer hover:bg-muted/50 transition-colors group"
                 onClick={() => handleNoticeClick(notice)}
               >
-                <div className="flex items-center gap-1 flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   {notice.is_pinned && (
-                    <Badge variant="destructive" className="flex-shrink-0 text-[10px] px-1 py-0 h-4">
+                    <Badge variant="destructive" className="flex-shrink-0 text-xs px-1.5 py-0 h-5">
                       顶
                     </Badge>
                   )}
                   <Badge 
                     variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
-                    className="flex-shrink-0 text-[10px] px-1 py-0 h-4"
+                    className="flex-shrink-0 text-xs px-1.5 py-0 h-5"
                   >
                     {notice.security_level?.charAt(0) || '普'}
                   </Badge>
@@ -121,9 +121,10 @@ const NoticeList = () => {
                     {notice.title}
                   </span>
                 </div>
-                <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-                  {formatDate(notice.created_at)}
-                </span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
+                  <span className="hidden sm:inline whitespace-nowrap max-w-[80px] truncate">{notice.department}</span>
+                  <span>{formatDate(notice.created_at)}</span>
+                </div>
               </div>
             ))}
           </div>

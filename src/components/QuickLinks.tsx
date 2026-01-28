@@ -119,25 +119,25 @@ const QuickLinks = () => {
     : baseModules;
 
   return (
-    <div className="gov-card flex flex-col">
-      {/* 标题栏 - 紧凑型 */}
-      <div className="px-2 py-1.5 border-b border-border">
+    <div className="gov-card h-full flex flex-col">
+      {/* 标题栏 */}
+      <div className="px-4 py-3 border-b border-border">
         <h2 className="gov-card-title text-base">快捷入口</h2>
       </div>
 
-      {/* 模块网格 - 紧凑型 */}
-      <div className="p-2">
-        <div className="grid grid-cols-7 gap-2 w-full">
+      {/* 模块网格 */}
+      <div className="p-4 flex-1 flex items-center justify-center">
+        <div className="grid grid-cols-4 gap-4 w-full">
           {modules.map((module) => (
             <div
               key={module.id}
-              className="flex flex-col items-center gap-1 p-1.5 rounded cursor-pointer hover:bg-muted/50 transition-colors group"
+              className="app-icon cursor-pointer group"
               onClick={() => navigate(module.path)}
             >
-              <div className={`${module.color} group-hover:scale-105 transition-transform w-9 h-9 flex items-center justify-center rounded-lg text-white`}>
-                <module.icon className="w-4 h-4" />
+              <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-11 h-11`}>
+                <module.icon className="w-5 h-5" />
               </div>
-              <span className="text-xs text-muted-foreground text-center leading-tight">
+              <span className="text-sm text-muted-foreground text-center leading-tight">
                 {module.name}
               </span>
             </div>
