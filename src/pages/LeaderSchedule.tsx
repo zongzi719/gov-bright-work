@@ -41,20 +41,62 @@ const LeaderSchedule = () => {
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const [loading, setLoading] = useState(true);
+  const [allowedLeaderIds, setAllowedLeaderIds] = useState<string[] | null>(null);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
-  // 只获取领导状态为"是"的人员
+  // 获取当前用户可查看的领导列表
+  const fetchUserPermissions = async () => {
+    const storedUser = localStorage.getItem("frontendUser");
+    if (!storedUser) return;
+
+    const user = JSON.parse(storedUser);
+    
+    // 如果是领导，可以查看所有领导日程
+    if (user.is_leader) {
+      setAllowedLeaderIds(null); // null表示可以查看所有
+      return;
+    }
+
+    // 查询该用户的权限记录
+    const { data: permData } = await supabase
+      .from("leader_schedule_permissions")
+      .select("leader_id, can_view_all")
+      .eq("user_id", user.contact_id);
+
+    if (permData && permData.length > 0) {
+      // 检查是否有can_view_all权限
+      const hasViewAll = permData.some(p => p.can_view_all);
+      if (hasViewAll) {
+        setAllowedLeaderIds(null);
+      } else {
+        // 收集所有被授权的leader_id
+        const leaderIds = permData
+          .filter(p => p.leader_id)
+          .map(p => p.leader_id as string);
+        setAllowedLeaderIds(leaderIds);
+      }
+    } else {
+      setAllowedLeaderIds([]); // 无权限
+    }
+  };
+
+  // 只获取领导状态为"是"的人员，并根据权限过滤
   const fetchLeaders = async () => {
     const { data } = await supabase
       .from("contacts")
       .select("id, name, position")
       .eq("is_active", true)
-      .eq("is_leader", true)  // 只获取领导
+      .eq("is_leader", true)
       .order("sort_order");
 
     if (data) {
-      setLeaders(data);
+      // 根据权限过滤领导列表
+      if (allowedLeaderIds === null) {
+        setLeaders(data); // 可以查看所有
+      } else {
+        setLeaders(data.filter(l => allowedLeaderIds.includes(l.id)));
+      }
     }
   };
 
@@ -91,8 +133,14 @@ const LeaderSchedule = () => {
   };
 
   useEffect(() => {
-    fetchLeaders();
+    fetchUserPermissions();
   }, []);
+
+  useEffect(() => {
+    if (allowedLeaderIds !== undefined) {
+      fetchLeaders();
+    }
+  }, [allowedLeaderIds]);
 
   useEffect(() => {
     fetchLeaderSchedules();
