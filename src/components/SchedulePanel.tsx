@@ -259,9 +259,21 @@ const SchedulePanel = () => {
       {/* 标题栏 */}
       <div className="px-4 py-2 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">日程管理</h2>
-        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-7 w-7 p-0">
-          <Plus className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <button 
+            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors"
+            onClick={() => {
+              // Navigate to a schedule list view - for now just show all schedules in a dialog or page
+              // We'll implement this as showing all schedules for the current user
+            }}
+          >
+            查看全部
+            <ChevronRight className="w-3 h-3" />
+          </button>
+          <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-7 w-7 p-0">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="p-3 flex-1 flex flex-col overflow-hidden">

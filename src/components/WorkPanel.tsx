@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -72,6 +73,7 @@ const getApplicationLabel = (businessType: string, title: string): string => {
 };
 
 const WorkPanel = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("pending");
   const [pendingItems, setPendingItems] = useState<TodoItem[]>([]);
   const [completedItems, setCompletedItems] = useState<TodoItem[]>([]);
@@ -370,7 +372,10 @@ const WorkPanel = () => {
                 )}
               </TabsTrigger>
             </TabsList>
-            <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
+            <button 
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors"
+              onClick={() => navigate(`/todo?tab=${activeTab}`)}
+            >
               更多
               <ChevronRight className="w-3 h-3" />
             </button>

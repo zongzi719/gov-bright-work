@@ -216,23 +216,24 @@ const NoticeList = () => {
                 >
                   {/* 标题行 */}
                   <div className="flex items-start gap-1.5 mb-0.5">
+                    <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${
+                      notice.security_level === '机密' ? 'bg-red-100 text-red-700' : 
+                      notice.security_level === '秘密' ? 'bg-orange-100 text-orange-700' : 
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {notice.security_level || '一般'}
+                    </span>
                     {notice.is_pinned && (
-                      <Badge variant="destructive" className="flex-shrink-0 text-xs px-1 py-0 h-4 mt-0.5">
+                      <span className="flex-shrink-0 text-xs px-1 py-0 bg-red-100 text-red-700 rounded mt-0.5">
                         顶
-                      </Badge>
+                      </span>
                     )}
                     <span className="text-sm text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-1">
                       {notice.title}
                     </span>
                   </div>
-                  {/* 信息行：密级 + 发布单位 + 日期 */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground pl-0 flex-wrap">
-                    <Badge 
-                      variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
-                      className="text-xs px-1.5 py-0.5 h-5 flex-shrink-0"
-                    >
-                      {notice.security_level || '一般'}
-                    </Badge>
+                  {/* 信息行：发布单位 + 日期 */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground pl-0">
                     <span className="flex-shrink-0">{notice.department}</span>
                     <span className="flex-shrink-0 ml-auto">{formatDate(notice.created_at)}</span>
                   </div>
