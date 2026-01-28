@@ -153,7 +153,7 @@ const BusinessTrip = () => {
         status={selectedRecord?.status}
         fields={detailFields}
         businessId={selectedRecord?.id}
-        businessType="absence"
+        businessType="business_trip"
       />
     </PageLayout>
   );
