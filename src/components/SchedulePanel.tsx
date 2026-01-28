@@ -1,7 +1,16 @@
 import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +18,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay } from "date-fns";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  addMonths,
+  subMonths,
+  isSameMonth,
+  isSameDay,
+} from "date-fns";
 import { zhCN } from "date-fns/locale";
 
 interface Schedule {
@@ -47,7 +67,7 @@ const SchedulePanel = () => {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
-  
+
   const [formData, setFormData] = useState({
     contact_id: currentUser?.id || "",
     title: "",
@@ -66,7 +86,7 @@ const SchedulePanel = () => {
     const monthEnd = endOfMonth(currentMonth);
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-    
+
     const days: Date[] = [];
     let day = calendarStart;
     while (day <= calendarEnd) {
@@ -85,11 +105,11 @@ const SchedulePanel = () => {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
-    
+
     const { data, error } = await supabase
       .from("schedules")
       .select("*")
@@ -150,7 +170,7 @@ const SchedulePanel = () => {
 
   const openAddDialog = () => {
     resetForm();
-    setFormData(prev => ({ ...prev, schedule_date: format(selectedDate, "yyyy-MM-dd") }));
+    setFormData((prev) => ({ ...prev, schedule_date: format(selectedDate, "yyyy-MM-dd") }));
     setDialogOpen(true);
   };
 
@@ -175,7 +195,7 @@ const SchedulePanel = () => {
 
   const handleSubmit = async () => {
     if (submitting) return;
-    
+
     const contactId = currentUser?.id;
     if (!contactId || !formData.title || !formData.schedule_date) {
       toast.error("请填写必填项（日程标题和日期）");
@@ -183,7 +203,7 @@ const SchedulePanel = () => {
     }
 
     setSubmitting(true);
-    
+
     try {
       if (editingSchedule) {
         const { error } = await supabase
@@ -240,10 +260,7 @@ const SchedulePanel = () => {
   const confirmDelete = async () => {
     if (!scheduleToDelete) return;
 
-    const { error } = await supabase
-      .from("schedules")
-      .delete()
-      .eq("id", scheduleToDelete.id);
+    const { error } = await supabase.from("schedules").delete().eq("id", scheduleToDelete.id);
 
     if (error) {
       toast.error("删除日程失败");
@@ -252,7 +269,7 @@ const SchedulePanel = () => {
       toast.success("日程已删除");
       fetchSchedules();
     }
-    
+
     setDeleteDialogOpen(false);
     setScheduleToDelete(null);
   };
@@ -262,11 +279,7 @@ const SchedulePanel = () => {
       {/* 标题栏 */}
       <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">日程管理</h2>
-        <Button 
-          size="sm" 
-          onClick={openAddDialog} 
-          className="h-7 text-xs gap-1"
-        >
+        <Button size="sm" onClick={openAddDialog} className="h-7 text-xs gap-1">
           <Plus className="w-3.5 h-3.5" />
           新建日程
         </Button>
@@ -312,7 +325,7 @@ const SchedulePanel = () => {
           {calendarDays.map((day, idx) => {
             const isCurrentMonth = isSameMonth(day, currentMonth);
             const dayHasSchedule = hasSchedule(day);
-            
+
             return (
               <div
                 key={idx}
@@ -336,12 +349,8 @@ const SchedulePanel = () => {
 
         {/* 我的日程标题 */}
         <div className="mt-3 pt-2 border-t border-border flex items-center justify-between flex-shrink-0">
-          <span className="text-sm font-medium text-foreground">
-            我的日程
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {format(selectedDate, "M月d日", { locale: zhCN })}
-          </span>
+          <span className="text-sm font-medium text-foreground">我的日程</span>
+          <span className="text-xs text-muted-foreground">{format(selectedDate, "M月d日", { locale: zhCN })}</span>
         </div>
 
         {/* 日程列表 */}
@@ -353,15 +362,17 @@ const SchedulePanel = () => {
           ) : (
             <div className="space-y-1.5">
               {selectedDateSchedules.map((item) => (
-                <div 
-                  key={item.id} 
+                <div
+                  key={item.id}
                   onClick={() => openEditDialog(item)}
                   className="flex items-start gap-2 text-sm group hover:bg-muted/50 rounded px-2 py-1.5 transition-colors cursor-pointer"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-foreground text-sm truncate">{item.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      <span className="text-primary">{item.start_time.slice(0, 5)}-{item.end_time.slice(0, 5)}</span>
+                      <span className="text-primary">
+                        {item.start_time.slice(0, 5)}-{item.end_time.slice(0, 5)}
+                      </span>
                       {item.location && <span> · {item.location}</span>}
                     </div>
                   </div>
@@ -375,10 +386,7 @@ const SchedulePanel = () => {
                     >
                       <Pencil className="w-3 h-3 text-primary" />
                     </button>
-                    <button
-                      onClick={(e) => openDeleteDialog(item, e)}
-                      className="p-1 hover:bg-destructive/10 rounded"
-                    >
+                    <button onClick={(e) => openDeleteDialog(item, e)} className="p-1 hover:bg-destructive/10 rounded">
                       <Trash2 className="w-3 h-3 text-destructive" />
                     </button>
                   </div>
@@ -394,9 +402,7 @@ const SchedulePanel = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingSchedule ? "编辑日程" : "新增日程"}</DialogTitle>
-            <DialogDescription>
-              {editingSchedule ? "修改日程信息" : "添加新的日程安排"}
-            </DialogDescription>
+            <DialogDescription>{editingSchedule ? "修改日程信息" : "添加新的日程安排"}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -458,7 +464,7 @@ const SchedulePanel = () => {
               取消
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (editingSchedule ? "保存中..." : "添加中...") : (editingSchedule ? "保存" : "添加")}
+              {submitting ? (editingSchedule ? "保存中..." : "添加中...") : editingSchedule ? "保存" : "添加"}
             </Button>
           </div>
         </DialogContent>
@@ -475,7 +481,10 @@ const SchedulePanel = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               删除
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -488,13 +497,13 @@ const SchedulePanel = () => {
 // 计算待办日程数量
 const pendingSchedulesCount = (schedules: Schedule[]) => {
   const today = format(new Date(), "yyyy-MM-dd");
-  return schedules.filter(s => s.schedule_date >= today).length;
+  return schedules.filter((s) => s.schedule_date >= today).length;
 };
 
 // 计算超期日程数量
 const overdueSchedulesCount = (schedules: Schedule[], today: Date) => {
   const todayStr = format(today, "yyyy-MM-dd");
-  return schedules.filter(s => s.schedule_date < todayStr).length;
+  return schedules.filter((s) => s.schedule_date < todayStr).length;
 };
 
 export default SchedulePanel;
