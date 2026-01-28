@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Plus, Search, Eye } from "lucide-react";
+import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
+import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -34,14 +28,6 @@ interface AbsenceRecord {
     name: string;
   } | null;
 }
-
-const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "待审批", variant: "secondary" },
-  approved: { label: "已通过", variant: "default" },
-  rejected: { label: "已拒绝", variant: "destructive" },
-  completed: { label: "已完成", variant: "outline" },
-  cancelled: { label: "已取消", variant: "outline" },
-};
 
 const leaveTypeLabels: Record<string, string> = {
   annual: "年假",
@@ -104,9 +90,25 @@ const Leave = () => {
     (r.leave_type && leaveTypeLabels[r.leave_type]?.includes(search))
   );
 
-  const handleViewDetail = (record: AbsenceRecord) => {
-    setSelectedRecord(record);
-    setDetailOpen(true);
+  // 转换为通用列表项格式
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({
+    id: record.id,
+    title: record.leave_type ? leaveTypeLabels[record.leave_type] || record.leave_type : "请假申请",
+    subtitle: record.reason,
+    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    status: record.status,
+    meta: [
+      { label: "天数", value: `${record.duration_days || "-"}天` },
+      { label: "时间", value: `${format(new Date(record.start_time), "MM/dd")} - ${record.end_time ? format(new Date(record.end_time), "MM/dd") : ""}` },
+    ],
+  }));
+
+  const handleItemClick = (item: ApplicationItem) => {
+    const record = records.find(r => r.id === item.id);
+    if (record) {
+      setSelectedRecord(record);
+      setDetailOpen(true);
+    }
   };
 
   const handleFormClose = (open: boolean) => {
@@ -116,71 +118,32 @@ const Leave = () => {
     }
   };
 
+  // 详情字段
+  const detailFields = selectedRecord ? [
+    { label: "请假类型", value: selectedRecord.leave_type ? leaveTypeLabels[selectedRecord.leave_type] || selectedRecord.leave_type : null },
+    { label: "请假天数", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
+    { label: "开始时间", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "结束时间", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "工作交接人", value: selectedRecord.handover_person?.name },
+    { label: "交接事项", value: selectedRecord.handover_notes },
+    { label: "请假事由", value: selectedRecord.reason, fullWidth: true },
+    { label: "备注", value: selectedRecord.notes, fullWidth: true },
+    { label: "申请时间", value: format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+  ] : [];
+
   return (
     <PageLayout>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>请假申请</CardTitle>
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            新增申请
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索请假类型或事由..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">加载中...</div>
-          ) : filteredRecords.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">暂无请假记录</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>请假类型</TableHead>
-                  <TableHead>请假事由</TableHead>
-                  <TableHead>开始时间</TableHead>
-                  <TableHead>结束时间</TableHead>
-                  <TableHead>天数</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell>{record.leave_type ? leaveTypeLabels[record.leave_type] || record.leave_type : "-"}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{record.reason}</TableCell>
-                    <TableCell>{format(new Date(record.start_time), "yyyy-MM-dd", { locale: zhCN })}</TableCell>
-                    <TableCell>{record.end_time ? format(new Date(record.end_time), "yyyy-MM-dd", { locale: zhCN }) : "-"}</TableCell>
-                    <TableCell>{record.duration_days || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusLabels[record.status]?.variant || "secondary"}>
-                        {statusLabels[record.status]?.label || record.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleViewDetail(record)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <ApplicationList
+        title="请假申请"
+        items={listItems}
+        loading={loading}
+        search={search}
+        onSearchChange={setSearch}
+        onAddClick={() => setFormOpen(true)}
+        onItemClick={handleItemClick}
+        searchPlaceholder="搜索请假类型或事由..."
+        emptyText="暂无请假记录"
+      />
 
       <LeaveForm
         open={formOpen}
@@ -188,72 +151,15 @@ const Leave = () => {
         currentUser={currentUser}
       />
 
-      {/* 详情对话框 */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>请假详情</DialogTitle>
-          </DialogHeader>
-          {selectedRecord && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">请假类型</Label>
-                  <div className="mt-1">{selectedRecord.leave_type ? leaveTypeLabels[selectedRecord.leave_type] || selectedRecord.leave_type : "-"}</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">状态</Label>
-                  <div className="mt-1">
-                    <Badge variant={statusLabels[selectedRecord.status]?.variant || "secondary"}>
-                      {statusLabels[selectedRecord.status]?.label || selectedRecord.status}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm text-muted-foreground">请假事由</Label>
-                <div className="mt-1">{selectedRecord.reason}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">开始时间</Label>
-                  <div className="mt-1">{format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">结束时间</Label>
-                  <div className="mt-1">{selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : "-"}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">请假天数</Label>
-                  <div className="mt-1">{selectedRecord.duration_days || "-"} 天</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">工作交接人</Label>
-                  <div className="mt-1">{selectedRecord.handover_person?.name || "-"}</div>
-                </div>
-              </div>
-              {selectedRecord.handover_notes && (
-                <div>
-                  <Label className="text-sm text-muted-foreground">交接事项</Label>
-                  <div className="mt-1">{selectedRecord.handover_notes}</div>
-                </div>
-              )}
-              {selectedRecord.notes && (
-                <div>
-                  <Label className="text-sm text-muted-foreground">备注</Label>
-                  <div className="mt-1">{selectedRecord.notes}</div>
-                </div>
-              )}
-              <div>
-                <Label className="text-sm text-muted-foreground">申请时间</Label>
-                <div className="mt-1">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ApplicationDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        title="请假详情"
+        status={selectedRecord?.status}
+        fields={detailFields}
+        businessId={selectedRecord?.id}
+        businessType="absence"
+      />
     </PageLayout>
   );
 };
