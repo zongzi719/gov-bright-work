@@ -158,7 +158,7 @@ const Leave = () => {
         status={selectedRecord?.status}
         fields={detailFields}
         businessId={selectedRecord?.id}
-        businessType="absence"
+        businessType="leave"
       />
     </PageLayout>
   );
