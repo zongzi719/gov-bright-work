@@ -225,10 +225,16 @@ const NoticeList = () => {
                       {notice.title}
                     </span>
                   </div>
-                  {/* 信息行：发布单位 + 日期 */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pl-0">
-                    <span className="truncate max-w-[140px]">发布单位：{notice.department}</span>
-                    <span className="flex-shrink-0">{formatDate(notice.created_at)}</span>
+                  {/* 信息行：发布单位 + 密级 + 日期 */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pl-0 flex-wrap">
+                    <span className="flex-shrink-0">发布单位：{notice.department}</span>
+                    <Badge 
+                      variant={notice.security_level === '机密' ? 'destructive' : notice.security_level === '秘密' ? 'secondary' : 'outline'} 
+                      className="text-xs px-1 py-0 h-4 flex-shrink-0"
+                    >
+                      {notice.security_level || '一般'}
+                    </Badge>
+                    <span className="flex-shrink-0 ml-auto">{formatDate(notice.created_at)}</span>
                   </div>
                 </div>
               ))}
