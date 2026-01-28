@@ -201,17 +201,19 @@ const NoticeList = () => {
         )}
 
         {/* 右侧通知列表 */}
-        <ScrollArea className="flex-1 border-l border-border">
+        <ScrollArea className="flex-1">
           {loading ? (
-            <div className="px-4 py-4 text-center text-muted-foreground text-sm">加载中...</div>
+            <div className="p-4 text-center text-muted-foreground text-sm">加载中...</div>
           ) : notices.length === 0 ? (
-            <div className="px-4 py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
+            <div className="p-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="p-3">
               {notices.map((notice, index) => (
                 <div
                   key={notice.id}
-                  className="px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors group"
+                  className={`px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors group rounded ${
+                    index !== notices.length - 1 ? 'border-b border-border' : ''
+                  }`}
                   onClick={() => handleNoticeClick(notice)}
                 >
                   {/* 标题行 */}
