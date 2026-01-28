@@ -275,7 +275,7 @@ const SchedulePanel = () => {
   };
 
   return (
-    <div className="gov-card h-full flex flex-col overflow-hidden">
+    <div className="gov-card h-full min-h-[420px] flex flex-col overflow-hidden">
       {/* 标题栏 */}
       <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">日程管理</h2>
@@ -353,8 +353,8 @@ const SchedulePanel = () => {
           <span className="text-xs text-muted-foreground">{format(selectedDate, "M月d日", { locale: zhCN })}</span>
         </div>
 
-        {/* 日程列表 */}
-        <ScrollArea className="flex-1 mt-2">
+        {/* 日程列表 - 确保最少能显示1条日程 */}
+        <ScrollArea className="flex-1 mt-2 min-h-[60px]">
           {loading ? (
             <div className="text-xs text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
