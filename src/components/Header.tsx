@@ -22,7 +22,7 @@ const Header = () => {
   const { user, loading, logout } = useFrontendAuth();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [todoCount, setTodoCount] = useState(0);
-  
+
   const today = new Date();
   const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
   const dateString = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 星期${weekDays[today.getDay()]}`;
@@ -50,13 +50,13 @@ const Header = () => {
   useEffect(() => {
     const fetchTodoCount = async () => {
       if (!user?.id) return;
-      
+
       const { count, error } = await supabase
         .from("todo_items")
         .select("*", { count: "exact", head: true })
         .eq("assignee_id", user.id)
         .in("status", ["pending", "processing"]);
-      
+
       if (!error && count !== null) {
         setTodoCount(count);
       }
@@ -82,43 +82,36 @@ const Header = () => {
   // Get first character of name for avatar
   const avatarChar = user?.name?.charAt(0) || "用";
 
-  const headerStyle = headerBgUrl 
-    ? { 
+  const headerStyle = headerBgUrl
+    ? {
         backgroundImage: `linear-gradient(to right, rgba(var(--primary-rgb), 0.85), rgba(var(--primary-rgb), 0.7)), url(${headerBgUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      } 
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
     : {};
 
   return (
     <>
-      <header 
-        className="bg-header-gradient shadow-header sticky top-0 z-50"
-        style={headerStyle}
-      >
+      <header className="bg-header-gradient shadow-header sticky top-0 z-50" style={headerStyle}>
         <div className="max-w-[1920px] mx-auto px-4 h-12 flex items-center justify-between">
           {/* 左侧：平台名称 */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <span className="text-white text-lg font-bold">政</span>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-wide">
-              一体化政务工作平台
-            </h1>
+            <h1 className="text-xl font-bold text-white tracking-wide">xx州党政办公平台</h1>
           </div>
 
           {/* 右侧：日期、用户信息、退出 */}
           <div className="flex items-center gap-4">
             {/* 日期显示 */}
-            <span className="text-white/90 text-base hidden md:block">
-              {dateString}
-            </span>
+            <span className="text-white/90 text-base hidden md:block">{dateString}</span>
 
             {/* 返回工作台 - 仅在非首页显示 */}
             {location.pathname !== "/" && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="text-white hover:bg-white/10 w-8 h-8"
                 onClick={() => navigate("/")}
                 title="返回工作台"
@@ -142,9 +135,7 @@ const Header = () => {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                   <Avatar className="w-7 h-7 border-2 border-white/30">
-                    <AvatarFallback className="bg-white text-primary font-bold text-xs">
-                      {avatarChar}
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-white text-primary font-bold text-xs">{avatarChar}</AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block text-left">
                     <p className="text-white font-medium text-base leading-tight">{user?.name || "用户"}</p>
@@ -172,13 +163,7 @@ const Header = () => {
       </header>
 
       {/* 修改密码弹窗 */}
-      {user && (
-        <PasswordChangeDialog
-          open={passwordDialogOpen}
-          onOpenChange={setPasswordDialogOpen}
-          userId={user.id}
-        />
-      )}
+      {user && <PasswordChangeDialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} userId={user.id} />}
     </>
   );
 };
