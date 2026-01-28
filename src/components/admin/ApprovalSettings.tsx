@@ -78,6 +78,13 @@ const existingForms = [
     description: "办公用品采购申请流程",
     business_type: "purchase_request"
   },
+  { 
+    id: "supply_purchase", 
+    name: "办公采购", 
+    icon: "🛒", 
+    description: "处室办公用品采购申请流程",
+    business_type: "supply_purchase"
+  },
 ];
 
 const ApprovalSettings = () => {
