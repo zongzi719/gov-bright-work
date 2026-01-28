@@ -74,16 +74,16 @@ const CanteenMenu = () => {
         </div>
 
         {/* 菜谱内容 */}
-        <div className="space-y-2 text-sm">
-          <div className="flex gap-2">
+        <div className="space-y-3 text-sm">
+          <div className="flex gap-3">
             <span className="text-primary font-medium w-10 flex-shrink-0">早餐</span>
             <span className="text-muted-foreground">{currentMenu.breakfast.join("、") || "暂无"}</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <span className="text-primary font-medium w-10 flex-shrink-0">午餐</span>
             <span className="text-muted-foreground">{currentMenu.lunch.join("、") || "暂无"}</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <span className="text-primary font-medium w-10 flex-shrink-0">晚餐</span>
             <span className="text-muted-foreground">{currentMenu.dinner.join("、") || "暂无"}</span>
           </div>

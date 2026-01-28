@@ -144,7 +144,7 @@ const NoticePanel = () => {
       </div>
 
       {/* 内容区域 - 公告列表 */}
-      <div className="flex-1 p-4 overflow-hidden">
+      <div className="flex-1 px-4 py-2 overflow-hidden">
         <ScrollArea className="h-full">
           {loading ? (
             <div className="py-4 text-center text-muted-foreground text-sm">加载中...</div>
