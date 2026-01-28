@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, RefreshCw, Search, UserCheck } from "lucide-react";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Leader {
   id: string;
@@ -38,12 +39,23 @@ interface ContactUser {
   mobile: string | null;
 }
 
+// 按用户分组的权限视图
+interface GroupedPermission {
+  user_id: string;
+  user_name: string;
+  user_mobile: string | null;
+  can_view_all: boolean;
+  leader_names: string[];
+  permission_ids: string[];
+}
+
 interface LeaderSchedulePermissionsProps {
   leaders: Leader[];
 }
 
 const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [groupedPermissions, setGroupedPermissions] = useState<GroupedPermission[]>([]);
   const [contactUsers, setContactUsers] = useState<ContactUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -53,7 +65,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   // 表单状态
   const [formData, setFormData] = useState({
     contact_id: "",
-    leader_id: "",
+    selected_leader_ids: [] as string[],
     can_view_all: false,
   });
   const [selectedContactName, setSelectedContactName] = useState("");
@@ -113,8 +125,33 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
         },
       }));
       setPermissions(enrichedData);
+
+      // 按用户分组
+      const grouped = new Map<string, GroupedPermission>();
+      enrichedData.forEach((p) => {
+        if (!grouped.has(p.user_id)) {
+          grouped.set(p.user_id, {
+            user_id: p.user_id,
+            user_name: p.profile?.display_name || "未知用户",
+            user_mobile: p.profile?.email || null,
+            can_view_all: p.can_view_all,
+            leader_names: [],
+            permission_ids: [],
+          });
+        }
+        const group = grouped.get(p.user_id)!;
+        group.permission_ids.push(p.id);
+        if (p.can_view_all) {
+          group.can_view_all = true;
+        }
+        if (p.leader?.name) {
+          group.leader_names.push(p.leader.name);
+        }
+      });
+      setGroupedPermissions(Array.from(grouped.values()));
     } else {
       setPermissions([]);
+      setGroupedPermissions([]);
     }
   };
 
@@ -138,44 +175,59 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
       return;
     }
 
-    if (!formData.can_view_all && !formData.leader_id) {
+    if (!formData.can_view_all && formData.selected_leader_ids.length === 0) {
       toast.error("请选择可查看的领导或勾选查看全部");
       return;
     }
 
-    const permissionData = {
-      user_id: formData.contact_id,
-      leader_id: formData.can_view_all ? null : formData.leader_id,
-      can_view_all: formData.can_view_all,
-    };
+    try {
+      // 先删除该用户现有的所有权限
+      await supabase
+        .from("leader_schedule_permissions")
+        .delete()
+        .eq("user_id", formData.contact_id);
 
-    const { error } = await supabase
-      .from("leader_schedule_permissions")
-      .insert(permissionData);
-
-    if (error) {
-      if (error.code === "23505") {
-        toast.error("该用户已有相同的权限配置");
+      if (formData.can_view_all) {
+        // 如果是查看全部，只插入一条记录
+        const { error } = await supabase
+          .from("leader_schedule_permissions")
+          .insert({
+            user_id: formData.contact_id,
+            leader_id: null,
+            can_view_all: true,
+          });
+        if (error) throw error;
       } else {
-        toast.error("添加权限失败");
-        console.error(error);
-      }
-      return;
-    }
+        // 为每个选中的领导插入一条权限记录
+        const permissionRecords = formData.selected_leader_ids.map((leaderId) => ({
+          user_id: formData.contact_id,
+          leader_id: leaderId,
+          can_view_all: false,
+        }));
 
-    toast.success("权限已添加");
-    setDialogOpen(false);
-    resetForm();
-    fetchPermissions();
+        const { error } = await supabase
+          .from("leader_schedule_permissions")
+          .insert(permissionRecords);
+        if (error) throw error;
+      }
+
+      toast.success("权限已添加");
+      setDialogOpen(false);
+      resetForm();
+      fetchPermissions();
+    } catch (error) {
+      toast.error("添加权限失败");
+      console.error(error);
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("确定要删除这条权限吗？")) return;
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("确定要删除该用户的所有权限吗？")) return;
 
     const { error } = await supabase
       .from("leader_schedule_permissions")
       .delete()
-      .eq("id", id);
+      .eq("user_id", userId);
 
     if (error) {
       toast.error("删除失败");
@@ -189,11 +241,20 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   const resetForm = () => {
     setFormData({
       contact_id: "",
-      leader_id: "",
+      selected_leader_ids: [],
       can_view_all: false,
     });
     setSearchTerm("");
     setSelectedContactName("");
+  };
+
+  const toggleLeaderSelection = (leaderId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      selected_leader_ids: prev.selected_leader_ids.includes(leaderId)
+        ? prev.selected_leader_ids.filter((id) => id !== leaderId)
+        : [...prev.selected_leader_ids, leaderId],
+    }));
   };
 
   const selectContact = (contact: ContactUser) => {
@@ -267,7 +328,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={formData.can_view_all}
-                    onCheckedChange={(checked) => setFormData({ ...formData, can_view_all: checked, leader_id: "" })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, can_view_all: checked, selected_leader_ids: [] })}
                     id="can_view_all"
                   />
                   <Label>允许查看所有领导日程</Label>
@@ -275,19 +336,32 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
 
                 {!formData.can_view_all && (
                   <div className="space-y-2">
-                    <Label>指定可查看的领导</Label>
-                    <Select value={formData.leader_id} onValueChange={(v) => setFormData({ ...formData, leader_id: v })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="选择领导" />
-                      </SelectTrigger>
-                      <SelectContent>
+                    <Label>指定可查看的领导（可多选）</Label>
+                    <ScrollArea className="h-48 border rounded-md p-2">
+                      <div className="space-y-2">
                         {leaders.map((leader) => (
-                          <SelectItem key={leader.id} value={leader.id}>
-                            {leader.name} - {leader.position}
-                          </SelectItem>
+                          <div
+                            key={leader.id}
+                            className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer"
+                            onClick={() => toggleLeaderSelection(leader.id)}
+                          >
+                            <Checkbox
+                              checked={formData.selected_leader_ids.includes(leader.id)}
+                              onCheckedChange={() => toggleLeaderSelection(leader.id)}
+                            />
+                            <div>
+                              <div className="font-medium text-sm">{leader.name}</div>
+                              <div className="text-xs text-muted-foreground">{leader.position}</div>
+                            </div>
+                          </div>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    </ScrollArea>
+                    {formData.selected_leader_ids.length > 0 && (
+                      <p className="text-xs text-green-600">
+                        已选择 {formData.selected_leader_ids.length} 位领导
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -303,7 +377,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">加载中...</div>
-      ) : permissions.length === 0 ? (
+      ) : groupedPermissions.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           暂无授权记录
         </div>
@@ -312,30 +386,39 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
           <TableHeader>
             <TableRow>
               <TableHead>用户</TableHead>
-              <TableHead>邮箱</TableHead>
+              <TableHead>手机号</TableHead>
               <TableHead>权限范围</TableHead>
               <TableHead className="w-[100px]">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {permissions.map((permission) => (
-              <TableRow key={permission.id}>
+            {groupedPermissions.map((group) => (
+              <TableRow key={group.user_id}>
                 <TableCell className="font-medium">
-                  {permission.profile?.display_name || "未知用户"}
+                  {group.user_name}
                 </TableCell>
-                <TableCell>{permission.profile?.email || "-"}</TableCell>
+                <TableCell>{group.user_mobile || "-"}</TableCell>
                 <TableCell>
-                  {permission.can_view_all ? (
+                  {group.can_view_all ? (
                     <span className="text-green-600 font-medium">全部领导</span>
                   ) : (
-                    <span>{permission.leader?.name || "指定领导"}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {group.leader_names.map((name, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-primary/10 text-primary"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(permission.id)}
+                    onClick={() => handleDeleteUser(group.user_id)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-4 h-4" />

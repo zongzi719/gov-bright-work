@@ -14,7 +14,7 @@ const QuickLinks = () => {
 
   const checkLeaderSchedulePermission = async () => {
     try {
-      // 获取当前登录用户
+      // 获取当前登录用户（前台用户基于contacts表）
       const storedUser = localStorage.getItem("frontendUser");
       if (!storedUser) {
         setHasLeaderSchedulePermission(false);
@@ -29,32 +29,16 @@ const QuickLinks = () => {
         return;
       }
 
-      // 检查是否有后台管理员权限
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.user) {
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.session.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        
-        if (roleData) {
-          setHasLeaderSchedulePermission(true);
-          return;
-        }
+      // 检查是否有领导日程查看权限（使用contact_id查询）
+      const { data: permData } = await supabase
+        .from("leader_schedule_permissions")
+        .select("id")
+        .eq("user_id", user.contact_id)
+        .limit(1);
 
-        // 检查是否有领导日程查看权限
-        const { data: permData } = await supabase
-          .from("leader_schedule_permissions")
-          .select("id")
-          .eq("user_id", session.session.user.id)
-          .limit(1);
-
-        if (permData && permData.length > 0) {
-          setHasLeaderSchedulePermission(true);
-          return;
-        }
+      if (permData && permData.length > 0) {
+        setHasLeaderSchedulePermission(true);
+        return;
       }
 
       setHasLeaderSchedulePermission(false);
