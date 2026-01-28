@@ -1201,6 +1201,86 @@ export type Database = {
           },
         ]
       }
+      supply_purchase_items: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          item_name: string
+          purchase_id: string
+          quantity: number
+          remarks: string | null
+          unit_price: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          item_name: string
+          purchase_id: string
+          quantity?: number
+          remarks?: string | null
+          unit_price?: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          item_name?: string
+          purchase_id?: string
+          quantity?: number
+          remarks?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "supply_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_purchases: {
+        Row: {
+          applicant_id: string
+          applicant_name: string
+          created_at: string
+          department: string
+          id: string
+          purchase_date: string
+          reason: string | null
+          status: string
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          applicant_id: string
+          applicant_name: string
+          created_at?: string
+          department: string
+          id?: string
+          purchase_date?: string
+          reason?: string | null
+          status?: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string
+          applicant_name?: string
+          created_at?: string
+          department?: string
+          id?: string
+          purchase_date?: string
+          reason?: string | null
+          status?: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       supply_requisition_items: {
         Row: {
           created_at: string

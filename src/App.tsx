@@ -13,6 +13,7 @@ import Leave from "./pages/Leave";
 import Out from "./pages/Out";
 import Requisition from "./pages/Requisition";
 import Purchase from "./pages/Purchase";
+import SuppliesPurchase from "./pages/SuppliesPurchase";
 import Contacts from "./pages/Contacts";
 import LeaderSchedule from "./pages/LeaderSchedule";
 import H5OfficialDocument from "./pages/H5OfficialDocument";
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/out" element={<Out />} />
           <Route path="/requisition" element={<Requisition />} />
           <Route path="/purchase" element={<Purchase />} />
+          <Route path="/supplies-purchase" element={<SuppliesPurchase />} />
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/leader-schedule" element={<LeaderSchedule />} />
           <Route path="/h5officialdocument" element={<H5OfficialDocument />} />
