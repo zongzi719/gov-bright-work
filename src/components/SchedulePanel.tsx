@@ -353,12 +353,12 @@ const SchedulePanel = () => {
           <span className="text-xs text-muted-foreground">{format(selectedDate, "M月d日", { locale: zhCN })}</span>
         </div>
 
-        {/* 日程列表 - 确保最小高度 */}
-        <ScrollArea className="flex-1 mt-2 min-h-[100px]">
+        {/* 日程列表 */}
+        <ScrollArea className="flex-1 mt-2">
           {loading ? (
-            <div className="text-xs text-muted-foreground text-center py-2">加载中...</div>
+            <div className="text-xs text-muted-foreground text-center py-4">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
-            <div className="text-xs text-muted-foreground text-center py-2">暂无日程</div>
+            <div className="text-xs text-muted-foreground text-center py-4">暂无日程</div>
           ) : (
             <div className="space-y-1.5">
               {selectedDateSchedules.map((item) => (
