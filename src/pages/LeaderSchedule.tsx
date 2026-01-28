@@ -106,16 +106,28 @@ const LeaderSchedule = () => {
     }
   };
 
-  const fetchLeaderSchedules = async () => {
+  const fetchLeaderSchedules = async (leaderIds: string[] | null) => {
     setLoading(true);
     const weekEnd = addDays(currentWeekStart, 6);
-    const { data } = await supabase
+    
+    let query = supabase
       .from("leader_schedules")
       .select("*, leader:contacts(id, name, position)")
       .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(weekEnd, "yyyy-MM-dd"))
-      .order("schedule_date")
-      .order("start_time");
+      .lte("schedule_date", format(weekEnd, "yyyy-MM-dd"));
+
+    // 服务端过滤：只获取有权限查看的领导日程
+    if (leaderIds !== null && leaderIds.length > 0) {
+      query = query.in("leader_id", leaderIds);
+    } else if (leaderIds !== null && leaderIds.length === 0) {
+      // 无权限时不获取任何数据
+      setLeaderSchedules([]);
+      setLoading(false);
+      return;
+    }
+    // leaderIds === null 表示可查看全部，不加过滤条件
+
+    const { data } = await query.order("schedule_date").order("start_time");
 
     if (data) {
       setLeaderSchedules(data as LeaderSchedule[]);
@@ -145,11 +157,16 @@ const LeaderSchedule = () => {
   useEffect(() => {
     if (allowedLeaderIds !== undefined) {
       fetchLeaders();
+      // 权限确定后立即获取日程，带上过滤条件
+      fetchLeaderSchedules(allowedLeaderIds);
     }
   }, [allowedLeaderIds]);
 
   useEffect(() => {
-    fetchLeaderSchedules();
+    // 周切换时重新获取日程，需等权限加载完成
+    if (allowedLeaderIds !== undefined) {
+      fetchLeaderSchedules(allowedLeaderIds);
+    }
   }, [currentWeekStart]);
 
   return (
