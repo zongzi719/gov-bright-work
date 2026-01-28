@@ -1,4 +1,4 @@
-import { NavBar, Card, Tag, Button, Toast, Grid } from "antd-mobile";
+import { Toast } from "antd-mobile";
 
 interface FileTransferData {
   id: string;
@@ -53,118 +53,111 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* 顶部导航 */}
-      <NavBar
-        onBack={onBack}
-        style={{
-          "--height": "44px",
-          "--border-bottom": "1px solid #e5e7eb",
-          background: "#1e40af",
-          color: "white",
-        }}
-        backIcon={<span className="text-white">←</span>}
-      >
-        <span className="text-white font-medium">文件详情</span>
-      </NavBar>
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
+      {/* 顶部导航 - 政务风格 */}
+      <div className="bg-slate-800 text-white shrink-0">
+        <div className="flex items-center h-11 px-3">
+          <button 
+            onClick={onBack}
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+          >
+            <span className="text-white text-sm">←</span>
+          </button>
+          <span className="flex-1 text-center text-sm font-medium">文件详情</span>
+          <div className="w-8"></div>
+        </div>
+      </div>
 
       {/* 内容区域 */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {/* 标题卡片 */}
-        <Card className="rounded-xl shadow-sm">
-          <div className="flex flex-wrap gap-2 mb-3">
-            <Tag color="primary" fill="outline" style={{ fontSize: "11px" }}>
+        <div className="bg-white rounded-lg p-3 border border-slate-200">
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            <span className="text-[10px] px-1.5 py-0.5 rounded border border-blue-500 text-blue-600">
               {file.docNumber}
-            </Tag>
-            <Tag
-              color={getSecurityColor(file.securityLevel) as "danger" | "warning" | "default"}
-              fill="solid"
-              style={{ fontSize: "11px" }}
-            >
+            </span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded text-white ${
+              file.securityLevel === "机密" ? "bg-red-500" : 
+              file.securityLevel === "秘密" ? "bg-amber-500" : "bg-slate-500"
+            }`}>
               {file.securityLevel}
-            </Tag>
+            </span>
             {file.urgency !== "普通" && (
-              <Tag
-                color={getUrgencyColor(file.urgency) as "danger" | "warning" | "primary"}
-                fill="solid"
-                style={{ fontSize: "11px" }}
-              >
+              <span className={`text-[10px] px-1.5 py-0.5 rounded text-white ${
+                file.urgency === "特急" ? "bg-red-500" : "bg-amber-500"
+              }`}>
                 {file.urgency}
-              </Tag>
+              </span>
             )}
-            <Tag
-              color={file.status === "待签收" ? "warning" : "success"}
-              fill="outline"
-              style={{ fontSize: "11px" }}
-            >
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+              file.status === "待签收" 
+                ? "bg-amber-50 text-amber-600 border border-amber-200" 
+                : "bg-green-50 text-green-600 border border-green-200"
+            }`}>
               {file.status}
-            </Tag>
+            </span>
           </div>
-          <h2 className="text-base font-semibold text-slate-800 leading-relaxed">
+          <h2 className="text-sm font-medium text-slate-800 leading-relaxed">
             {file.title}
           </h2>
-        </Card>
+        </div>
 
         {/* 基本信息卡片 */}
-        <Card className="rounded-xl shadow-sm" title={<span className="text-sm font-medium text-slate-700">基本信息</span>}>
-          <Grid columns={2} gap={12}>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">发文单位</div>
-              <div className="text-sm text-slate-800">{file.sendUnit}</div>
-            </Grid.Item>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">总份数</div>
-              <div className="text-sm text-slate-800">{file.copies}份</div>
-            </Grid.Item>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">成文日期</div>
-              <div className="text-sm text-slate-800">{file.documentDate}</div>
-            </Grid.Item>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">签发日期</div>
-              <div className="text-sm text-slate-800">{file.signDate}</div>
-            </Grid.Item>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">签发领导</div>
-              <div className="text-sm text-slate-800">{file.signLeader}</div>
-            </Grid.Item>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">密级</div>
-              <div className="text-sm text-slate-800">{file.securityLevel}</div>
-            </Grid.Item>
-          </Grid>
-        </Card>
+        <div className="bg-white rounded-lg p-3 border border-slate-200">
+          <div className="text-xs font-medium text-slate-700 mb-2 pb-1.5 border-b border-slate-100">基本信息</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div>
+              <div className="text-[10px] text-slate-400">发文单位</div>
+              <div className="text-xs text-slate-700">{file.sendUnit}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400">总份数</div>
+              <div className="text-xs text-slate-700">{file.copies}份</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400">成文日期</div>
+              <div className="text-xs text-slate-700">{file.documentDate}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400">签发日期</div>
+              <div className="text-xs text-slate-700">{file.signDate}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400">签发领导</div>
+              <div className="text-xs text-slate-700">{file.signLeader}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400">密级</div>
+              <div className="text-xs text-slate-700">{file.securityLevel}</div>
+            </div>
+          </div>
+        </div>
 
         {/* 联系信息卡片 */}
-        <Card className="rounded-xl shadow-sm" title={<span className="text-sm font-medium text-slate-700">联系信息</span>}>
-          <Grid columns={2} gap={12}>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">联系人</div>
-              <div className="text-sm text-slate-800">{file.contactPerson}</div>
-            </Grid.Item>
-            <Grid.Item>
-              <div className="text-xs text-slate-500 mb-1">联系电话</div>
-              <div className="text-sm text-blue-600">{file.contactPhone}</div>
-            </Grid.Item>
-          </Grid>
-        </Card>
+        <div className="bg-white rounded-lg p-3 border border-slate-200">
+          <div className="text-xs font-medium text-slate-700 mb-2 pb-1.5 border-b border-slate-100">联系信息</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div>
+              <div className="text-[10px] text-slate-400">联系人</div>
+              <div className="text-xs text-slate-700">{file.contactPerson}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400">联系电话</div>
+              <div className="text-xs text-blue-600">{file.contactPhone}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 底部操作栏 */}
       {file.status === "待签收" && (
-        <div className="p-3 bg-white border-t border-slate-200">
-          <Button
-            block
-            color="primary"
+        <div className="p-3 bg-white border-t border-slate-200 shrink-0">
+          <button
             onClick={handleSign}
-            style={{
-              "--background-color": "#1e40af",
-              "--border-color": "#1e40af",
-              borderRadius: "8px",
-            }}
+            className="w-full h-10 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
           >
             确认签收
-          </Button>
+          </button>
         </div>
       )}
     </div>

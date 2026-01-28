@@ -221,10 +221,8 @@ const H5OfficialDocument = () => {
       {/* 顶部固定Header - 简洁政务风格 */}
       <div className="bg-slate-800 text-white shrink-0">
         <div className="flex items-center justify-between h-11 px-3">
-          {/* 左侧返回 */}
-          <button onClick={() => navigate(-1)} className="text-white/90 text-sm">
-            ← 返回
-          </button>
+          {/* 左侧占位 */}
+          <div className="w-10"></div>
           
           {/* 中间待办/已办切换 */}
           <div className="flex items-center bg-slate-700 rounded-lg p-0.5">
