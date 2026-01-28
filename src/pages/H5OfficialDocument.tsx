@@ -217,59 +217,56 @@ const H5OfficialDocument = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-100 flex flex-col overflow-hidden">
-      {/* 顶部导航栏 - 政务蓝 */}
-      <div className="bg-blue-800 text-white shrink-0">
-        <NavBar
-          backIcon={<span className="text-white text-base">←</span>}
-          onBack={() => navigate(-1)}
-          right={
-            <span className="text-xs text-white/80" onClick={handleLogout}>
-              退出
-            </span>
-          }
-          style={{
-            "--height": "40px",
-            "--border-bottom": "none",
-            background: "transparent",
-          }}
-        >
-          {/* 待办/已办切换 */}
-          <div className="flex items-center justify-center gap-1">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
+      {/* 顶部固定Header - 简洁政务风格 */}
+      <div className="bg-slate-800 text-white shrink-0">
+        <div className="flex items-center justify-between h-11 px-3">
+          {/* 左侧返回 */}
+          <button onClick={() => navigate(-1)} className="text-white/90 text-sm">
+            ← 返回
+          </button>
+          
+          {/* 中间待办/已办切换 */}
+          <div className="flex items-center bg-slate-700 rounded-lg p-0.5">
             <button
-              className={`px-4 py-1 text-xs font-medium rounded-full transition-all ${
+              className={`px-4 py-1 text-xs font-medium rounded transition-all ${
                 activeTab === "pending"
-                  ? "bg-white text-blue-800"
-                  : "bg-transparent text-white/90 border border-white/40"
+                  ? "bg-white text-slate-800"
+                  : "text-white/80"
               }`}
               onClick={() => setActiveTab("pending")}
             >
               待办 ({mockDocuments.filter(d => d.status === "待办" || d.status === "在办" || d.status === "未批阅").length})
             </button>
             <button
-              className={`px-4 py-1 text-xs font-medium rounded-full transition-all ${
+              className={`px-4 py-1 text-xs font-medium rounded transition-all ${
                 activeTab === "completed"
-                  ? "bg-white text-blue-800"
-                  : "bg-transparent text-white/90 border border-white/40"
+                  ? "bg-white text-slate-800"
+                  : "text-white/80"
               }`}
               onClick={() => setActiveTab("completed")}
             >
               已办 (0)
             </button>
           </div>
-        </NavBar>
+
+          {/* 右侧退出 */}
+          <button onClick={handleLogout} className="text-white/80 text-xs">
+            退出
+          </button>
+        </div>
       </div>
 
-      {/* 搜索框 */}
+      {/* 搜索区域 - 独立模块 */}
       <div className="px-3 py-2 bg-white border-b border-slate-200 shrink-0">
         <SearchBar
           placeholder="搜索标题、提交人、关键词"
           value={searchText}
           onChange={setSearchText}
           style={{
-            "--background": "#f1f5f9",
-            "--border-radius": "8px",
-            "--height": "32px",
+            "--background": "#f8fafc",
+            "--border-radius": "6px",
+            "--height": "36px",
             "--placeholder-color": "#94a3b8",
           }}
         />
@@ -277,36 +274,38 @@ const H5OfficialDocument = () => {
 
       {/* 主内容区：左侧分类 + 右侧列表 */}
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* 左侧分类栏 */}
+        {/* 左侧分类栏 - 紧凑设计 */}
         <div className="w-16 bg-white border-r border-slate-200 flex flex-col shrink-0">
           {categories.map((cat) => (
             <button
               key={cat.key}
               onClick={() => setActiveCategory(cat.key)}
-              className={`relative flex flex-col items-center justify-center py-3 px-1 transition-all ${
+              className={`relative flex flex-col items-center justify-center py-3 transition-all ${
                 activeCategory === cat.key
-                  ? "bg-blue-50 text-blue-800 border-l-2 border-blue-800"
-                  : "text-slate-500 hover:bg-slate-50"
+                  ? "bg-slate-100 border-l-2 border-slate-800"
+                  : "text-slate-500 hover:bg-slate-50 border-l-2 border-transparent"
               }`}
             >
               {/* 红点徽章 */}
               {cat.count > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center px-1">
+                <span className="absolute top-2 right-2 min-w-[14px] h-[14px] bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center">
                   {cat.count}
                 </span>
               )}
-              <span className={`${activeCategory === cat.key ? "text-blue-800" : "text-slate-400"}`}>
+              <span className={`${activeCategory === cat.key ? "text-slate-800" : "text-slate-400"}`}>
                 {cat.icon}
               </span>
-              <span className="text-[10px] font-medium mt-1 leading-tight text-center whitespace-nowrap">
+              <span className={`text-[10px] mt-1 leading-tight text-center ${
+                activeCategory === cat.key ? "text-slate-800 font-medium" : "text-slate-500"
+              }`}>
                 {cat.title}
               </span>
             </button>
           ))}
         </div>
 
-        {/* 右侧内容区 */}
-        <div className="flex-1 overflow-y-auto bg-slate-100 min-h-0">
+        {/* 右侧内容区 - 卡片列表 */}
+        <div className="flex-1 overflow-y-auto bg-slate-50 min-h-0">
           {activeCategory === "transfer" ? (
             <FileTransferList activeTab={activeTab} searchText={searchText} />
           ) : filteredDocuments.length === 0 ? (
@@ -317,62 +316,52 @@ const H5OfficialDocument = () => {
                 <div
                   key={doc.id}
                   onClick={() => setSelectedDocument(doc)}
-                  className="bg-white rounded-lg p-3 shadow-sm active:bg-slate-50 transition-colors cursor-pointer"
+                  className="bg-white rounded-lg p-3 border border-slate-100 active:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  {/* 发文审签样式 */}
-                  {activeCategory === "send" && (
-                    <>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Tag
-                          color={doc.flowColor as "warning" | "success" | "default"}
-                          fill="outline"
-                          style={{ fontSize: "10px", padding: "0 4px" }}
-                        >
-                          {doc.flowName}
-                        </Tag>
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded"
-                          style={{
-                            backgroundColor: `${getStatusColor(doc.status)}15`,
-                            color: getStatusColor(doc.status),
-                          }}
-                        >
-                          {doc.status}
-                        </span>
-                      </div>
-                      <h3 className="font-medium text-slate-800 text-sm leading-snug mb-2 line-clamp-2">
-                        {doc.title}
-                      </h3>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span>{doc.submitter}</span>
-                        <span>{doc.submitTime}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-1">
-                        当前节点：<span className="text-blue-600">{doc.currentNode}</span>
-                      </div>
-                    </>
+                  {/* 流程类型标识区域 */}
+                  {activeCategory === "send" && doc.flowName && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <Tag
+                        color={doc.flowColor as "warning" | "success" | "default"}
+                        fill="outline"
+                        style={{ fontSize: "10px", padding: "0 6px", borderRadius: "2px" }}
+                      >
+                        {doc.flowName}
+                      </Tag>
+                    </div>
                   )}
 
-                  {/* 公文办理样式 */}
-                  {activeCategory === "process" && (
-                    <>
-                      <div className="flex items-center justify-between mb-2">
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded"
-                          style={{
-                            backgroundColor: `${getStatusColor(doc.status)}15`,
-                            color: getStatusColor(doc.status),
-                          }}
-                        >
-                          {doc.status}
-                        </span>
-                        <span className="text-[11px] text-slate-400">{doc.submitTime}</span>
-                      </div>
-                      <h3 className="font-medium text-slate-800 text-sm leading-snug line-clamp-2">
-                        {doc.title}
-                      </h3>
-                    </>
-                  )}
+                  {/* 标题区域 - 主信息 */}
+                  <h3 className="font-medium text-slate-800 text-sm leading-snug mb-2 line-clamp-2">
+                    {doc.title}
+                  </h3>
+
+                  {/* 辅助信息区域 */}
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+                    <span>提交人：{doc.submitter}</span>
+                    <span>{doc.submitTime}</span>
+                  </div>
+
+                  {/* 节点与状态信息区域 */}
+                  <div className="flex items-center justify-between">
+                    {activeCategory === "send" && doc.currentNode && (
+                      <span className="text-xs text-slate-500">
+                        当前节点：<span className="text-slate-700">{doc.currentNode}</span>
+                      </span>
+                    )}
+                    {activeCategory === "process" && (
+                      <span className="text-xs text-slate-400">收文处理</span>
+                    )}
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded"
+                      style={{
+                        backgroundColor: `${getStatusColor(doc.status)}10`,
+                        color: getStatusColor(doc.status),
+                      }}
+                    >
+                      {doc.status}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
