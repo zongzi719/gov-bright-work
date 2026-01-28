@@ -23,7 +23,7 @@ const QuickLinks = () => {
 
       const user = JSON.parse(storedUser);
       const userId = user.id; // localStorage stores 'id' not 'contact_id'
-      
+
       if (!userId) {
         setHasLeaderSchedulePermission(false);
         return;
@@ -114,32 +114,24 @@ const QuickLinks = () => {
   };
 
   // 根据权限决定是否显示领导日程模块
-  const modules = hasLeaderSchedulePermission 
-    ? [...baseModules, leaderScheduleModule] 
-    : baseModules;
+  const modules = hasLeaderSchedulePermission ? [...baseModules, leaderScheduleModule] : baseModules;
 
   return (
     <div className="gov-card h-full flex flex-col">
       {/* 标题栏 */}
       <div className="px-4 py-3 border-b border-border">
-        <h2 className="gov-card-title text-base">快捷入口</h2>
+        <h2 className="gov-card-title text-base">应用导航</h2>
       </div>
 
       {/* 模块网格 */}
       <div className="p-4 flex-1 flex items-center justify-center">
         <div className="grid grid-cols-4 gap-4 w-full">
           {modules.map((module) => (
-            <div
-              key={module.id}
-              className="app-icon cursor-pointer group"
-              onClick={() => navigate(module.path)}
-            >
+            <div key={module.id} className="app-icon cursor-pointer group" onClick={() => navigate(module.path)}>
               <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-11 h-11`}>
                 <module.icon className="w-5 h-5" />
               </div>
-              <span className="text-sm text-muted-foreground text-center leading-tight">
-                {module.name}
-              </span>
+              <span className="text-sm text-muted-foreground text-center leading-tight">{module.name}</span>
             </div>
           ))}
         </div>
