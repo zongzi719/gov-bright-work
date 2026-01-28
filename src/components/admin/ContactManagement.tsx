@@ -44,6 +44,8 @@ import {
   Phone,
   Mail,
   MapPin,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 interface Organization {
@@ -56,6 +58,27 @@ interface Organization {
   address: string | null;
   phone: string | null;
 }
+
+// 获取单位的完整层级路径
+const getOrganizationPath = (orgId: string, organizations: Organization[]): string => {
+  const org = organizations.find(o => o.id === orgId);
+  if (!org) return '';
+  
+  const path: string[] = [org.name];
+  let currentOrg = org;
+  
+  while (currentOrg.parent_id) {
+    const parent = organizations.find(o => o.id === currentOrg.parent_id);
+    if (parent) {
+      path.unshift(parent.name);
+      currentOrg = parent;
+    } else {
+      break;
+    }
+  }
+  
+  return path.join(' > ');
+};
 
 type ContactStatus = 'on_duty' | 'out' | 'leave' | 'business_trip' | 'meeting';
 
@@ -816,6 +839,7 @@ const ContactManagement = () => {
               ) : (
                 <ContactTable 
                   contacts={getFilteredContacts()}
+                  organizations={organizations}
                   statusLabels={statusLabels}
                   statusColors={statusColors}
                   onEdit={handleEditContact}
@@ -947,61 +971,11 @@ const ContactManagement = () => {
                   暂无单位数据
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>单位名称</TableHead>
-                      <TableHead>简称</TableHead>
-                      <TableHead>联系电话</TableHead>
-                      <TableHead>地址</TableHead>
-                      <TableHead>排序</TableHead>
-                      <TableHead className="text-right">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {organizations.map((org) => (
-                      <TableRow key={org.id}>
-                        <TableCell className="font-medium">{org.name}</TableCell>
-                        <TableCell>{org.short_name || "-"}</TableCell>
-                        <TableCell>
-                          {org.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-muted-foreground" />
-                              {org.phone}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {org.address && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-muted-foreground" />
-                              {org.address}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{org.sort_order}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditOrg(org)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteOrg(org.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <OrganizationTree 
+                  organizations={organizations}
+                  onEdit={handleEditOrg}
+                  onDelete={handleDeleteOrg}
+                />
               )}
             </CardContent>
           </Card>
@@ -1011,15 +985,170 @@ const ContactManagement = () => {
   );
 };
 
+// 组织架构树形组件
+const OrganizationTree = ({
+  organizations,
+  onEdit,
+  onDelete,
+}: {
+  organizations: Organization[];
+  onEdit: (org: Organization) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // 获取顶级组织
+  const getRootOrganizations = () => {
+    return organizations.filter(org => !org.parent_id).sort((a, b) => a.sort_order - b.sort_order);
+  };
+
+  // 获取子组织
+  const getChildren = (parentId: string) => {
+    return organizations.filter(org => org.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order);
+  };
+
+  // 检查是否有子节点
+  const hasChildren = (orgId: string) => {
+    return organizations.some(org => org.parent_id === orgId);
+  };
+
+  // 切换展开状态
+  const toggleExpand = (orgId: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(orgId)) {
+        next.delete(orgId);
+      } else {
+        next.add(orgId);
+      }
+      return next;
+    });
+  };
+
+  // 展开全部
+  const expandAll = () => {
+    const allIds = new Set(organizations.filter(org => hasChildren(org.id)).map(org => org.id));
+    setExpandedIds(allIds);
+  };
+
+  // 收起全部
+  const collapseAll = () => {
+    setExpandedIds(new Set());
+  };
+
+  // 递归渲染组织节点
+  const renderOrganizationNode = (org: Organization, level: number = 0) => {
+    const isExpanded = expandedIds.has(org.id);
+    const children = getChildren(org.id);
+    const hasChildNodes = children.length > 0;
+
+    return (
+      <div key={org.id}>
+        <div 
+          className={`flex items-center gap-2 py-2 px-3 hover:bg-muted/50 rounded-md group ${level > 0 ? 'ml-6' : ''}`}
+          style={{ marginLeft: level * 24 }}
+        >
+          {/* 展开/收起按钮 */}
+          <button
+            onClick={() => hasChildNodes && toggleExpand(org.id)}
+            className={`w-5 h-5 flex items-center justify-center rounded hover:bg-muted ${hasChildNodes ? 'cursor-pointer' : 'cursor-default opacity-0'}`}
+          >
+            {hasChildNodes && (
+              isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )
+            )}
+          </button>
+
+          {/* 组织图标 */}
+          <Building2 className="w-4 h-4 text-primary" />
+
+          {/* 组织名称 */}
+          <span className="flex-1 font-medium">{org.name}</span>
+
+          {/* 简称 */}
+          {org.short_name && (
+            <span className="text-sm text-muted-foreground">({org.short_name})</span>
+          )}
+
+          {/* 电话 */}
+          {org.phone && (
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <Phone className="w-3 h-3" />
+              {org.phone}
+            </span>
+          )}
+
+          {/* 操作按钮 */}
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onEdit(org)}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onDelete(org.id)}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            </Button>
+          </div>
+        </div>
+
+        {/* 子节点 */}
+        {isExpanded && children.map(child => renderOrganizationNode(child, level + 1))}
+      </div>
+    );
+  };
+
+  const rootOrgs = getRootOrganizations();
+  const hasHierarchy = organizations.some(org => org.parent_id);
+
+  return (
+    <div className="space-y-2">
+      {/* 工具栏 */}
+      {hasHierarchy && (
+        <div className="flex gap-2 mb-4">
+          <Button variant="outline" size="sm" onClick={expandAll}>
+            全部展开
+          </Button>
+          <Button variant="outline" size="sm" onClick={collapseAll}>
+            全部收起
+          </Button>
+        </div>
+      )}
+
+      {/* 组织树 */}
+      <div className="border rounded-lg p-2">
+        {rootOrgs.length > 0 ? (
+          rootOrgs.map(org => renderOrganizationNode(org))
+        ) : (
+          // 如果没有顶级组织（全部有父级），显示所有组织
+          organizations.map(org => renderOrganizationNode(org))
+        )}
+      </div>
+    </div>
+  );
+};
+
 // 抽取表格组件以支持分页
 const ContactTable = ({
   contacts,
+  organizations,
   statusLabels,
   statusColors,
   onEdit,
   onDelete,
 }: {
   contacts: Contact[];
+  organizations: Organization[];
   statusLabels: Record<ContactStatus, string>;
   statusColors: Record<ContactStatus, 'default' | 'secondary' | 'destructive' | 'outline'>;
   onEdit: (contact: Contact) => void;
@@ -1032,7 +1161,7 @@ const ContactTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>单位</TableHead>
+            <TableHead>所属单位层级</TableHead>
             <TableHead>姓名</TableHead>
             <TableHead>职务</TableHead>
             <TableHead>部门</TableHead>
@@ -1045,77 +1174,82 @@ const ContactTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pagination.paginatedData.map((contact) => (
-            <TableRow key={contact.id}>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-1">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  {contact.organization?.name}
-                </div>
-              </TableCell>
-              <TableCell>{contact.name}</TableCell>
-              <TableCell>{contact.position || "-"}</TableCell>
-              <TableCell>{contact.department || "-"}</TableCell>
-              <TableCell>
-                {contact.phone && (
-                  <div className="flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-muted-foreground" />
-                    {contact.phone}
-                  </div>
-                )}
-              </TableCell>
-              <TableCell>
-                {contact.mobile && (
-                  <div className="flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-muted-foreground" />
-                    {contact.mobile}
-                  </div>
-                )}
-              </TableCell>
-              <TableCell>
-                <Badge variant={contact.security_level === '机密' ? 'destructive' : contact.security_level === '秘密' ? 'secondary' : 'outline'}>
-                  {contact.security_level || '一般'}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {contact.is_leader ? (
-                  <Badge variant="default">是</Badge>
-                ) : (
-                  <span className="text-muted-foreground">否</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
-                  <Badge variant={statusColors[contact.status]}>
-                    {statusLabels[contact.status]}
-                  </Badge>
-                  {contact.status_note && (
-                    <span className="text-xs text-muted-foreground">
-                      {contact.status_note}
+          {pagination.paginatedData.map((contact) => {
+            const orgPath = getOrganizationPath(contact.organization_id, organizations);
+            return (
+              <TableRow key={contact.id}>
+                <TableCell className="font-medium max-w-xs">
+                  <div className="flex items-start gap-1">
+                    <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <span className="text-sm leading-tight" title={orgPath}>
+                      {orgPath || contact.organization?.name || '-'}
                     </span>
+                  </div>
+                </TableCell>
+                <TableCell>{contact.name}</TableCell>
+                <TableCell>{contact.position || "-"}</TableCell>
+                <TableCell>{contact.department || "-"}</TableCell>
+                <TableCell>
+                  {contact.phone && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-muted-foreground" />
+                      {contact.phone}
+                    </div>
                   )}
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEdit(contact)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDelete(contact.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell>
+                  {contact.mobile && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-muted-foreground" />
+                      {contact.mobile}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={contact.security_level === '机密' ? 'destructive' : contact.security_level === '秘密' ? 'secondary' : 'outline'}>
+                    {contact.security_level || '一般'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {contact.is_leader ? (
+                    <Badge variant="default">是</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">否</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-1">
+                    <Badge variant={statusColors[contact.status]}>
+                      {statusLabels[contact.status]}
+                    </Badge>
+                    {contact.status_note && (
+                      <span className="text-xs text-muted-foreground">
+                        {contact.status_note}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(contact)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(contact.id)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
       <TablePagination
