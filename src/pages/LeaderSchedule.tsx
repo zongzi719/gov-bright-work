@@ -34,7 +34,16 @@ const scheduleTypeColors: Record<string, { bg: string; text: string; label: stri
 
 const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
-const LeaderSchedule = () => {
+// 时间段定义 (8:00 - 18:00)
+const timeSlots = [
+  { start: "08:00", end: "10:00", label: "8-10" },
+  { start: "10:00", end: "12:00", label: "10-12" },
+  { start: "12:00", end: "14:00", label: "12-14" },
+  { start: "14:00", end: "16:00", label: "14-16" },
+  { start: "16:00", end: "18:00", label: "16-18" },
+];
+
+const LeaderSchedulePage = () => {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [leaderSchedules, setLeaderSchedules] = useState<LeaderSchedule[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
@@ -149,11 +158,16 @@ const LeaderSchedule = () => {
     setLoading(false);
   };
 
-  const getSchedulesForLeaderAndDay = (leaderId: string, date: Date): LeaderSchedule[] => {
+  // 根据时间段获取日程
+  const getSchedulesForSlot = (leaderId: string, date: Date, slotStart: string, slotEnd: string): LeaderSchedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return leaderSchedules.filter(
-      (s) => s.leader_id === leaderId && s.schedule_date === dateStr
-    );
+    return leaderSchedules.filter((s) => {
+      if (s.leader_id !== leaderId || s.schedule_date !== dateStr) return false;
+      const scheduleStart = s.start_time.slice(0, 5);
+      const scheduleEnd = s.end_time.slice(0, 5);
+      // 判断日程是否与时间段有交集
+      return scheduleStart < slotEnd && scheduleEnd > slotStart;
+    });
   };
 
   const handlePrevWeek = () => {
@@ -191,7 +205,7 @@ const LeaderSchedule = () => {
             <Button variant="outline" size="icon" onClick={handlePrevWeek}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-medium min-w-[160px] text-center">
+            <span className="text-sm font-medium min-w-[180px] text-center">
               {format(currentWeekStart, "yyyy年M月d日", { locale: zhCN })} -{" "}
               {format(addDays(currentWeekStart, 6), "M月d日", { locale: zhCN })}
             </span>
@@ -214,61 +228,100 @@ const LeaderSchedule = () => {
           {!permissionsLoaded || loading ? (
             <div className="text-center py-8 text-muted-foreground">加载中...</div>
           ) : leaders.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">暂无领导信息</div>
+            <div className="text-center py-8 text-muted-foreground">暂无领导信息或无查看权限</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="border p-2 text-left font-medium w-24">领导</th>
-                    {weekDays.map((day, idx) => (
-                      <th key={idx} className="border p-2 text-center font-medium min-w-[120px]">
-                        <div>{weekDayNames[idx]}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(day, "M/d", { locale: zhCN })}
-                        </div>
-                      </th>
+            <div className="border rounded-lg overflow-x-auto">
+              {/* 表头 - 日期 */}
+              <div 
+                className="grid bg-red-800 text-white min-w-[1200px]" 
+                style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
+              >
+                <div className="p-2 border-r border-red-700 text-center font-medium flex items-center justify-center">
+                  领导
+                </div>
+                {weekDays.map((day, idx) => (
+                  <div key={idx} className="p-2 border-r border-red-700 last:border-r-0 text-center">
+                    <div className="font-medium">{weekDayNames[idx]}</div>
+                    <div className="text-sm opacity-80">{format(day, "M/d")}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 时间段表头 */}
+              <div 
+                className="grid bg-muted border-b min-w-[1200px]" 
+                style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
+              >
+                <div className="p-1 border-r text-center text-xs text-muted-foreground flex items-center justify-center">
+                  时段
+                </div>
+                {weekDays.map((_, dayIdx) => (
+                  <div key={dayIdx} className="grid grid-cols-5 border-r last:border-r-0">
+                    {timeSlots.map((slot, slotIdx) => (
+                      <div 
+                        key={slotIdx} 
+                        className="p-1 text-center text-[10px] border-r last:border-r-0 text-muted-foreground"
+                      >
+                        {slot.label}
+                      </div>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaders.map((leader) => (
-                    <tr key={leader.id} className="hover:bg-muted/30">
-                      <td className="border p-2">
-                        <div className="font-medium text-sm">{leader.name}</div>
-                        <div className="text-xs text-muted-foreground">{leader.position}</div>
-                      </td>
-                      {weekDays.map((day, idx) => {
-                        const schedules = getSchedulesForLeaderAndDay(leader.id, day);
+                  </div>
+                ))}
+              </div>
+
+              {/* 领导日程行 */}
+              {leaders.map((leader) => (
+                <div 
+                  key={leader.id} 
+                  className="grid border-b last:border-b-0 min-w-[1200px]" 
+                  style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
+                >
+                  {/* 领导姓名 */}
+                  <div className="p-2 border-r bg-muted/50 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="font-medium text-sm">{leader.name}</div>
+                      {leader.position && (
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[70px]">
+                          {leader.position}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* 每天的时间段 */}
+                  {weekDays.map((day, dayIdx) => (
+                    <div key={dayIdx} className="grid grid-cols-5 border-r last:border-r-0 min-h-[60px]">
+                      {timeSlots.map((slot, slotIdx) => {
+                        const slotSchedules = getSchedulesForSlot(leader.id, day, slot.start, slot.end);
                         return (
-                          <td key={idx} className="border p-1 align-top">
-                            <div className="space-y-1">
-                              {schedules.map((s) => {
-                                const typeStyle = scheduleTypeColors[s.schedule_type] || {
-                                  bg: "bg-gray-500",
-                                  text: "text-white",
-                                };
+                          <div 
+                            key={slotIdx} 
+                            className="relative border-r last:border-r-0 p-0.5 border-dashed border-muted-foreground/20"
+                          >
+                            <div className="space-y-0.5">
+                              {slotSchedules.map((schedule) => {
+                                const colors = scheduleTypeColors[schedule.schedule_type] || scheduleTypeColors.internal_meeting;
                                 return (
                                   <div
-                                    key={s.id}
-                                    className={`${typeStyle.bg} ${typeStyle.text} rounded px-1.5 py-1 text-xs`}
-                                    title={`${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)} ${s.title}${s.location ? ` @ ${s.location}` : ""}`}
+                                    key={schedule.id}
+                                    className={`${colors.bg} ${colors.text} rounded px-1 py-0.5 text-[10px] cursor-pointer`}
+                                    title={`${schedule.start_time.slice(0, 5)}-${schedule.end_time.slice(0, 5)} ${schedule.title}${schedule.location ? ` @ ${schedule.location}` : ""}`}
                                   >
-                                    <div className="font-medium truncate">{s.title}</div>
-                                    <div className="opacity-80 text-[10px]">
-                                      {s.start_time.slice(0, 5)}-{s.end_time.slice(0, 5)}
+                                    <div className="font-medium truncate leading-tight">{schedule.title}</div>
+                                    <div className="opacity-80 text-[9px] leading-tight">
+                                      {schedule.start_time.slice(0, 5)}-{schedule.end_time.slice(0, 5)}
                                     </div>
                                   </div>
                                 );
                               })}
                             </div>
-                          </td>
+                          </div>
                         );
                       })}
-                    </tr>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
@@ -277,4 +330,4 @@ const LeaderSchedule = () => {
   );
 };
 
-export default LeaderSchedule;
+export default LeaderSchedulePage;
