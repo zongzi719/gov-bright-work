@@ -95,6 +95,28 @@ interface SupplyRequisition {
   office_supplies?: OfficeSupply;
 }
 
+interface SupplyPurchase {
+  id: string;
+  department: string;
+  purchase_date: string;
+  reason: string | null;
+  total_amount: number | null;
+  applicant_id: string;
+  applicant_name: string;
+  status: string;
+  created_at: string;
+}
+
+interface SupplyPurchaseItem {
+  id: string;
+  purchase_id: string;
+  item_name: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  remarks: string | null;
+}
+
 const purchaseStatusLabels: Record<PurchaseStatus, string> = {
   pending: "待审批",
   approved: "已批准",
@@ -117,6 +139,20 @@ const requisitionStatusLabels: Record<RequisitionStatus, string> = {
 };
 
 const requisitionStatusColors: Record<RequisitionStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  approved: "bg-blue-100 text-blue-800",
+  rejected: "bg-red-100 text-red-800",
+  completed: "bg-green-100 text-green-800",
+};
+
+const officePurchaseStatusLabels: Record<string, string> = {
+  pending: "待审批",
+  approved: "已批准",
+  rejected: "已拒绝",
+  completed: "已完成",
+};
+
+const officePurchaseStatusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   approved: "bg-blue-100 text-blue-800",
   rejected: "bg-red-100 text-red-800",
@@ -163,10 +199,19 @@ const SupplyManagement = () => {
     requisition_by: "",
   });
 
+  // 办公采购管理
+  const [officePurchases, setOfficePurchases] = useState<SupplyPurchase[]>([]);
+  const [officePurchaseSearch, setOfficePurchaseSearch] = useState("");
+  const [officePurchaseStatusFilter, setOfficePurchaseStatusFilter] = useState<string>("all");
+  const [selectedOfficePurchase, setSelectedOfficePurchase] = useState<SupplyPurchase | null>(null);
+  const [officePurchaseItems, setOfficePurchaseItems] = useState<SupplyPurchaseItem[]>([]);
+  const [officePurchaseDetailOpen, setOfficePurchaseDetailOpen] = useState(false);
+
   useEffect(() => {
     fetchSupplies();
     fetchPurchaseRequests();
     fetchRequisitions();
+    fetchOfficePurchases();
   }, []);
 
   // 获取办公用品列表
@@ -209,6 +254,42 @@ const SupplyManagement = () => {
       return;
     }
     setRequisitions(data || []);
+  };
+
+  // 获取办公采购记录列表
+  const fetchOfficePurchases = async () => {
+    const { data, error } = await supabase
+      .from("supply_purchases")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("获取办公采购列表失败");
+      return;
+    }
+    setOfficePurchases(data || []);
+  };
+
+  // 获取办公采购明细
+  const fetchOfficePurchaseItems = async (purchaseId: string) => {
+    const { data, error } = await supabase
+      .from("supply_purchase_items")
+      .select("*")
+      .eq("purchase_id", purchaseId)
+      .order("created_at");
+
+    if (error) {
+      toast.error("获取采购明细失败");
+      return;
+    }
+    setOfficePurchaseItems(data || []);
+  };
+
+  // 查看办公采购详情
+  const handleViewOfficePurchase = async (purchase: SupplyPurchase) => {
+    setSelectedOfficePurchase(purchase);
+    await fetchOfficePurchaseItems(purchase.id);
+    setOfficePurchaseDetailOpen(true);
   };
 
   // =============== 库存管理 ===============
@@ -573,6 +654,10 @@ const SupplyManagement = () => {
             <TabsTrigger value="requisition" className="gap-2">
               <ClipboardList className="w-4 h-4" />
               领用管理
+            </TabsTrigger>
+            <TabsTrigger value="office-purchase" className="gap-2">
+              <ShoppingCart className="w-4 h-4" />
+              办公采购
             </TabsTrigger>
           </TabsList>
 
@@ -943,7 +1028,173 @@ const SupplyManagement = () => {
               </Table>
             </div>
           </TabsContent>
+
+          {/* 办公采购管理 */}
+          <TabsContent value="office-purchase" className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="搜索部门或申请人..."
+                  value={officePurchaseSearch}
+                  onChange={(e) => setOfficePurchaseSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select
+                value={officePurchaseStatusFilter}
+                onValueChange={setOfficePurchaseStatusFilter}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部状态</SelectItem>
+                  <SelectItem value="pending">待审批</SelectItem>
+                  <SelectItem value="approved">已批准</SelectItem>
+                  <SelectItem value="rejected">已拒绝</SelectItem>
+                  <SelectItem value="completed">已完成</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>部门</TableHead>
+                    <TableHead>申请人</TableHead>
+                    <TableHead>采购日期</TableHead>
+                    <TableHead>总金额</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {officePurchases
+                    .filter(p => 
+                      (officePurchaseStatusFilter === "all" || p.status === officePurchaseStatusFilter) &&
+                      (p.department.includes(officePurchaseSearch) || p.applicant_name.includes(officePurchaseSearch))
+                    )
+                    .length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        暂无办公采购记录
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    officePurchases
+                      .filter(p => 
+                        (officePurchaseStatusFilter === "all" || p.status === officePurchaseStatusFilter) &&
+                        (p.department.includes(officePurchaseSearch) || p.applicant_name.includes(officePurchaseSearch))
+                      )
+                      .map((purchase) => (
+                        <TableRow key={purchase.id}>
+                          <TableCell className="font-medium">{purchase.department}</TableCell>
+                          <TableCell>{purchase.applicant_name}</TableCell>
+                          <TableCell>{purchase.purchase_date}</TableCell>
+                          <TableCell>¥{(purchase.total_amount || 0).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge className={officePurchaseStatusColors[purchase.status] || "bg-gray-100 text-gray-800"}>
+                              {officePurchaseStatusLabels[purchase.status] || purchase.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-primary"
+                              onClick={() => handleViewOfficePurchase(purchase)}
+                            >
+                              查看详情
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
         </Tabs>
+
+        {/* 办公采购详情对话框 */}
+        <Dialog open={officePurchaseDetailOpen} onOpenChange={setOfficePurchaseDetailOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>办公采购详情</span>
+                {selectedOfficePurchase && (
+                  <Badge className={officePurchaseStatusColors[selectedOfficePurchase.status] || "bg-gray-100 text-gray-800"}>
+                    {officePurchaseStatusLabels[selectedOfficePurchase.status] || selectedOfficePurchase.status}
+                  </Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedOfficePurchase && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">部门</Label>
+                    <div className="font-medium">{selectedOfficePurchase.department}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">申请人</Label>
+                    <div className="font-medium">{selectedOfficePurchase.applicant_name}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">采购日期</Label>
+                    <div className="font-medium">{selectedOfficePurchase.purchase_date}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">总金额</Label>
+                    <div className="font-medium text-primary">¥{(selectedOfficePurchase.total_amount || 0).toFixed(2)}</div>
+                  </div>
+                  {selectedOfficePurchase.reason && (
+                    <div className="col-span-2">
+                      <Label className="text-muted-foreground text-xs">采购理由</Label>
+                      <div className="font-medium">{selectedOfficePurchase.reason}</div>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <Label className="text-muted-foreground text-xs mb-2 block">采购明细</Label>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>品名</TableHead>
+                          <TableHead>数量</TableHead>
+                          <TableHead>单价</TableHead>
+                          <TableHead>小计</TableHead>
+                          <TableHead>备注</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {officePurchaseItems.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell>
+                          </TableRow>
+                        ) : (
+                          officePurchaseItems.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">{item.item_name}</TableCell>
+                              <TableCell>{item.quantity}</TableCell>
+                              <TableCell>¥{item.unit_price.toFixed(2)}</TableCell>
+                              <TableCell>¥{item.amount.toFixed(2)}</TableCell>
+                              <TableCell className="text-muted-foreground">{item.remarks || "-"}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* 删除确认对话框 */}
         <AlertDialog
