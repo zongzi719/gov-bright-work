@@ -249,40 +249,40 @@ const SchedulePanel = () => {
 
   return (
     <div className="gov-card h-full flex flex-col overflow-hidden">
-      {/* 标题栏 */}
-      <div className="px-4 py-2 border-b border-border flex items-center justify-between flex-shrink-0">
+      {/* 标题栏 - 紧凑型 */}
+      <div className="px-2 py-1.5 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-base">日程管理</h2>
-        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-7 w-7 p-0">
+        <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-6 w-6 p-0">
           <Plus className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="p-3 flex-1 flex flex-col overflow-hidden">
+      <div className="p-2 flex-1 flex flex-col overflow-hidden">
         {/* 日历头部 */}
         <div className="flex items-center justify-between flex-shrink-0">
           <span className="font-medium text-foreground text-sm">
             {format(currentWeekStart, "yyyy年M月", { locale: zhCN })}
           </span>
-          <div className="flex items-center gap-1">
-            <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
+          <div className="flex items-center gap-0.5">
+            <button className="p-0.5 hover:bg-muted rounded" onClick={handlePrevWeek}>
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
-            <span className="text-xs text-muted-foreground px-1">本周</span>
-            <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
+            <span className="text-xs text-muted-foreground px-0.5">本周</span>
+            <button className="p-0.5 hover:bg-muted rounded" onClick={handleNextWeek}>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
 
-        {/* 星期和日期 */}
-        <div className="mt-2 flex-shrink-0">
-          <div className="grid grid-cols-7 gap-1">
+        {/* 星期和日期 - 紧凑 */}
+        <div className="mt-1.5 flex-shrink-0">
+          <div className="grid grid-cols-7 gap-0.5">
             {weekLabels.map((label, idx) => (
               <div key={label} className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">{label}</div>
+                <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
                 <div
                   onClick={() => handleDateClick(weekDays[idx])}
-                  className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center cursor-pointer text-sm transition-all ${
+                  className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center cursor-pointer text-xs transition-all ${
                     isSelected(weekDays[idx]) 
                       ? "bg-primary text-primary-foreground" 
                       : isToday(weekDays[idx]) 
@@ -300,27 +300,27 @@ const SchedulePanel = () => {
         </div>
 
         {/* 选中日期标题 - 紧凑 */}
-        <div className="mt-3 pt-2 flex-shrink-0 border-t border-border">
+        <div className="mt-2 pt-1.5 flex-shrink-0 border-t border-border">
           <span className="text-xs font-medium text-muted-foreground">
             {format(selectedDate, "M月d日 EEEE", { locale: zhCN })}
           </span>
         </div>
 
         {/* 日程列表 - 可滚动 */}
-        <ScrollArea className="flex-1 mt-2">
+        <ScrollArea className="flex-1 mt-1.5">
           {loading ? (
-            <div className="text-sm text-muted-foreground text-center py-4">加载中...</div>
+            <div className="text-sm text-muted-foreground text-center py-3">加载中...</div>
           ) : selectedDateSchedules.length === 0 ? (
-            <div className="text-sm text-muted-foreground text-center py-4">暂无日程</div>
+            <div className="text-sm text-muted-foreground text-center py-3">暂无日程</div>
           ) : (
-            <div className="space-y-1.5 pr-2">
+            <div className="space-y-1 pr-1">
               {selectedDateSchedules.map((item) => (
                 <div 
                   key={item.id} 
                   onClick={() => openEditDialog(item)}
-                  className="flex items-center gap-2 text-sm group hover:bg-muted/50 rounded px-2 py-1.5 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-sm group hover:bg-muted/30 rounded px-1.5 py-1 transition-colors cursor-pointer"
                 >
-                  <span className="text-primary font-medium w-12 flex-shrink-0 text-xs">
+                  <span className="text-primary font-medium w-10 flex-shrink-0 text-xs">
                     {item.start_time.slice(0, 5)}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -335,15 +335,15 @@ const SchedulePanel = () => {
                         e.stopPropagation();
                         openEditDialog(item);
                       }}
-                      className="p-1 hover:bg-primary/10 rounded"
+                      className="p-0.5 hover:bg-primary/10 rounded"
                     >
-                      <Pencil className="w-3.5 h-3.5 text-primary" />
+                      <Pencil className="w-3 h-3 text-primary" />
                     </button>
                     <button
                       onClick={(e) => openDeleteDialog(item, e)}
-                      className="p-1 hover:bg-destructive/10 rounded"
+                      className="p-0.5 hover:bg-destructive/10 rounded"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      <Trash2 className="w-3 h-3 text-destructive" />
                     </button>
                   </div>
                 </div>
