@@ -3,7 +3,12 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface NoticeItem {
   id: string;
@@ -22,9 +27,9 @@ interface BannerItem {
 }
 
 const securityLevelRank: Record<string, number> = {
-  一般: 1,
-  秘密: 2,
-  机密: 3,
+  '一般': 1,
+  '秘密': 2,
+  '机密': 3,
 };
 
 const NoticePanel = () => {
@@ -56,7 +61,7 @@ const NoticePanel = () => {
       .eq("is_active", true)
       .order("sort_order")
       .limit(5);
-
+    
     if (bannerData) {
       setBanners(bannerData);
     }
@@ -128,7 +133,7 @@ const NoticePanel = () => {
   return (
     <div className="gov-card h-full flex flex-col overflow-hidden">
       {/* 标题栏 */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-2">
           <h2 className="gov-card-title text-base">信息服务</h2>
         </div>
@@ -146,14 +151,22 @@ const NoticePanel = () => {
           ) : notices.length === 0 ? (
             <div className="py-4 text-center text-muted-foreground text-sm">暂无通知公告</div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {notices.map((notice) => (
-                <div key={notice.id} className="notice-item group" onClick={() => handleNoticeClick(notice)}>
-                  <span className={getTagStyle(notice)}>{getTagText(notice)}</span>
+                <div
+                  key={notice.id}
+                  className="notice-item group"
+                  onClick={() => handleNoticeClick(notice)}
+                >
+                  <span className={getTagStyle(notice)}>
+                    {getTagText(notice)}
+                  </span>
                   <span className="flex-1 text-sm text-foreground truncate group-hover:text-primary transition-colors">
                     {notice.title}
                   </span>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">{formatDate(notice.created_at)}</span>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                    {formatDate(notice.created_at)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -165,30 +178,22 @@ const NoticePanel = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold pr-6">{selectedNotice?.title}</DialogTitle>
+            <DialogTitle className="text-lg font-semibold pr-6">
+              {selectedNotice?.title}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>发布单位：{selectedNotice?.department}</span>
-              <span>
-                发布时间：{selectedNotice ? new Date(selectedNotice.created_at).toLocaleDateString("zh-CN") : ""}
-              </span>
+              <span>发布时间：{selectedNotice ? new Date(selectedNotice.created_at).toLocaleDateString("zh-CN") : ""}</span>
               {selectedNotice?.is_pinned && (
-                <Badge variant="destructive" className="text-xs px-1.5 py-0">
-                  置顶
-                </Badge>
+                <Badge variant="destructive" className="text-xs px-1.5 py-0">置顶</Badge>
               )}
-              <Badge
-                variant={
-                  selectedNotice?.security_level === "机密"
-                    ? "destructive"
-                    : selectedNotice?.security_level === "秘密"
-                      ? "secondary"
-                      : "outline"
-                }
+              <Badge 
+                variant={selectedNotice?.security_level === '机密' ? 'destructive' : selectedNotice?.security_level === '秘密' ? 'secondary' : 'outline'} 
                 className="text-xs px-1.5 py-0"
               >
-                {selectedNotice?.security_level || "一般"}
+                {selectedNotice?.security_level || '一般'}
               </Badge>
             </div>
             <div className="border-t border-border pt-4">
