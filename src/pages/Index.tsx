@@ -14,15 +14,15 @@ const Index = () => {
 
       {/* 主体内容区域 - 自适应填充剩余空间 */}
       <main className="flex-1 p-3 overflow-hidden">
-        {/* 三栏布局 - 3:4:3 比例 */}
+        {/* 三栏布局 - 2:5:3 比例 */}
         <div className="h-full grid grid-cols-1 lg:grid-cols-10 gap-3">
-          {/* 左侧：工作事项（待办/已办理/抄送）- 30% */}
-          <div className="lg:col-span-3 flex flex-col overflow-hidden">
+          {/* 左侧：工作事项（待办/已办理/抄送）- 20% */}
+          <div className="lg:col-span-2 flex flex-col overflow-hidden">
             <WorkPanel />
           </div>
 
-          {/* 中间：通知公告 + 单点登录 - 40% */}
-          <div className="lg:col-span-4 flex flex-col gap-3 overflow-hidden">
+          {/* 中间：通知公告 + 单点登录 - 50% */}
+          <div className="lg:col-span-5 flex flex-col gap-3 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-hidden">
               <NoticeList />
             </div>
