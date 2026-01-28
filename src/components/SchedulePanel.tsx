@@ -69,7 +69,8 @@ const SchedulePanel = () => {
   });
 
   const today = new Date();
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  // 两周视图：当前周 + 下一周
+  const weekDays = Array.from({ length: 14 }, (_, i) => addDays(currentWeekStart, i));
   const weekLabels = ["一", "二", "三", "四", "五", "六", "日"];
 
   const fetchSchedules = async () => {
@@ -80,13 +81,14 @@ const SchedulePanel = () => {
     }
     
     setLoading(true);
-    const oneWeekEnd = addDays(currentWeekStart, 6);
+    // 获取两周的数据
+    const twoWeeksEnd = addDays(currentWeekStart, 13);
     const { data, error } = await supabase
       .from("schedules")
       .select("*, contact:contacts(id, name, department)")
       .eq("contact_id", currentUser.id)
       .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(oneWeekEnd, "yyyy-MM-dd"))
+      .lte("schedule_date", format(twoWeeksEnd, "yyyy-MM-dd"))
       .order("schedule_date")
       .order("start_time");
 
@@ -123,8 +125,9 @@ const SchedulePanel = () => {
     setSelectedDate(date);
   };
 
-  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
-  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
+  // 两周导航
+  const handlePrevWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 2));
+  const handleNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 2));
 
   const resetForm = () => {
     setFormData({
@@ -267,22 +270,23 @@ const SchedulePanel = () => {
             <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
-            <span className="text-xs text-muted-foreground px-1">本周</span>
+            <span className="text-xs text-muted-foreground px-1">两周</span>
             <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
 
-        {/* 星期和日期 */}
-        <div className="mt-2 flex-shrink-0">
+        {/* 两周日期视图 */}
+        <div className="mt-2 flex-shrink-0 space-y-1">
+          {/* 第一周 */}
           <div className="grid grid-cols-7 gap-1">
             {weekLabels.map((label, idx) => (
-              <div key={label} className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">{label}</div>
+              <div key={`week1-${label}`} className="text-center">
+                <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
                 <div
                   onClick={() => handleDateClick(weekDays[idx])}
-                  className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center cursor-pointer text-sm transition-all ${
+                  className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center cursor-pointer text-xs transition-all ${
                     isSelected(weekDays[idx]) 
                       ? "bg-primary text-primary-foreground" 
                       : isToday(weekDays[idx]) 
@@ -293,6 +297,27 @@ const SchedulePanel = () => {
                   }`}
                 >
                   {format(weekDays[idx], "d")}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* 第二周 */}
+          <div className="grid grid-cols-7 gap-1">
+            {weekLabels.map((label, idx) => (
+              <div key={`week2-${label}`} className="text-center">
+                <div
+                  onClick={() => handleDateClick(weekDays[idx + 7])}
+                  className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center cursor-pointer text-xs transition-all ${
+                    isSelected(weekDays[idx + 7]) 
+                      ? "bg-primary text-primary-foreground" 
+                      : isToday(weekDays[idx + 7]) 
+                        ? "bg-primary/20 text-primary font-medium" 
+                        : hasSchedule(weekDays[idx + 7]) 
+                          ? "bg-accent text-accent-foreground" 
+                          : "hover:bg-muted"
+                  }`}
+                >
+                  {format(weekDays[idx + 7], "d")}
                 </div>
               </div>
             ))}
