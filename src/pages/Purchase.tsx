@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -25,7 +26,14 @@ import ApprovalTimeline from "@/components/admin/ApprovalTimeline";
 interface PurchaseRequest {
   id: string;
   requested_by: string;
+  department: string | null;
   purchase_date: string;
+  procurement_method: string | null;
+  funding_source: string | null;
+  funding_detail: string | null;
+  budget_amount: number | null;
+  expected_completion_date: string | null;
+  purpose: string | null;
   total_amount: number | null;
   reason: string | null;
   status: string;
@@ -34,29 +42,25 @@ interface PurchaseRequest {
 
 interface PurchaseItem {
   id: string;
-  supply_id: string;
+  item_name: string | null;
+  specification: string | null;
+  unit: string | null;
   quantity: number;
   unit_price: number;
   amount: number;
-  office_supplies: {
-    name: string;
-    specification: string | null;
-    unit: string;
-  } | null;
-}
-
-interface OfficeSupply {
-  id: string;
-  name: string;
-  specification: string | null;
-  unit: string;
+  category_link: string | null;
+  remarks: string | null;
 }
 
 interface FormItem {
-  supply_id: string;
+  item_name: string;
+  specification: string;
+  unit: string;
   quantity: number;
   unit_price: number;
   amount: number;
+  category_link: string;
+  remarks: string;
 }
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
@@ -65,6 +69,18 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   rejected: { label: "已拒绝", variant: "destructive", className: "bg-red-50 text-red-700 border-red-200" },
   completed: { label: "已完成", variant: "outline", className: "bg-slate-50 text-slate-600 border-slate-200" },
 };
+
+const procurementMethods = [
+  { value: "政采云平台采购", label: "政采云平台采购" },
+  { value: "集中采购", label: "集中采购" },
+  { value: "分散采购（政采云渠道）", label: "分散采购（政采云渠道）" },
+];
+
+const fundingSources = [
+  { value: "财政拨款", label: "财政拨款", placeholder: "项目名称" },
+  { value: "专项经费", label: "专项经费", placeholder: "经费编号" },
+  { value: "其他", label: "其他", placeholder: "请说明" },
+];
 
 const Purchase = () => {
   const { startApproval } = useApprovalWorkflow();
@@ -75,11 +91,31 @@ const Purchase = () => {
   const [selectedRecord, setSelectedRecord] = useState<PurchaseRequest | null>(null);
   const [selectedItems, setSelectedItems] = useState<PurchaseItem[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [supplies, setSupplies] = useState<OfficeSupply[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Form states
+  const [department, setDepartment] = useState("");
   const [purchaseDate, setPurchaseDate] = useState<Date>(new Date());
-  const [reason, setReason] = useState("");
-  const [formItems, setFormItems] = useState<FormItem[]>([{ supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
+  const [procurementMethod, setProcurementMethod] = useState("");
+  const [fundingSource, setFundingSource] = useState("");
+  const [fundingDetail, setFundingDetail] = useState("");
+  const [budgetAmount, setBudgetAmount] = useState<number>(0);
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState<Date | undefined>(undefined);
+  const [purpose, setPurpose] = useState("");
+  const [formItems, setFormItems] = useState<FormItem[]>([createEmptyItem()]);
+
+  function createEmptyItem(): FormItem {
+    return {
+      item_name: "",
+      specification: "",
+      unit: "个",
+      quantity: 1,
+      unit_price: 0,
+      amount: 0,
+      category_link: "",
+      remarks: "",
+    };
+  }
 
   const getCurrentUser = () => {
     try {
@@ -99,7 +135,7 @@ const Purchase = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("purchase_requests")
-      .select("id, requested_by, purchase_date, total_amount, reason, status, created_at")
+      .select("id, requested_by, department, purchase_date, procurement_method, funding_source, funding_detail, budget_amount, expected_completion_date, purpose, total_amount, reason, status, created_at")
       .eq("requested_by", currentUser.name)
       .order("created_at", { ascending: false });
 
@@ -109,29 +145,20 @@ const Purchase = () => {
     setLoading(false);
   };
 
-  const fetchSupplies = async () => {
-    const { data } = await supabase
-      .from("office_supplies")
-      .select("id, name, specification, unit")
-      .eq("is_active", true)
-      .order("name");
-    if (data) setSupplies(data);
-  };
-
   useEffect(() => {
     fetchRecords();
   }, [currentUser?.name]);
 
   const filteredRecords = records.filter(r =>
     r.requested_by.includes(search) ||
-    r.reason?.includes(search)
+    r.department?.includes(search) ||
+    r.purpose?.includes(search)
   );
 
-  // 转换为通用列表项格式
   const listItems: ApplicationItem[] = filteredRecords.map(record => ({
     id: record.id,
     title: `采购申请`,
-    subtitle: record.reason || `${record.requested_by} - ${record.purchase_date}`,
+    subtitle: record.purpose || `${record.requested_by} - ${record.department || ""}`,
     time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
@@ -146,10 +173,7 @@ const Purchase = () => {
       setSelectedRecord(record);
       const { data } = await supabase
         .from("purchase_request_items")
-        .select(`
-          id, supply_id, quantity, unit_price, amount,
-          office_supplies (name, specification, unit)
-        `)
+        .select("id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks")
         .eq("request_id", record.id);
       
       if (data) {
@@ -160,15 +184,20 @@ const Purchase = () => {
   };
 
   const handleOpenForm = () => {
-    fetchSupplies();
-    setFormItems([{ supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
+    setDepartment(currentUser?.department || "");
     setPurchaseDate(new Date());
-    setReason("");
+    setProcurementMethod("");
+    setFundingSource("");
+    setFundingDetail("");
+    setBudgetAmount(0);
+    setExpectedCompletionDate(undefined);
+    setPurpose("");
+    setFormItems([createEmptyItem()]);
     setFormOpen(true);
   };
 
   const handleAddItem = () => {
-    setFormItems([...formItems, { supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
+    setFormItems([...formItems, createEmptyItem()]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -193,9 +222,19 @@ const Purchase = () => {
   const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
 
   const handleSubmit = async () => {
-    const validItems = formItems.filter(item => item.supply_id && item.quantity > 0);
+    const validItems = formItems.filter(item => item.item_name.trim() && item.quantity > 0);
     if (validItems.length === 0) {
       toast.error("请至少添加一条采购明细");
+      return;
+    }
+
+    if (!procurementMethod) {
+      toast.error("请选择采购方式");
+      return;
+    }
+
+    if (!fundingSource) {
+      toast.error("请选择资金来源");
       return;
     }
 
@@ -205,8 +244,14 @@ const Purchase = () => {
       .from("purchase_requests")
       .insert({
         requested_by: currentUser?.name || "",
+        department: department.trim() || null,
         purchase_date: format(purchaseDate, "yyyy-MM-dd"),
-        reason: reason.trim() || null,
+        procurement_method: procurementMethod,
+        funding_source: fundingSource,
+        funding_detail: fundingDetail.trim() || null,
+        budget_amount: budgetAmount || null,
+        expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null,
+        purpose: purpose.trim() || null,
         total_amount: Number(totalAmount.toFixed(2)),
         supply_id: null,
         quantity: null,
@@ -223,10 +268,14 @@ const Purchase = () => {
 
     const itemsToInsert = validItems.map(item => ({
       request_id: record.id,
-      supply_id: item.supply_id,
+      item_name: item.item_name.trim(),
+      specification: item.specification.trim() || null,
+      unit: item.unit || "个",
       quantity: item.quantity,
       unit_price: Number(item.unit_price.toFixed(2)),
       amount: Number(item.amount.toFixed(2)),
+      category_link: item.category_link.trim() || null,
+      remarks: item.remarks.trim() || null,
     }));
 
     const { error: itemsError } = await supabase
@@ -239,10 +288,7 @@ const Purchase = () => {
       return;
     }
 
-    const itemNames = validItems.map(item => {
-      const supply = supplies.find(s => s.id === item.supply_id);
-      return `${supply?.name || "物品"} x ${item.quantity}`;
-    }).join(", ");
+    const itemNames = validItems.map(item => `${item.item_name} x ${item.quantity}`).join(", ");
 
     const approvalResult = await startApproval({
       businessType: "purchase_request",
@@ -251,18 +297,15 @@ const Purchase = () => {
       initiatorName: currentUser?.name || "未知用户",
       title: `采购申请 - ${itemNames.substring(0, 50)}${itemNames.length > 50 ? "..." : ""}`,
       formData: {
-        items: validItems.map(item => {
-          const supply = supplies.find(s => s.id === item.supply_id);
-          return {
-            supply_id: item.supply_id,
-            supply_name: supply?.name,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            amount: item.amount,
-          };
-        }),
+        department,
         purchase_date: format(purchaseDate, "yyyy-MM-dd"),
-        reason: reason,
+        procurement_method: procurementMethod,
+        funding_source: fundingSource,
+        funding_detail: fundingDetail,
+        budget_amount: budgetAmount,
+        expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null,
+        purpose,
+        items: validItems,
         total_amount: totalAmount,
       },
     });
@@ -272,12 +315,16 @@ const Purchase = () => {
     if (approvalResult.success) {
       toast.success("采购申请已提交");
       setFormOpen(false);
-      setFormItems([{ supply_id: "", quantity: 1, unit_price: 0, amount: 0 }]);
-      setReason("");
       fetchRecords();
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
     }
+  };
+
+  const getFundingSourceLabel = (source: string, detail: string | null) => {
+    const sourceConfig = fundingSources.find(s => s.value === source);
+    if (!sourceConfig) return source;
+    return detail ? `${sourceConfig.label}（${sourceConfig.placeholder}：${detail}）` : sourceConfig.label;
   };
 
   return (
@@ -290,25 +337,37 @@ const Purchase = () => {
         onSearchChange={setSearch}
         onAddClick={handleOpenForm}
         onItemClick={handleItemClick}
-        searchPlaceholder="搜索申请人或原因..."
+        searchPlaceholder="搜索申请人、部门或用途..."
         emptyText="暂无采购记录"
         statusConfig={statusConfig}
       />
 
       {/* 新增对话框 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
+        <DialogContent className="max-w-4xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
           <DialogHeader className="px-6 py-4 border-b bg-background">
             <DialogTitle>新建采购申请</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto px-6 py-4 space-y-4">
+            {/* 基本信息 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>申请人</Label>
                 <Input value={currentUser?.name || ""} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
-                <Label>采购日期 *</Label>
+                <Label>申请部门</Label>
+                <Input
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="请输入申请部门"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>申请日期 *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
@@ -322,115 +381,215 @@ const Purchase = () => {
                       selected={purchaseDate}
                       onSelect={(date) => date && setPurchaseDate(date)}
                       locale={zhCN}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>预计采购完成时间</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expectedCompletionDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd", { locale: zhCN }) : "选择日期"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={expectedCompletionDate}
+                      onSelect={setExpectedCompletionDate}
+                      locale={zhCN}
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
 
+            {/* 采购方式 */}
+            <div className="space-y-2">
+              <Label>采购方式 *</Label>
+              <Select value={procurementMethod} onValueChange={setProcurementMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="请选择采购方式" />
+                </SelectTrigger>
+                <SelectContent>
+                  {procurementMethods.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>
+                      {method.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 资金来源 */}
+            <div className="space-y-2">
+              <Label>资金来源 *</Label>
+              <RadioGroup value={fundingSource} onValueChange={(v) => { setFundingSource(v); setFundingDetail(""); }} className="flex flex-wrap gap-4">
+                {fundingSources.map((source) => (
+                  <div key={source.value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={source.value} id={source.value} />
+                    <Label htmlFor={source.value} className="font-normal cursor-pointer">{source.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              {fundingSource && (
+                <Input
+                  value={fundingDetail}
+                  onChange={(e) => setFundingDetail(e.target.value)}
+                  placeholder={fundingSources.find(s => s.value === fundingSource)?.placeholder || ""}
+                  className="mt-2"
+                />
+              )}
+            </div>
+
+            {/* 预算金额 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>预算金额（元）</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={budgetAmount === 0 ? "" : budgetAmount}
+                  onChange={(e) => setBudgetAmount(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                  placeholder="请输入预算金额"
+                />
+              </div>
+            </div>
+
+            {/* 采购用途 */}
+            <div className="space-y-2">
+              <Label>采购用途</Label>
+              <Textarea
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                placeholder="如：日常办公所需、会议保障、专项工作开展等，简要说明"
+                rows={2}
+              />
+            </div>
+
+            {/* 采购物品明细 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>采购明细 *</Label>
+                <Label>采购物品明细 *</Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
                   <Plus className="h-3 w-3 mr-1" />
                   添加物品
                 </Button>
               </div>
               <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[30%]">办公用品</TableHead>
-                      <TableHead className="w-[15%]">采购数量</TableHead>
-                      <TableHead className="w-[18%]">采购单价(元)</TableHead>
-                      <TableHead className="w-[18%]">采购金额(元)</TableHead>
-                      <TableHead className="w-[10%]">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {formItems.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="p-2">
-                          <Select
-                            value={item.supply_id}
-                            onValueChange={(v) => handleItemChange(index, "supply_id", v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="选择办公用品" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {supplies.map((supply) => (
-                                <SelectItem key={supply.id} value={supply.id}>
-                                  {supply.name}{supply.specification ? ` (${supply.specification})` : ""}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={item.quantity === 0 ? "" : item.quantity}
-                            onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 0 : parseInt(e.target.value) || 0)}
-                            onBlur={(e) => {
-                              if (e.target.value === "" || parseInt(e.target.value) < 1) {
-                                handleItemChange(index, "quantity", 1);
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={item.unit_price === 0 ? "" : item.unit_price}
-                            onChange={(e) => handleItemChange(index, "unit_price", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
-                            onBlur={(e) => {
-                              if (e.target.value === "") {
-                                handleItemChange(index, "unit_price", 0);
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Input
-                            value={item.amount.toFixed(2)}
-                            disabled
-                            className="bg-muted text-right"
-                          />
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveItem(index)}
-                            disabled={formItems.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="min-w-[120px]">物品名称 *</TableHead>
+                        <TableHead className="min-w-[150px]">规格型号/技术参数</TableHead>
+                        <TableHead className="w-[80px]">单位</TableHead>
+                        <TableHead className="w-[80px]">数量 *</TableHead>
+                        <TableHead className="w-[100px]">单价(元)</TableHead>
+                        <TableHead className="w-[100px]">小计(元)</TableHead>
+                        <TableHead className="min-w-[150px]">政采云类目/链接</TableHead>
+                        <TableHead className="min-w-[100px]">备注</TableHead>
+                        <TableHead className="w-[60px]">操作</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {formItems.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="p-2">
+                            <Input
+                              value={item.item_name}
+                              onChange={(e) => handleItemChange(index, "item_name", e.target.value)}
+                              placeholder="物品名称"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              value={item.specification}
+                              onChange={(e) => handleItemChange(index, "specification", e.target.value)}
+                              placeholder="规格型号"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              value={item.unit}
+                              onChange={(e) => handleItemChange(index, "unit", e.target.value)}
+                              placeholder="个"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              type="number"
+                              min={1}
+                              value={item.quantity === 0 ? "" : item.quantity}
+                              onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 0 : parseInt(e.target.value) || 0)}
+                              onBlur={(e) => {
+                                if (e.target.value === "" || parseInt(e.target.value) < 1) {
+                                  handleItemChange(index, "quantity", 1);
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={item.unit_price === 0 ? "" : item.unit_price}
+                              onChange={(e) => handleItemChange(index, "unit_price", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                              onBlur={(e) => {
+                                if (e.target.value === "") {
+                                  handleItemChange(index, "unit_price", 0);
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              value={item.amount.toFixed(2)}
+                              disabled
+                              className="bg-muted text-right"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              value={item.category_link}
+                              onChange={(e) => handleItemChange(index, "category_link", e.target.value)}
+                              placeholder="链接（可选）"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              value={item.remarks}
+                              onChange={(e) => handleItemChange(index, "remarks", e.target.value)}
+                              placeholder="备注"
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveItem(index)}
+                              disabled={formItems.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
               <div className="flex justify-end items-center gap-2 pt-2">
-                <Label className="text-muted-foreground">采购总额:</Label>
+                <Label className="text-muted-foreground">合计金额:</Label>
                 <span className="text-lg font-semibold">¥{totalAmount.toFixed(2)}</span>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>采购原因</Label>
-              <Textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="请说明采购原因"
-                rows={2}
-              />
             </div>
           </div>
           <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
@@ -444,7 +603,7 @@ const Purchase = () => {
 
       {/* 详情对话框 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[85vh] p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg font-semibold">采购详情</DialogTitle>
@@ -481,59 +640,93 @@ const Purchase = () => {
                         <div className="text-sm">{selectedRecord.requested_by}</div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground font-normal">采购日期</Label>
+                        <Label className="text-xs text-muted-foreground font-normal">申请部门</Label>
+                        <div className="text-sm">{selectedRecord.department || "-"}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">申请日期</Label>
                         <div className="text-sm">{selectedRecord.purchase_date}</div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground font-normal">申请时间</Label>
-                        <div className="text-sm">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
+                        <Label className="text-xs text-muted-foreground font-normal">预计完成时间</Label>
+                        <div className="text-sm">{selectedRecord.expected_completion_date || "-"}</div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground font-normal">采购总额</Label>
+                        <Label className="text-xs text-muted-foreground font-normal">采购方式</Label>
+                        <div className="text-sm">{selectedRecord.procurement_method || "-"}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">资金来源</Label>
+                        <div className="text-sm">
+                          {selectedRecord.funding_source 
+                            ? getFundingSourceLabel(selectedRecord.funding_source, selectedRecord.funding_detail)
+                            : "-"}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">预算金额</Label>
+                        <div className="text-sm">{selectedRecord.budget_amount ? `¥${selectedRecord.budget_amount.toFixed(2)}` : "-"}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">合计金额</Label>
                         <div className="text-sm font-medium">¥{(selectedRecord.total_amount || 0).toFixed(2)}</div>
                       </div>
                     </div>
-                    
-                    <div className="space-y-2 pt-2">
-                      <Label className="text-xs text-muted-foreground font-normal">采购明细</Label>
-                      <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/30">
-                              <TableHead>物品名称</TableHead>
-                              <TableHead>规格</TableHead>
-                              <TableHead>数量</TableHead>
-                              <TableHead>单价(元)</TableHead>
-                              <TableHead>金额(元)</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {selectedItems.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细数据</TableCell>
-                              </TableRow>
-                            ) : (
-                              selectedItems.map((item) => (
-                                <TableRow key={item.id}>
-                                  <TableCell>{item.office_supplies?.name || "-"}</TableCell>
-                                  <TableCell>{item.office_supplies?.specification || "-"}</TableCell>
-                                  <TableCell>{item.quantity} {item.office_supplies?.unit}</TableCell>
-                                  <TableCell>{item.unit_price.toFixed(2)}</TableCell>
-                                  <TableCell>{item.amount.toFixed(2)}</TableCell>
-                                </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
 
-                    {selectedRecord.reason && (
+                    {selectedRecord.purpose && (
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground font-normal">采购原因</Label>
-                        <div className="text-sm">{selectedRecord.reason}</div>
+                        <Label className="text-xs text-muted-foreground font-normal">采购用途</Label>
+                        <div className="text-sm">{selectedRecord.purpose}</div>
                       </div>
                     )}
+                    
+                    <div className="space-y-2 pt-2">
+                      <Label className="text-xs text-muted-foreground font-normal">采购物品明细</Label>
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/30">
+                                <TableHead>物品名称</TableHead>
+                                <TableHead>规格型号</TableHead>
+                                <TableHead>单位</TableHead>
+                                <TableHead>数量</TableHead>
+                                <TableHead>单价(元)</TableHead>
+                                <TableHead>小计(元)</TableHead>
+                                <TableHead>政采云链接</TableHead>
+                                <TableHead>备注</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {selectedItems.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={8} className="text-center text-muted-foreground">暂无明细数据</TableCell>
+                                </TableRow>
+                              ) : (
+                                selectedItems.map((item) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell>{item.item_name || "-"}</TableCell>
+                                    <TableCell>{item.specification || "-"}</TableCell>
+                                    <TableCell>{item.unit || "-"}</TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell>{item.unit_price.toFixed(2)}</TableCell>
+                                    <TableCell>{item.amount.toFixed(2)}</TableCell>
+                                    <TableCell>
+                                      {item.category_link ? (
+                                        <a href={item.category_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                          查看链接
+                                        </a>
+                                      ) : "-"}
+                                    </TableCell>
+                                    <TableCell>{item.remarks || "-"}</TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </ScrollArea>
               </TabsContent>

@@ -931,29 +931,44 @@ export type Database = {
       purchase_request_items: {
         Row: {
           amount: number
+          category_link: string | null
           created_at: string
           id: string
+          item_name: string | null
           quantity: number
+          remarks: string | null
           request_id: string
-          supply_id: string
+          specification: string | null
+          supply_id: string | null
+          unit: string | null
           unit_price: number
         }
         Insert: {
           amount?: number
+          category_link?: string | null
           created_at?: string
           id?: string
+          item_name?: string | null
           quantity: number
+          remarks?: string | null
           request_id: string
-          supply_id: string
+          specification?: string | null
+          supply_id?: string | null
+          unit?: string | null
           unit_price?: number
         }
         Update: {
           amount?: number
+          category_link?: string | null
           created_at?: string
           id?: string
+          item_name?: string | null
           quantity?: number
+          remarks?: string | null
           request_id?: string
-          supply_id?: string
+          specification?: string | null
+          supply_id?: string | null
+          unit?: string | null
           unit_price?: number
         }
         Relationships: [
@@ -977,10 +992,17 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          budget_amount: number | null
           completed_at: string | null
           created_at: string
+          department: string | null
+          expected_completion_date: string | null
+          funding_detail: string | null
+          funding_source: string | null
           id: string
+          procurement_method: string | null
           purchase_date: string
+          purpose: string | null
           quantity: number | null
           reason: string | null
           requested_by: string
@@ -993,10 +1015,17 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          budget_amount?: number | null
           completed_at?: string | null
           created_at?: string
+          department?: string | null
+          expected_completion_date?: string | null
+          funding_detail?: string | null
+          funding_source?: string | null
           id?: string
+          procurement_method?: string | null
           purchase_date?: string
+          purpose?: string | null
           quantity?: number | null
           reason?: string | null
           requested_by: string
@@ -1009,10 +1038,17 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          budget_amount?: number | null
           completed_at?: string | null
           created_at?: string
+          department?: string | null
+          expected_completion_date?: string | null
+          funding_detail?: string | null
+          funding_source?: string | null
           id?: string
+          procurement_method?: string | null
           purchase_date?: string
+          purpose?: string | null
           quantity?: number | null
           reason?: string | null
           requested_by?: string
