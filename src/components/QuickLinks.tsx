@@ -98,6 +98,13 @@ const QuickLinks = () => {
     },
     {
       id: 6,
+      name: "办公采购",
+      color: "bg-teal-500",
+      icon: Package,
+      path: "/supplies-purchase",
+    },
+    {
+      id: 7,
       name: "通讯录",
       color: "bg-cyan-500",
       icon: BookUser,
@@ -106,7 +113,7 @@ const QuickLinks = () => {
   ];
 
   const leaderScheduleModule = {
-    id: 7,
+    id: 8,
     name: "领导日程",
     color: "bg-amber-500",
     icon: Star,
