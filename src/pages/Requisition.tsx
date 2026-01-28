@@ -1,22 +1,25 @@
 import { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
+import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, Search, Eye, CalendarIcon, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
+import ApprovalTimeline from "@/components/admin/ApprovalTimeline";
 
 interface SupplyRequisition {
   id: string;
@@ -50,11 +53,11 @@ interface FormItem {
   quantity: number;
 }
 
-const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "待审批", variant: "secondary" },
-  approved: { label: "已通过", variant: "default" },
-  rejected: { label: "已拒绝", variant: "destructive" },
-  completed: { label: "已完成", variant: "outline" },
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
+  pending: { label: "待审批", variant: "secondary", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  approved: { label: "已通过", variant: "default", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  rejected: { label: "已拒绝", variant: "destructive", className: "bg-red-50 text-red-700 border-red-200" },
+  completed: { label: "已完成", variant: "outline", className: "bg-slate-50 text-slate-600 border-slate-200" },
 };
 
 const Requisition = () => {
@@ -117,21 +120,36 @@ const Requisition = () => {
     r.requisition_date.includes(search)
   );
 
-  const handleViewDetail = async (record: SupplyRequisition) => {
-    setSelectedRecord(record);
-    // Fetch items for this requisition
-    const { data } = await supabase
-      .from("supply_requisition_items")
-      .select(`
-        id, supply_id, quantity,
-        office_supplies (name, specification, unit)
-      `)
-      .eq("requisition_id", record.id);
-    
-    if (data) {
-      setSelectedItems(data as RequisitionItem[]);
+  // 转换为通用列表项格式
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({
+    id: record.id,
+    title: `领用申请`,
+    subtitle: `${record.requisition_by} - ${record.requisition_date}`,
+    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    status: record.status,
+    meta: [
+      { label: "领用日期", value: record.requisition_date },
+    ],
+  }));
+
+  const handleItemClick = async (item: ApplicationItem) => {
+    const record = records.find(r => r.id === item.id);
+    if (record) {
+      setSelectedRecord(record);
+      // Fetch items for this requisition
+      const { data } = await supabase
+        .from("supply_requisition_items")
+        .select(`
+          id, supply_id, quantity,
+          office_supplies (name, specification, unit)
+        `)
+        .eq("requisition_id", record.id);
+      
+      if (data) {
+        setSelectedItems(data as RequisitionItem[]);
+      }
+      setDetailOpen(true);
     }
-    setDetailOpen(true);
   };
 
   const handleOpenForm = () => {
@@ -158,14 +176,12 @@ const Requisition = () => {
   };
 
   const handleSubmit = async () => {
-    // Validate items
     const validItems = formItems.filter(item => item.supply_id && item.quantity > 0);
     if (validItems.length === 0) {
       toast.error("请至少添加一条物品明细");
       return;
     }
 
-    // Check stock for each item
     for (const item of validItems) {
       const supply = supplies.find(s => s.id === item.supply_id);
       if (supply && item.quantity > supply.current_stock) {
@@ -176,7 +192,6 @@ const Requisition = () => {
 
     setSubmitting(true);
 
-    // Create requisition record (supply_id and quantity are now nullable)
     const { data: record, error } = await supabase
       .from("supply_requisitions")
       .insert({
@@ -194,7 +209,6 @@ const Requisition = () => {
       return;
     }
 
-    // Insert detail items
     const itemsToInsert = validItems.map(item => ({
       requisition_id: record.id,
       supply_id: item.supply_id,
@@ -211,7 +225,6 @@ const Requisition = () => {
       return;
     }
 
-    // Build approval form data
     const itemNames = validItems.map(item => {
       const supply = supplies.find(s => s.id === item.supply_id);
       return `${supply?.name || "物品"} x ${item.quantity}`;
@@ -250,65 +263,18 @@ const Requisition = () => {
 
   return (
     <PageLayout>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>领用申请</CardTitle>
-          <Button onClick={handleOpenForm}>
-            <Plus className="h-4 w-4 mr-2" />
-            新增申请
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索申请人或日期..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">加载中...</div>
-          ) : filteredRecords.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">暂无领用记录</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>申请人</TableHead>
-                  <TableHead>领用日期</TableHead>
-                  <TableHead>申请时间</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell>{record.requisition_by}</TableCell>
-                    <TableCell>{record.requisition_date}</TableCell>
-                    <TableCell>{format(new Date(record.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusLabels[record.status]?.variant || "secondary"}>
-                        {statusLabels[record.status]?.label || record.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleViewDetail(record)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <ApplicationList
+        title="领用申请"
+        items={listItems}
+        loading={loading}
+        search={search}
+        onSearchChange={setSearch}
+        onAddClick={handleOpenForm}
+        onItemClick={handleItemClick}
+        searchPlaceholder="搜索申请人或日期..."
+        emptyText="暂无领用记录"
+        statusConfig={statusConfig}
+      />
 
       {/* 新增对话框 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
@@ -317,7 +283,6 @@ const Requisition = () => {
             <DialogTitle>新建领用申请</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto px-6 py-4 space-y-4">
-            {/* 申请人 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>申请人</Label>
@@ -344,7 +309,6 @@ const Requisition = () => {
               </div>
             </div>
 
-            {/* 物品明细 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>物品明细 *</Label>
@@ -408,7 +372,6 @@ const Requisition = () => {
               </div>
             </div>
           </div>
-          {/* 固定底部操作按钮 */}
           <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>取消</Button>
             <Button onClick={handleSubmit} disabled={submitting}>
@@ -420,68 +383,93 @@ const Requisition = () => {
 
       {/* 详情对话框 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>领用详情</DialogTitle>
-          </DialogHeader>
-          {selectedRecord && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">申请人</Label>
-                  <div className="mt-1">{selectedRecord.requisition_by}</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">状态</Label>
-                  <div className="mt-1">
-                    <Badge variant={statusLabels[selectedRecord.status]?.variant || "secondary"}>
-                      {statusLabels[selectedRecord.status]?.label || selectedRecord.status}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-muted-foreground">领用日期</Label>
-                  <div className="mt-1">{selectedRecord.requisition_date}</div>
-                </div>
-                <div>
-                  <Label className="text-sm text-muted-foreground">申请时间</Label>
-                  <div className="mt-1">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
-                </div>
-              </div>
-              
-              {/* 物品明细 */}
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">物品明细</Label>
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead>物品名称</TableHead>
-                        <TableHead>规格</TableHead>
-                        <TableHead>数量</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedItems.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell>
-                        </TableRow>
-                      ) : (
-                        selectedItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>{item.office_supplies?.name || "-"}</TableCell>
-                            <TableCell>{item.office_supplies?.specification || "-"}</TableCell>
-                            <TableCell>{item.quantity} {item.office_supplies?.unit}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+        <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-semibold">领用详情</DialogTitle>
+              {selectedRecord && (
+                <Badge
+                  variant="outline"
+                  className={cn("text-xs font-normal border", statusConfig[selectedRecord.status]?.className)}
+                >
+                  {statusConfig[selectedRecord.status]?.label || selectedRecord.status}
+                </Badge>
+              )}
             </div>
+          </DialogHeader>
+
+          {selectedRecord && (
+            <Tabs defaultValue="detail" className="flex-1 flex flex-col min-h-0">
+              <TabsList className="mx-6 mt-4 mb-2 grid w-fit grid-cols-2 bg-muted/50">
+                <TabsTrigger value="detail" className="gap-2 px-4">
+                  <FileText className="w-4 h-4" />
+                  申请详情
+                </TabsTrigger>
+                <TabsTrigger value="approval" className="gap-2 px-4">
+                  <GitBranch className="w-4 h-4" />
+                  审批流程
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="detail" className="flex-1 m-0 overflow-hidden">
+                <ScrollArea className="h-[calc(85vh-180px)]">
+                  <div className="px-6 py-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">申请人</Label>
+                        <div className="text-sm">{selectedRecord.requisition_by}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">领用日期</Label>
+                        <div className="text-sm">{selectedRecord.requisition_date}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">申请时间</Label>
+                        <div className="text-sm">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 pt-2">
+                      <Label className="text-xs text-muted-foreground font-normal">物品明细</Label>
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/30">
+                              <TableHead>物品名称</TableHead>
+                              <TableHead>规格</TableHead>
+                              <TableHead>数量</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedItems.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell>
+                              </TableRow>
+                            ) : (
+                              selectedItems.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell>{item.office_supplies?.name || "-"}</TableCell>
+                                  <TableCell>{item.office_supplies?.specification || "-"}</TableCell>
+                                  <TableCell>{item.quantity} {item.office_supplies?.unit}</TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="approval" className="flex-1 m-0 overflow-hidden">
+                <ScrollArea className="h-[calc(85vh-180px)]">
+                  <div className="px-6 py-4">
+                    <ApprovalTimeline businessId={selectedRecord.id} businessType="supply_requisition" />
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
