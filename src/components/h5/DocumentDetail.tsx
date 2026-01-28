@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ArrowLeft, Eye, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import DocumentContentViewer from "./DocumentContentViewer";
 
@@ -33,23 +32,23 @@ const DocumentDetail = ({ document, onBack }: DocumentDetailProps) => {
     <div className="min-h-screen bg-muted/30 flex flex-col">
       {/* 顶部导航 */}
       <div className="bg-background sticky top-0 z-20 border-b">
-        <div className="flex items-center justify-between px-2 py-2">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-3 py-3">
+          <div className="flex items-center gap-2">
             <button onClick={onBack} className="p-1">
               <ArrowLeft className="w-5 h-5" />
             </button>
             
-            {/* 左侧标签 */}
-            <div className="flex items-center gap-1">
+            {/* 标签导航 - 不压缩 */}
+            <div className="flex items-center gap-3">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1 text-sm rounded transition-colors",
+                    "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors whitespace-nowrap",
                     activeTab === tab.id
-                      ? "text-amber-600 font-medium"
-                      : "text-muted-foreground"
+                      ? "text-amber-600 bg-amber-50 font-medium"
+                      : "text-muted-foreground hover:bg-muted"
                   )}
                 >
                   <span>{tab.icon}</span>
@@ -61,30 +60,23 @@ const DocumentDetail = ({ document, onBack }: DocumentDetailProps) => {
 
           {/* 右侧按钮 */}
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="h-7 px-3 text-xs border-orange-400 text-orange-500 hover:bg-orange-50"
-            >
+            <button className="px-4 py-1.5 text-sm border border-orange-400 text-orange-500 rounded-lg hover:bg-orange-50">
               退回
-            </Button>
-            <Button 
-              size="sm"
-              className="h-7 px-3 text-xs bg-green-500 hover:bg-green-600 text-white"
-            >
+            </button>
+            <button className="px-4 py-1.5 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg">
               发送
-            </Button>
+            </button>
           </div>
         </div>
       </div>
 
       {/* 内容区 */}
-      <div className="flex-1 p-3 overflow-y-auto">
+      <div className="flex-1 p-4 overflow-y-auto">
         {activeTab === "approval" && (
           <ApprovalSlip document={document} />
         )}
         {activeTab === "content" && (
-          <div className="bg-background rounded-lg overflow-hidden h-[calc(100vh-120px)]">
+          <div className="bg-background rounded-lg overflow-hidden h-[calc(100vh-140px)]">
             <DocumentContentViewer />
           </div>
         )}
@@ -108,21 +100,21 @@ const CirculationHistory = () => {
   ];
 
   return (
-    <div className="bg-background rounded-lg p-4">
-      <h3 className="text-center text-base font-medium mb-4">流转记录</h3>
-      <div className="space-y-3">
+    <div className="bg-background rounded-lg p-5">
+      <h3 className="text-center text-lg font-medium mb-5">流转记录</h3>
+      <div className="space-y-4">
         {records.map((record, index) => (
-          <div key={index} className="border-l-2 border-primary/30 pl-3 py-1">
-            <div className="flex items-center gap-2 text-sm">
+          <div key={index} className="border-l-2 border-primary/30 pl-4 py-2">
+            <div className="flex items-center gap-3 text-sm">
               <span className="font-medium text-foreground">{record.from}</span>
-              <span className="text-muted-foreground text-xs">{record.fromTime}</span>
+              <span className="text-muted-foreground">{record.fromTime}</span>
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground my-1">
+            <div className="flex items-center gap-1 text-muted-foreground my-2 ml-2">
               <span>↓</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-3 text-sm">
               <span className="font-medium text-foreground">{record.to}</span>
-              <span className="text-muted-foreground text-xs">{record.toTime}</span>
+              <span className="text-muted-foreground">{record.toTime}</span>
             </div>
           </div>
         ))}
@@ -134,125 +126,139 @@ const CirculationHistory = () => {
 // 签批单组件
 const ApprovalSlip = ({ document }: { document: DocumentDetailProps["document"] }) => {
   return (
-    <div className="bg-background rounded-lg p-4">
+    <div className="bg-background rounded-lg p-5">
       {/* 标题 */}
-      <h2 className="text-center text-lg font-bold mb-4">发文审批单</h2>
+      <h2 className="text-center text-xl font-bold mb-5">发文审批单</h2>
 
       {/* 发文字号 */}
-      <div className="mb-3 text-sm">
+      <div className="mb-4 text-sm">
         <span className="text-muted-foreground">发文字号：</span>
-        <span className="border-b border-dashed border-muted-foreground/50 inline-block min-w-20"></span>
+        <span className="border-b border-dashed border-muted-foreground/50 inline-block min-w-24 ml-2">昌党办发〔2025〕12号</span>
       </div>
 
       {/* 主表格 */}
-      <div className="border border-green-500 text-sm">
+      <div className="border-2 border-green-500 text-sm">
         {/* 第一行：签发、办公室领导意见、会稿 */}
         <div className="flex border-b border-green-500">
-          <div className="w-16 shrink-0 border-r border-green-500 p-2 flex items-start">
-            <span>签发：</span>
+          <div className="w-20 shrink-0 border-r border-green-500 p-3 flex items-start">
+            <span className="font-medium">签发：</span>
           </div>
-          <div className="flex-1 border-r border-green-500 p-2 min-h-24">
-            <div className="flex items-center justify-between mb-2">
+          <div className="flex-1 border-r border-green-500 p-3 min-h-28">
+            <div className="flex items-center justify-between mb-3">
               <span className="font-medium">办公室领导意见：</span>
-              <div className="flex gap-1">
-                <Eye className="w-4 h-4 text-red-400" />
-                <FileText className="w-4 h-4 text-red-400" />
+              <div className="flex gap-2">
+                <Eye className="w-5 h-5 text-red-400" />
+                <FileText className="w-5 h-5 text-red-400" />
               </div>
             </div>
-            <div className="bg-muted/50 rounded p-2 min-h-12 flex items-end justify-center">
-              <span className="text-xs text-muted-foreground">陈树龙 2025.11.17</span>
+            <div className="bg-muted/50 rounded p-3 min-h-14 flex items-end justify-center">
+              <span className="text-sm text-muted-foreground">陈树龙 2025.11.17</span>
             </div>
           </div>
-          <div className="w-16 shrink-0 p-2">
-            <span>会稿：</span>
+          <div className="w-20 shrink-0 p-3">
+            <span className="font-medium">会稿：</span>
           </div>
         </div>
 
         {/* 第二行：标题 */}
         <div className="flex border-b border-green-500">
-          <div className="w-16 shrink-0 border-r border-green-500 p-2 flex items-center">
-            <span className="tracking-widest">标　题：</span>
+          <div className="w-20 shrink-0 border-r border-green-500 p-3 flex items-center">
+            <span className="font-medium">标　题：</span>
           </div>
-          <div className="flex-1 p-2">
+          <div className="flex-1 p-3">
             <span className="font-medium">{document.title}</span>
           </div>
         </div>
 
         {/* 第三行：主送 */}
         <div className="flex border-b border-green-500">
-          <div className="w-16 shrink-0 border-r border-green-500 p-2 flex items-center">
-            <span className="tracking-widest">主　送：</span>
+          <div className="w-20 shrink-0 border-r border-green-500 p-3 flex items-center">
+            <span className="font-medium">主　送：</span>
           </div>
-          <div className="flex-1 p-2 min-h-10"></div>
+          <div className="flex-1 p-3 min-h-12">
+            <span>各县市区党委、人民政府，州直各部门</span>
+          </div>
         </div>
 
         {/* 第四行：抄送 */}
         <div className="flex border-b border-green-500">
-          <div className="w-16 shrink-0 border-r border-green-500 p-2 flex items-center">
-            <span className="tracking-widest">抄　送：</span>
+          <div className="w-20 shrink-0 border-r border-green-500 p-3 flex items-center">
+            <span className="font-medium">抄　送：</span>
           </div>
-          <div className="flex-1 p-2 min-h-10"></div>
+          <div className="flex-1 p-3 min-h-12">
+            <span>州纪委监委，州人大常委会办公室，州政协办公室</span>
+          </div>
         </div>
 
         {/* 第五行：拟稿、清样打印 */}
         <div className="flex border-b border-green-500">
-          <div className="flex-1 border-r border-green-500 p-2">
-            <span>拟稿：</span>
+          <div className="flex-1 border-r border-green-500 p-3">
+            <span className="font-medium">拟稿：</span>
+            <span className="ml-2 text-muted-foreground">黄思艺</span>
           </div>
-          <div className="flex-1 p-2">
-            <span>清样打印：</span>
+          <div className="flex-1 p-3">
+            <span className="font-medium">清样打印：</span>
+            <span className="ml-2 text-muted-foreground">张玉</span>
           </div>
         </div>
 
         {/* 第六行：核稿、送签 */}
         <div className="flex border-b border-green-500">
-          <div className="flex-1 border-r border-green-500 p-2">
-            <span>核稿：</span>
+          <div className="flex-1 border-r border-green-500 p-3">
+            <span className="font-medium">核稿：</span>
+            <span className="ml-2 text-muted-foreground">李明华</span>
           </div>
-          <div className="flex-1 p-2">
-            <span>送签：</span>
+          <div className="flex-1 p-3">
+            <span className="font-medium">送签：</span>
+            <span className="ml-2 text-muted-foreground">王秀英</span>
           </div>
         </div>
 
         {/* 第七行：审核领导、挂号 */}
         <div className="flex border-b border-green-500">
-          <div className="flex-1 border-r border-green-500 p-2">
-            <span>审核领导</span>
+          <div className="flex-1 border-r border-green-500 p-3">
+            <span className="font-medium">审核领导：</span>
+            <span className="ml-2 text-muted-foreground">周明</span>
           </div>
-          <div className="flex-1 p-2">
-            <span>挂号：</span>
+          <div className="flex-1 p-3">
+            <span className="font-medium">挂号：</span>
+            <span className="ml-2 text-muted-foreground">2025-0012</span>
           </div>
         </div>
 
         {/* 第八行：密级、定密审批、紧急程度、终校 */}
-        <div className="flex border-b border-green-500 text-xs">
-          <div className="border-r border-green-500 p-2">
-            <span>密级：</span>
-            <span className="text-blue-600">内部</span>
+        <div className="flex border-b border-green-500">
+          <div className="border-r border-green-500 p-3">
+            <span className="font-medium">密级：</span>
+            <span className="ml-1 text-blue-600">内部</span>
           </div>
-          <div className="border-r border-green-500 p-2 flex-1">
-            <span>定密审批：</span>
+          <div className="border-r border-green-500 p-3 flex-1">
+            <span className="font-medium">定密审批：</span>
+            <span className="ml-1 text-muted-foreground">刘主任</span>
           </div>
-          <div className="border-r border-green-500 p-2">
-            <span>紧急程度：</span>
-            <span className="text-blue-600">无</span>
+          <div className="border-r border-green-500 p-3">
+            <span className="font-medium">紧急程度：</span>
+            <span className="ml-1 text-blue-600">普通</span>
           </div>
-          <div className="p-2">
-            <span>终校：</span>
+          <div className="p-3">
+            <span className="font-medium">终校：</span>
+            <span className="ml-1 text-muted-foreground">张玉</span>
           </div>
         </div>
 
         {/* 第九行：是否内网审批、印制份数、印制日期 */}
-        <div className="flex text-xs">
-          <div className="border-r border-green-500 p-2">
-            <span>是否内网审批：</span>
-            <span className="text-blue-600">是（）否（）</span>
+        <div className="flex">
+          <div className="border-r border-green-500 p-3">
+            <span className="font-medium">是否内网审批：</span>
+            <span className="ml-1 text-blue-600">是（✓）否（）</span>
           </div>
-          <div className="border-r border-green-500 p-2 flex-1">
-            <span>印制份数：</span>
+          <div className="border-r border-green-500 p-3 flex-1">
+            <span className="font-medium">印制份数：</span>
+            <span className="ml-1 text-muted-foreground">200份</span>
           </div>
-          <div className="p-2 flex-1">
-            <span>印制日期：</span>
+          <div className="p-3 flex-1">
+            <span className="font-medium">印制日期：</span>
+            <span className="ml-1 text-muted-foreground">2025-11-18</span>
           </div>
         </div>
       </div>
