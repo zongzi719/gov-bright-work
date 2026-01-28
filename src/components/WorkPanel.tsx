@@ -228,14 +228,15 @@ const WorkPanel = () => {
     const reason = extractReason(item.title);
     const sourceLabel = getSourceLabel(item);
     const isRead = isItemRead(item.id);
+    const initiatorDept = item.initiator?.department || "未知部门";
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
+        className={`relative mx-2 my-1.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg border ${
           selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
+            ? "bg-primary/5 border-primary/30 shadow-sm"
+            : "bg-card border-border hover:bg-muted/50 hover:border-primary/20"
         }`}
         onClick={() => {
           markAsRead(item.id);
@@ -243,13 +244,15 @@ const WorkPanel = () => {
         }}
       >
         <div className="flex-1 min-w-0">
-          <h3 className={`text-sm leading-tight mb-1 line-clamp-1 ${
+          <h3 className={`text-sm leading-tight mb-1.5 line-clamp-1 ${
             isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
           }`}>
             {reason}
           </h3>
           <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
             <span className="text-primary/80">{sourceLabel}</span>
+            <span>·</span>
+            <span>{initiatorDept}</span>
             <span>·</span>
             <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
           </div>
@@ -262,19 +265,20 @@ const WorkPanel = () => {
     const { label, color } = statusToDisplay(item.status, item.process_result);
     const reason = extractReason(item.title);
     const sourceLabel = getSourceLabel(item);
+    const initiatorDept = item.initiator?.department || "未知部门";
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
+        className={`relative mx-2 my-1.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg border ${
           selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
+            ? "bg-primary/5 border-primary/30 shadow-sm"
+            : "bg-card border-border hover:bg-muted/50 hover:border-primary/20"
         }`}
         onClick={() => handleItemClick(item)}
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1.5">
             <h3 className="text-sm font-normal leading-tight text-muted-foreground line-clamp-1 flex-1">
               {reason}
             </h3>
@@ -282,6 +286,8 @@ const WorkPanel = () => {
           </div>
           <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
             <span className="text-primary/80">{sourceLabel}</span>
+            <span>·</span>
+            <span>{initiatorDept}</span>
             <span>·</span>
             <span>
               {item.processed_at
@@ -298,19 +304,20 @@ const WorkPanel = () => {
     const isRead = item.status !== "pending";
     const reason = extractReason(item.title.replace(/^\[抄送\]\s*/, ""));
     const sourceLabel = getSourceLabel(item);
+    const initiatorDept = item.initiator?.department || "未知部门";
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
+        className={`relative mx-2 my-1.5 px-3 py-2.5 cursor-pointer transition-all rounded-lg border ${
           selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
+            ? "bg-primary/5 border-primary/30 shadow-sm"
+            : "bg-card border-border hover:bg-muted/50 hover:border-primary/20"
         }`}
         onClick={() => handleItemClick(item)}
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1.5">
             <h3 className={`text-sm leading-tight line-clamp-1 flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
               {reason}
             </h3>
@@ -324,6 +331,8 @@ const WorkPanel = () => {
           </div>
           <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
             <span className="text-primary/80">{sourceLabel}</span>
+            <span>·</span>
+            <span>{initiatorDept}</span>
             <span>·</span>
             <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
           </div>

@@ -33,7 +33,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import TablePagination from "./TablePagination";
 
-type SecurityLevel = '机密' | '秘密' | '一般';
+type SecurityLevel = '机密' | '秘密' | '内部' | '公开';
 
 interface Notice {
   id: string;
@@ -64,7 +64,7 @@ const NoticeManagement = () => {
     content: "",
     is_pinned: false,
     is_published: true,
-    security_level: "一般" as SecurityLevel,
+    security_level: "公开" as SecurityLevel,
   });
 
   useEffect(() => {
@@ -151,7 +151,7 @@ const NoticeManagement = () => {
       content: notice.content || "",
       is_pinned: notice.is_pinned,
       is_published: notice.is_published,
-      security_level: notice.security_level || "一般",
+      security_level: ((notice.security_level as string) === '一般' ? '公开' : notice.security_level || '公开') as SecurityLevel,
     });
     setDialogOpen(true);
   };
@@ -178,7 +178,7 @@ const NoticeManagement = () => {
       content: "",
       is_pinned: false,
       is_published: true,
-      security_level: "一般",
+      security_level: "公开",
     });
   };
 
@@ -266,7 +266,8 @@ const NoticeManagement = () => {
                   <SelectContent>
                     <SelectItem value="机密">机密</SelectItem>
                     <SelectItem value="秘密">秘密</SelectItem>
-                    <SelectItem value="一般">一般</SelectItem>
+                    <SelectItem value="内部">内部</SelectItem>
+                    <SelectItem value="公开">公开</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -348,9 +349,10 @@ const NoticeTable = ({
                 <span className={`text-xs px-1.5 py-0.5 rounded ${
                   notice.security_level === '机密' ? 'bg-red-100 text-red-700' : 
                   notice.security_level === '秘密' ? 'bg-orange-100 text-orange-700' : 
+                  notice.security_level === '内部' ? 'bg-blue-100 text-blue-700' :
                   'bg-gray-100 text-gray-500'
                 }`}>
-                  {notice.security_level || '一般'}
+                  {notice.security_level || '公开'}
                 </span>
               </TableCell>
               <TableCell className="whitespace-nowrap">
