@@ -41,58 +41,49 @@ const LeaderSchedule = () => {
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const [loading, setLoading] = useState(true);
-  const [permissionLoading, setPermissionLoading] = useState(true);
   const [allowedLeaderIds, setAllowedLeaderIds] = useState<string[] | null>(null);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
   // 获取当前用户可查看的领导列表
   const fetchUserPermissions = async () => {
-    setPermissionLoading(true);
-    try {
-      const storedUser = localStorage.getItem("frontendUser");
-      if (!storedUser) {
-        setAllowedLeaderIds([]);
-        return;
-      }
+    const storedUser = localStorage.getItem("frontendUser");
+    if (!storedUser) return;
 
-      const user = JSON.parse(storedUser);
-      const userId = user.id; // localStorage stores 'id' not 'contact_id'
-      
-      // 如果是领导，可以查看所有领导日程
-      if (user.is_leader) {
-        setAllowedLeaderIds(null); // null表示可以查看所有
-        return;
-      }
+    const user = JSON.parse(storedUser);
+    const userId = user.id; // localStorage stores 'id' not 'contact_id'
+    
+    // 如果是领导，可以查看所有领导日程
+    if (user.is_leader) {
+      setAllowedLeaderIds(null); // null表示可以查看所有
+      return;
+    }
 
-      if (!userId) {
-        setAllowedLeaderIds([]);
-        return;
-      }
+    if (!userId) {
+      setAllowedLeaderIds([]);
+      return;
+    }
 
-      // 查询该用户的权限记录
-      const { data: permData } = await supabase
-        .from("leader_schedule_permissions")
-        .select("leader_id, can_view_all")
-        .eq("user_id", userId);
+    // 查询该用户的权限记录
+    const { data: permData } = await supabase
+      .from("leader_schedule_permissions")
+      .select("leader_id, can_view_all")
+      .eq("user_id", userId);
 
-      if (permData && permData.length > 0) {
-        // 检查是否有can_view_all权限
-        const hasViewAll = permData.some(p => p.can_view_all);
-        if (hasViewAll) {
-          setAllowedLeaderIds(null);
-        } else {
-          // 收集所有被授权的leader_id
-          const leaderIds = permData
-            .filter(p => p.leader_id)
-            .map(p => p.leader_id as string);
-          setAllowedLeaderIds(leaderIds);
-        }
+    if (permData && permData.length > 0) {
+      // 检查是否有can_view_all权限
+      const hasViewAll = permData.some(p => p.can_view_all);
+      if (hasViewAll) {
+        setAllowedLeaderIds(null);
       } else {
-        setAllowedLeaderIds([]); // 无权限
+        // 收集所有被授权的leader_id
+        const leaderIds = permData
+          .filter(p => p.leader_id)
+          .map(p => p.leader_id as string);
+        setAllowedLeaderIds(leaderIds);
       }
-    } finally {
-      setPermissionLoading(false);
+    } else {
+      setAllowedLeaderIds([]); // 无权限
     }
   };
 
@@ -190,7 +181,7 @@ const LeaderSchedule = () => {
             ))}
           </div>
 
-          {permissionLoading || loading ? (
+          {loading ? (
             <div className="text-center py-8 text-muted-foreground">加载中...</div>
           ) : leaders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无领导信息</div>
