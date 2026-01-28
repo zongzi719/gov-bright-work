@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import TodoDetailDialog from "./TodoDetailDialog";
 
 interface TodoItem {
@@ -27,13 +28,6 @@ interface TodoItem {
     department: string | null;
   } | null;
 }
-
-const priorityToStatus = (priority: string, status: string): "urgent" | "normal" | "done" => {
-  if (status === "approved" || status === "rejected" || status === "completed") {
-    return "done";
-  }
-  return priority === "urgent" ? "urgent" : "normal";
-};
 
 const statusToDisplay = (status: string, processResult: string | null): { label: string; color: string } => {
   if (processResult === "cc_notified") {
@@ -170,44 +164,48 @@ const WorkPanel = () => {
 
   const getDisplayInfo = (item: TodoItem) => {
     const system = item.source_system || businessTypeLabels[item.business_type] || "内部系统";
-    const department = item.source_department || item.initiator?.department || "未知部门";
-    return { system, department };
+    const initiator = item.initiator?.name || "未知";
+    return { system, initiator };
   };
 
   const renderPendingItem = (item: TodoItem) => {
-    const displayStatus = priorityToStatus(item.priority, item.status);
-    const { system, department } = getDisplayInfo(item);
+    const { system, initiator } = getDisplayInfo(item);
+    const isUrgent = item.priority === "urgent";
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
+        className={`relative p-3 cursor-pointer transition-all border-l-4 bg-card hover:shadow-md ${
           selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
+            ? "border-l-primary bg-primary/5"
+            : isUrgent
+            ? "border-l-destructive"
+            : "border-l-accent"
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-2">
-          <div
-            className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-              displayStatus === "urgent"
-                ? "bg-destructive"
-                : displayStatus === "normal"
-                ? "bg-primary"
-                : "bg-muted-foreground"
-            }`}
-          />
+        <div className="flex items-start gap-3">
+          {/* 图标 */}
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+            isUrgent ? "bg-destructive/10" : "bg-primary/10"
+          }`}>
+            <FileText className={`w-5 h-5 ${isUrgent ? "text-destructive" : "text-primary"}`} />
+          </div>
+          
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium leading-tight mb-1 text-foreground line-clamp-1">
-              {item.title}
-            </h3>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
-              <span>·</span>
-              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-sm font-medium text-foreground line-clamp-1 flex-1">
+                {item.title}
+              </h3>
+              {isUrgent && (
+                <Badge variant="destructive" className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
+                  急
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="text-primary">• {system}</span>
+              <span>{initiator} · {format(new Date(item.created_at), "yyyy-MM-dd", { locale: zhCN })}</span>
             </div>
           </div>
         </div>
@@ -217,36 +215,34 @@ const WorkPanel = () => {
 
   const renderCompletedItem = (item: TodoItem) => {
     const { label, color } = statusToDisplay(item.status, item.process_result);
-    const { system, department } = getDisplayInfo(item);
+    const { system, initiator } = getDisplayInfo(item);
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
-          selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
+        className={`relative p-3 cursor-pointer transition-all border-l-4 border-l-muted bg-card hover:shadow-md ${
+          selectedId === item.id ? "bg-primary/5" : ""
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-2">
-          <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-muted-foreground" />
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-muted">
+            <FileText className="w-5 h-5 text-muted-foreground" />
+          </div>
+          
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
+              <h3 className="text-sm font-medium text-foreground line-clamp-1 flex-1">
                 {item.title}
               </h3>
               <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
             </div>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
-              <span>·</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>• {system}</span>
               <span>
-                {item.processed_at
-                  ? format(new Date(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
-                  : format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
+                {initiator} · {item.processed_at
+                  ? format(new Date(item.processed_at), "yyyy-MM-dd", { locale: zhCN })
+                  : format(new Date(item.created_at), "yyyy-MM-dd", { locale: zhCN })}
               </span>
             </div>
           </div>
@@ -257,23 +253,30 @@ const WorkPanel = () => {
 
   const renderCCItem = (item: TodoItem) => {
     const isRead = item.status !== "pending";
-    const { system, department } = getDisplayInfo(item);
+    const { system, initiator } = getDisplayInfo(item);
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
+        className={`relative p-3 cursor-pointer transition-all border-l-4 bg-card hover:shadow-md ${
           selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
+            ? "border-l-primary bg-primary/5"
+            : isRead
+            ? "border-l-muted"
+            : "border-l-accent"
         }`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-2">
-          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isRead ? "bg-muted-foreground" : "bg-primary"}`} />
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+            isRead ? "bg-muted" : "bg-accent/10"
+          }`}>
+            <FileText className={`w-5 h-5 ${isRead ? "text-muted-foreground" : "text-accent"}`} />
+          </div>
+          
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
+              <h3 className="text-sm font-medium text-foreground line-clamp-1 flex-1">
                 {item.title.replace(/^\[抄送\]\s*/, "")}
               </h3>
               <span
@@ -284,12 +287,9 @@ const WorkPanel = () => {
                 {isRead ? "已阅" : "未阅"}
               </span>
             </div>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
-              <span>·</span>
-              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>• {system}</span>
+              <span>{initiator} · {format(new Date(item.created_at), "yyyy-MM-dd", { locale: zhCN })}</span>
             </div>
           </div>
         </div>
@@ -297,50 +297,53 @@ const WorkPanel = () => {
     );
   };
 
-  // 无数据时压缩显示高度
-  const getEmptyHeight = () => {
-    if (activeTab === "pending" && pendingItems.length === 0) return "h-20";
-    if (activeTab === "completed" && completedItems.length === 0) return "h-20";
-    if (activeTab === "cc" && ccItems.length === 0) return "h-20";
-    return "h-32";
-  };
-
   return (
     <>
       <div className="gov-card h-full flex flex-col overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-          {/* 标题栏 + Tab切换 */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
-            <TabsList className="bg-transparent gap-0.5 p-0 h-auto">
+        {/* 标题栏 */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <h2 className="gov-card-title text-base">待办事项</h2>
+            {pendingCount > 0 && (
+              <Badge variant="destructive" className="text-sm px-2 py-0.5 rounded-full">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </Badge>
+            )}
+          </div>
+          <button className="text-xs text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors font-medium">
+            全部应用
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
+          {/* Tab切换 */}
+          <div className="px-4 py-2 border-b border-border flex-shrink-0">
+            <TabsList className="bg-transparent gap-1 p-0 h-auto w-full justify-start">
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-1.5 text-sm rounded-md"
               >
                 待办
-                {pendingCount > 0 && (
-                  <span className="ml-1 gov-badge text-xs px-1">{pendingCount}</span>
-                )}
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-1.5 text-sm rounded-md"
               >
                 已办
               </TabsTrigger>
               <TabsTrigger
                 value="cc"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-1.5 text-sm rounded-md"
               >
                 抄送
                 {ccUnreadCount > 0 && (
-                  <span className="ml-1 gov-badge text-xs px-1">{ccUnreadCount}</span>
+                  <span className="ml-1 text-xs bg-accent text-accent-foreground px-1.5 rounded-full">
+                    {ccUnreadCount}
+                  </span>
                 )}
               </TabsTrigger>
             </TabsList>
-            <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
-              更多
-              <ChevronRight className="w-3 h-3" />
-            </button>
           </div>
 
           {/* 待办事项列表 */}
@@ -355,7 +358,9 @@ const WorkPanel = () => {
               </div>
             ) : (
               <ScrollArea className="h-full">
-                {pendingItems.map(renderPendingItem)}
+                <div className="space-y-2 p-3">
+                  {pendingItems.map(renderPendingItem)}
+                </div>
               </ScrollArea>
             )}
           </TabsContent>
@@ -372,7 +377,9 @@ const WorkPanel = () => {
               </div>
             ) : (
               <ScrollArea className="h-full">
-                {completedItems.map(renderCompletedItem)}
+                <div className="space-y-2 p-3">
+                  {completedItems.map(renderCompletedItem)}
+                </div>
               </ScrollArea>
             )}
           </TabsContent>
@@ -389,7 +396,9 @@ const WorkPanel = () => {
               </div>
             ) : (
               <ScrollArea className="h-full">
-                {ccItems.map(renderCCItem)}
+                <div className="space-y-2 p-3">
+                  {ccItems.map(renderCCItem)}
+                </div>
               </ScrollArea>
             )}
           </TabsContent>
