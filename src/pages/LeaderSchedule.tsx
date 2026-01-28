@@ -204,9 +204,9 @@ const LeaderSchedule = () => {
           {/* 图例 */}
           <div className="flex gap-4 mb-4 flex-wrap">
             {Object.entries(scheduleTypeColors).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-1.5">
-                <div className={`w-3 h-3 rounded ${value.bg}`} />
-                <span className="text-xs text-muted-foreground">{value.label}</span>
+              <div key={key} className="flex items-center gap-2">
+                <div className={`w-4 h-4 rounded ${value.bg}`} />
+                <span className="text-sm text-muted-foreground">{value.label}</span>
               </div>
             ))}
           </div>
@@ -216,59 +216,71 @@ const LeaderSchedule = () => {
           ) : leaders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">暂无领导信息</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="border p-2 text-left font-medium w-24">领导</th>
-                    {weekDays.map((day, idx) => (
-                      <th key={idx} className="border p-2 text-center font-medium min-w-[120px]">
-                        <div>{weekDayNames[idx]}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(day, "M/d", { locale: zhCN })}
+            <div className="border rounded-lg overflow-hidden">
+              {/* 表头 - 红色背景 */}
+              <div className="grid bg-red-800 text-white" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                <div className="p-2 border-r border-red-700 text-center font-medium">姓名</div>
+                {weekDays.map((day, idx) => (
+                  <div key={idx} className="p-2 border-r border-red-700 last:border-r-0 text-center">
+                    <div className="font-medium">{weekDayNames[idx]}</div>
+                    <div className="text-sm opacity-80">{format(day, "MM/dd")}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 上午/下午子表头 */}
+              <div className="grid bg-muted border-b" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                <div className="p-1 border-r text-center text-xs text-muted-foreground"></div>
+                {weekDays.map((_, idx) => (
+                  <div key={idx} className="grid grid-cols-2 border-r last:border-r-0">
+                    <div className="p-1 text-center text-xs border-r">上午</div>
+                    <div className="p-1 text-center text-xs">下午</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 领导行 */}
+              {leaders.map((leader) => (
+                <div key={leader.id} className="grid border-b last:border-b-0" style={{ gridTemplateColumns: "100px repeat(7, 1fr)" }}>
+                  <div className="p-2 border-r bg-muted/50 flex items-center justify-center">
+                    <span className="font-medium text-sm">{leader.name}</span>
+                  </div>
+                  {weekDays.map((day, dayIdx) => {
+                    const daySchedules = getSchedulesForLeaderAndDay(leader.id, day);
+                    return (
+                      <div key={dayIdx} className="relative border-r last:border-r-0 min-h-[60px] p-1">
+                        {/* 时间刻度虚线 */}
+                        <div className="absolute inset-0 grid grid-cols-10">
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <div key={i} className="border-r border-dashed border-muted-foreground/20 last:border-r-0"></div>
+                          ))}
                         </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaders.map((leader) => (
-                    <tr key={leader.id} className="hover:bg-muted/30">
-                      <td className="border p-2">
-                        <div className="font-medium text-sm">{leader.name}</div>
-                        <div className="text-xs text-muted-foreground">{leader.position}</div>
-                      </td>
-                      {weekDays.map((day, idx) => {
-                        const schedules = getSchedulesForLeaderAndDay(leader.id, day);
-                        return (
-                          <td key={idx} className="border p-1 align-top">
-                            <div className="space-y-1">
-                              {schedules.map((s) => {
-                                const typeStyle = scheduleTypeColors[s.schedule_type] || {
-                                  bg: "bg-gray-500",
-                                  text: "text-white",
-                                };
-                                return (
-                                  <div
-                                    key={s.id}
-                                    className={`${typeStyle.bg} ${typeStyle.text} rounded px-1.5 py-1 text-xs`}
-                                    title={`${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)} ${s.title}${s.location ? ` @ ${s.location}` : ""}`}
-                                  >
-                                    <div className="font-medium truncate">{s.title}</div>
-                                    <div className="opacity-80 text-[10px]">
-                                      {s.start_time.slice(0, 5)}-{s.end_time.slice(0, 5)}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        {/* 日程卡片 */}
+                        <div className="relative z-10 space-y-1">
+                          {daySchedules.map((s) => {
+                            const typeStyle = scheduleTypeColors[s.schedule_type] || {
+                              bg: "bg-gray-500",
+                              text: "text-white",
+                            };
+                            return (
+                              <div
+                                key={s.id}
+                                className={`${typeStyle.bg} ${typeStyle.text} rounded px-1.5 py-0.5 text-xs`}
+                                title={`${s.start_time.slice(0, 5)}-${s.end_time.slice(0, 5)} ${s.title}${s.location ? ` @ ${s.location}` : ""}`}
+                              >
+                                <div className="font-medium truncate">{s.title}</div>
+                                <div className="opacity-80 text-[10px]">
+                                  {s.start_time.slice(0, 5)}-{s.end_time.slice(0, 5)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
