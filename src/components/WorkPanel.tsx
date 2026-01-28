@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -28,35 +28,29 @@ interface TodoItem {
   } | null;
 }
 
-const priorityToStatus = (priority: string, status: string): "urgent" | "normal" | "done" => {
-  if (status === "approved" || status === "rejected" || status === "completed") {
-    return "done";
-  }
-  return priority === "urgent" ? "urgent" : "normal";
-};
-
-const statusToDisplay = (status: string, processResult: string | null): { label: string; color: string } => {
-  if (processResult === "cc_notified") {
-    return { label: "已阅", color: "bg-blue-100 text-blue-700" };
-  }
-  switch (status) {
-    case "approved":
-      return { label: "已同意", color: "bg-green-100 text-green-700" };
-    case "rejected":
-      return { label: "已驳回", color: "bg-red-100 text-red-700" };
-    case "completed":
-      return { label: "已完成", color: "bg-green-100 text-green-700" };
-    default:
-      return { label: "已处理", color: "bg-gray-100 text-gray-700" };
-  }
-};
-
 const businessTypeLabels: Record<string, string> = {
   business_trip: "出差申请",
   absence: "请假/外出",
   supply_requisition: "领用申请",
   purchase_request: "采购申请",
   external_approval: "外部审批",
+};
+
+// 图标组件
+const TodoIcon = ({ type }: { type: string }) => {
+  const colors: Record<string, string> = {
+    business_trip: "bg-blue-500",
+    absence: "bg-orange-500",
+    supply_requisition: "bg-green-500",
+    purchase_request: "bg-purple-500",
+    external_approval: "bg-gray-500",
+  };
+  
+  return (
+    <div className={`w-10 h-10 rounded-lg ${colors[type] || "bg-primary"} flex items-center justify-center flex-shrink-0`}>
+      <FileText className="w-5 h-5 text-white" />
+    </div>
+  );
 };
 
 const WorkPanel = () => {
@@ -148,7 +142,6 @@ const WorkPanel = () => {
   }, [currentUser?.id]);
 
   const pendingCount = pendingItems.filter((item) => item.status === "pending").length;
-  const ccUnreadCount = ccItems.filter((item) => item.status === "pending").length;
 
   const handleItemClick = (item: TodoItem) => {
     setSelectedId(item.id);
@@ -174,81 +167,40 @@ const WorkPanel = () => {
     return { system, department };
   };
 
-  const renderPendingItem = (item: TodoItem) => {
-    const displayStatus = priorityToStatus(item.priority, item.status);
-    const { system, department } = getDisplayInfo(item);
+  const renderTodoItem = (item: TodoItem, showStatus = false) => {
+    const { system } = getDisplayInfo(item);
+    const statusLabel = item.status === "approved" ? "已同意" : item.status === "rejected" ? "已驳回" : "已处理";
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
-          selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
-        }`}
+        className={`todo-item ${selectedId === item.id ? "bg-primary/5" : ""}`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-2">
-          <div
-            className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-              displayStatus === "urgent"
-                ? "bg-destructive"
-                : displayStatus === "normal"
-                ? "bg-primary"
-                : "bg-muted-foreground"
-            }`}
-          />
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium leading-tight mb-1 text-foreground line-clamp-1">
+        <TodoIcon type={item.business_type} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm font-medium text-foreground line-clamp-2 flex-1">
               {item.title}
             </h3>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
-              <span>·</span>
-              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
-            </div>
+            {item.priority === "urgent" && (
+              <span className="gov-badge text-[10px] px-1.5 flex-shrink-0">急</span>
+            )}
           </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderCompletedItem = (item: TodoItem) => {
-    const { label, color } = statusToDisplay(item.status, item.process_result);
-    const { system, department } = getDisplayInfo(item);
-
-    return (
-      <div
-        key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
-          selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
-        }`}
-        onClick={() => handleItemClick(item)}
-      >
-        <div className="flex items-start gap-2">
-          <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-muted-foreground" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
-                {item.title}
-              </h3>
-              <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
-            </div>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
-              <span>·</span>
-              <span>
-                {item.processed_at
-                  ? format(new Date(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
-                  : format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
-              </span>
-            </div>
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+            <span className="text-primary">● {system}</span>
+            <span>·</span>
+            <span>{item.initiator?.name || "未知"}</span>
+            <span>·</span>
+            <span>{format(new Date(item.created_at), "yyyy-MM-dd", { locale: zhCN })}</span>
+            {showStatus && (
+              <>
+                <span>·</span>
+                <span className={item.status === "approved" ? "text-green-600" : item.status === "rejected" ? "text-red-600" : "text-muted-foreground"}>
+                  {statusLabel}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -257,52 +209,34 @@ const WorkPanel = () => {
 
   const renderCCItem = (item: TodoItem) => {
     const isRead = item.status !== "pending";
-    const { system, department } = getDisplayInfo(item);
+    const { system } = getDisplayInfo(item);
 
     return (
       <div
         key={item.id}
-        className={`relative px-3 py-2 cursor-pointer transition-all border-l-2 ${
-          selectedId === item.id
-            ? "bg-primary/5 border-l-primary"
-            : "border-l-transparent hover:bg-muted/50"
-        }`}
+        className={`todo-item ${selectedId === item.id ? "bg-primary/5" : ""}`}
         onClick={() => handleItemClick(item)}
       >
-        <div className="flex items-start gap-2">
-          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${isRead ? "bg-muted-foreground" : "bg-primary"}`} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-1 flex-1">
-                {item.title.replace(/^\[抄送\]\s*/, "")}
-              </h3>
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
-                  isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                }`}
-              >
-                {isRead ? "已阅" : "未阅"}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              <span>{system}</span>
-              <span>·</span>
-              <span>{department}</span>
-              <span>·</span>
-              <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
-            </div>
+        <TodoIcon type={item.business_type} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm font-medium text-foreground line-clamp-2 flex-1">
+              {item.title.replace(/^\[抄送\]\s*/, "")}
+            </h3>
+            <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${isRead ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+              {isRead ? "已阅" : "未阅"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+            <span className="text-primary">● {system}</span>
+            <span>·</span>
+            <span>{item.initiator?.name || "未知"}</span>
+            <span>·</span>
+            <span>{format(new Date(item.created_at), "yyyy-MM-dd", { locale: zhCN })}</span>
           </div>
         </div>
       </div>
     );
-  };
-
-  // 无数据时压缩显示高度
-  const getEmptyHeight = () => {
-    if (activeTab === "pending" && pendingItems.length === 0) return "h-20";
-    if (activeTab === "completed" && completedItems.length === 0) return "h-20";
-    if (activeTab === "cc" && ccItems.length === 0) return "h-20";
-    return "h-32";
   };
 
   return (
@@ -310,37 +244,41 @@ const WorkPanel = () => {
       <div className="gov-card h-full flex flex-col overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* 标题栏 + Tab切换 */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
-            <TabsList className="bg-transparent gap-0.5 p-0 h-auto">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <h2 className="gov-card-title text-base">待办事项</h2>
+              {pendingCount > 0 && (
+                <span className="gov-badge">{pendingCount > 99 ? "99+" : pendingCount}</span>
+              )}
+            </div>
+            <button className="view-more-btn">
+              全部应用
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Tab栏 */}
+          <div className="px-4 py-2 border-b border-border flex-shrink-0">
+            <TabsList className="bg-transparent gap-1 p-0 h-auto">
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-1.5 text-sm rounded"
               >
                 待办
-                {pendingCount > 0 && (
-                  <span className="ml-1 gov-badge text-xs px-1">{pendingCount}</span>
-                )}
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-1.5 text-sm rounded"
               >
                 已办
               </TabsTrigger>
               <TabsTrigger
                 value="cc"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-1.5 text-sm rounded"
               >
                 抄送
-                {ccUnreadCount > 0 && (
-                  <span className="ml-1 gov-badge text-xs px-1">{ccUnreadCount}</span>
-                )}
               </TabsTrigger>
             </TabsList>
-            <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
-              更多
-              <ChevronRight className="w-3 h-3" />
-            </button>
           </div>
 
           {/* 待办事项列表 */}
@@ -355,7 +293,9 @@ const WorkPanel = () => {
               </div>
             ) : (
               <ScrollArea className="h-full">
-                {pendingItems.map(renderPendingItem)}
+                <div className="divide-y divide-border/50">
+                  {pendingItems.map((item) => renderTodoItem(item))}
+                </div>
               </ScrollArea>
             )}
           </TabsContent>
@@ -372,7 +312,9 @@ const WorkPanel = () => {
               </div>
             ) : (
               <ScrollArea className="h-full">
-                {completedItems.map(renderCompletedItem)}
+                <div className="divide-y divide-border/50">
+                  {completedItems.map((item) => renderTodoItem(item, true))}
+                </div>
               </ScrollArea>
             )}
           </TabsContent>
@@ -389,11 +331,20 @@ const WorkPanel = () => {
               </div>
             ) : (
               <ScrollArea className="h-full">
-                {ccItems.map(renderCCItem)}
+                <div className="divide-y divide-border/50">
+                  {ccItems.map(renderCCItem)}
+                </div>
               </ScrollArea>
             )}
           </TabsContent>
         </Tabs>
+
+        {/* 底部查看更多 */}
+        <div className="px-4 py-3 border-t border-border flex-shrink-0">
+          <button className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors">
+            查看更多 &gt;
+          </button>
+        </div>
       </div>
 
       <TodoDetailDialog
