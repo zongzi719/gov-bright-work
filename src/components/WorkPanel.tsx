@@ -355,30 +355,30 @@ const WorkPanel = () => {
       <div className="gov-card h-full flex flex-col overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* 标题栏 + Tab切换 */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
+          <div className="flex items-center justify-between px-2 md:px-3 py-2 border-b border-border flex-shrink-0">
             <TabsList className="bg-transparent gap-0.5 p-0 h-auto">
               <TabsTrigger
                 value="pending"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-1.5 md:px-2 py-1 text-xs md:text-sm"
               >
                 待办
                 {pendingCount > 0 && (
-                  <span className="ml-1 gov-badge text-xs px-1">{pendingCount}</span>
+                  <span className="ml-1 gov-badge text-[10px] md:text-xs px-1">{pendingCount}</span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-1.5 md:px-2 py-1 text-xs md:text-sm"
               >
                 已办
               </TabsTrigger>
               <TabsTrigger
                 value="cc"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-2 py-1 text-sm"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary px-1.5 md:px-2 py-1 text-xs md:text-sm"
               >
                 抄送
                 {ccUnreadCount > 0 && (
-                  <span className="ml-1 gov-badge text-xs px-1">{ccUnreadCount}</span>
+                  <span className="ml-1 gov-badge text-[10px] md:text-xs px-1">{ccUnreadCount}</span>
                 )}
               </TabsTrigger>
             </TabsList>
