@@ -1692,6 +1692,7 @@ export type Database = {
           contact_id: string
           contact_mobile: string
           contact_name: string
+          contact_organization_id: string
           contact_position: string
           contact_security_level: string
           organization_name: string

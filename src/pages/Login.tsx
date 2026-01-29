@@ -70,6 +70,7 @@ const Login = () => {
         position: userData.contact_position,
         department: userData.contact_department,
         organization: userData.organization_name,
+        organization_id: userData.contact_organization_id,
         security_level: userData.contact_security_level || "一般",
         is_leader: contactData?.is_leader || false,
       };
