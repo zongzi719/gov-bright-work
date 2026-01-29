@@ -1,12 +1,21 @@
-import { useState } from "react";
-import { Tag, Empty, FloatingBubble, Popup, Form, Input, Picker, TextArea, Button, DatePicker, Radio, Toast } from "antd-mobile";
-import { AddOutline } from "antd-mobile-icons";
+import { useState, useEffect, useRef } from "react";
+import { Tag, Empty, FloatingBubble, Popup, Form, Input, Picker, TextArea, Button, DatePicker, Radio, Toast, CascadePicker } from "antd-mobile";
+import { AddOutline, AddCircleOutline, CloseCircleFill } from "antd-mobile-icons";
 import { format } from "date-fns";
 import FileTransferDetail from "./FileTransferDetail";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FileTransferListProps {
   activeTab: "pending" | "completed";
   searchText: string;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  level: number;
+  children?: Organization[];
 }
 
 // 模拟文件收发数据
@@ -60,13 +69,13 @@ const mockFileTransfers = [
 
 type FileTransferData = (typeof mockFileTransfers)[0];
 
-// 选项配置
+// 选项配置 - 更新为标准四级密级
 const securityLevelOptions = [
   [
     { label: "机密", value: "机密" },
     { label: "秘密", value: "秘密" },
     { label: "内部", value: "内部" },
-    { label: "一般", value: "一般" },
+    { label: "公开", value: "公开" },
   ],
 ];
 
@@ -104,12 +113,18 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
   const [sendTypeVisible, setSendTypeVisible] = useState(false);
   const [documentDateVisible, setDocumentDateVisible] = useState(false);
   const [signDateVisible, setSignDateVisible] = useState(false);
+  const [orgPickerVisible, setOrgPickerVisible] = useState(false);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [orgCascadeOptions, setOrgCascadeOptions] = useState<any[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     title: "",
     sendUnit: "",
+    sendUnitId: "",
     docNumber: "",
-    securityLevel: ["内部"],
+    securityLevel: ["公开"],
     urgency: ["普通"],
     sourceUnit: "",
     sendType: ["不限制份数"],
@@ -126,6 +141,64 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     copyUnit: "",
     description: "",
   });
+
+  // 加载组织架构
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("*")
+        .order("sort_order", { ascending: true });
+      
+      if (!error && data) {
+        setOrganizations(data);
+        // 转换为级联选择器格式
+        const cascadeOptions = buildCascadeOptions(data);
+        setOrgCascadeOptions(cascadeOptions);
+      }
+    };
+    fetchOrganizations();
+  }, []);
+
+  // 构建级联选择器选项
+  const buildCascadeOptions = (orgs: Organization[]): any[] => {
+    const buildTree = (parentId: string | null): any[] => {
+      return orgs
+        .filter(org => org.parent_id === parentId)
+        .map(org => {
+          const children = buildTree(org.id);
+          return {
+            label: org.name,
+            value: org.id,
+            children: children.length > 0 ? children : undefined,
+          };
+        });
+    };
+    return buildTree(null);
+  };
+
+  // 根据ID查找组织名称
+  const getOrgNameById = (id: string): string => {
+    const org = organizations.find(o => o.id === id);
+    return org?.name || "";
+  };
+
+  // 处理文件选择
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setUploadedFiles(prev => [...prev, ...Array.from(files)]);
+    }
+    // 重置input以便可以再次选择同一文件
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // 移除已上传的文件
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const filteredFiles = mockFileTransfers.filter((file) => {
     const matchTab =
@@ -249,13 +322,16 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
         bodyStyle={{ width: "100vw", height: "100vh", overflow: "auto" }}
       >
         <div className="min-h-screen bg-slate-50">
-          {/* 头部 */}
-          <div className="sticky top-0 z-10 bg-blue-800 text-white px-4 py-3 flex items-center justify-between">
+          {/* 头部 - 红色背景 */}
+          <div className="sticky top-0 z-10 bg-red-700 text-white px-4 py-3 flex items-center justify-between">
             <span className="font-medium">新增文件</span>
             <div className="flex gap-2">
               <Button
                 size="mini"
-                onClick={() => setShowAddPopup(false)}
+                onClick={() => {
+                  setShowAddPopup(false);
+                  setUploadedFiles([]);
+                }}
                 style={{
                   "--background-color": "transparent",
                   "--border-color": "rgba(255,255,255,0.5)",
@@ -284,13 +360,29 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               />
             </Form.Item>
 
-            <Form.Item label="发文单位" required>
+            <Form.Item 
+              label="发文单位" 
+              required
+              onClick={() => setOrgPickerVisible(true)}
+            >
               <Input
-                placeholder="请输入"
+                placeholder="请选择组织"
                 value={formData.sendUnit}
-                onChange={(v) => updateFormData("sendUnit", v)}
+                readOnly
               />
             </Form.Item>
+            <CascadePicker
+              options={orgCascadeOptions}
+              visible={orgPickerVisible}
+              onClose={() => setOrgPickerVisible(false)}
+              onConfirm={(value) => {
+                if (value && value.length > 0) {
+                  const lastId = value[value.length - 1] as string;
+                  updateFormData("sendUnitId", lastId);
+                  updateFormData("sendUnit", getOrgNameById(lastId));
+                }
+              }}
+            />
 
             <Form.Item label="发文字号" required>
               <Input
@@ -494,6 +586,51 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
                 value={formData.description}
                 onChange={(v) => updateFormData("description", v)}
               />
+            </Form.Item>
+
+            {/* 文件上传区域 */}
+            <Form.Item label="上传附件">
+              <div className="space-y-2">
+                {/* 已上传的文件列表 */}
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-1.5">
+                    {uploadedFiles.map((file, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center justify-between bg-slate-100 rounded px-2 py-1.5"
+                      >
+                        <span className="text-xs text-slate-700 truncate flex-1 mr-2">
+                          {file.name}
+                        </span>
+                        <CloseCircleFill 
+                          className="text-slate-400 flex-shrink-0 cursor-pointer"
+                          fontSize={16}
+                          onClick={() => removeFile(index)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* 添加文件按钮 */}
+                <div 
+                  className="flex items-center justify-center gap-1 border border-dashed border-slate-300 rounded py-3 cursor-pointer active:bg-slate-50"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <AddCircleOutline className="text-blue-600" fontSize={18} />
+                  <span className="text-sm text-blue-600">添加文件</span>
+                </div>
+                
+                {/* 隐藏的文件input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </div>
             </Form.Item>
           </Form>
         </div>
