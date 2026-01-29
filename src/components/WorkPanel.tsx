@@ -27,6 +27,7 @@ interface TodoItem {
     name: string;
     department: string | null;
   } | null;
+  _outReason?: string; // 外出申请的事由
 }
 
 const priorityToStatus = (priority: string, status: string): "urgent" | "normal" | "done" => {
@@ -98,6 +99,47 @@ const WorkPanel = () => {
 
   const currentUser = getCurrentUser();
 
+  // 获取外出申请的事由
+  const fetchOutReasons = async (businessIds: string[]): Promise<Record<string, string>> => {
+    if (businessIds.length === 0) return {};
+    
+    const { data } = await supabase
+      .from("absence_records")
+      .select("id, reason, out_location")
+      .eq("type", "out")
+      .in("id", businessIds);
+    
+    const reasonMap: Record<string, string> = {};
+    (data || []).forEach((record) => {
+      // 外出事由优先，如果没有则用往返地点
+      reasonMap[record.id] = record.reason || record.out_location || "";
+    });
+    return reasonMap;
+  };
+
+  // 为待办项添加外出事由
+  const enrichWithOutReasons = async (items: TodoItem[]): Promise<TodoItem[]> => {
+    // 找出所有外出申请的 business_id
+    const outBusinessIds = items
+      .filter((item) => item.business_type === "absence" && item.title.includes("外出") && item.business_id)
+      .map((item) => item.business_id as string);
+    
+    if (outBusinessIds.length === 0) return items;
+    
+    const reasonMap = await fetchOutReasons(outBusinessIds);
+    
+    return items.map((item) => {
+      if (item.business_type === "absence" && item.title.includes("外出") && item.business_id) {
+        const reason = reasonMap[item.business_id];
+        if (reason) {
+          // 用外出事由替换原标题中的内容
+          return { ...item, _outReason: reason } as TodoItem & { _outReason?: string };
+        }
+      }
+      return item;
+    });
+  };
+
   const fetchAllItems = async () => {
     if (!currentUser?.id) {
       setLoading(false);
@@ -122,7 +164,8 @@ const WorkPanel = () => {
     const filteredPending = (pendingData || []).filter(
       (item) => !item.process_result || item.process_result !== "cc_notified"
     );
-    setPendingItems(filteredPending as unknown as TodoItem[]);
+    const enrichedPending = await enrichWithOutReasons(filteredPending as unknown as TodoItem[]);
+    setPendingItems(enrichedPending);
 
     const { data: completedData } = await supabase
       .from("todo_items")
@@ -138,7 +181,8 @@ const WorkPanel = () => {
       .order("processed_at", { ascending: false })
       .limit(20);
 
-    setCompletedItems((completedData || []) as unknown as TodoItem[]);
+    const enrichedCompleted = await enrichWithOutReasons((completedData || []) as unknown as TodoItem[]);
+    setCompletedItems(enrichedCompleted);
 
     const { data: ccData } = await supabase
       .from("todo_items")
@@ -153,7 +197,8 @@ const WorkPanel = () => {
       .order("created_at", { ascending: false })
       .limit(20);
 
-    setCCItems((ccData || []) as unknown as TodoItem[]);
+    const enrichedCC = await enrichWithOutReasons((ccData || []) as unknown as TodoItem[]);
+    setCCItems(enrichedCC);
 
     setLoading(false);
   };
@@ -189,10 +234,14 @@ const WorkPanel = () => {
     return { system, department };
   };
 
-  // 从标题中提取事由（去掉"xxx申请 - "前缀）
-  const extractReason = (title: string): string => {
-    const match = title.match(/^[^-]+\s*-\s*(.+)$/);
-    return match ? match[1] : title;
+  // 从标题中提取事由（去掉"xxx申请 - "前缀），外出申请优先使用 _outReason
+  const extractReason = (item: TodoItem): string => {
+    // 如果是外出申请且有事由，直接使用事由
+    if (item._outReason) {
+      return item._outReason;
+    }
+    const match = item.title.match(/^[^-]+\s*-\s*(.+)$/);
+    return match ? match[1] : item.title;
   };
 
   // 获取应用来源标签
@@ -226,7 +275,7 @@ const WorkPanel = () => {
 
   const renderPendingItem = (item: TodoItem) => {
     const displayStatus = priorityToStatus(item.priority, item.status);
-    const reason = extractReason(item.title);
+    const reason = extractReason(item);
     const sourceLabel = getSourceLabel(item);
     const isRead = isItemRead(item.id);
     const initiatorDept = item.initiator?.department || "未知部门";
@@ -264,7 +313,7 @@ const WorkPanel = () => {
 
   const renderCompletedItem = (item: TodoItem) => {
     const { label, color } = statusToDisplay(item.status, item.process_result);
-    const reason = extractReason(item.title);
+    const reason = extractReason(item);
     const sourceLabel = getSourceLabel(item);
     const initiatorDept = item.initiator?.department || "未知部门";
 
@@ -303,7 +352,9 @@ const WorkPanel = () => {
 
   const renderCCItem = (item: TodoItem) => {
     const isRead = item.status !== "pending";
-    const reason = extractReason(item.title.replace(/^\[抄送\]\s*/, ""));
+    // 抄送项：先处理标题去掉抄送前缀，再提取事由
+    const ccItem = { ...item, title: item.title.replace(/^\[抄送\]\s*/, "") };
+    const reason = extractReason(ccItem);
     const sourceLabel = getSourceLabel(item);
     const initiatorDept = item.initiator?.department || "未知部门";
 
