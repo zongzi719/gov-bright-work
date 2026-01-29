@@ -115,19 +115,23 @@ const NoticeList = () => {
   };
   const hasImages = images.length > 0;
   return <div className="gov-card h-full flex flex-col overflow-hidden">
-      {/* 标题栏 - 与日程管理保持一致的高度 */}
-      <div className="px-4 border-b border-border flex items-center justify-between flex-shrink-0 py-[12px]">
-        <h2 className="gov-card-title text-base">通知公告</h2>
+      {/* 标题栏 */}
+      <div className="px-3 md:px-4 border-b border-border flex items-center justify-between flex-shrink-0 py-2 md:py-[12px]">
+        <h2 className="gov-card-title text-sm md:text-base">通知公告</h2>
         <button className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors">
           更多
           <ChevronRight className="w-3 h-3" />
         </button>
       </div>
 
-      {/* 主内容区：左侧轮播图 + 右侧列表 */}
-      <div className="flex-1 flex overflow-hidden min-h-0 py-0">
-        {/* 左侧轮播图 */}
-        {hasImages && <div className="w-[240px] max-w-[40%] flex-shrink-0 relative group bg-muted ml-3 my-3 rounded" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+      {/* 主内容区：移动端垂直布局，桌面端左右布局 */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 py-0">
+        {/* 轮播图 - 移动端顶部横向，桌面端左侧 */}
+        {hasImages && <div 
+          className="h-32 md:h-auto md:w-[240px] md:max-w-[40%] flex-shrink-0 relative group bg-muted m-2 md:ml-3 md:my-3 rounded overflow-hidden" 
+          onMouseEnter={() => setIsHovered(true)} 
+          onMouseLeave={() => setIsHovered(false)}
+        >
             {images.map((image, index) => <div key={image.id} className={`absolute inset-0 transition-opacity duration-500 ${index === currentImageIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
                 <img src={image.image_url} alt={image.title} className="w-full h-full object-cover" />
               </div>)}
@@ -148,15 +152,15 @@ const NoticeList = () => {
               </>}
           </div>}
 
-        {/* 右侧通知列表 */}
+        {/* 通知列表 */}
         <ScrollArea className="flex-1">
-          {loading ? <div className="p-4 text-center text-muted-foreground text-sm">加载中...</div> : notices.length === 0 ? <div className="p-4 text-center text-muted-foreground text-sm">暂无通知公告</div> : <div className="p-3">
-              {notices.map((notice, index) => <div key={notice.id} className={`px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors group rounded ${index !== notices.length - 1 ? 'border-b border-border' : ''}`} onClick={() => handleNoticeClick(notice)}>
+          {loading ? <div className="p-4 text-center text-muted-foreground text-sm">加载中...</div> : notices.length === 0 ? <div className="p-4 text-center text-muted-foreground text-sm">暂无通知公告</div> : <div className="p-2 md:p-3">
+              {notices.map((notice, index) => <div key={notice.id} className={`px-2 md:px-3 py-2 md:py-2.5 cursor-pointer hover:bg-muted/50 transition-colors group rounded ${index !== notices.length - 1 ? 'border-b border-border' : ''}`} onClick={() => handleNoticeClick(notice)}>
                   <div className="flex items-start gap-1.5 mb-0.5">
-                    <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${getDisplaySecurityLevel(notice.security_level) === '机密' ? 'bg-red-100 text-red-700' : getDisplaySecurityLevel(notice.security_level) === '秘密' ? 'bg-orange-100 text-orange-700' : getDisplaySecurityLevel(notice.security_level) === '内部' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${getDisplaySecurityLevel(notice.security_level) === '机密' ? 'bg-red-100 text-red-700' : getDisplaySecurityLevel(notice.security_level) === '秘密' ? 'bg-orange-100 text-orange-700' : getDisplaySecurityLevel(notice.security_level) === '内部' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
                       {getDisplaySecurityLevel(notice.security_level)}
                     </span>
-                    {notice.is_pinned && <span className="flex-shrink-0 text-xs px-1 py-0 bg-red-100 text-red-700 rounded mt-0.5">
+                    {notice.is_pinned && <span className="flex-shrink-0 text-[10px] md:text-xs px-1 py-0 bg-red-100 text-red-700 rounded mt-0.5">
                         顶
                       </span>}
                     <span className="text-sm text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-1">
@@ -164,8 +168,8 @@ const NoticeList = () => {
                     </span>
                   </div>
                   {/* 信息行：发布单位 + 日期 */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground pl-0">
-                    <span className="flex-shrink-0">{notice.department}</span>
+                  <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground pl-0">
+                    <span className="flex-shrink-0 truncate">{notice.department}</span>
                     <span className="flex-shrink-0 ml-auto">{formatDate(notice.created_at)}</span>
                   </div>
                 </div>)}

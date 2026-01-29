@@ -94,26 +94,26 @@ const Header = () => {
   return (
     <>
       <header className="bg-header-gradient shadow-header sticky top-0 z-50" style={headerStyle}>
-        <div className="max-w-[1920px] mx-auto px-4 h-12 flex items-center justify-between">
+        <div className="max-w-[1920px] mx-auto px-3 md:px-4 h-12 flex items-center justify-between">
           {/* 左侧：平台名称 */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8">
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <div className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0">
               <img src={partyEmblem} alt="党徽" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-xl font-bold text-white tracking-wide">xx州党政办公平台</h1>
+            <h1 className="text-base md:text-xl font-bold text-white tracking-wide truncate">xx州党政办公平台</h1>
           </div>
 
           {/* 右侧：日期、用户信息、退出 */}
-          <div className="flex items-center gap-4">
-            {/* 日期显示 */}
-            <span className="text-white/90 text-base hidden md:block">{dateString}</span>
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* 日期显示 - 仅桌面端 */}
+            <span className="text-white/90 text-sm hidden lg:block">{dateString}</span>
 
             {/* 返回工作台 - 仅在非首页显示 */}
             {location.pathname !== "/" && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-white/10 w-8 h-8"
+                className="text-white hover:bg-white/10 w-7 h-7 md:w-8 md:h-8"
                 onClick={() => navigate("/")}
                 title="返回工作台"
               >
@@ -122,7 +122,7 @@ const Header = () => {
             )}
 
             {/* 消息通知 */}
-            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 w-8 h-8">
+            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 w-7 h-7 md:w-8 md:h-8">
               <Bell className="w-4 h-4" />
               {todoCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-1 bg-accent text-[10px] text-white rounded-full flex items-center justify-center font-medium">
@@ -134,13 +134,13 @@ const Header = () => {
             {/* 用户信息 - 下拉菜单 */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
+                <button className="flex items-center gap-1.5 md:gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                   <Avatar className="w-7 h-7 border-2 border-white/30">
                     <AvatarFallback className="bg-white text-primary font-bold text-xs">{avatarChar}</AvatarFallback>
                   </Avatar>
-                  <div className="hidden sm:block text-left">
-                    <p className="text-white font-medium text-base leading-tight">{user?.name || "用户"}</p>
-                    <p className="text-white/70 text-sm">
+                  <div className="hidden md:block text-left">
+                    <p className="text-white font-medium text-sm leading-tight">{user?.name || "用户"}</p>
+                    <p className="text-white/70 text-xs">
                       {user?.department || user?.organization || "未设置部门"}
                       {user?.position && ` · ${user.position}`}
                     </p>
