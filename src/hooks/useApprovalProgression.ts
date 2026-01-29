@@ -21,6 +21,7 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
   out: "absence",
   supply_requisition: "supply_requisition",
   purchase_request: "purchase_request",
+  supply_purchase: "supply_purchase",
 };
 
 // 业务类型到联系人状态的映射
@@ -28,6 +29,146 @@ const businessTypeToContactStatus: Record<string, string> = {
   business_trip: "business_trip",
   leave: "leave",
   out: "out",
+};
+
+/**
+ * 处理审批完成后的库存变动
+ */
+const handleStockUpdate = async (
+  businessType: string,
+  businessId: string,
+  operatorName?: string
+) => {
+  try {
+    // 采购申请完成后入库
+    if (businessType === "purchase_request") {
+      const { data: items } = await supabase
+        .from("purchase_request_items")
+        .select("supply_id, quantity, item_name")
+        .eq("request_id", businessId);
+
+      if (items) {
+        for (const item of items) {
+          if (!item.supply_id) continue;
+          
+          const { data: supply } = await supabase
+            .from("office_supplies")
+            .select("id, current_stock, name")
+            .eq("id", item.supply_id)
+            .single();
+
+          if (supply) {
+            const beforeStock = supply.current_stock;
+            const afterStock = beforeStock + item.quantity;
+            
+            await supabase
+              .from("office_supplies")
+              .update({ current_stock: afterStock })
+              .eq("id", item.supply_id);
+
+            await supabase.from("stock_movements").insert({
+              supply_id: item.supply_id,
+              movement_type: "purchase_in",
+              quantity: item.quantity,
+              before_stock: beforeStock,
+              after_stock: afterStock,
+              reference_type: "purchase_request",
+              reference_id: businessId,
+              operator_name: operatorName || null,
+              notes: `采购入库: ${item.item_name || supply.name}`,
+            });
+          }
+        }
+        console.log("Purchase request stock updated");
+      }
+    }
+
+    // 办公采购完成后入库
+    if (businessType === "supply_purchase") {
+      const { data: items } = await supabase
+        .from("supply_purchase_items")
+        .select("supply_id, quantity, item_name")
+        .eq("purchase_id", businessId);
+
+      if (items) {
+        for (const item of items) {
+          if (!item.supply_id) continue;
+          
+          const { data: supply } = await supabase
+            .from("office_supplies")
+            .select("id, current_stock, name")
+            .eq("id", item.supply_id)
+            .single();
+
+          if (supply) {
+            const beforeStock = supply.current_stock;
+            const afterStock = beforeStock + item.quantity;
+            
+            await supabase
+              .from("office_supplies")
+              .update({ current_stock: afterStock })
+              .eq("id", item.supply_id);
+
+            await supabase.from("stock_movements").insert({
+              supply_id: item.supply_id,
+              movement_type: "purchase_in",
+              quantity: item.quantity,
+              before_stock: beforeStock,
+              after_stock: afterStock,
+              reference_type: "supply_purchase",
+              reference_id: businessId,
+              operator_name: operatorName || null,
+              notes: `办公采购入库: ${item.item_name || supply.name}`,
+            });
+          }
+        }
+        console.log("Supply purchase stock updated");
+      }
+    }
+
+    // 领用申请完成后出库
+    if (businessType === "supply_requisition") {
+      const { data: items } = await supabase
+        .from("supply_requisition_items")
+        .select(`supply_id, quantity, office_supplies (name)`)
+        .eq("requisition_id", businessId);
+
+      if (items) {
+        for (const item of items) {
+          const { data: supply } = await supabase
+            .from("office_supplies")
+            .select("id, current_stock, name")
+            .eq("id", item.supply_id)
+            .single();
+
+          if (supply) {
+            const beforeStock = supply.current_stock;
+            const afterStock = Math.max(0, beforeStock - item.quantity);
+            
+            await supabase
+              .from("office_supplies")
+              .update({ current_stock: afterStock })
+              .eq("id", item.supply_id);
+
+            await supabase.from("stock_movements").insert({
+              supply_id: item.supply_id,
+              movement_type: "requisition_out",
+              quantity: item.quantity,
+              before_stock: beforeStock,
+              after_stock: afterStock,
+              reference_type: "supply_requisition",
+              reference_id: businessId,
+              operator_name: operatorName || null,
+              notes: `领用出库: ${(item.office_supplies as any)?.name || supply.name}`,
+            });
+          }
+        }
+        console.log("Requisition stock updated");
+      }
+    }
+  } catch (error) {
+    console.error("Failed to update stock:", error);
+  }
 };
 
 /**
@@ -387,6 +528,9 @@ export const useApprovalProgression = () => {
         
         // 联动更新业务表状态和联系人状态
         await updateBusinessAndContactStatus(businessType, businessId, "approved");
+        
+        // 处理库存变动（采购入库或领用出库）
+        await handleStockUpdate(businessType, businessId, initiatorName);
         
         return { success: true, completed: true };
       }
