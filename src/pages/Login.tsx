@@ -107,11 +107,11 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="mobile">手机号</Label>
+              <Label htmlFor="mobile">账号</Label>
               <Input
                 id="mobile"
                 type="tel"
-                placeholder="请输入手机号"
+                placeholder="请输入账号"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
                 disabled={loading}

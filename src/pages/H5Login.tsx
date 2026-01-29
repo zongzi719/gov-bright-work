@@ -105,11 +105,11 @@ const H5Login = () => {
           >
             <Form.Item
               name="mobile"
-              label="手机号"
-              rules={[{ required: true, message: "请输入手机号" }]}
+              label="账号"
+              rules={[{ required: true, message: "请输入账号" }]}
             >
               <Input
-                placeholder="请输入手机号"
+                placeholder="请输入账号"
                 clearable
                 style={{
                   "--font-size": "16px",

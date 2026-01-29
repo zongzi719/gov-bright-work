@@ -57,6 +57,7 @@ const businessTypeLabels: Record<string, string> = {
   absence: "请假申请",
   supply_requisition: "领用申请",
   purchase_request: "采购申请",
+  supply_purchase: "办公用品采购",
   external_approval: "外部审批",
 };
 

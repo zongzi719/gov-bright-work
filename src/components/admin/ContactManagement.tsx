@@ -98,7 +98,7 @@ const statusColors: Record<ContactStatus, 'default' | 'secondary' | 'destructive
   meeting: 'secondary',
 };
 
-type SecurityLevel = '机密' | '秘密' | '一般';
+type SecurityLevel = '机密' | '秘密' | '内部' | '公开';
 
 interface Contact {
   id: string;
@@ -159,7 +159,7 @@ const ContactManagement = () => {
     is_active: true,
     status: "on_duty" as ContactStatus,
     status_note: "",
-    security_level: "一般" as SecurityLevel,
+    security_level: "公开" as SecurityLevel,
     is_leader: false,
     first_work_date: "",
   });
@@ -350,7 +350,7 @@ const ContactManagement = () => {
       is_active: contact.is_active,
       status: contact.status || "on_duty",
       status_note: contact.status_note || "",
-      security_level: contact.security_level || "一般",
+      security_level: contact.security_level || "公开",
       is_leader: contact.is_leader || false,
       first_work_date: contact.first_work_date || "",
     });
@@ -385,7 +385,7 @@ const ContactManagement = () => {
       is_active: true,
       status: "on_duty",
       status_note: "",
-      security_level: "一般",
+      security_level: "公开",
       is_leader: false,
       first_work_date: "",
     });
@@ -779,7 +779,8 @@ const ContactManagement = () => {
                             <SelectContent>
                               <SelectItem value="机密">机密</SelectItem>
                               <SelectItem value="秘密">秘密</SelectItem>
-                              <SelectItem value="一般">一般</SelectItem>
+                              <SelectItem value="内部">内部</SelectItem>
+                              <SelectItem value="公开">公开</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
