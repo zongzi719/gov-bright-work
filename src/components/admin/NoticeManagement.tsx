@@ -425,6 +425,7 @@ const NoticeTable = ({
             <TableHead className="w-28">发布单位</TableHead>
             <TableHead className="w-24">发布日期</TableHead>
             <TableHead className="w-16">密级</TableHead>
+            <TableHead className="w-20">发布范围</TableHead>
             <TableHead className="w-14">置顶</TableHead>
             <TableHead className="w-16">状态</TableHead>
             <TableHead className="w-20">操作</TableHead>
@@ -444,6 +445,13 @@ const NoticeTable = ({
                   'bg-gray-100 text-gray-500'
                 }`}>
                   {notice.security_level || '公开'}
+                </span>
+              </TableCell>
+              <TableCell className="whitespace-nowrap">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                  notice.publish_scope === 'organization' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {notice.publish_scope === 'organization' ? `${notice.publish_scope_ids?.length || 0}个单位` : '全部'}
                 </span>
               </TableCell>
               <TableCell className="whitespace-nowrap">

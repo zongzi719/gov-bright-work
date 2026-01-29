@@ -217,9 +217,14 @@ const NoticeList = () => {
               </span>
             </div>
             <div className="border-t border-border pt-4">
-              <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                {selectedNotice?.content || "暂无详细内容"}
-              </div>
+              {selectedNotice?.content ? (
+                <div 
+                  className="text-sm text-foreground leading-relaxed prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: selectedNotice.content }}
+                />
+              ) : (
+                <div className="text-sm text-muted-foreground">暂无详细内容</div>
+              )}
             </div>
           </div>
         </DialogContent>

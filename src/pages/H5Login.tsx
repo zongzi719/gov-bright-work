@@ -45,6 +45,7 @@ const H5Login = () => {
           position: contact.contact_position,
           department: contact.contact_department,
           organization: contact.organization_name,
+          organization_id: contact.contact_organization_id,
           security_level: contact.contact_security_level,
           is_leader: true,
         };
