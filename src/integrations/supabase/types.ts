@@ -617,6 +617,98 @@ export type Database = {
           },
         ]
       }
+      file_transfers: {
+        Row: {
+          attachments: Json | null
+          confidential_period: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          copies: number | null
+          copy_unit: string | null
+          created_at: string
+          description: string | null
+          doc_number: string
+          document_date: string | null
+          file_type: string | null
+          id: string
+          main_unit: string | null
+          notify_type: string | null
+          security_level: string
+          send_type: string | null
+          send_unit: string
+          send_unit_id: string | null
+          sign_date: string | null
+          sign_leader: string | null
+          source_unit: string | null
+          status: string
+          title: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          attachments?: Json | null
+          confidential_period?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          copies?: number | null
+          copy_unit?: string | null
+          created_at?: string
+          description?: string | null
+          doc_number: string
+          document_date?: string | null
+          file_type?: string | null
+          id?: string
+          main_unit?: string | null
+          notify_type?: string | null
+          security_level?: string
+          send_type?: string | null
+          send_unit: string
+          send_unit_id?: string | null
+          sign_date?: string | null
+          sign_leader?: string | null
+          source_unit?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          attachments?: Json | null
+          confidential_period?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          copies?: number | null
+          copy_unit?: string | null
+          created_at?: string
+          description?: string | null
+          doc_number?: string
+          document_date?: string | null
+          file_type?: string | null
+          id?: string
+          main_unit?: string | null
+          notify_type?: string | null
+          security_level?: string
+          send_type?: string | null
+          send_unit?: string
+          send_unit_id?: string | null
+          sign_date?: string | null
+          sign_leader?: string | null
+          source_unit?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_transfers_send_unit_id_fkey"
+            columns: ["send_unit_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leader_schedule_permissions: {
         Row: {
           can_view_all: boolean

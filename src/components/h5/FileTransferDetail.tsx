@@ -1,5 +1,5 @@
 import { Toast } from "antd-mobile";
-import { LeftOutline } from "antd-mobile-icons";
+import { LeftOutline, LinkOutline } from "antd-mobile-icons";
 
 interface FileTransferData {
   id: string;
@@ -15,6 +15,7 @@ interface FileTransferData {
   signLeader: string;
   signDate: string;
   status: string;
+  attachments?: { name: string; url: string }[];
 }
 
 interface FileTransferDetailProps {
@@ -31,14 +32,23 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
     onBack();
   };
 
+  const handleBackClick = () => {
+    onBack();
+  };
+
+  // 打开附件
+  const openAttachment = (url: string) => {
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* 顶部导航 - 简洁白色背景 */}
       <div className="bg-white border-b border-slate-200 shrink-0">
         <div className="flex items-center h-11 px-3">
           <button 
-            onClick={onBack}
-            className="flex items-center justify-center w-8 h-8 -ml-1"
+            onClick={handleBackClick}
+            className="flex items-center justify-center w-8 h-8 -ml-1 rounded-full hover:bg-slate-100 active:bg-slate-200"
           >
             <LeftOutline className="text-slate-600 text-lg" />
           </button>
@@ -95,15 +105,15 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
             </div>
             <div>
               <div className="text-[10px] text-slate-400">成文日期</div>
-              <div className="text-xs text-slate-700">{file.documentDate}</div>
+              <div className="text-xs text-slate-700">{file.documentDate || "-"}</div>
             </div>
             <div>
               <div className="text-[10px] text-slate-400">签发日期</div>
-              <div className="text-xs text-slate-700">{file.signDate}</div>
+              <div className="text-xs text-slate-700">{file.signDate || "-"}</div>
             </div>
             <div>
               <div className="text-[10px] text-slate-400">签发领导</div>
-              <div className="text-xs text-slate-700">{file.signLeader}</div>
+              <div className="text-xs text-slate-700">{file.signLeader || "-"}</div>
             </div>
             <div>
               <div className="text-[10px] text-slate-400">密级</div>
@@ -118,14 +128,39 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
               <div className="text-[10px] text-slate-400">联系人</div>
-              <div className="text-xs text-slate-700">{file.contactPerson}</div>
+              <div className="text-xs text-slate-700">{file.contactPerson || "-"}</div>
             </div>
             <div>
               <div className="text-[10px] text-slate-400">联系电话</div>
-              <a href={`tel:${file.contactPhone}`} className="text-xs text-blue-600">{file.contactPhone}</a>
+              {file.contactPhone ? (
+                <a href={`tel:${file.contactPhone}`} className="text-xs text-blue-600">{file.contactPhone}</a>
+              ) : (
+                <span className="text-xs text-slate-700">-</span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* 附件列表卡片 */}
+        {file.attachments && file.attachments.length > 0 && (
+          <div className="bg-white rounded-lg p-3 border border-slate-200">
+            <div className="text-xs font-medium text-slate-700 mb-2 pb-1.5 border-b border-slate-100">
+              附件 ({file.attachments.length})
+            </div>
+            <div className="space-y-2">
+              {file.attachments.map((attachment, index) => (
+                <div 
+                  key={index}
+                  onClick={() => openAttachment(attachment.url)}
+                  className="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer hover:bg-slate-100 active:bg-slate-200"
+                >
+                  <LinkOutline className="text-blue-600 flex-shrink-0" fontSize={16} />
+                  <span className="text-xs text-slate-700 truncate flex-1">{attachment.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 底部操作栏 */}
