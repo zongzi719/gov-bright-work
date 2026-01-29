@@ -20,7 +20,7 @@ const H5Login = () => {
 
       if (data && data.length > 0) {
         const contact = data[0];
-        
+
         // 检查是否是领导
         const { data: contactData } = await supabase
           .from("contacts")
@@ -59,7 +59,7 @@ const H5Login = () => {
       } else {
         Toast.show({
           icon: "fail",
-          content: "手机号或密码错误",
+          content: "账号或密码错误",
         });
       }
     } catch (error) {
@@ -103,11 +103,7 @@ const H5Login = () => {
               </Button>
             }
           >
-            <Form.Item
-              name="mobile"
-              label="账号"
-              rules={[{ required: true, message: "请输入账号" }]}
-            >
+            <Form.Item name="mobile" label="账号" rules={[{ required: true, message: "请输入账号" }]}>
               <Input
                 placeholder="请输入账号"
                 clearable
@@ -118,11 +114,7 @@ const H5Login = () => {
               />
             </Form.Item>
 
-            <Form.Item
-              name="password"
-              label="密码"
-              rules={[{ required: true, message: "请输入密码" }]}
-            >
+            <Form.Item name="password" label="密码" rules={[{ required: true, message: "请输入密码" }]}>
               <Input
                 type="password"
                 placeholder="请输入密码"
@@ -138,12 +130,8 @@ const H5Login = () => {
 
         {/* Tips */}
         <div className="mt-6 text-center">
-          <p className="text-xs text-muted-foreground">
-            仅限领导人员登录使用
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            如需帮助，请联系办公室
-          </p>
+          <p className="text-xs text-muted-foreground">仅限领导人员登录使用</p>
+          <p className="text-xs text-muted-foreground mt-1">如需帮助，请联系办公室</p>
         </div>
       </div>
 
