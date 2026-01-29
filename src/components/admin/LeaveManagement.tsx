@@ -15,6 +15,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,7 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Trash2 } from "lucide-react";
 
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
@@ -129,6 +139,8 @@ const LeaveManagement = () => {
   const [approvalInstanceStatus, setApprovalInstanceStatus] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<AbsenceStatus | "all">("all");
+  const [deleteRecordId, setDeleteRecordId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchRecords();
@@ -238,6 +250,59 @@ const LeaveManagement = () => {
     }
   };
 
+  // 删除已驳回的记录
+  const handleDeleteRecord = async () => {
+    if (!deleteRecordId) return;
+    
+    setIsDeleting(true);
+    try {
+      // 1. 先获取审批实例ID
+      const { data: instanceData } = await supabase
+        .from("approval_instances")
+        .select("id")
+        .eq("business_id", deleteRecordId)
+        .eq("business_type", "leave")
+        .maybeSingle();
+      
+      if (instanceData) {
+        // 2. 删除待办事项
+        await supabase
+          .from("todo_items")
+          .delete()
+          .eq("approval_instance_id", instanceData.id);
+        
+        // 3. 删除审批记录
+        await supabase
+          .from("approval_records")
+          .delete()
+          .eq("instance_id", instanceData.id);
+        
+        // 4. 删除审批实例
+        await supabase
+          .from("approval_instances")
+          .delete()
+          .eq("id", instanceData.id);
+      }
+      
+      // 5. 删除业务记录
+      const { error } = await supabase
+        .from("absence_records")
+        .delete()
+        .eq("id", deleteRecordId);
+      
+      if (error) throw error;
+      
+      toast.success("删除成功");
+      setDeleteRecordId(null);
+      fetchRecords();
+    } catch (error) {
+      console.error("删除失败:", error);
+      toast.error("删除失败");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredRecords = records.filter((record) => {
     const matchesSearch =
       !searchTerm ||
@@ -336,15 +401,27 @@ const LeaveManagement = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-primary"
-                        onClick={() => openDetailDialog(record)}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        查看详情
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-primary"
+                          onClick={() => openDetailDialog(record)}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          查看
+                        </Button>
+                        {record.approval_status === "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteRecordId(record.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -492,6 +569,28 @@ const LeaveManagement = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={!!deleteRecordId} onOpenChange={(open) => !open && setDeleteRecordId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这条已驳回的请假申请记录吗？此操作将同时删除相关的审批流程数据，且不可恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteRecord}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "删除中..." : "确认删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
