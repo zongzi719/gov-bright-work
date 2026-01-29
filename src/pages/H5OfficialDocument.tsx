@@ -5,6 +5,7 @@ import { FileOutline, SendOutline, ReceivePaymentOutline } from "antd-mobile-ico
 import DocumentDetail from "@/components/h5/DocumentDetail";
 import ProcessDocumentDetail from "@/components/h5/ProcessDocumentDetail";
 import FileTransferList from "@/components/h5/FileTransferList";
+import { supabase } from "@/integrations/supabase/client";
 
 // 更真实的模拟数据
 const mockDocuments = [
@@ -117,6 +118,7 @@ const H5OfficialDocument = () => {
   const [activeCategory, setActiveCategory] = useState("send");
   const [searchText, setSearchText] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null);
+  const [fileTransferPendingCount, setFileTransferPendingCount] = useState(0);
 
   // 检查登录状态
   useEffect(() => {
@@ -138,6 +140,21 @@ const H5OfficialDocument = () => {
     }
     setLoading(false);
   }, [navigate]);
+
+  // 获取文件收发待办数量
+  useEffect(() => {
+    const fetchFileTransferCount = async () => {
+      const { count, error } = await supabase
+        .from("file_transfers")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "待签收");
+      
+      if (!error && count !== null) {
+        setFileTransferPendingCount(count);
+      }
+    };
+    fetchFileTransferCount();
+  }, [activeCategory]);
 
   const filteredDocuments = mockDocuments.filter((doc) => {
     const matchCategory = doc.category === activeCategory;
@@ -197,7 +214,7 @@ const H5OfficialDocument = () => {
   const categories = [
     { key: "send", title: "发文审签", icon: <SendOutline fontSize={18} />, count: getCategoryCount("send") },
     { key: "process", title: "公文办理", icon: <FileOutline fontSize={18} />, count: getCategoryCount("process") },
-    { key: "transfer", title: "文件收发", icon: <ReceivePaymentOutline fontSize={18} />, count: 2 },
+    { key: "transfer", title: "文件收发", icon: <ReceivePaymentOutline fontSize={18} />, count: fileTransferPendingCount },
   ];
 
   // 获取状态标签颜色
