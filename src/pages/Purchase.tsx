@@ -73,7 +73,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 const procurementMethods = [
   { value: "政采云平台采购", label: "政采云平台采购" },
   { value: "集中采购", label: "集中采购" },
-  { value: "分散采购（政采云渠道）", label: "分散采购（政采云渠道）" },
+  { value: "分散采购(政采云渠道)", label: "分散采购(政采云渠道)" },
 ];
 
 const fundingSources = [
@@ -100,6 +100,7 @@ const Purchase = () => {
   const [fundingSource, setFundingSource] = useState("");
   const [fundingDetail, setFundingDetail] = useState("");
   const [budgetAmount, setBudgetAmount] = useState<number>(0);
+  const [budgetManuallyEdited, setBudgetManuallyEdited] = useState(false);
   const [expectedCompletionDate, setExpectedCompletionDate] = useState<Date | undefined>(undefined);
   const [purpose, setPurpose] = useState("");
   const [formItems, setFormItems] = useState<FormItem[]>([createEmptyItem()]);
@@ -190,6 +191,7 @@ const Purchase = () => {
     setFundingSource("");
     setFundingDetail("");
     setBudgetAmount(0);
+    setBudgetManuallyEdited(false);
     setExpectedCompletionDate(undefined);
     setPurpose("");
     setFormItems([createEmptyItem()]);
@@ -221,10 +223,12 @@ const Purchase = () => {
 
   const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
 
-  // 自动同步预算金额为物品明细合计
+  // 自动同步预算金额为物品明细合计（仅当用户未手动修改时）
   useEffect(() => {
-    setBudgetAmount(Number(totalAmount.toFixed(2)));
-  }, [totalAmount]);
+    if (!budgetManuallyEdited) {
+      setBudgetAmount(Number(totalAmount.toFixed(2)));
+    }
+  }, [totalAmount, budgetManuallyEdited]);
 
   const handleSubmit = async () => {
     const validItems = formItems.filter(item => item.item_name.trim() && item.quantity > 0);
@@ -456,7 +460,10 @@ const Purchase = () => {
                   min={0}
                   step={0.01}
                   value={budgetAmount === 0 ? "" : budgetAmount}
-                  onChange={(e) => setBudgetAmount(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    setBudgetManuallyEdited(true);
+                    setBudgetAmount(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0);
+                  }}
                   placeholder="请输入预算金额"
                 />
               </div>
