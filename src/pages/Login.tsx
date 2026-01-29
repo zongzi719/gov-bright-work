@@ -101,7 +101,7 @@ const Login = () => {
             <span className="text-primary text-2xl font-bold">政</span>
           </div>
           <CardTitle className="text-2xl">xx州党政办公平台</CardTitle>
-          <CardDescription>请使用您的手机号登录</CardDescription>
+          {/* <CardDescription>请使用您的手机号登录</CardDescription> */}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
