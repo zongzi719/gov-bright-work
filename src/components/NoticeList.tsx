@@ -13,6 +13,8 @@ interface NoticeItem {
   created_at: string;
   is_pinned: boolean;
   security_level: string;
+  publish_scope?: string;
+  publish_scope_ids?: string[];
 }
 interface NoticeImage {
   id: string;
@@ -71,10 +73,13 @@ const NoticeList = () => {
   const fetchNotices = async () => {
     const storedUser = localStorage.getItem("frontendUser");
     let userSecurityLevel = "一般";
+    let userOrgId: string | null = null;
+    
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
         userSecurityLevel = user.security_level || "一般";
+        userOrgId = user.organization_id || null;
       } catch {
         // ignore
       }
@@ -83,15 +88,32 @@ const NoticeList = () => {
     const {
       data,
       error
-    } = await supabase.from("notices").select("id, title, department, content, created_at, is_pinned, security_level").eq("is_published", true).order("is_pinned", {
+    } = await supabase.from("notices").select("id, title, department, content, created_at, is_pinned, security_level, publish_scope, publish_scope_ids").eq("is_published", true).order("is_pinned", {
       ascending: false
     }).order("created_at", {
       ascending: false
     }).limit(20);
     if (!error && data) {
       const filteredNotices = data.filter(notice => {
+        // 密级过滤
         const noticeRank = securityLevelRank[notice.security_level] || 1;
-        return noticeRank <= userRank;
+        if (noticeRank > userRank) return false;
+        
+        // 发布范围过滤
+        const publishScope = notice.publish_scope || 'all';
+        const publishScopeIds = notice.publish_scope_ids || [];
+        
+        if (publishScope === 'all') {
+          return true;
+        }
+        
+        // 如果是指定单位，检查用户是否在范围内
+        if (publishScope === 'organization' && userOrgId) {
+          return publishScopeIds.includes(userOrgId);
+        }
+        
+        // 如果没有用户单位信息，只显示全部范围的通知
+        return false;
       });
       setNotices(filteredNotices.slice(0, 10));
     }
