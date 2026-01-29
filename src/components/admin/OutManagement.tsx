@@ -407,7 +407,7 @@ const OutManagement = () => {
                           <Eye className="w-4 h-4 mr-1" />
                           查看
                         </Button>
-                        {record.approval_status === "rejected" && (
+                        {(record.approval_status === "rejected" || record.approval_status === "pending") && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -572,7 +572,7 @@ const OutManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除这条已驳回的外出申请记录吗？此操作将同时删除相关的审批流程数据，且不可恢复。
+              确定要删除这条外出申请记录吗？此操作将同时删除相关的审批流程数据，且不可恢复。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
