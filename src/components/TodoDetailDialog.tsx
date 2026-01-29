@@ -32,6 +32,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useApprovalProgression } from "@/hooks/useApprovalProgression";
+import BusinessDataRenderer from "@/components/todo/BusinessDataRenderer";
 
 interface TodoItem {
   id: string;
@@ -1451,12 +1452,23 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           </div>
         ) : (
           <div className="overflow-y-auto px-6 py-4 space-y-6">
-            {/* 表单区域 */}
+            {/* 表单区域 - 使用专用业务数据渲染组件 */}
             <div>
               <h3 className="text-sm font-medium mb-4">申请信息</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {formFields.map(renderFormField)}
-              </div>
+              {/* 优先使用 BusinessDataRenderer 渲染业务数据 */}
+              {todoItem.business_type && (
+                <BusinessDataRenderer 
+                  businessType={todoItem.business_type}
+                  businessData={businessData}
+                  formData={instance?.form_data}
+                />
+              )}
+              {/* 如果有表单字段配置，作为补充渲染（用于审批设计器配置的额外字段） */}
+              {formFields.length > 0 && Object.keys(businessData).length === 0 && (
+                <div className="grid grid-cols-2 gap-4">
+                  {formFields.map(renderFormField)}
+                </div>
+              )}
             </div>
 
             <Separator />
