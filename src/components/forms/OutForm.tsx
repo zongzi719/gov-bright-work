@@ -174,13 +174,13 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
             </Select>
           </div>
 
-          {/* 外出地点 */}
+          {/* 往返地点 */}
           <div className="space-y-2">
-            <Label>外出地点 *</Label>
+            <Label>往返地点 *</Label>
             <Input
               value={form.out_location}
               onChange={(e) => setForm({ ...form, out_location: e.target.value })}
-              placeholder="请输入外出地点"
+              placeholder="请输入往返地点"
             />
           </div>
 

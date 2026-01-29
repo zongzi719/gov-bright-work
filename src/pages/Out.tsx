@@ -119,7 +119,7 @@ const Out = () => {
     { label: "外出时长", value: selectedRecord.duration_hours ? `${selectedRecord.duration_hours} 小时` : null },
     { label: "开始时间", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
     { label: "预计返回", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
-    { label: "外出地点", value: selectedRecord.out_location },
+    { label: "往返地点", value: selectedRecord.out_location },
     { label: "联系电话", value: selectedRecord.contact_phone },
     { label: "外出事由", value: selectedRecord.reason, fullWidth: true },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
