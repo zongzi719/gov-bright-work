@@ -375,6 +375,7 @@ const PurchaseContent = () => {
   const [fundingSource, setFundingSource] = useState("");
   const [fundingDetail, setFundingDetail] = useState("");
   const [budgetAmount, setBudgetAmount] = useState<number>(0);
+  const [budgetManuallyEdited, setBudgetManuallyEdited] = useState(false);
   const [expectedCompletionDate, setExpectedCompletionDate] = useState<Date | undefined>(undefined);
   const [purpose, setPurpose] = useState("");
   const [formItems, setFormItems] = useState<FormItemPurchase[]>([createEmptyItem()]);
@@ -408,7 +409,7 @@ const PurchaseContent = () => {
     }
   };
 
-  const handleOpenForm = () => { setDepartment(currentUser?.department || ""); setPurchaseDate(new Date()); setProcurementMethod(""); setFundingSource(""); setFundingDetail(""); setBudgetAmount(0); setExpectedCompletionDate(undefined); setPurpose(""); setFormItems([createEmptyItem()]); setFormOpen(true); };
+  const handleOpenForm = () => { setDepartment(currentUser?.department || ""); setPurchaseDate(new Date()); setProcurementMethod(""); setFundingSource(""); setFundingDetail(""); setBudgetAmount(0); setBudgetManuallyEdited(false); setExpectedCompletionDate(undefined); setPurpose(""); setFormItems([createEmptyItem()]); setFormOpen(true); };
 
   const handleAddItem = () => { setFormItems([...formItems, createEmptyItem()]); };
   const handleRemoveItem = (index: number) => { if (formItems.length > 1) setFormItems(formItems.filter((_, i) => i !== index)); };
@@ -425,6 +426,13 @@ const PurchaseContent = () => {
   };
 
   const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
+
+  // 自动同步预算金额为物品明细合计（仅当用户未手动修改时）
+  useEffect(() => {
+    if (!budgetManuallyEdited) {
+      setBudgetAmount(Number(totalAmount.toFixed(2)));
+    }
+  }, [totalAmount, budgetManuallyEdited]);
 
   const handleSubmit = async () => {
     const validItems = formItems.filter(item => item.item_name.trim() && item.quantity > 0);
@@ -461,9 +469,19 @@ const PurchaseContent = () => {
               <div className="space-y-2"><Label>申请日期 *</Label><Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => date && setPurchaseDate(date)} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
               <div className="space-y-2"><Label>预计采购完成时间</Label><Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expectedCompletionDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd", { locale: zhCN }) : "选择日期"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={expectedCompletionDate} onSelect={setExpectedCompletionDate} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
             </div>
-            <div className="space-y-2"><Label>采购方式 *</Label><Select value={procurementMethod} onValueChange={setProcurementMethod}><SelectTrigger><SelectValue placeholder="请选择采购方式" /></SelectTrigger><SelectContent>{procurementMethods.map((method) => (<SelectItem key={method.value} value={method.value}>{method.label}</SelectItem>))}</SelectContent></Select></div>
+            <div className="space-y-2">
+              <Label>采购方式 *</Label>
+              <RadioGroup value={procurementMethod} onValueChange={setProcurementMethod} className="flex flex-wrap gap-4">
+                {procurementMethods.map((method) => (
+                  <div key={method.value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={method.value} id={`method-${method.value}`} />
+                    <Label htmlFor={`method-${method.value}`} className="font-normal cursor-pointer">{method.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
             <div className="space-y-2"><Label>资金来源 *</Label><RadioGroup value={fundingSource} onValueChange={(v) => { setFundingSource(v); setFundingDetail(""); }} className="flex flex-wrap gap-4">{fundingSources.map((source) => (<div key={source.value} className="flex items-center space-x-2"><RadioGroupItem value={source.value} id={source.value} /><Label htmlFor={source.value} className="font-normal cursor-pointer">{source.label}</Label></div>))}</RadioGroup>{fundingSource && (<Input value={fundingDetail} onChange={(e) => setFundingDetail(e.target.value)} placeholder={fundingSources.find(s => s.value === fundingSource)?.placeholder || ""} className="mt-2" />)}</div>
-            <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>预算金额（元）</Label><Input type="number" min={0} step={0.01} value={budgetAmount === 0 ? "" : budgetAmount} onChange={(e) => setBudgetAmount(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)} placeholder="请输入预算金额" /></div></div>
+            <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>预算金额（元）</Label><Input type="number" min={0} step={0.01} value={budgetAmount === 0 ? "" : budgetAmount} onChange={(e) => { setBudgetManuallyEdited(true); setBudgetAmount(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0); }} placeholder="请输入预算金额" /></div></div>
             <div className="space-y-2"><Label>采购用途</Label><Textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="请填写采购用途说明" rows={2} /></div>
             <div className="space-y-2">
               <div className="flex items-center justify-between"><Label>采购物品明细 *</Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
