@@ -41,10 +41,11 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // 双指缩放状态
-  const [isPinching, setIsPinching] = useState(false);
+  // 双指缩放状态 - 优化版
   const lastPinchDistance = useRef<number>(0);
+  const lastPinchCenter = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const pinchStartScale = useRef<number>(1);
+  const isGesturing = useRef<boolean>(false);
 
   const defaultPdfUrl = "/documents/default-document.pdf";
   const defaultPdfName = "关于印发《2025年度党风廉政建设工作要点》的通知.pdf";
@@ -71,34 +72,71 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
     }
   }, [storageKey]);
 
-  // 双指缩放处理
+  // 计算两指间距离
+  const getPinchDistance = (touches: React.TouchList) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // 计算两指中心点
+  const getPinchCenter = (touches: React.TouchList) => {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  };
+
+  // 双指缩放处理 - 优化流畅度和中心点缩放
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2 && !activeTool) {
-      setIsPinching(true);
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      lastPinchDistance.current = Math.sqrt(dx * dx + dy * dy);
+      isGesturing.current = true;
+      lastPinchDistance.current = getPinchDistance(e.touches);
+      lastPinchCenter.current = getPinchCenter(e.touches);
       pinchStartScale.current = scale;
     }
   }, [activeTool, scale]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2 && isPinching && !activeTool) {
+    if (e.touches.length === 2 && isGesturing.current && !activeTool) {
       e.preventDefault();
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      const currentDistance = getPinchDistance(e.touches);
+      const currentCenter = getPinchCenter(e.touches);
       
       if (lastPinchDistance.current > 0) {
-        const pinchScale = distance / lastPinchDistance.current;
-        const newScale = Math.min(Math.max(pinchStartScale.current * pinchScale, 0.5), 3.0);
+        // 计算缩放比例 - 使用增量方式更流畅
+        const pinchRatio = currentDistance / lastPinchDistance.current;
+        const newScale = Math.min(Math.max(scale * pinchRatio, 0.5), 3.0);
+        
+        // 更新缩放
         setScale(newScale);
+        
+        // 计算滚动位置以保持中心点
+        const container = containerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const centerX = currentCenter.x - rect.left + container.scrollLeft;
+          const centerY = currentCenter.y - rect.top + container.scrollTop;
+          
+          // 根据缩放比例调整滚动位置
+          const scrollAdjustX = centerX * (pinchRatio - 1);
+          const scrollAdjustY = centerY * (pinchRatio - 1);
+          
+          container.scrollLeft += scrollAdjustX;
+          container.scrollTop += scrollAdjustY;
+        }
+        
+        // 更新上一次的距离
+        lastPinchDistance.current = currentDistance;
+        lastPinchCenter.current = currentCenter;
       }
     }
-  }, [isPinching, activeTool]);
+  }, [activeTool, scale]);
 
   const handleTouchEnd = useCallback(() => {
-    setIsPinching(false);
+    isGesturing.current = false;
+    lastPinchDistance.current = 0;
   }, []);
 
   const handleSave = () => {
