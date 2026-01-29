@@ -1271,14 +1271,6 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
                     {item.name}
-                    {item.type !== "initiator" && item.type !== "end" && item.type !== "resubmit" && 
-                     item.approvalMode === "or" && (
-                      <span className="text-muted-foreground font-normal"> (或签)</span>
-                    )}
-                    {item.type !== "initiator" && item.type !== "end" && item.type !== "resubmit" && 
-                     item.approvalMode === "countersign" && (
-                      <span className="text-muted-foreground font-normal"> (会签)</span>
-                    )}
                   </span>
                   {item.status === "current" && (
                     <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
