@@ -1293,6 +1293,56 @@ export type Database = {
           },
         ]
       }
+      stock_movements: {
+        Row: {
+          after_stock: number
+          before_stock: number
+          created_at: string
+          id: string
+          movement_type: string
+          notes: string | null
+          operator_name: string | null
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          supply_id: string
+        }
+        Insert: {
+          after_stock: number
+          before_stock: number
+          created_at?: string
+          id?: string
+          movement_type: string
+          notes?: string | null
+          operator_name?: string | null
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          supply_id: string
+        }
+        Update: {
+          after_stock?: number
+          before_stock?: number
+          created_at?: string
+          id?: string
+          movement_type?: string
+          notes?: string | null
+          operator_name?: string | null
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          supply_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "office_supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supply_purchase_items: {
         Row: {
           amount: number
@@ -1302,6 +1352,9 @@ export type Database = {
           purchase_id: string
           quantity: number
           remarks: string | null
+          specification: string | null
+          supply_id: string | null
+          unit: string | null
           unit_price: number
         }
         Insert: {
@@ -1312,6 +1365,9 @@ export type Database = {
           purchase_id: string
           quantity?: number
           remarks?: string | null
+          specification?: string | null
+          supply_id?: string | null
+          unit?: string | null
           unit_price?: number
         }
         Update: {
@@ -1322,6 +1378,9 @@ export type Database = {
           purchase_id?: string
           quantity?: number
           remarks?: string | null
+          specification?: string | null
+          supply_id?: string | null
+          unit?: string | null
           unit_price?: number
         }
         Relationships: [
@@ -1330,6 +1389,13 @@ export type Database = {
             columns: ["purchase_id"]
             isOneToOne: false
             referencedRelation: "supply_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_purchase_items_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "office_supplies"
             referencedColumns: ["id"]
           },
         ]

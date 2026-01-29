@@ -56,6 +56,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
+import StockMovementHistory from "./StockMovementHistory";
 
 type PurchaseStatus = "pending" | "approved" | "rejected" | "completed";
 type RequisitionStatus = "pending" | "approved" | "rejected" | "completed";
@@ -659,6 +660,10 @@ const SupplyManagement = () => {
               <ShoppingCart className="w-4 h-4" />
               办公采购
             </TabsTrigger>
+            <TabsTrigger value="stock-history" className="gap-2">
+              <ClipboardList className="w-4 h-4" />
+              库存变动
+            </TabsTrigger>
           </TabsList>
 
           {/* 库存管理 */}
@@ -1115,6 +1120,11 @@ const SupplyManagement = () => {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* 库存变动记录 */}
+          <TabsContent value="stock-history" className="space-y-4">
+            <StockMovementHistory />
           </TabsContent>
         </Tabs>
 

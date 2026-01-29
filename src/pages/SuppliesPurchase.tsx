@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,14 +40,28 @@ interface PurchaseItem {
   unit_price: number;
   amount: number;
   remarks: string | null;
+  supply_id?: string | null;
+  specification?: string | null;
+  unit?: string | null;
 }
 
 interface FormItem {
+  supply_id: string;
   item_name: string;
+  specification: string;
+  unit: string;
   quantity: number;
   unit_price: number;
   amount: number;
   remarks: string;
+}
+
+interface OfficeSupply {
+  id: string;
+  name: string;
+  specification: string | null;
+  unit: string;
+  current_stock: number;
 }
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
@@ -66,13 +81,14 @@ const SuppliesPurchase = () => {
   const [selectedItems, setSelectedItems] = useState<PurchaseItem[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [supplies, setSupplies] = useState<OfficeSupply[]>([]);
   
   // Form state
   const [purchaseDate, setPurchaseDate] = useState<Date>(new Date());
   const [department, setDepartment] = useState("");
   const [reason, setReason] = useState("");
   const [formItems, setFormItems] = useState<FormItem[]>([
-    { item_name: "", quantity: 1, unit_price: 0, amount: 0, remarks: "" }
+    { supply_id: "", item_name: "", specification: "", unit: "个", quantity: 1, unit_price: 0, amount: 0, remarks: "" }
   ]);
 
   const getCurrentUser = () => {
@@ -101,6 +117,15 @@ const SuppliesPurchase = () => {
       setRecords(data as SupplyPurchase[]);
     }
     setLoading(false);
+  };
+
+  const fetchSupplies = async () => {
+    const { data } = await supabase
+      .from("office_supplies")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    if (data) setSupplies(data);
   };
 
   useEffect(() => {
@@ -144,15 +169,16 @@ const SuppliesPurchase = () => {
   };
 
   const handleOpenForm = () => {
+    fetchSupplies();
     setDepartment(currentUser?.department || "");
     setReason("");
     setPurchaseDate(new Date());
-    setFormItems([{ item_name: "", quantity: 1, unit_price: 0, amount: 0, remarks: "" }]);
+    setFormItems([{ supply_id: "", item_name: "", specification: "", unit: "个", quantity: 1, unit_price: 0, amount: 0, remarks: "" }]);
     setFormOpen(true);
   };
 
   const handleAddItem = () => {
-    setFormItems([...formItems, { item_name: "", quantity: 1, unit_price: 0, amount: 0, remarks: "" }]);
+    setFormItems([...formItems, { supply_id: "", item_name: "", specification: "", unit: "个", quantity: 1, unit_price: 0, amount: 0, remarks: "" }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -164,6 +190,16 @@ const SuppliesPurchase = () => {
   const handleItemChange = (index: number, field: keyof FormItem, value: string | number) => {
     const newItems = [...formItems];
     newItems[index] = { ...newItems[index], [field]: value };
+    
+    // 当选择库存物品时，自动填充名称、规格、单位
+    if (field === "supply_id" && value) {
+      const supply = supplies.find(s => s.id === value);
+      if (supply) {
+        newItems[index].item_name = supply.name;
+        newItems[index].specification = supply.specification || "";
+        newItems[index].unit = supply.unit;
+      }
+    }
     
     if (field === "quantity" || field === "unit_price") {
       const quantity = field === "quantity" ? Number(value) : newItems[index].quantity;
@@ -215,6 +251,9 @@ const SuppliesPurchase = () => {
       unit_price: item.unit_price,
       amount: item.amount,
       remarks: item.remarks || null,
+      supply_id: item.supply_id || null,
+      specification: item.specification || null,
+      unit: item.unit || "个",
     }));
 
     const { error: itemsError } = await supabase
@@ -329,11 +368,11 @@ const SuppliesPurchase = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="w-[30%]">名称</TableHead>
+                      <TableHead className="w-[35%]">物品（从库存选择或手动输入）</TableHead>
                       <TableHead className="w-[12%]">数量</TableHead>
                       <TableHead className="w-[15%]">单价（元）</TableHead>
                       <TableHead className="w-[13%]">金额</TableHead>
-                      <TableHead className="w-[20%]">备注</TableHead>
+                      <TableHead className="w-[15%]">备注</TableHead>
                       <TableHead className="w-[10%]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -341,11 +380,32 @@ const SuppliesPurchase = () => {
                     {formItems.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell className="p-2">
-                          <Input
-                            value={item.item_name}
-                            onChange={(e) => handleItemChange(index, "item_name", e.target.value)}
-                            placeholder="物品名称"
-                          />
+                          <div className="space-y-1">
+                            <Select
+                              value={item.supply_id}
+                              onValueChange={(v) => handleItemChange(index, "supply_id", v)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="选择库存物品" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="manual">手动输入物品</SelectItem>
+                                {supplies.map((supply) => (
+                                  <SelectItem key={supply.id} value={supply.id}>
+                                    {supply.name}{supply.specification ? ` (${supply.specification})` : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {(item.supply_id === "manual" || !item.supply_id) && (
+                              <Input
+                                value={item.item_name}
+                                onChange={(e) => handleItemChange(index, "item_name", e.target.value)}
+                                placeholder="输入物品名称"
+                                className="mt-1"
+                              />
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="p-2">
                           <Input
