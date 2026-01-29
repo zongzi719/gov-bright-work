@@ -18,8 +18,25 @@ interface Organization {
   children?: Organization[];
 }
 
-// 模拟文件收发数据
-const mockFileTransfers = [
+// 文件收发数据类型
+interface FileTransferData {
+  id: string;
+  title: string;
+  sendUnit: string;
+  docNumber: string;
+  securityLevel: string;
+  urgency: string;
+  contactPerson: string;
+  contactPhone: string;
+  documentDate: string;
+  copies: number;
+  signLeader: string;
+  signDate: string;
+  status: string;
+}
+
+// 初始模拟数据
+const initialFileTransfers: FileTransferData[] = [
   {
     id: "1",
     title: "关于加强党风廉政建设的通知",
@@ -55,7 +72,7 @@ const mockFileTransfers = [
     title: "关于召开年度总结会议的通知",
     sendUnit: "综合科",
     docNumber: "综发〔2025〕3号",
-    securityLevel: "一般",
+    securityLevel: "公开",
     urgency: "普通",
     contactPerson: "刘明",
     contactPhone: "13800138003",
@@ -66,8 +83,6 @@ const mockFileTransfers = [
     status: "已签收",
   },
 ];
-
-type FileTransferData = (typeof mockFileTransfers)[0];
 
 // 选项配置 - 更新为标准四级密级
 const securityLevelOptions = [
@@ -105,6 +120,7 @@ const sendTypeOptions = [
 ];
 
 const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
+  const [fileTransfers, setFileTransfers] = useState<FileTransferData[]>(initialFileTransfers);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileTransferData | null>(null);
   const [securityVisible, setSecurityVisible] = useState(false);
@@ -200,7 +216,7 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const filteredFiles = mockFileTransfers.filter((file) => {
+  const filteredFiles = fileTransfers.filter((file) => {
     const matchTab =
       activeTab === "pending"
         ? file.status === "待签收"
@@ -212,11 +228,73 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     return matchTab && matchSearch;
   });
 
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      sendUnit: "",
+      sendUnitId: "",
+      docNumber: "",
+      securityLevel: ["公开"],
+      urgency: ["普通"],
+      sourceUnit: "",
+      sendType: ["不限制份数"],
+      contactPerson: "",
+      contactPhone: "",
+      documentDate: new Date(),
+      copies: "",
+      confidentialPeriod: "",
+      mainUnit: "",
+      signLeader: "",
+      signDate: new Date(),
+      fileType: ["中央文件"],
+      notifyType: "不通知",
+      copyUnit: "",
+      description: "",
+    });
+    setUploadedFiles([]);
+  };
+
   const handleSubmit = () => {
+    // 验证必填字段
+    if (!formData.title.trim()) {
+      Toast.show({ icon: "fail", content: "请输入文件标题" });
+      return;
+    }
+    if (!formData.sendUnit.trim()) {
+      Toast.show({ icon: "fail", content: "请选择发文单位" });
+      return;
+    }
+    if (!formData.docNumber.trim()) {
+      Toast.show({ icon: "fail", content: "请输入发文字号" });
+      return;
+    }
+
+    // 创建新文件记录
+    const newFile: FileTransferData = {
+      id: Date.now().toString(),
+      title: formData.title,
+      sendUnit: formData.sendUnit,
+      docNumber: formData.docNumber,
+      securityLevel: formData.securityLevel[0],
+      urgency: formData.urgency[0],
+      contactPerson: formData.contactPerson,
+      contactPhone: formData.contactPhone,
+      documentDate: format(formData.documentDate, "yyyy-MM-dd"),
+      copies: parseInt(formData.copies) || 1,
+      signLeader: formData.signLeader,
+      signDate: format(formData.signDate, "yyyy-MM-dd"),
+      status: "待签收",
+    };
+
+    // 添加到列表
+    setFileTransfers(prev => [newFile, ...prev]);
+    
     Toast.show({
       icon: "success",
-      content: "提交成功",
+      content: "新增成功",
     });
+    
+    resetForm();
     setShowAddPopup(false);
   };
 
@@ -329,8 +407,8 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
               <Button
                 size="mini"
                 onClick={() => {
+                  resetForm();
                   setShowAddPopup(false);
-                  setUploadedFiles([]);
                 }}
                 style={{
                   "--background-color": "transparent",
