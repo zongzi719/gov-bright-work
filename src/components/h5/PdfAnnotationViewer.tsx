@@ -33,6 +33,10 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
 
+  // 默认PDF文件路径
+  const defaultPdfUrl = "/documents/default-document.pdf";
+  const defaultPdfName = "关于印发《2025年度党风廉政建设工作要点》的通知.pdf";
+
   // 从localStorage加载保存的批注和PDF信息
   useEffect(() => {
     const savedPaths = localStorage.getItem(`${storageKey}_paths`);
@@ -46,11 +50,15 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
         // ignore
       }
     }
+    
+    // 如果有保存的PDF则使用保存的，否则使用默认PDF
     if (savedPdf) {
       setPdfUrl(savedPdf);
-    }
-    if (savedPdfName) {
-      setPdfFileName(savedPdfName);
+      setPdfFileName(savedPdfName || defaultPdfName);
+    } else {
+      // 使用默认PDF
+      setPdfUrl(defaultPdfUrl);
+      setPdfFileName(defaultPdfName);
     }
   }, [storageKey]);
 
