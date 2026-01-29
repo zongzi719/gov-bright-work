@@ -134,9 +134,9 @@ const RichTextEditor = ({
   }, [execCommand]);
 
   return (
-    <div className="border rounded-md overflow-hidden bg-background">
+    <div className="border rounded-md overflow-hidden bg-background flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b bg-muted/50">
+      <div className="flex flex-wrap items-center gap-0.5 p-2 border-b bg-muted/50 flex-shrink-0">
         <Button
           type="button"
           variant="ghost"
@@ -264,8 +264,8 @@ const RichTextEditor = ({
       <div
         ref={editorRef}
         contentEditable
-        className="p-3 outline-none prose prose-sm max-w-none"
-        style={{ minHeight }}
+        className="p-3 outline-none prose prose-sm max-w-none flex-1 overflow-y-auto"
+        style={{ minHeight, maxHeight: '200px' }}
         onInput={handleInput}
         onPaste={handlePaste}
         onDrop={handleDrop}
