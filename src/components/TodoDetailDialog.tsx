@@ -964,7 +964,28 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     // 创建节点名称到节点信息的映射
     const nodeMap = new Map<string, { node: ApprovalNode; index: number; approverNames: string }>();
     displayNodes.forEach((node, index) => {
-      const approverNames = getApproverNames(node.approver_ids);
+      let approverNames = "";
+      
+      // 处理不同的审批人类型
+      if (node.approver_type === "initiator") {
+        // 发起人自己 - 显示发起人名称
+        approverNames = instance?.initiator?.name || "发起人";
+      } else if (node.approver_type === "specific" && node.approver_ids && node.approver_ids.length > 0) {
+        // 指定成员 - 显示指定人员名称
+        approverNames = node.approver_ids
+          .map(id => approverContacts.get(id)?.name || "")
+          .filter(Boolean)
+          .join("、") || "未指定";
+      } else if (node.approver_type === "self") {
+        approverNames = "发起人自选";
+      } else if (node.approver_type === "supervisor") {
+        approverNames = "直属主管";
+      } else if (node.approver_type === "department_head") {
+        approverNames = "部门负责人";
+      } else {
+        approverNames = "未指定";
+      }
+      
       nodeMap.set(node.node_name, { node, index, approverNames });
     });
     
