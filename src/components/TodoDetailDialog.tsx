@@ -362,19 +362,56 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           .maybeSingle();
         data = result.data;
       } else if (businessType === "supply_requisition") {
+        // 领用申请 - 获取主表和明细表数据
         const result = await supabase
           .from("supply_requisitions")
           .select("*")
           .eq("id", businessId)
           .maybeSingle();
-        data = result.data;
+        
+        // 获取领用明细
+        const { data: itemsData } = await supabase
+          .from("supply_requisition_items")
+          .select("*, supply:office_supplies(name, specification, unit)")
+          .eq("requisition_id", businessId);
+        
+        if (result.data) {
+          data = { ...result.data, items: itemsData || [] };
+        }
       } else if (businessType === "purchase_request") {
+        // 采购申请 - 获取主表和明细表数据
         const result = await supabase
           .from("purchase_requests")
           .select("*")
           .eq("id", businessId)
           .maybeSingle();
-        data = result.data;
+        
+        // 获取采购明细
+        const { data: itemsData } = await supabase
+          .from("purchase_request_items")
+          .select("*, supply:office_supplies(name, specification, unit)")
+          .eq("request_id", businessId);
+        
+        if (result.data) {
+          data = { ...result.data, items: itemsData || [] };
+        }
+      } else if (businessType === "supply_purchase") {
+        // 办公用品采购 - 获取主表和明细表数据
+        const result = await supabase
+          .from("supply_purchases")
+          .select("*")
+          .eq("id", businessId)
+          .maybeSingle();
+        
+        // 获取采购明细
+        const { data: itemsData } = await supabase
+          .from("supply_purchase_items")
+          .select("*")
+          .eq("purchase_id", businessId);
+        
+        if (result.data) {
+          data = { ...result.data, items: itemsData || [] };
+        }
       }
 
       if (data) {
