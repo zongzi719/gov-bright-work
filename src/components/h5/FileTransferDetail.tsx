@@ -1,4 +1,5 @@
 import { Toast } from "antd-mobile";
+import { LeftOutline } from "antd-mobile-icons";
 
 interface FileTransferData {
   id: string;
@@ -30,41 +31,18 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
     onBack();
   };
 
-  const getSecurityColor = (level: string) => {
-    switch (level) {
-      case "机密":
-        return "danger";
-      case "秘密":
-        return "warning";
-      default:
-        return "default";
-    }
-  };
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "特急":
-        return "danger";
-      case "加急":
-        return "warning";
-      default:
-        return "primary";
-    }
-  };
-
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
-      {/* 顶部导航 - 红色背景 */}
-      <div className="bg-red-700 text-white shrink-0">
+      {/* 顶部导航 - 简洁白色背景 */}
+      <div className="bg-white border-b border-slate-200 shrink-0">
         <div className="flex items-center h-11 px-3">
           <button 
             onClick={onBack}
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            className="flex items-center justify-center w-8 h-8 -ml-1"
           >
-            <span className="text-white text-sm">←</span>
+            <LeftOutline className="text-slate-600 text-lg" />
           </button>
-          <span className="flex-1 text-center text-sm font-medium">文件详情</span>
-          <div className="w-8"></div>
+          <span className="flex-1 text-center text-sm font-medium text-slate-800 -ml-8">文件详情</span>
         </div>
       </div>
 
@@ -78,11 +56,12 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded text-white ${
               file.securityLevel === "机密" ? "bg-red-500" : 
-              file.securityLevel === "秘密" ? "bg-amber-500" : "bg-slate-500"
+              file.securityLevel === "秘密" ? "bg-amber-500" : 
+              file.securityLevel === "内部" ? "bg-blue-500" : "bg-slate-400"
             }`}>
               {file.securityLevel}
             </span>
-            {file.urgency !== "普通" && (
+            {file.urgency !== "普通" && file.urgency !== "无" && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded text-white ${
                 file.urgency === "特急" ? "bg-red-500" : "bg-amber-500"
               }`}>
@@ -143,7 +122,7 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
             </div>
             <div>
               <div className="text-[10px] text-slate-400">联系电话</div>
-              <div className="text-xs text-blue-600">{file.contactPhone}</div>
+              <a href={`tel:${file.contactPhone}`} className="text-xs text-blue-600">{file.contactPhone}</a>
             </div>
           </div>
         </div>
@@ -154,7 +133,7 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
         <div className="p-3 bg-white border-t border-slate-200 shrink-0">
           <button
             onClick={handleSign}
-            className="w-full h-10 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
+            className="w-full h-10 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
           >
             确认签收
           </button>
