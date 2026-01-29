@@ -1723,6 +1723,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="initiator">发起人自己</SelectItem>
                           <SelectItem value="self">发起人自选</SelectItem>
                           <SelectItem value="specific">指定成员</SelectItem>
                           <SelectItem value="supervisor">直属主管</SelectItem>

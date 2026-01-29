@@ -749,12 +749,6 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">
                     {item.node.node_name}
-                    {item.node.node_type === "approver" && item.node.approval_mode === "or" && (
-                      <span className="text-muted-foreground font-normal"> (或签)</span>
-                    )}
-                    {item.node.node_type === "approver" && item.node.approval_mode === "countersign" && (
-                      <span className="text-muted-foreground font-normal"> (会签)</span>
-                    )}
                   </span>
                   {showStatus && (
                     <span className={`text-xs px-2 py-0.5 rounded ${statusBg} ${statusTextColor}`}>
