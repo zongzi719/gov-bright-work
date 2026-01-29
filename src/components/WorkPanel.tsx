@@ -27,7 +27,7 @@ interface TodoItem {
     name: string;
     department: string | null;
   } | null;
-  _outReason?: string; // 外出申请的事由
+  _outReason?: string; // 外出/请假/出差申请的事由
 }
 
 const priorityToStatus = (priority: string, status: string): "urgent" | "normal" | "done" => {
@@ -99,41 +99,42 @@ const WorkPanel = () => {
 
   const currentUser = getCurrentUser();
 
-  // 获取外出申请的事由
-  const fetchOutReasons = async (businessIds: string[]): Promise<Record<string, string>> => {
+  // 获取请假/外出/出差申请的事由
+  const fetchAbsenceReasons = async (businessIds: string[]): Promise<Record<string, string>> => {
     if (businessIds.length === 0) return {};
     
     const { data } = await supabase
       .from("absence_records")
-      .select("id, reason, out_location")
-      .eq("type", "out")
+      .select("id, reason, out_location, destination")
       .in("id", businessIds);
     
     const reasonMap: Record<string, string> = {};
     (data || []).forEach((record) => {
-      // 外出事由优先，如果没有则用往返地点
-      reasonMap[record.id] = record.reason || record.out_location || "";
+      // 事由优先，外出用 out_location，出差用 destination
+      reasonMap[record.id] = record.reason || record.out_location || record.destination || "";
     });
     return reasonMap;
   };
 
-  // 为待办项添加外出事由
-  const enrichWithOutReasons = async (items: TodoItem[]): Promise<TodoItem[]> => {
-    // 找出所有外出申请的 business_id
-    const outBusinessIds = items
-      .filter((item) => item.business_type === "absence" && item.title.includes("外出") && item.business_id)
+  // 为待办项添加申请事由（出差、请假、外出）
+  const enrichWithAbsenceReasons = async (items: TodoItem[]): Promise<TodoItem[]> => {
+    // 找出所有请假/外出/出差申请的 business_id
+    const absenceBusinessIds = items
+      .filter((item) => 
+        (item.business_type === "absence" || item.business_type === "business_trip") && 
+        item.business_id
+      )
       .map((item) => item.business_id as string);
     
-    if (outBusinessIds.length === 0) return items;
+    if (absenceBusinessIds.length === 0) return items;
     
-    const reasonMap = await fetchOutReasons(outBusinessIds);
+    const reasonMap = await fetchAbsenceReasons(absenceBusinessIds);
     
     return items.map((item) => {
-      if (item.business_type === "absence" && item.title.includes("外出") && item.business_id) {
+      if ((item.business_type === "absence" || item.business_type === "business_trip") && item.business_id) {
         const reason = reasonMap[item.business_id];
         if (reason) {
-          // 用外出事由替换原标题中的内容
-          return { ...item, _outReason: reason } as TodoItem & { _outReason?: string };
+          return { ...item, _outReason: reason };
         }
       }
       return item;
@@ -164,7 +165,7 @@ const WorkPanel = () => {
     const filteredPending = (pendingData || []).filter(
       (item) => !item.process_result || item.process_result !== "cc_notified"
     );
-    const enrichedPending = await enrichWithOutReasons(filteredPending as unknown as TodoItem[]);
+    const enrichedPending = await enrichWithAbsenceReasons(filteredPending as unknown as TodoItem[]);
     setPendingItems(enrichedPending);
 
     const { data: completedData } = await supabase
@@ -181,7 +182,7 @@ const WorkPanel = () => {
       .order("processed_at", { ascending: false })
       .limit(20);
 
-    const enrichedCompleted = await enrichWithOutReasons((completedData || []) as unknown as TodoItem[]);
+    const enrichedCompleted = await enrichWithAbsenceReasons((completedData || []) as unknown as TodoItem[]);
     setCompletedItems(enrichedCompleted);
 
     const { data: ccData } = await supabase
@@ -197,7 +198,7 @@ const WorkPanel = () => {
       .order("created_at", { ascending: false })
       .limit(20);
 
-    const enrichedCC = await enrichWithOutReasons((ccData || []) as unknown as TodoItem[]);
+    const enrichedCC = await enrichWithAbsenceReasons((ccData || []) as unknown as TodoItem[]);
     setCCItems(enrichedCC);
 
     setLoading(false);
