@@ -44,6 +44,7 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [pdfWidth, setPdfWidth] = useState<number>(0);
   const [isFitWidth, setIsFitWidth] = useState<boolean>(true);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   // 默认PDF文件路径
   const defaultPdfUrl = "/documents/default-document.pdf";
@@ -61,7 +62,7 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  // 计算适合宽度的缩放比例
+  // 计算适合宽度的缩放比例 - 只在初次加载完成后计算
   const fitWidthScale = useMemo(() => {
     if (pdfWidth > 0 && containerWidth > 0) {
       return Math.min(containerWidth / pdfWidth, 3.0);
@@ -69,12 +70,12 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
     return 1.0;
   }, [pdfWidth, containerWidth]);
 
-  // 当选择适合宽度模式时自动调整缩放
+  // 当选择适合宽度模式时自动调整缩放 - 跳过初始加载阶段
   useEffect(() => {
-    if (isFitWidth && fitWidthScale > 0) {
+    if (isFitWidth && pdfWidth > 0 && containerWidth > 0 && !isInitialLoad) {
       setScale(fitWidthScale);
     }
-  }, [isFitWidth, fitWidthScale]);
+  }, [isFitWidth, fitWidthScale, pdfWidth, containerWidth, isInitialLoad]);
 
   // 从localStorage加载保存的批注和PDF信息
   useEffect(() => {
@@ -161,9 +162,16 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
     setScale(1.0);
   };
 
-  // 记录PDF原始宽度
+  // 记录PDF原始宽度并计算初始缩放
   const handleFirstPageLoad = (page: { width: number }) => {
     setPdfWidth(page.width);
+    // 初次加载完成后立即计算适合宽度的缩放
+    if (containerWidth > 0 && page.width > 0) {
+      const initialScale = Math.min(containerWidth / page.width, 3.0);
+      setScale(initialScale);
+    }
+    // 延迟标记初始加载完成，避免立即触发effect重新计算
+    setTimeout(() => setIsInitialLoad(false), 100);
   };
 
   const tools = [
