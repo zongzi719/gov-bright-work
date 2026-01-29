@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Tag, Empty, FloatingBubble, Popup, Form, Input, Picker, TextArea, Button, DatePicker, Radio, Toast, CascadePicker } from "antd-mobile";
-import { AddOutline, AddCircleOutline, CloseCircleFill } from "antd-mobile-icons";
+import { Tag, Empty, FloatingBubble, Popup, Form, Input, Picker, TextArea, Button, DatePicker, Radio, Toast, CascadePicker, Dialog } from "antd-mobile";
+import { AddOutline, AddCircleOutline, CloseCircleFill, DeleteOutline } from "antd-mobile-icons";
 import { format } from "date-fns";
 import FileTransferDetail from "./FileTransferDetail";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ interface FileTransferData {
   id: string;
   title: string;
   sendUnit: string;
+  sendUnitId?: string;
   docNumber: string;
   securityLevel: string;
   urgency: string;
@@ -33,56 +34,8 @@ interface FileTransferData {
   signLeader: string;
   signDate: string;
   status: string;
+  attachments?: { name: string; url: string }[];
 }
-
-// 初始模拟数据
-const initialFileTransfers: FileTransferData[] = [
-  {
-    id: "1",
-    title: "关于加强党风廉政建设的通知",
-    sendUnit: "纪检监察室",
-    docNumber: "党纪〔2025〕1号",
-    securityLevel: "机密",
-    urgency: "特急",
-    contactPerson: "王磊",
-    contactPhone: "13800138001",
-    documentDate: "2025-01-15",
-    copies: 50,
-    signLeader: "李主任",
-    signDate: "2025-01-16",
-    status: "待签收",
-  },
-  {
-    id: "2",
-    title: "2025年度工作计划汇报",
-    sendUnit: "办公室",
-    docNumber: "办发〔2025〕5号",
-    securityLevel: "内部",
-    urgency: "普通",
-    contactPerson: "张华",
-    contactPhone: "13800138002",
-    documentDate: "2025-01-10",
-    copies: 30,
-    signLeader: "赵局长",
-    signDate: "2025-01-12",
-    status: "待签收",
-  },
-  {
-    id: "3",
-    title: "关于召开年度总结会议的通知",
-    sendUnit: "综合科",
-    docNumber: "综发〔2025〕3号",
-    securityLevel: "公开",
-    urgency: "普通",
-    contactPerson: "刘明",
-    contactPhone: "13800138003",
-    documentDate: "2025-01-08",
-    copies: 20,
-    signLeader: "王主任",
-    signDate: "2025-01-09",
-    status: "已签收",
-  },
-];
 
 // 选项配置 - 更新为标准四级密级
 const securityLevelOptions = [
@@ -120,7 +73,8 @@ const sendTypeOptions = [
 ];
 
 const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
-  const [fileTransfers, setFileTransfers] = useState<FileTransferData[]>(initialFileTransfers);
+  const [fileTransfers, setFileTransfers] = useState<FileTransferData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileTransferData | null>(null);
   const [securityVisible, setSecurityVisible] = useState(false);
@@ -133,6 +87,7 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [orgCascadeOptions, setOrgCascadeOptions] = useState<any[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -157,6 +112,41 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     copyUnit: "",
     description: "",
   });
+
+  // 加载文件收发数据
+  const fetchFileTransfers = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("file_transfers")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    if (!error && data) {
+      const mappedData: FileTransferData[] = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        sendUnit: item.send_unit,
+        sendUnitId: item.send_unit_id,
+        docNumber: item.doc_number,
+        securityLevel: item.security_level,
+        urgency: item.urgency,
+        contactPerson: item.contact_person || "",
+        contactPhone: item.contact_phone || "",
+        documentDate: item.document_date || "",
+        copies: item.copies || 1,
+        signLeader: item.sign_leader || "",
+        signDate: item.sign_date || "",
+        status: item.status,
+        attachments: item.attachments || [],
+      }));
+      setFileTransfers(mappedData);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchFileTransfers();
+  }, []);
 
   // 加载组织架构
   useEffect(() => {
@@ -254,7 +244,35 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     setUploadedFiles([]);
   };
 
-  const handleSubmit = () => {
+  // 上传文件到存储
+  const uploadFilesToStorage = async (): Promise<{ name: string; url: string }[]> => {
+    const uploadedAttachments: { name: string; url: string }[] = [];
+    
+    for (const file of uploadedFiles) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `attachments/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('file-transfers')
+        .upload(filePath, file);
+      
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage
+          .from('file-transfers')
+          .getPublicUrl(filePath);
+        
+        uploadedAttachments.push({
+          name: file.name,
+          url: urlData.publicUrl,
+        });
+      }
+    }
+    
+    return uploadedAttachments;
+  };
+
+  const handleSubmit = async () => {
     // 验证必填字段
     if (!formData.title.trim()) {
       Toast.show({ icon: "fail", content: "请输入文件标题" });
@@ -269,33 +287,80 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
       return;
     }
 
-    // 创建新文件记录
-    const newFile: FileTransferData = {
-      id: Date.now().toString(),
-      title: formData.title,
-      sendUnit: formData.sendUnit,
-      docNumber: formData.docNumber,
-      securityLevel: formData.securityLevel[0],
-      urgency: formData.urgency[0],
-      contactPerson: formData.contactPerson,
-      contactPhone: formData.contactPhone,
-      documentDate: format(formData.documentDate, "yyyy-MM-dd"),
-      copies: parseInt(formData.copies) || 1,
-      signLeader: formData.signLeader,
-      signDate: format(formData.signDate, "yyyy-MM-dd"),
-      status: "待签收",
-    };
-
-    // 添加到列表
-    setFileTransfers(prev => [newFile, ...prev]);
+    setSubmitting(true);
     
-    Toast.show({
-      icon: "success",
-      content: "新增成功",
+    try {
+      // 上传附件
+      const attachments = await uploadFilesToStorage();
+      
+      // 插入数据库
+      const { error } = await supabase
+        .from("file_transfers")
+        .insert({
+          title: formData.title,
+          send_unit: formData.sendUnit,
+          send_unit_id: formData.sendUnitId || null,
+          doc_number: formData.docNumber,
+          security_level: formData.securityLevel[0],
+          urgency: formData.urgency[0],
+          source_unit: formData.sourceUnit || null,
+          send_type: formData.sendType[0],
+          contact_person: formData.contactPerson || null,
+          contact_phone: formData.contactPhone || null,
+          document_date: format(formData.documentDate, "yyyy-MM-dd"),
+          copies: parseInt(formData.copies) || 1,
+          confidential_period: formData.confidentialPeriod || null,
+          main_unit: formData.mainUnit || null,
+          sign_leader: formData.signLeader || null,
+          sign_date: format(formData.signDate, "yyyy-MM-dd"),
+          file_type: formData.fileType[0],
+          notify_type: formData.notifyType,
+          copy_unit: formData.copyUnit || null,
+          description: formData.description || null,
+          status: "待签收",
+          attachments: attachments,
+        });
+
+      if (error) {
+        Toast.show({ icon: "fail", content: "保存失败：" + error.message });
+        return;
+      }
+
+      Toast.show({ icon: "success", content: "新增成功" });
+      resetForm();
+      setShowAddPopup(false);
+      // 重新加载数据
+      fetchFileTransfers();
+    } catch (err) {
+      Toast.show({ icon: "fail", content: "保存失败" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 删除文件收发记录
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const result = await Dialog.confirm({
+      content: "确定要删除这条记录吗？",
+      confirmText: "删除",
+      cancelText: "取消",
     });
     
-    resetForm();
-    setShowAddPopup(false);
+    if (result) {
+      const { error } = await supabase
+        .from("file_transfers")
+        .delete()
+        .eq("id", id);
+      
+      if (error) {
+        Toast.show({ icon: "fail", content: "删除失败" });
+      } else {
+        Toast.show({ icon: "success", content: "删除成功" });
+        fetchFileTransfers();
+      }
+    }
   };
 
   const updateFormData = (key: string, value: any) => {
@@ -314,19 +379,30 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     }
   };
 
+  // 处理从详情页返回
+  const handleBackFromDetail = () => {
+    setSelectedFile(null);
+    // 刷新列表以获取最新状态
+    fetchFileTransfers();
+  };
+
   // 如果选中了文件，显示详情页
   if (selectedFile) {
     return (
       <FileTransferDetail
         file={selectedFile}
-        onBack={() => setSelectedFile(null)}
+        onBack={handleBackFromDetail}
       />
     );
   }
 
   return (
     <>
-      {filteredFiles.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <span className="text-slate-500">加载中...</span>
+        </div>
+      ) : filteredFiles.length === 0 ? (
         <Empty description="暂无文件" style={{ padding: "48px 0" }} />
       ) : (
         <div className="p-2 space-y-2">
@@ -334,10 +410,18 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
             <div
               key={file.id}
               onClick={() => setSelectedFile(file)}
-              className="bg-white rounded-lg p-3 shadow-sm active:bg-slate-50 transition-colors cursor-pointer"
+              className="bg-white rounded-lg p-3 shadow-sm active:bg-slate-50 transition-colors cursor-pointer relative"
             >
+              {/* 删除按钮 */}
+              <button
+                onClick={(e) => handleDelete(file.id, e)}
+                className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-red-500"
+              >
+                <DeleteOutline fontSize={16} />
+              </button>
+              
               {/* 标签行 */}
-              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+              <div className="flex items-center gap-1.5 mb-2 flex-wrap pr-8">
                 <Tag color="primary" fill="outline" style={{ fontSize: "10px", padding: "0 4px" }}>
                   {file.docNumber}
                 </Tag>
@@ -348,7 +432,7 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
                 >
                   {file.securityLevel}
                 </Tag>
-                {file.urgency !== "普通" && (
+                {file.urgency !== "普通" && file.urgency !== "无" && (
                   <Tag color="danger" fill="solid" style={{ fontSize: "10px", padding: "0 4px" }}>
                     {file.urgency}
                   </Tag>
@@ -422,6 +506,8 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
                 size="mini"
                 color="default"
                 onClick={handleSubmit}
+                loading={submitting}
+                disabled={submitting}
               >
                 确定
               </Button>
