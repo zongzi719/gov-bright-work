@@ -676,21 +676,34 @@ const SuppliesPurchaseContent = () => {
             <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>经办人</Label><Input value={currentUser?.name || ""} disabled className="bg-muted" /></div></div>
             <div className="space-y-2">
               <div className="flex items-center justify-between"><Label>采购物品明细 *</Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
-              <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader><TableRow className="bg-muted/50"><TableHead className="w-[30%]">名称</TableHead><TableHead className="w-[12%]">数量</TableHead><TableHead className="w-[15%]">单价（元）</TableHead><TableHead className="w-[13%]">金额</TableHead><TableHead className="w-[20%]">备注</TableHead><TableHead className="w-[10%]">操作</TableHead></TableRow></TableHeader>
+              <div className="border rounded-md overflow-x-auto">
+                <Table className="min-w-[700px]">
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="min-w-[160px] whitespace-nowrap">名称</TableHead>
+                      <TableHead className="min-w-[80px] whitespace-nowrap text-center">数量</TableHead>
+                      <TableHead className="min-w-[100px] whitespace-nowrap text-center">单价（元）</TableHead>
+                      <TableHead className="min-w-[100px] whitespace-nowrap text-right">金额</TableHead>
+                      <TableHead className="min-w-[120px] whitespace-nowrap">备注</TableHead>
+                      <TableHead className="min-w-[60px] whitespace-nowrap text-center">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     {formItems.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell className="p-2"><Input value={item.item_name} onChange={(e) => handleItemChange(index, "item_name", e.target.value)} placeholder="物品名称" /></TableCell>
-                        <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleItemChange(index, "quantity", 1); }} /></TableCell>
-                        <TableCell className="p-2"><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)} onBlur={(e) => { if (!e.target.value) handleItemChange(index, "unit_price", 0); }} /></TableCell>
-                        <TableCell className="p-2 text-right font-medium">¥{item.amount.toFixed(2)}</TableCell>
-                        <TableCell className="p-2"><Input value={item.remarks} onChange={(e) => handleItemChange(index, "remarks", e.target.value)} placeholder="备注" /></TableCell>
-                        <TableCell className="p-2"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                        <TableCell className="p-2"><Input value={item.item_name} onChange={(e) => handleItemChange(index, "item_name", e.target.value)} placeholder="物品名称" className="min-w-[140px]" /></TableCell>
+                        <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleItemChange(index, "quantity", 1); }} className="min-w-[60px] text-center" /></TableCell>
+                        <TableCell className="p-2"><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)} onBlur={(e) => { if (!e.target.value) handleItemChange(index, "unit_price", 0); }} className="min-w-[80px] text-right" /></TableCell>
+                        <TableCell className="p-2 text-right font-medium whitespace-nowrap">¥{item.amount.toFixed(2)}</TableCell>
+                        <TableCell className="p-2"><Input value={item.remarks} onChange={(e) => handleItemChange(index, "remarks", e.target.value)} placeholder="备注" className="min-w-[100px]" /></TableCell>
+                        <TableCell className="p-2 text-center"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                       </TableRow>
                     ))}
-                    <TableRow className="bg-muted/30"><TableCell colSpan={3} className="text-right font-medium">合计金额（元）</TableCell><TableCell className="text-right font-bold text-primary">¥{totalAmount.toFixed(2)}</TableCell><TableCell colSpan={2}></TableCell></TableRow>
+                    <TableRow className="bg-muted/30">
+                      <TableCell colSpan={3} className="text-right font-medium whitespace-nowrap">合计金额（元）</TableCell>
+                      <TableCell className="text-right font-bold text-primary whitespace-nowrap">¥{totalAmount.toFixed(2)}</TableCell>
+                      <TableCell colSpan={2}></TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </div>
@@ -721,11 +734,31 @@ const SuppliesPurchaseContent = () => {
                     {selectedRecord.reason && <div className="space-y-1.5 pt-2"><Label className="text-xs text-muted-foreground font-normal">购置理由</Label><div className="text-sm">{selectedRecord.reason}</div></div>}
                     <div className="space-y-2 pt-2">
                       <Label className="text-xs text-muted-foreground font-normal">采购明细</Label>
-                      <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader><TableRow className="bg-muted/30"><TableHead>名称</TableHead><TableHead>数量</TableHead><TableHead>单价</TableHead><TableHead>金额</TableHead><TableHead>备注</TableHead></TableRow></TableHeader>
+                      <div className="border rounded-lg overflow-x-auto">
+                        <Table className="min-w-[500px]">
+                          <TableHeader>
+                            <TableRow className="bg-muted/30">
+                              <TableHead className="min-w-[140px] whitespace-nowrap">名称</TableHead>
+                              <TableHead className="min-w-[60px] whitespace-nowrap text-center">数量</TableHead>
+                              <TableHead className="min-w-[80px] whitespace-nowrap text-right">单价</TableHead>
+                              <TableHead className="min-w-[80px] whitespace-nowrap text-right">金额</TableHead>
+                              <TableHead className="min-w-[100px] whitespace-nowrap">备注</TableHead>
+                            </TableRow>
+                          </TableHeader>
                           <TableBody>
-                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.item_name}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>¥{item.unit_price.toFixed(2)}</TableCell><TableCell>¥{item.amount.toFixed(2)}</TableCell><TableCell>{item.remarks || "-"}</TableCell></TableRow>)))}
+                            {selectedItems.length === 0 ? (
+                              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">暂无明细</TableCell></TableRow>
+                            ) : (
+                              selectedItems.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell className="whitespace-nowrap">{item.item_name}</TableCell>
+                                  <TableCell className="text-center">{item.quantity}</TableCell>
+                                  <TableCell className="text-right whitespace-nowrap">¥{item.unit_price.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right whitespace-nowrap">¥{item.amount.toFixed(2)}</TableCell>
+                                  <TableCell>{item.remarks || "-"}</TableCell>
+                                </TableRow>
+                              ))
+                            )}
                           </TableBody>
                         </Table>
                       </div>
