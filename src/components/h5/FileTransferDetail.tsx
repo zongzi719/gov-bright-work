@@ -54,8 +54,8 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
-      {/* 顶部导航 - 政务风格 */}
-      <div className="bg-slate-800 text-white shrink-0">
+      {/* 顶部导航 - 红色背景 */}
+      <div className="bg-red-700 text-white shrink-0">
         <div className="flex items-center h-11 px-3">
           <button 
             onClick={onBack}
