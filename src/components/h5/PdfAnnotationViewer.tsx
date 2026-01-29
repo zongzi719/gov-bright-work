@@ -86,31 +86,53 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // 清空画布（保持透明，让PDF内容可见）
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    paths.forEach((path) => {
-      if (path.points.length < 2) return;
-      
-      ctx.beginPath();
-      
-      if (path.tool === "eraser") {
-        ctx.globalCompositeOperation = "destination-out";
-      } else {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.strokeStyle = path.color;
-      }
-      
-      ctx.lineWidth = path.lineWidth;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+    // 分两步渲染：先画所有铅笔笔迹到临时canvas，再用橡皮擦除
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext("2d");
+    if (!tempCtx) return;
 
-      ctx.moveTo(path.points[0].x, path.points[0].y);
+    // 第一遍：绘制所有铅笔笔迹
+    paths.forEach((path) => {
+      if (path.points.length < 2 || path.tool !== "pencil") return;
+      
+      tempCtx.beginPath();
+      tempCtx.globalCompositeOperation = "source-over";
+      tempCtx.strokeStyle = path.color;
+      tempCtx.lineWidth = path.lineWidth;
+      tempCtx.lineCap = "round";
+      tempCtx.lineJoin = "round";
+
+      tempCtx.moveTo(path.points[0].x, path.points[0].y);
       for (let i = 1; i < path.points.length; i++) {
-        ctx.lineTo(path.points[i].x, path.points[i].y);
+        tempCtx.lineTo(path.points[i].x, path.points[i].y);
       }
-      ctx.stroke();
-      ctx.globalCompositeOperation = "source-over";
+      tempCtx.stroke();
     });
+
+    // 第二遍：用橡皮擦除笔迹（只擦除临时canvas上的内容）
+    paths.forEach((path) => {
+      if (path.points.length < 2 || path.tool !== "eraser") return;
+      
+      tempCtx.beginPath();
+      tempCtx.globalCompositeOperation = "destination-out";
+      tempCtx.lineWidth = path.lineWidth;
+      tempCtx.lineCap = "round";
+      tempCtx.lineJoin = "round";
+
+      tempCtx.moveTo(path.points[0].x, path.points[0].y);
+      for (let i = 1; i < path.points.length; i++) {
+        tempCtx.lineTo(path.points[i].x, path.points[i].y);
+      }
+      tempCtx.stroke();
+    });
+
+    // 将临时canvas内容复制到主canvas
+    ctx.drawImage(tempCanvas, 0, 0);
   }, [paths]);
 
   useEffect(() => {
@@ -158,32 +180,84 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
     const newPath = [...currentPath, point];
     setCurrentPath(newPath);
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
     if (newPath.length >= 2) {
-      ctx.beginPath();
-      
-      if (activeTool === "eraser") {
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.lineWidth = 20;
-      } else {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      if (activeTool === "pencil") {
+        // 铅笔：直接在主canvas上绘制
+        ctx.beginPath();
         ctx.globalCompositeOperation = "source-over";
         ctx.strokeStyle = "#ff0000";
         ctx.lineWidth = 2;
-      }
-      
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
 
-      const lastIndex = newPath.length - 1;
-      ctx.moveTo(newPath[lastIndex - 1].x, newPath[lastIndex - 1].y);
-      ctx.lineTo(newPath[lastIndex].x, newPath[lastIndex].y);
-      ctx.stroke();
-      
-      ctx.globalCompositeOperation = "source-over";
+        const lastIndex = newPath.length - 1;
+        ctx.moveTo(newPath[lastIndex - 1].x, newPath[lastIndex - 1].y);
+        ctx.lineTo(newPath[lastIndex].x, newPath[lastIndex].y);
+        ctx.stroke();
+      } else if (activeTool === "eraser") {
+        // 橡皮擦：重绘整个canvas以正确显示擦除效果
+        // 创建一个包含当前绘制路径的临时paths数组
+        const tempPaths = [
+          ...paths,
+          {
+            points: newPath,
+            tool: "eraser" as const,
+            color: "#ff0000",
+            lineWidth: 20,
+          },
+        ];
+        
+        // 重绘canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext("2d");
+        if (!tempCtx) return;
+
+        // 绘制所有铅笔笔迹
+        tempPaths.forEach((path) => {
+          if (path.points.length < 2 || path.tool !== "pencil") return;
+          
+          tempCtx.beginPath();
+          tempCtx.globalCompositeOperation = "source-over";
+          tempCtx.strokeStyle = path.color;
+          tempCtx.lineWidth = path.lineWidth;
+          tempCtx.lineCap = "round";
+          tempCtx.lineJoin = "round";
+
+          tempCtx.moveTo(path.points[0].x, path.points[0].y);
+          for (let i = 1; i < path.points.length; i++) {
+            tempCtx.lineTo(path.points[i].x, path.points[i].y);
+          }
+          tempCtx.stroke();
+        });
+
+        // 应用所有橡皮擦
+        tempPaths.forEach((path) => {
+          if (path.points.length < 2 || path.tool !== "eraser") return;
+          
+          tempCtx.beginPath();
+          tempCtx.globalCompositeOperation = "destination-out";
+          tempCtx.lineWidth = path.lineWidth;
+          tempCtx.lineCap = "round";
+          tempCtx.lineJoin = "round";
+
+          tempCtx.moveTo(path.points[0].x, path.points[0].y);
+          for (let i = 1; i < path.points.length; i++) {
+            tempCtx.lineTo(path.points[i].x, path.points[i].y);
+          }
+          tempCtx.stroke();
+        });
+
+        ctx.drawImage(tempCanvas, 0, 0);
+      }
     }
   };
 
