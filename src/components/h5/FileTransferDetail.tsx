@@ -29,11 +29,19 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
       icon: "success",
       content: "签收成功",
     });
-    onBack();
+    // 确保调用 onBack
+    if (onBack && typeof onBack === 'function') {
+      onBack();
+    }
   };
 
-  const handleBackClick = () => {
-    onBack();
+  const handleBackClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 确保调用 onBack
+    if (onBack && typeof onBack === 'function') {
+      onBack();
+    }
   };
 
   // 打开附件
@@ -47,8 +55,9 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
       <div className="bg-white border-b border-slate-200 shrink-0">
         <div className="flex items-center h-11 px-3">
           <button 
+            type="button"
             onClick={handleBackClick}
-            className="flex items-center justify-center w-8 h-8 -ml-1 rounded-full hover:bg-slate-100 active:bg-slate-200"
+            className="flex items-center justify-center w-8 h-8 -ml-1 rounded-full hover:bg-slate-100 active:bg-slate-200 z-10"
           >
             <LeftOutline className="text-slate-600 text-lg" />
           </button>
