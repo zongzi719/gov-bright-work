@@ -219,17 +219,17 @@ const H5OfficialDocument = () => {
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* 顶部固定Header - 简洁政务风格 */}
-      <div className="bg-slate-800 text-white shrink-0">
+      <div className="bg-red-700 text-white shrink-0">
         <div className="flex items-center justify-between h-11 px-3">
           {/* 左侧占位 */}
           <div className="w-10"></div>
           
           {/* 中间待办/已办切换 */}
-          <div className="flex items-center bg-slate-700 rounded-lg p-0.5">
+          <div className="flex items-center bg-red-800 rounded-lg p-0.5">
             <button
               className={`px-4 py-1 text-xs font-medium rounded transition-all ${
                 activeTab === "pending"
-                  ? "bg-white text-slate-800"
+                  ? "bg-white text-red-700"
                   : "text-white/80"
               }`}
               onClick={() => setActiveTab("pending")}
@@ -239,7 +239,7 @@ const H5OfficialDocument = () => {
             <button
               className={`px-4 py-1 text-xs font-medium rounded transition-all ${
                 activeTab === "completed"
-                  ? "bg-white text-slate-800"
+                  ? "bg-white text-red-700"
                   : "text-white/80"
               }`}
               onClick={() => setActiveTab("completed")}
