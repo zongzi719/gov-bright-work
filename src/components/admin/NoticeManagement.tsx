@@ -254,7 +254,7 @@ const NoticeManagement = () => {
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>{editingNotice ? "编辑通知" : "添加通知"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="overflow-y-auto space-y-4 pr-2">
               <div className="space-y-2">
                 <Label htmlFor="title">标题</Label>
                 <Input
@@ -285,12 +285,14 @@ const NoticeManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="content">内容（可选，支持图文混排）</Label>
-                <RichTextEditor
-                  value={formData.content}
-                  onChange={(value) => setFormData({ ...formData, content: value })}
-                  placeholder="请输入通知内容，支持插入图片..."
-                  minHeight="180px"
-                />
+                <div className="max-h-[280px] overflow-hidden">
+                  <RichTextEditor
+                    value={formData.content}
+                    onChange={(value) => setFormData({ ...formData, content: value })}
+                    placeholder="请输入通知内容，支持插入图片..."
+                    minHeight="180px"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="security_level">密级</Label>
