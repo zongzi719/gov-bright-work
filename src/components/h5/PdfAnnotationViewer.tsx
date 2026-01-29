@@ -332,11 +332,11 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
               {pdfFileName || "PDF文件"}
             </div>
             
-            {/* PDF iframe */}
-            <iframe
+            {/* PDF embed - 使用embed替代iframe以避免Chrome屏蔽 */}
+            <embed
               src={pdfUrl}
-              className="w-full h-full min-h-[500px] border-0"
-              title="PDF Preview"
+              type="application/pdf"
+              className="w-full h-full min-h-[500px]"
             />
 
             {/* 批注Canvas覆盖层 */}
