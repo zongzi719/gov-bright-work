@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Pencil, Eraser, Save, Upload, FileText, ZoomIn, ZoomOut } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Pencil, Eraser, Save, Upload, FileText, ZoomIn, ZoomOut, Maximize, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -8,6 +8,9 @@ import "react-pdf/dist/esm/Page/TextLayer.css";
 
 // 配置 PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+// 预设缩放级别
+const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0];
 
 type ToolType = "pencil" | "eraser" | null;
 
@@ -38,10 +41,40 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
   const [numPages, setNumPages] = useState<number>(0);
   const [scale, setScale] = useState<number>(1.0);
   const [pathsByPage, setPathsByPage] = useState<Record<number, DrawPath[]>>({});
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [pdfWidth, setPdfWidth] = useState<number>(0);
+  const [isFitWidth, setIsFitWidth] = useState<boolean>(true);
 
   // 默认PDF文件路径
   const defaultPdfUrl = "/documents/default-document.pdf";
   const defaultPdfName = "关于印发《2025年度党风廉政建设工作要点》的通知.pdf";
+
+  // 监听容器宽度变化
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth - 32); // 减去内边距
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  // 计算适合宽度的缩放比例
+  const fitWidthScale = useMemo(() => {
+    if (pdfWidth > 0 && containerWidth > 0) {
+      return Math.min(containerWidth / pdfWidth, 3.0);
+    }
+    return 1.0;
+  }, [pdfWidth, containerWidth]);
+
+  // 当选择适合宽度模式时自动调整缩放
+  useEffect(() => {
+    if (isFitWidth && fitWidthScale > 0) {
+      setScale(fitWidthScale);
+    }
+  }, [isFitWidth, fitWidthScale]);
 
   // 从localStorage加载保存的批注和PDF信息
   useEffect(() => {
@@ -106,11 +139,31 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
   };
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.2, 3.0));
+    setIsFitWidth(false);
+    const currentIndex = ZOOM_LEVELS.findIndex(z => z >= scale);
+    const nextIndex = Math.min(currentIndex + 1, ZOOM_LEVELS.length - 1);
+    setScale(ZOOM_LEVELS[nextIndex]);
   };
 
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.2, 0.5));
+    setIsFitWidth(false);
+    const currentIndex = ZOOM_LEVELS.findIndex(z => z >= scale);
+    const prevIndex = Math.max(currentIndex - 1, 0);
+    setScale(ZOOM_LEVELS[prevIndex]);
+  };
+
+  const handleFitWidth = () => {
+    setIsFitWidth(true);
+  };
+
+  const handleActualSize = () => {
+    setIsFitWidth(false);
+    setScale(1.0);
+  };
+
+  // 记录PDF原始宽度
+  const handleFirstPageLoad = (page: { width: number }) => {
+    setPdfWidth(page.width);
   };
 
   const tools = [
@@ -119,55 +172,27 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* 工具栏 */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50 shrink-0">
-        <button
-          onClick={triggerFileUpload}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
-        >
-          <Upload className="w-4 h-4" />
-          <span>上传</span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-
+    <div className="flex flex-col h-full bg-background">
+      {/* 顶部工具栏 - 批注工具 */}
+      <div className="flex items-center justify-between px-2 py-1.5 border-b bg-muted/50 shrink-0">
         <div className="flex items-center gap-1">
           <button
-            onClick={handleZoomOut}
-            disabled={!pdfUrl || scale <= 0.5}
-            className={cn(
-              "p-1 rounded text-xs transition-colors",
-              !pdfUrl || scale <= 0.5
-                ? "text-slate-300 cursor-not-allowed"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-            )}
+            onClick={triggerFileUpload}
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
           >
-            <ZoomOut className="w-4 h-4" />
+            <Upload className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">上传</span>
           </button>
-          <span className="text-xs text-slate-500 min-w-[3rem] text-center">
-            {Math.round(scale * 100)}%
-          </span>
-          <button
-            onClick={handleZoomIn}
-            disabled={!pdfUrl || scale >= 3.0}
-            className={cn(
-              "p-1 rounded text-xs transition-colors",
-              !pdfUrl || scale >= 3.0
-                ? "text-slate-300 cursor-not-allowed"
-                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-            )}
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {tools.map((tool) => (
             <button
               key={tool.id}
@@ -176,13 +201,13 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
               className={cn(
                 "flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
                 !pdfUrl 
-                  ? "text-slate-300 cursor-not-allowed"
+                  ? "text-muted-foreground/40 cursor-not-allowed"
                   : activeTool === tool.id
-                    ? "text-red-500 bg-red-50"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "text-destructive bg-destructive/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <tool.icon className="w-4 h-4" />
+              <tool.icon className="w-3.5 h-3.5" />
               <span>{tool.label}</span>
             </button>
           ))}
@@ -192,42 +217,120 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
             className={cn(
               "flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
               !pdfUrl 
-                ? "text-slate-300 cursor-not-allowed"
-                : "text-slate-500 hover:text-slate-700"
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
-            <Save className="w-4 h-4" />
+            <Save className="w-3.5 h-3.5" />
             <span>保存</span>
           </button>
         </div>
       </div>
 
+      {/* 缩放控制栏 - 固定在底部 */}
+      {pdfUrl && (
+        <div className="flex items-center justify-center gap-2 px-2 py-1.5 border-b bg-muted/30 shrink-0">
+          <button
+            onClick={handleZoomOut}
+            disabled={scale <= 0.5}
+            className={cn(
+              "p-1.5 rounded-full transition-colors",
+              scale <= 0.5
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          
+          <div className="flex items-center bg-background border rounded-full px-1">
+            {[50, 100, 150, 200].map((percent) => (
+              <button
+                key={percent}
+                onClick={() => {
+                  setIsFitWidth(false);
+                  setScale(percent / 100);
+                }}
+                className={cn(
+                  "px-2 py-0.5 text-xs rounded-full transition-colors",
+                  Math.round(scale * 100) === percent
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {percent}%
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handleZoomIn}
+            disabled={scale >= 3.0}
+            className={cn(
+              "p-1.5 rounded-full transition-colors",
+              scale >= 3.0
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+
+          <div className="h-4 w-px bg-border mx-1" />
+
+          <button
+            onClick={handleFitWidth}
+            className={cn(
+              "p-1.5 rounded-full transition-colors",
+              isFitWidth
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+            title="适合宽度"
+          >
+            <Maximize className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleActualSize}
+            className={cn(
+              "p-1.5 rounded-full transition-colors",
+              !isFitWidth && scale === 1.0
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+            title="实际大小"
+          >
+            <Minimize2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* PDF预览区域 */}
       <div 
         ref={containerRef}
-        className="flex-1 relative overflow-auto bg-slate-200"
+        className="flex-1 relative overflow-auto bg-muted/20"
       >
         {!pdfUrl ? (
           <div className="flex flex-col items-center justify-center h-full p-8">
-            <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mb-4">
-              <FileText className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <FileText className="w-8 h-8 text-muted-foreground" />
             </div>
-            <p className="text-sm text-slate-500 mb-4 text-center">
+            <p className="text-sm text-muted-foreground mb-4 text-center">
               请上传PDF文件进行批注
             </p>
             <button
               onClick={triggerFileUpload}
-              className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-destructive text-destructive-foreground text-sm rounded-lg hover:bg-destructive/90 transition-colors flex items-center gap-2"
             >
               <Upload className="w-4 h-4" />
               选择PDF文件
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center py-4">
+          <div className="flex flex-col items-center py-2 px-4">
             {/* PDF文件信息 */}
-            <div className="sticky top-2 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-slate-600 shadow-sm mb-4">
-              {pdfFileName || "PDF文件"} - {numPages} 页
+            <div className="sticky top-1 z-10 bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-muted-foreground shadow-sm mb-2 max-w-full truncate">
+              {pdfFileName || "PDF文件"} · {numPages} 页 · {Math.round(scale * 100)}%
             </div>
             
             <Document
@@ -235,11 +338,11 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
               onLoadSuccess={onDocumentLoadSuccess}
               loading={
                 <div className="flex items-center justify-center p-8">
-                  <div className="animate-spin w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full" />
+                  <div className="animate-spin w-8 h-8 border-2 border-destructive border-t-transparent rounded-full" />
                 </div>
               }
               error={
-                <div className="text-red-500 p-4 text-center">
+                <div className="text-destructive p-4 text-center">
                   PDF加载失败，请重新上传
                 </div>
               }
@@ -248,6 +351,7 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
                 <PdfPageWithAnnotation
                   key={`page_${index + 1}`}
                   pageNumber={index + 1}
+                  totalPages={numPages}
                   scale={scale}
                   activeTool={activeTool}
                   paths={pathsByPage[index + 1] || []}
@@ -257,6 +361,7 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
                       [index + 1]: newPaths
                     }));
                   }}
+                  onFirstLoad={index === 0 ? handleFirstPageLoad : undefined}
                 />
               ))}
             </Document>
@@ -270,18 +375,22 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
 // 单页PDF + 批注组件
 interface PdfPageWithAnnotationProps {
   pageNumber: number;
+  totalPages: number;
   scale: number;
   activeTool: ToolType;
   paths: DrawPath[];
   onPathsChange: (paths: DrawPath[]) => void;
+  onFirstLoad?: (page: { width: number; height: number }) => void;
 }
 
 const PdfPageWithAnnotation = ({
   pageNumber,
+  totalPages,
   scale,
   activeTool,
   paths,
   onPathsChange,
+  onFirstLoad,
 }: PdfPageWithAnnotationProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -449,10 +558,11 @@ const PdfPageWithAnnotation = ({
 
   const onPageLoadSuccess = (page: { width: number; height: number }) => {
     setPageSize({ width: page.width, height: page.height });
+    onFirstLoad?.(page);
   };
 
   return (
-    <div className="relative mb-4 shadow-lg bg-white">
+    <div className="relative mb-2 shadow-md bg-background rounded overflow-hidden">
       <Page
         pageNumber={pageNumber}
         scale={scale}
@@ -478,8 +588,8 @@ const PdfPageWithAnnotation = ({
         onTouchMove={draw}
         onTouchEnd={stopDrawing}
       />
-      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-        第 {pageNumber} 页
+      <div className="absolute bottom-1 right-1 bg-foreground/60 text-background text-[10px] px-1.5 py-0.5 rounded">
+        {pageNumber}/{totalPages || '?'}
       </div>
     </div>
   );
