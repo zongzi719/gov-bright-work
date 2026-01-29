@@ -1,11 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -30,10 +31,11 @@ import {
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
 import TablePagination from "./TablePagination";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 
 type SecurityLevel = '机密' | '秘密' | '内部' | '公开';
+type PublishScope = 'all' | 'organization';
 
 interface Notice {
   id: string;
@@ -43,12 +45,16 @@ interface Notice {
   is_pinned: boolean;
   is_published: boolean;
   security_level: SecurityLevel;
+  publish_scope: PublishScope;
+  publish_scope_ids: string[];
   created_at: string;
 }
 
 interface Organization {
   id: string;
   name: string;
+  parent_id: string | null;
+  level: number;
 }
 
 const NoticeManagement = () => {
@@ -65,6 +71,8 @@ const NoticeManagement = () => {
     is_pinned: false,
     is_published: true,
     security_level: "公开" as SecurityLevel,
+    publish_scope: "all" as PublishScope,
+    publish_scope_ids: [] as string[],
   });
 
   useEffect(() => {
@@ -103,7 +111,7 @@ const NoticeManagement = () => {
   const fetchOrganizations = async () => {
     const { data, error } = await supabase
       .from("organizations")
-      .select("id, name")
+      .select("id, name, parent_id, level")
       .order("sort_order", { ascending: true });
 
     if (error) {
@@ -152,6 +160,8 @@ const NoticeManagement = () => {
       is_pinned: notice.is_pinned,
       is_published: notice.is_published,
       security_level: ((notice.security_level as string) === '一般' ? '公开' : notice.security_level || '公开') as SecurityLevel,
+      publish_scope: notice.publish_scope || 'all',
+      publish_scope_ids: notice.publish_scope_ids || [],
     });
     setDialogOpen(true);
   };
@@ -179,8 +189,37 @@ const NoticeManagement = () => {
       is_pinned: false,
       is_published: true,
       security_level: "公开",
+      publish_scope: "all",
+      publish_scope_ids: [],
     });
   };
+
+  const handleScopeOrgToggle = (orgId: string, checked: boolean) => {
+    if (checked) {
+      setFormData({
+        ...formData,
+        publish_scope_ids: [...formData.publish_scope_ids, orgId]
+      });
+    } else {
+      setFormData({
+        ...formData,
+        publish_scope_ids: formData.publish_scope_ids.filter(id => id !== orgId)
+      });
+    }
+  };
+
+  // 构建树形组织结构
+  const buildOrgTree = (orgs: Organization[], parentId: string | null = null, level: number = 0): Array<Organization & { indent: number }> => {
+    const result: Array<Organization & { indent: number }> = [];
+    const children = orgs.filter(org => org.parent_id === parentId);
+    children.forEach(child => {
+      result.push({ ...child, indent: level });
+      result.push(...buildOrgTree(orgs, child.id, level + 1));
+    });
+    return result;
+  };
+
+  const orgTree = buildOrgTree(organizations);
 
   return (
     <div className="gov-card">
@@ -211,8 +250,8 @@ const NoticeManagement = () => {
               添加通知
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
+          <DialogContent className="max-w-3xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto]">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>{editingNotice ? "编辑通知" : "添加通知"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -245,13 +284,12 @@ const NoticeManagement = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="content">内容（可选）</Label>
-                <Textarea
-                  id="content"
+                <Label htmlFor="content">内容（可选，支持图文混排）</Label>
+                <RichTextEditor
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="请输入通知内容"
-                  rows={4}
+                  onChange={(value) => setFormData({ ...formData, content: value })}
+                  placeholder="请输入通知内容，支持插入图片..."
+                  minHeight="180px"
                 />
               </div>
               <div className="space-y-2">
@@ -271,6 +309,59 @@ const NoticeManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>发布范围</Label>
+                <Select
+                  value={formData.publish_scope}
+                  onValueChange={(value: PublishScope) => setFormData({ 
+                    ...formData, 
+                    publish_scope: value,
+                    publish_scope_ids: value === 'all' ? [] : formData.publish_scope_ids
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择发布范围" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部单位</SelectItem>
+                    <SelectItem value="organization">指定单位</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.publish_scope === 'organization' && (
+                <div className="space-y-2">
+                  <Label>选择可见单位</Label>
+                  <ScrollArea className="h-40 border rounded-md p-2">
+                    <div className="space-y-1">
+                      {orgTree.map((org) => (
+                        <div 
+                          key={org.id} 
+                          className="flex items-center gap-2"
+                          style={{ paddingLeft: `${org.indent * 16}px` }}
+                        >
+                          {org.indent > 0 && <span className="text-muted-foreground text-sm">└</span>}
+                          <Checkbox
+                            id={`org-${org.id}`}
+                            checked={formData.publish_scope_ids.includes(org.id)}
+                            onCheckedChange={(checked) => handleScopeOrgToggle(org.id, !!checked)}
+                          />
+                          <label 
+                            htmlFor={`org-${org.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {org.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  <p className="text-xs text-muted-foreground">
+                    已选择 {formData.publish_scope_ids.length} 个单位
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Switch
