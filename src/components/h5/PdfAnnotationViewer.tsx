@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pencil, Eraser, Save, Upload, FileText } from "lucide-react";
+import { Pencil, Eraser, Save, Upload, FileText, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+
+// 配置 PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 type ToolType = "pencil" | "eraser" | null;
 
@@ -15,6 +21,7 @@ interface DrawPath {
   tool: "pencil" | "eraser";
   color: string;
   lineWidth: number;
+  pageNumber: number; // 批注所在的页码
 }
 
 interface PdfAnnotationViewerProps {
@@ -23,15 +30,14 @@ interface PdfAnnotationViewerProps {
 }
 
 const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTool, setActiveTool] = useState<ToolType>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [paths, setPaths] = useState<DrawPath[]>([]);
-  const [currentPath, setCurrentPath] = useState<Point[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [scale, setScale] = useState<number>(1.0);
+  const [pathsByPage, setPathsByPage] = useState<Record<number, DrawPath[]>>({});
 
   // 默认PDF文件路径
   const defaultPdfUrl = "/documents/default-document.pdf";
@@ -39,209 +45,29 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
 
   // 从localStorage加载保存的批注和PDF信息
   useEffect(() => {
-    const savedPaths = localStorage.getItem(`${storageKey}_paths`);
+    const savedPaths = localStorage.getItem(`${storageKey}_paths_v2`);
     const savedPdf = localStorage.getItem(`${storageKey}_pdf`);
     const savedPdfName = localStorage.getItem(`${storageKey}_pdf_name`);
     
     if (savedPaths) {
       try {
-        setPaths(JSON.parse(savedPaths));
+        setPathsByPage(JSON.parse(savedPaths));
       } catch {
         // ignore
       }
     }
     
-    // 如果有保存的PDF则使用保存的，否则使用默认PDF
     if (savedPdf) {
       setPdfUrl(savedPdf);
       setPdfFileName(savedPdfName || defaultPdfName);
     } else {
-      // 使用默认PDF
       setPdfUrl(defaultPdfUrl);
       setPdfFileName(defaultPdfName);
     }
   }, [storageKey]);
 
-  // Resize canvas
-  useEffect(() => {
-    const resizeCanvas = () => {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
-
-      const rect = container.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = Math.max(rect.height, 500);
-      redrawCanvas();
-    };
-
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-    return () => window.removeEventListener("resize", resizeCanvas);
-  }, [pdfUrl]);
-
-  const redrawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // 清空画布（保持透明，让PDF内容可见）
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 分两步渲染：先画所有铅笔笔迹到临时canvas，再用橡皮擦除
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext("2d");
-    if (!tempCtx) return;
-
-    // 第一遍：绘制所有铅笔笔迹
-    paths.forEach((path) => {
-      if (path.points.length < 2 || path.tool !== "pencil") return;
-      
-      tempCtx.beginPath();
-      tempCtx.globalCompositeOperation = "source-over";
-      tempCtx.strokeStyle = path.color;
-      tempCtx.lineWidth = path.lineWidth;
-      tempCtx.lineCap = "round";
-      tempCtx.lineJoin = "round";
-
-      tempCtx.moveTo(path.points[0].x, path.points[0].y);
-      for (let i = 1; i < path.points.length; i++) {
-        tempCtx.lineTo(path.points[i].x, path.points[i].y);
-      }
-      tempCtx.stroke();
-    });
-
-    // 第二遍：用橡皮擦除笔迹（只擦除临时canvas上的内容）
-    paths.forEach((path) => {
-      if (path.points.length < 2 || path.tool !== "eraser") return;
-      
-      tempCtx.beginPath();
-      tempCtx.globalCompositeOperation = "destination-out";
-      tempCtx.lineWidth = path.lineWidth;
-      tempCtx.lineCap = "round";
-      tempCtx.lineJoin = "round";
-
-      tempCtx.moveTo(path.points[0].x, path.points[0].y);
-      for (let i = 1; i < path.points.length; i++) {
-        tempCtx.lineTo(path.points[i].x, path.points[i].y);
-      }
-      tempCtx.stroke();
-    });
-
-    // 将临时canvas内容复制到主canvas
-    ctx.drawImage(tempCanvas, 0, 0);
-  }, [paths]);
-
-  useEffect(() => {
-    redrawCanvas();
-  }, [paths, redrawCanvas]);
-
-  const getCoordinates = (e: React.TouchEvent | React.MouseEvent): Point | null => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-
-    const rect = canvas.getBoundingClientRect();
-    
-    if ("touches" in e) {
-      const touch = e.touches[0];
-      return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-      };
-    } else {
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-    }
-  };
-
-  const startDrawing = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!activeTool || !pdfUrl) return;
-    e.preventDefault();
-    
-    const point = getCoordinates(e);
-    if (!point) return;
-
-    setIsDrawing(true);
-    setCurrentPath([point]);
-  };
-
-  const draw = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!isDrawing || !activeTool) return;
-    e.preventDefault();
-
-    const point = getCoordinates(e);
-    if (!point) return;
-
-    const newPath = [...currentPath, point];
-    setCurrentPath(newPath);
-
-    if (newPath.length >= 2) {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      const lastIndex = newPath.length - 1;
-
-      if (activeTool === "pencil") {
-        // 铅笔：增量绘制，只画新的一段
-        ctx.beginPath();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.strokeStyle = "#ff0000";
-        ctx.lineWidth = 2;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.moveTo(newPath[lastIndex - 1].x, newPath[lastIndex - 1].y);
-        ctx.lineTo(newPath[lastIndex].x, newPath[lastIndex].y);
-        ctx.stroke();
-      } else if (activeTool === "eraser") {
-        // 橡皮擦：显示半透明预览线条，实际擦除在stopDrawing时执行
-        // 先重绘已保存的路径
-        redrawCanvas();
-        
-        // 再绘制当前橡皮擦的预览效果（半透明白色线条）
-        ctx.beginPath();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-        ctx.lineWidth = 20;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.moveTo(newPath[0].x, newPath[0].y);
-        for (let i = 1; i < newPath.length; i++) {
-          ctx.lineTo(newPath[i].x, newPath[i].y);
-        }
-        ctx.stroke();
-      }
-    }
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawing || !activeTool) return;
-
-    if (currentPath.length > 1) {
-      const newPaths = [
-        ...paths,
-        {
-          points: currentPath,
-          tool: activeTool,
-          color: "#ff0000",
-          lineWidth: activeTool === "eraser" ? 20 : 2,
-        },
-      ];
-      setPaths(newPaths);
-    }
-
-    setIsDrawing(false);
-    setCurrentPath([]);
-  };
-
   const handleSave = () => {
-    localStorage.setItem(`${storageKey}_paths`, JSON.stringify(paths));
+    localStorage.setItem(`${storageKey}_paths_v2`, JSON.stringify(pathsByPage));
     if (pdfUrl) {
       localStorage.setItem(`${storageKey}_pdf`, pdfUrl);
     }
@@ -265,8 +91,7 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
       const result = event.target?.result as string;
       setPdfUrl(result);
       setPdfFileName(file.name);
-      // 清除旧批注
-      setPaths([]);
+      setPathsByPage({});
       toast.success(`已加载: ${file.name}`);
     };
     reader.readAsDataURL(file);
@@ -274,6 +99,18 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
 
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
+  };
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  };
+
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(prev + 0.2, 3.0));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(prev - 0.2, 0.5));
   };
 
   const tools = [
@@ -290,7 +127,7 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
           className="flex items-center gap-1 px-2 py-1 rounded text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
         >
           <Upload className="w-4 h-4" />
-          <span>上传PDF</span>
+          <span>上传</span>
         </button>
         <input
           ref={fileInputRef}
@@ -299,6 +136,36 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
           onChange={handleFileUpload}
           className="hidden"
         />
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleZoomOut}
+            disabled={!pdfUrl || scale <= 0.5}
+            className={cn(
+              "p-1 rounded text-xs transition-colors",
+              !pdfUrl || scale <= 0.5
+                ? "text-slate-300 cursor-not-allowed"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            )}
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <span className="text-xs text-slate-500 min-w-[3rem] text-center">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            onClick={handleZoomIn}
+            disabled={!pdfUrl || scale >= 3.0}
+            className={cn(
+              "p-1 rounded text-xs transition-colors",
+              !pdfUrl || scale >= 3.0
+                ? "text-slate-300 cursor-not-allowed"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            )}
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+        </div>
 
         <div className="flex items-center gap-2">
           {tools.map((tool) => (
@@ -338,10 +205,9 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
       {/* PDF预览区域 */}
       <div 
         ref={containerRef}
-        className="flex-1 relative overflow-auto bg-slate-100"
+        className="flex-1 relative overflow-auto bg-slate-200"
       >
         {!pdfUrl ? (
-          /* 未上传PDF时的提示界面 */
           <div className="flex flex-col items-center justify-center h-full p-8">
             <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mb-4">
               <FileText className="w-8 h-8 text-slate-400" />
@@ -358,37 +224,262 @@ const PdfAnnotationViewer = ({ storageKey, title }: PdfAnnotationViewerProps) =>
             </button>
           </div>
         ) : (
-          /* PDF预览 + 批注层 */
-          <>
+          <div className="flex flex-col items-center py-4">
             {/* PDF文件信息 */}
-            <div className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs text-slate-600 shadow-sm">
-              {pdfFileName || "PDF文件"}
+            <div className="sticky top-2 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-slate-600 shadow-sm mb-4">
+              {pdfFileName || "PDF文件"} - {numPages} 页
             </div>
             
-            {/* PDF embed - 使用embed替代iframe以避免Chrome屏蔽 */}
-            <embed
-              src={pdfUrl}
-              type="application/pdf"
-              className="w-full h-full min-h-[500px]"
-            />
-
-            {/* 批注Canvas覆盖层 */}
-            <canvas
-              ref={canvasRef}
-              className={cn(
-                "absolute inset-0 w-full h-full",
-                activeTool ? "cursor-crosshair" : "pointer-events-none"
-              )}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-            />
-          </>
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              loading={
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full" />
+                </div>
+              }
+              error={
+                <div className="text-red-500 p-4 text-center">
+                  PDF加载失败，请重新上传
+                </div>
+              }
+            >
+              {Array.from(new Array(numPages), (_, index) => (
+                <PdfPageWithAnnotation
+                  key={`page_${index + 1}`}
+                  pageNumber={index + 1}
+                  scale={scale}
+                  activeTool={activeTool}
+                  paths={pathsByPage[index + 1] || []}
+                  onPathsChange={(newPaths) => {
+                    setPathsByPage(prev => ({
+                      ...prev,
+                      [index + 1]: newPaths
+                    }));
+                  }}
+                />
+              ))}
+            </Document>
+          </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// 单页PDF + 批注组件
+interface PdfPageWithAnnotationProps {
+  pageNumber: number;
+  scale: number;
+  activeTool: ToolType;
+  paths: DrawPath[];
+  onPathsChange: (paths: DrawPath[]) => void;
+}
+
+const PdfPageWithAnnotation = ({
+  pageNumber,
+  scale,
+  activeTool,
+  paths,
+  onPathsChange,
+}: PdfPageWithAnnotationProps) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentPath, setCurrentPath] = useState<Point[]>([]);
+  const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
+
+  // 重绘Canvas
+  const redrawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || pageSize.width === 0) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 设置canvas实际大小
+    canvas.width = pageSize.width * scale;
+    canvas.height = pageSize.height * scale;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 使用临时canvas来处理橡皮擦逻辑
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext("2d");
+    if (!tempCtx) return;
+
+    // 第一遍：绘制所有铅笔笔迹（应用缩放）
+    paths.forEach((path) => {
+      if (path.points.length < 2 || path.tool !== "pencil") return;
+      
+      tempCtx.beginPath();
+      tempCtx.globalCompositeOperation = "source-over";
+      tempCtx.strokeStyle = path.color;
+      tempCtx.lineWidth = path.lineWidth * scale;
+      tempCtx.lineCap = "round";
+      tempCtx.lineJoin = "round";
+
+      tempCtx.moveTo(path.points[0].x * scale, path.points[0].y * scale);
+      for (let i = 1; i < path.points.length; i++) {
+        tempCtx.lineTo(path.points[i].x * scale, path.points[i].y * scale);
+      }
+      tempCtx.stroke();
+    });
+
+    // 第二遍：用橡皮擦除
+    paths.forEach((path) => {
+      if (path.points.length < 2 || path.tool !== "eraser") return;
+      
+      tempCtx.beginPath();
+      tempCtx.globalCompositeOperation = "destination-out";
+      tempCtx.lineWidth = path.lineWidth * scale;
+      tempCtx.lineCap = "round";
+      tempCtx.lineJoin = "round";
+
+      tempCtx.moveTo(path.points[0].x * scale, path.points[0].y * scale);
+      for (let i = 1; i < path.points.length; i++) {
+        tempCtx.lineTo(path.points[i].x * scale, path.points[i].y * scale);
+      }
+      tempCtx.stroke();
+    });
+
+    ctx.drawImage(tempCanvas, 0, 0);
+  }, [paths, scale, pageSize]);
+
+  useEffect(() => {
+    redrawCanvas();
+  }, [paths, scale, pageSize, redrawCanvas]);
+
+  const getCoordinates = (e: React.TouchEvent | React.MouseEvent): Point | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    
+    if ("touches" in e) {
+      const touch = e.touches[0];
+      // 存储的是相对于原始PDF尺寸的坐标
+      return {
+        x: (touch.clientX - rect.left) / scale,
+        y: (touch.clientY - rect.top) / scale,
+      };
+    } else {
+      return {
+        x: (e.clientX - rect.left) / scale,
+        y: (e.clientY - rect.top) / scale,
+      };
+    }
+  };
+
+  const startDrawing = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!activeTool) return;
+    e.preventDefault();
+    
+    const point = getCoordinates(e);
+    if (!point) return;
+
+    setIsDrawing(true);
+    setCurrentPath([point]);
+  };
+
+  const draw = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDrawing || !activeTool) return;
+    e.preventDefault();
+
+    const point = getCoordinates(e);
+    if (!point) return;
+
+    const newPath = [...currentPath, point];
+    setCurrentPath(newPath);
+
+    // 实时绘制预览
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    if (activeTool === "pencil" && newPath.length >= 2) {
+      const lastIndex = newPath.length - 1;
+      ctx.beginPath();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = "#ff0000";
+      ctx.lineWidth = 2 * scale;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.moveTo(newPath[lastIndex - 1].x * scale, newPath[lastIndex - 1].y * scale);
+      ctx.lineTo(newPath[lastIndex].x * scale, newPath[lastIndex].y * scale);
+      ctx.stroke();
+    } else if (activeTool === "eraser" && newPath.length >= 2) {
+      // 橡皮擦预览
+      redrawCanvas();
+      ctx.beginPath();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.lineWidth = 20 * scale;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.moveTo(newPath[0].x * scale, newPath[0].y * scale);
+      for (let i = 1; i < newPath.length; i++) {
+        ctx.lineTo(newPath[i].x * scale, newPath[i].y * scale);
+      }
+      ctx.stroke();
+    }
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing || !activeTool) return;
+
+    if (currentPath.length > 1) {
+      const newPaths = [
+        ...paths,
+        {
+          points: currentPath,
+          tool: activeTool,
+          color: "#ff0000",
+          lineWidth: activeTool === "eraser" ? 20 : 2,
+          pageNumber,
+        },
+      ];
+      onPathsChange(newPaths);
+    }
+
+    setIsDrawing(false);
+    setCurrentPath([]);
+  };
+
+  const onPageLoadSuccess = (page: { width: number; height: number }) => {
+    setPageSize({ width: page.width, height: page.height });
+  };
+
+  return (
+    <div className="relative mb-4 shadow-lg bg-white">
+      <Page
+        pageNumber={pageNumber}
+        scale={scale}
+        onLoadSuccess={onPageLoadSuccess}
+        renderTextLayer={false}
+        renderAnnotationLayer={false}
+      />
+      <canvas
+        ref={canvasRef}
+        className={cn(
+          "absolute top-0 left-0",
+          activeTool ? "cursor-crosshair" : "pointer-events-none"
+        )}
+        style={{
+          width: pageSize.width * scale,
+          height: pageSize.height * scale,
+        }}
+        onMouseDown={startDrawing}
+        onMouseMove={draw}
+        onMouseUp={stopDrawing}
+        onMouseLeave={stopDrawing}
+        onTouchStart={startDrawing}
+        onTouchMove={draw}
+        onTouchEnd={stopDrawing}
+      />
+      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+        第 {pageNumber} 页
       </div>
     </div>
   );
