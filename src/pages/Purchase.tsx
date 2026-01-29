@@ -537,16 +537,21 @@ const Purchase = () => {
                           </TableCell>
                           <TableCell className="p-2">
                             <Input
-                              type="number"
-                              min={0}
-                              step={0.01}
+                              type="text"
+                              inputMode="decimal"
                               value={item.unit_price === 0 ? "" : item.unit_price}
-                              onChange={(e) => handleItemChange(index, "unit_price", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                                  handleItemChange(index, "unit_price", val === "" ? 0 : parseFloat(val) || 0);
+                                }
+                              }}
                               onBlur={(e) => {
                                 if (e.target.value === "") {
                                   handleItemChange(index, "unit_price", 0);
                                 }
                               }}
+                              placeholder="0.00"
                             />
                           </TableCell>
                           <TableCell className="p-2">
