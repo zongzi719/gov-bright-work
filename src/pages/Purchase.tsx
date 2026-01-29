@@ -221,6 +221,11 @@ const Purchase = () => {
 
   const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
 
+  // 自动同步预算金额为物品明细合计
+  useEffect(() => {
+    setBudgetAmount(Number(totalAmount.toFixed(2)));
+  }, [totalAmount]);
+
   const handleSubmit = async () => {
     const validItems = formItems.filter(item => item.item_name.trim() && item.quantity > 0);
     if (validItems.length === 0) {
@@ -411,18 +416,14 @@ const Purchase = () => {
             {/* 采购方式 */}
             <div className="space-y-2">
               <Label>采购方式 *</Label>
-              <Select value={procurementMethod} onValueChange={setProcurementMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择采购方式" />
-                </SelectTrigger>
-                <SelectContent>
-                  {procurementMethods.map((method) => (
-                    <SelectItem key={method.value} value={method.value}>
-                      {method.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <RadioGroup value={procurementMethod} onValueChange={setProcurementMethod} className="flex flex-wrap gap-4">
+                {procurementMethods.map((method) => (
+                  <div key={method.value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={method.value} id={`method-${method.value}`} />
+                    <Label htmlFor={`method-${method.value}`} className="font-normal cursor-pointer">{method.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
 
             {/* 资金来源 */}
