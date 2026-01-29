@@ -30,12 +30,7 @@ const BannerManagement = () => {
   }, []);
 
   const fetchBanner = async () => {
-    const { data, error } = await supabase
-      .from("banners")
-      .select("*")
-      .order("sort_order")
-      .limit(1)
-      .single();
+    const { data, error } = await supabase.from("banners").select("*").order("sort_order").limit(1).single();
 
     if (!error && data) {
       setBanner(data);
@@ -49,7 +44,7 @@ const BannerManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.image_url) {
       toast.error("请上传背景图片");
       return;
@@ -112,18 +107,16 @@ const BannerManagement = () => {
       const fileName = `header-bg-${Date.now()}.${fileExt}`;
       const filePath = `banners/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("banners")
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from("banners").upload(filePath, file);
 
       if (uploadError) {
         throw uploadError;
       }
 
       // 获取公开URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("banners")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("banners").getPublicUrl(filePath);
 
       setFormData({ ...formData, image_url: publicUrl });
       toast.success("图片上传成功");
@@ -140,7 +133,7 @@ const BannerManagement = () => {
 
   const handleClear = async () => {
     if (!banner) return;
-    
+
     if (!confirm("确定要清除导航栏背景图吗？")) return;
 
     const { error } = await supabase.from("banners").delete().eq("id", banner.id);
@@ -159,9 +152,7 @@ const BannerManagement = () => {
     <div className="gov-card">
       <div className="px-5 py-4 border-b border-border">
         <h2 className="gov-card-title">导航栏背景管理</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          设置顶部导航栏的背景图片（只允许上传一张）
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">设置顶部导航栏的背景图片（只允许上传一张）</p>
       </div>
 
       <div className="p-5">
@@ -174,18 +165,14 @@ const BannerManagement = () => {
               <Label>当前背景</Label>
               {formData.image_url ? (
                 <div className="relative w-full h-24 bg-muted rounded-lg overflow-hidden border">
-                  <img
-                    src={formData.image_url}
-                    alt="导航栏背景预览"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={formData.image_url} alt="导航栏背景预览" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary/60 flex items-center px-4">
-                    <span className="text-white font-bold text-lg">一体化政务工作平台</span>
+                    <span className="text-white font-bold text-lg">xx州党政办公平台</span>
                   </div>
                 </div>
               ) : (
                 <div className="w-full h-24 bg-header-gradient rounded-lg flex items-center px-4 border">
-                  <span className="text-white font-bold text-lg">一体化政务工作平台（默认渐变背景）</span>
+                  <span className="text-white font-bold text-lg">xx州党政办公平台（默认渐变背景）</span>
                 </div>
               )}
             </div>
@@ -194,13 +181,7 @@ const BannerManagement = () => {
             <div className="space-y-2">
               <Label>上传背景图</Label>
               <div className="flex items-center gap-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                 <Button
                   type="button"
                   variant="outline"
@@ -211,9 +192,7 @@ const BannerManagement = () => {
                   <Upload className="w-4 h-4" />
                   {uploading ? "上传中..." : "选择图片"}
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  建议尺寸：1920×48 像素，支持 JPG/PNG，最大 5MB
-                </span>
+                <span className="text-sm text-muted-foreground">建议尺寸：1920×48 像素，支持 JPG/PNG，最大 5MB</span>
               </div>
             </div>
 
