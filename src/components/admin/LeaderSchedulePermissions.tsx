@@ -82,7 +82,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
         (c) =>
           c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           c.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.department?.toLowerCase().includes(searchTerm.toLowerCase())
+          c.department?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
       setFilteredContacts(filtered);
     } else {
@@ -99,10 +99,12 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   const fetchPermissions = async () => {
     const { data, error } = await supabase
       .from("leader_schedule_permissions")
-      .select(`
+      .select(
+        `
         *,
         leader:contacts!leader_id(name)
-      `)
+      `,
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -113,10 +115,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     // 获取用户信息 - 从contacts表获取
     if (data && data.length > 0) {
       const userIds = [...new Set(data.map((p) => p.user_id))];
-      const { data: contactsData } = await supabase
-        .from("contacts")
-        .select("id, name, mobile")
-        .in("id", userIds);
+      const { data: contactsData } = await supabase.from("contacts").select("id, name, mobile").in("id", userIds);
 
       const contactMap = new Map(contactsData?.map((c) => [c.id, c]) || []);
       const enrichedData = data.map((p) => ({
@@ -184,20 +183,15 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
 
     try {
       // 先删除该用户现有的所有权限
-      await supabase
-        .from("leader_schedule_permissions")
-        .delete()
-        .eq("user_id", formData.contact_id);
+      await supabase.from("leader_schedule_permissions").delete().eq("user_id", formData.contact_id);
 
       if (formData.can_view_all) {
         // 如果是查看全部，只插入一条记录
-        const { error } = await supabase
-          .from("leader_schedule_permissions")
-          .insert({
-            user_id: formData.contact_id,
-            leader_id: null,
-            can_view_all: true,
-          });
+        const { error } = await supabase.from("leader_schedule_permissions").insert({
+          user_id: formData.contact_id,
+          leader_id: null,
+          can_view_all: true,
+        });
         if (error) throw error;
       } else {
         // 为每个选中的领导插入一条权限记录
@@ -207,9 +201,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
           can_view_all: false,
         }));
 
-        const { error } = await supabase
-          .from("leader_schedule_permissions")
-          .insert(permissionRecords);
+        const { error } = await supabase.from("leader_schedule_permissions").insert(permissionRecords);
         if (error) throw error;
       }
 
@@ -226,10 +218,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("确定要删除该用户的所有权限吗？")) return;
 
-    const { error } = await supabase
-      .from("leader_schedule_permissions")
-      .delete()
-      .eq("user_id", userId);
+    const { error } = await supabase.from("leader_schedule_permissions").delete().eq("user_id", userId);
 
     if (error) {
       toast.error("删除失败");
@@ -245,9 +234,9 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     setEditingUserId(group.user_id);
     setFormData({
       contact_id: group.user_id,
-      selected_leader_ids: group.can_view_all ? [] : permissions
-        .filter(p => p.user_id === group.user_id && p.leader_id)
-        .map(p => p.leader_id!),
+      selected_leader_ids: group.can_view_all
+        ? []
+        : permissions.filter((p) => p.user_id === group.user_id && p.leader_id).map((p) => p.leader_id!),
       can_view_all: group.can_view_all,
     });
     setSelectedContactName(group.user_name);
@@ -286,18 +275,19 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          管理哪些用户可以查看领导日程。管理员默认拥有全部查看权限。
-        </p>
+        <p className="text-sm text-muted-foreground">管理哪些用户可以查看领导日程。管理员默认拥有全部查看权限。</p>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchData}>
             <RefreshCw className="w-4 h-4 mr-2" />
             刷新
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}
+          >
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="w-4 h-4 mr-2" />
@@ -312,9 +302,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                 <div className="space-y-2">
                   <Label>用户 *</Label>
                   {editMode ? (
-                    <div className="p-2 bg-muted rounded-md text-sm font-medium">
-                      {selectedContactName}
-                    </div>
+                    <div className="p-2 bg-muted rounded-md text-sm font-medium">{selectedContactName}</div>
                   ) : (
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -353,7 +341,9 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={formData.can_view_all}
-                    onCheckedChange={(checked) => setFormData({ ...formData, can_view_all: checked, selected_leader_ids: [] })}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, can_view_all: checked, selected_leader_ids: [] })
+                    }
                     id="can_view_all"
                   />
                   <Label htmlFor="can_view_all">允许查看所有领导日程</Label>
@@ -383,15 +373,15 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                       </div>
                     </ScrollArea>
                     {formData.selected_leader_ids.length > 0 && (
-                      <p className="text-xs text-primary">
-                        已选择 {formData.selected_leader_ids.length} 位领导
-                      </p>
+                      <p className="text-xs text-primary">已选择 {formData.selected_leader_ids.length} 位领导</p>
                     )}
                   </div>
                 )}
 
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    取消
+                  </Button>
                   <Button onClick={handleSubmit}>{editMode ? "保存" : "添加"}</Button>
                 </div>
               </div>
@@ -403,15 +393,13 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">加载中...</div>
       ) : groupedPermissions.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          暂无授权记录
-        </div>
+        <div className="text-center py-8 text-muted-foreground">暂无授权记录</div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>用户</TableHead>
-              <TableHead>手机号</TableHead>
+              <TableHead>账号</TableHead>
               <TableHead>权限范围</TableHead>
               <TableHead className="w-[100px]">操作</TableHead>
             </TableRow>
@@ -419,9 +407,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
           <TableBody>
             {groupedPermissions.map((group) => (
               <TableRow key={group.user_id}>
-                <TableCell className="font-medium">
-                  {group.user_name}
-                </TableCell>
+                <TableCell className="font-medium">{group.user_name}</TableCell>
                 <TableCell>{group.user_mobile || "-"}</TableCell>
                 <TableCell>
                   {group.can_view_all ? (

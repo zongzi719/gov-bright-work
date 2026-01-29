@@ -16,7 +16,7 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!mobile.trim() || !password.trim()) {
       toast({
         title: "请填写完整信息",
@@ -29,11 +29,10 @@ const Login = () => {
     setLoading(true);
     try {
       // Use the secure RPC function for login verification
-      const { data, error } = await supabase
-        .rpc("verify_contact_login", {
-          p_mobile: mobile.trim(),
-          p_password: password
-        });
+      const { data, error } = await supabase.rpc("verify_contact_login", {
+        p_mobile: mobile.trim(),
+        p_password: password,
+      });
 
       if (error) {
         console.error("Login error:", error);
@@ -55,14 +54,14 @@ const Login = () => {
       }
 
       const userData = data[0];
-      
+
       // Fetch is_leader status from contacts table
       const { data: contactData } = await supabase
         .from("contacts")
         .select("is_leader")
         .eq("id", userData.contact_id)
         .single();
-      
+
       // Store user info in localStorage for session
       const userInfo = {
         id: userData.contact_id,
@@ -101,7 +100,7 @@ const Login = () => {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-primary text-2xl font-bold">政</span>
           </div>
-          <CardTitle className="text-2xl">一体化政务工作平台</CardTitle>
+          <CardTitle className="text-2xl">xx州党政办公平台</CardTitle>
           <CardDescription>请使用您的手机号登录</CardDescription>
         </CardHeader>
         <CardContent>
@@ -139,9 +138,7 @@ const Login = () => {
               )}
             </Button>
           </form>
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            默认密码：123456
-          </p>
+          <p className="text-center text-sm text-muted-foreground mt-4">默认密码：123456</p>
         </CardContent>
       </Card>
     </div>
