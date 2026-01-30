@@ -191,7 +191,11 @@ sudo mysql_secure_installation
 
 ### 安装 Nginx
 
-#### 方式一：使用系统包管理器
+> **注意**：麒麟 V10 内网环境通常没有配置软件源，使用 `dnf/yum install` 会失败。请直接使用**方式二**或**方式三**进行离线安装。
+
+#### 方式一：使用系统包管理器（需配置本地源）
+
+如果系统已配置本地软件源（如挂载了安装光盘）：
 
 ```bash
 # 麒麟 V10
@@ -201,42 +205,214 @@ sudo dnf install nginx -y
 sudo yum install nginx -y
 ```
 
-#### 方式二：使用离线 RPM 包
+> 如果提示 "无法找到软件包" 或 "没有可用的软件源"，请使用下面的离线安装方式。
+
+---
+
+#### 方式二：使用离线 RPM 包（推荐）
+
+##### 步骤 1：在有网络的机器上下载 RPM 包
+
+在一台能联网的 ARM64 机器（或使用相同架构的虚拟机）上下载：
 
 ```bash
-cd /path/to/部署包/rpm-packages
+# 创建下载目录
+mkdir -p ~/nginx-offline && cd ~/nginx-offline
 
-# 安装 Nginx
+# 方法 A：使用 dnf 下载（不安装）
+sudo dnf download nginx --resolve --destdir=./
+
+# 方法 B：如果是 CentOS/RHEL 系的系统
+sudo yum install --downloadonly --downloaddir=./ nginx
+
+# 方法 C：直接从网站下载（以 nginx 1.20 为例）
+# 麒麟V10基于CentOS 8，可从以下地址下载兼容包：
+# https://mirrors.aliyun.com/centos/8-stream/AppStream/aarch64/os/Packages/
+# 搜索 nginx 相关的 rpm 文件
+```
+
+##### 步骤 2：列出需要的 RPM 包
+
+通常需要以下包（文件名可能略有不同）：
+
+```
+nginx-1.20.x-x.el8.aarch64.rpm
+nginx-filesystem-1.20.x-x.el8.noarch.rpm
+nginx-mod-http-image-filter-1.20.x-x.el8.aarch64.rpm  (可选)
+nginx-mod-http-xslt-filter-1.20.x-x.el8.aarch64.rpm   (可选)
+nginx-mod-mail-1.20.x-x.el8.aarch64.rpm               (可选)
+nginx-mod-stream-1.20.x-x.el8.aarch64.rpm             (可选)
+```
+
+##### 步骤 3：打包传输到目标服务器
+
+```bash
+# 打包
+tar -czvf nginx-rpm-packages.tar.gz *.rpm
+
+# 通过 U 盘或内网传输到目标服务器
+```
+
+##### 步骤 4：在目标服务器安装
+
+```bash
+# 解压
+tar -xzvf nginx-rpm-packages.tar.gz
+
+# 安装（忽略依赖检查）
 sudo rpm -ivh nginx-*.rpm --nodeps --force
 
-# 或使用 dnf 安装本地包
-sudo dnf localinstall nginx-*.rpm -y
+# 或者按顺序安装（推荐）
+sudo rpm -ivh nginx-filesystem-*.rpm
+sudo rpm -ivh nginx-1*.rpm
 ```
 
-#### 方式三：从源码编译（高级）
-
-如果以上方式都不可用，可以从源码编译：
+##### 验证安装
 
 ```bash
-# 安装编译依赖
-sudo dnf install gcc pcre-devel zlib-devel openssl-devel -y
+nginx -v
+# 应显示: nginx version: nginx/1.20.x
+```
 
-# 下载 Nginx 源码（需要提前下载并放入部署包）
+---
+
+#### 方式三：从源码编译安装（最可靠）
+
+如果 RPM 安装失败或无法获取兼容的 RPM 包，可以从源码编译。
+
+##### 步骤 1：在联网机器上下载所需文件
+
+```bash
+mkdir -p ~/nginx-source && cd ~/nginx-source
+
+# 1. 下载 Nginx 源码
+wget https://nginx.org/download/nginx-1.24.0.tar.gz
+
+# 2. 下载依赖库源码（如果目标机器没有这些库）
+wget https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.42/pcre2-10.42.tar.gz
+wget https://zlib.net/zlib-1.3.tar.gz
+wget https://www.openssl.org/source/openssl-1.1.1w.tar.gz
+
+# 3. 打包所有文件
+tar -czvf nginx-source-complete.tar.gz *.tar.gz
+```
+
+##### 步骤 2：传输到目标服务器并解压
+
+```bash
+# 创建编译目录
+sudo mkdir -p /opt/nginx-build && cd /opt/nginx-build
+
+# 解压主包
+tar -xzvf nginx-source-complete.tar.gz
+
+# 解压各个源码包
+tar -xzf pcre2-10.42.tar.gz
+tar -xzf zlib-1.3.tar.gz
+tar -xzf openssl-1.1.1w.tar.gz
 tar -xzf nginx-1.24.0.tar.gz
-cd nginx-1.24.0
+```
 
-# 配置
-./configure --prefix=/usr/local/nginx \
-  --with-http_ssl_module \
-  --with-http_realip_module \
-  --with-http_gzip_static_module
+##### 步骤 3：检查编译器
 
-# 编译安装
+```bash
+# 确认 gcc 已安装
+gcc --version
+
+# 如果没有 gcc，需要从麒麟安装盘安装：
+# 挂载安装光盘
+sudo mount /dev/cdrom /mnt
+# 安装开发工具
+sudo rpm -ivh /mnt/Packages/gcc-*.rpm --nodeps
+sudo rpm -ivh /mnt/Packages/make-*.rpm --nodeps
+```
+
+##### 步骤 4：编译依赖库（如果系统没有）
+
+```bash
+# 编译 PCRE2（正则表达式库）
+cd /opt/nginx-build/pcre2-10.42
+./configure --prefix=/usr/local/pcre2
 make && sudo make install
 
-# 创建软链接
-sudo ln -s /usr/local/nginx/sbin/nginx /usr/local/bin/nginx
+# 编译 zlib（压缩库）
+cd /opt/nginx-build/zlib-1.3
+./configure --prefix=/usr/local/zlib
+make && sudo make install
+
+# 编译 OpenSSL（SSL库）
+cd /opt/nginx-build/openssl-1.1.1w
+./config --prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared zlib
+make && sudo make install
 ```
+
+##### 步骤 5：编译 Nginx
+
+```bash
+cd /opt/nginx-build/nginx-1.24.0
+
+# 配置（指定依赖库路径）
+./configure \
+  --prefix=/usr/local/nginx \
+  --with-http_ssl_module \
+  --with-http_realip_module \
+  --with-http_gzip_static_module \
+  --with-http_stub_status_module \
+  --with-pcre=/opt/nginx-build/pcre2-10.42 \
+  --with-zlib=/opt/nginx-build/zlib-1.3 \
+  --with-openssl=/opt/nginx-build/openssl-1.1.1w
+
+# 编译
+make
+
+# 安装
+sudo make install
+```
+
+##### 步骤 6：配置 Nginx 环境
+
+```bash
+# 创建软链接，使 nginx 命令全局可用
+sudo ln -s /usr/local/nginx/sbin/nginx /usr/local/bin/nginx
+sudo ln -s /usr/local/nginx/sbin/nginx /usr/sbin/nginx
+
+# 创建配置目录软链接（兼容标准路径）
+sudo mkdir -p /etc/nginx
+sudo ln -s /usr/local/nginx/conf/* /etc/nginx/
+sudo mkdir -p /etc/nginx/conf.d
+
+# 验证
+nginx -v
+# 应显示: nginx version: nginx/1.24.0
+```
+
+##### 步骤 7：创建 systemd 服务文件
+
+```bash
+sudo tee /etc/systemd/system/nginx.service << 'EOF'
+[Unit]
+Description=The NGINX HTTP and reverse proxy server
+After=syslog.target network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/usr/local/nginx/logs/nginx.pid
+ExecStartPre=/usr/local/nginx/sbin/nginx -t
+ExecStart=/usr/local/nginx/sbin/nginx
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s QUIT $MAINPID
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 重新加载 systemd
+sudo systemctl daemon-reload
+```
+
+---
 
 #### 启动 Nginx 服务
 
@@ -250,8 +426,10 @@ sudo systemctl enable nginx
 # 检查状态
 sudo systemctl status nginx
 
-# 测试配置
-sudo nginx -t
+# 测试配置文件语法
+nginx -t
+# 或
+/usr/local/nginx/sbin/nginx -t
 ```
 
 #### 验证 Nginx 安装
@@ -260,8 +438,53 @@ sudo nginx -t
 # 检查版本
 nginx -v
 
-# 浏览器访问服务器 IP，应显示 Nginx 欢迎页
+# 检查进程
+ps aux | grep nginx
+
+# 测试访问（应返回 HTML）
 curl http://localhost
+
+# 如果curl不可用，查看端口监听
+ss -tlnp | grep 80
+```
+
+#### 常见问题
+
+##### 问题1：nginx: command not found
+
+```bash
+# 检查 nginx 安装位置
+which nginx
+ls -la /usr/local/nginx/sbin/nginx
+
+# 如果存在但命令不可用，添加到 PATH
+echo 'export PATH=/usr/local/nginx/sbin:$PATH' | sudo tee -a /etc/profile.d/nginx.sh
+source /etc/profile.d/nginx.sh
+```
+
+##### 问题2：端口 80 被占用
+
+```bash
+# 查看占用端口的进程
+ss -tlnp | grep :80
+
+# 停止占用的服务
+sudo systemctl stop httpd  # 如果是 Apache
+
+# 或修改 nginx 监听端口
+sudo vi /usr/local/nginx/conf/nginx.conf
+# 将 listen 80 改为 listen 8080
+```
+
+##### 问题3：Permission denied
+
+```bash
+# 给 nginx 程序执行权限
+sudo chmod +x /usr/local/nginx/sbin/nginx
+
+# 确保日志目录可写
+sudo mkdir -p /usr/local/nginx/logs
+sudo chmod 755 /usr/local/nginx/logs
 ```
 
 ---
