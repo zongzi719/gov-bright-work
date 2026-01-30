@@ -1,0 +1,428 @@
+-- ============================================
+-- 党政办公平台 - MariaDB数据库初始化脚本
+-- 适用于MariaDB 10.3+ (aarch64)
+-- ============================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ==================== 组织架构表 ====================
+CREATE TABLE IF NOT EXISTS `organizations` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `name` VARCHAR(255) NOT NULL,
+  `short_name` VARCHAR(100) DEFAULT NULL,
+  `parent_id` CHAR(36) DEFAULT NULL,
+  `level` INT NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `phone` VARCHAR(50) DEFAULT NULL,
+  `address` VARCHAR(500) DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_sort_order` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 通讯录表 ====================
+CREATE TABLE IF NOT EXISTS `contacts` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `name` VARCHAR(100) NOT NULL,
+  `mobile` VARCHAR(20) DEFAULT NULL,
+  `phone` VARCHAR(50) DEFAULT NULL,
+  `email` VARCHAR(255) DEFAULT NULL,
+  `position` VARCHAR(100) DEFAULT NULL,
+  `department` VARCHAR(100) DEFAULT NULL,
+  `organization_id` CHAR(36) NOT NULL,
+  `is_leader` TINYINT(1) NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `office_location` VARCHAR(255) DEFAULT NULL,
+  `first_work_date` DATE DEFAULT NULL,
+  `security_level` VARCHAR(20) NOT NULL DEFAULT '一般',
+  `status` VARCHAR(20) NOT NULL DEFAULT 'on_duty',
+  `status_note` VARCHAR(255) DEFAULT NULL,
+  `password_hash` VARCHAR(255) NOT NULL DEFAULT '123456',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_organization_id` (`organization_id`),
+  KEY `idx_mobile` (`mobile`),
+  KEY `idx_is_active` (`is_active`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 角色表 ====================
+CREATE TABLE IF NOT EXISTS `roles` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `name` VARCHAR(50) NOT NULL,
+  `label` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(500) DEFAULT NULL,
+  `is_system` TINYINT(1) NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 用户角色关联表 ====================
+CREATE TABLE IF NOT EXISTS `user_roles` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `user_id` CHAR(36) NOT NULL,
+  `role` VARCHAR(50) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_role` (`role`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 公告表 ====================
+CREATE TABLE IF NOT EXISTS `notices` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `title` VARCHAR(255) NOT NULL,
+  `content` TEXT DEFAULT NULL,
+  `department` VARCHAR(100) NOT NULL,
+  `is_pinned` TINYINT(1) NOT NULL DEFAULT 0,
+  `is_published` TINYINT(1) NOT NULL DEFAULT 1,
+  `security_level` VARCHAR(20) NOT NULL DEFAULT '一般',
+  `publish_scope` VARCHAR(20) NOT NULL DEFAULT 'all',
+  `publish_scope_ids` JSON DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_is_published` (`is_published`),
+  KEY `idx_is_pinned` (`is_pinned`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 轮播图/导航背景表 ====================
+CREATE TABLE IF NOT EXISTS `banners` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `title` VARCHAR(255) NOT NULL,
+  `image_url` VARCHAR(500) NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 食堂菜单表 ====================
+CREATE TABLE IF NOT EXISTS `canteen_menus` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `day_of_week` INT NOT NULL COMMENT '1-7代表周一到周日',
+  `breakfast` JSON DEFAULT NULL,
+  `lunch` JSON DEFAULT NULL,
+  `dinner` JSON DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_day_of_week` (`day_of_week`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 请假/外出/出差记录表 ====================
+CREATE TABLE IF NOT EXISTS `absence_records` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `contact_id` CHAR(36) NOT NULL,
+  `type` VARCHAR(20) NOT NULL COMMENT 'out/leave/business_trip/meeting',
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `reason` TEXT NOT NULL,
+  `start_time` DATETIME NOT NULL,
+  `end_time` DATETIME DEFAULT NULL,
+  `leave_type` VARCHAR(20) DEFAULT NULL COMMENT 'annual/sick/personal',
+  `duration_hours` DECIMAL(10,2) DEFAULT NULL,
+  `duration_days` DECIMAL(10,2) DEFAULT NULL,
+  `destination` VARCHAR(255) DEFAULT NULL,
+  `transport_type` VARCHAR(50) DEFAULT NULL,
+  `estimated_cost` DECIMAL(10,2) DEFAULT NULL,
+  `companions` JSON DEFAULT NULL,
+  `handover_person_id` CHAR(36) DEFAULT NULL,
+  `handover_notes` TEXT DEFAULT NULL,
+  `contact_phone` VARCHAR(50) DEFAULT NULL,
+  `out_type` VARCHAR(50) DEFAULT NULL,
+  `out_location` VARCHAR(255) DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `approved_by` CHAR(36) DEFAULT NULL,
+  `approved_at` DATETIME DEFAULT NULL,
+  `cancelled_at` DATETIME DEFAULT NULL,
+  `cancel_reason` TEXT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_contact_id` (`contact_id`),
+  KEY `idx_type` (`type`),
+  KEY `idx_status` (`status`),
+  KEY `idx_start_time` (`start_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 日程表 ====================
+CREATE TABLE IF NOT EXISTS `schedules` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `contact_id` CHAR(36) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `schedule_date` DATE NOT NULL,
+  `start_time` TIME NOT NULL,
+  `end_time` TIME NOT NULL,
+  `location` VARCHAR(255) DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_contact_id` (`contact_id`),
+  KEY `idx_schedule_date` (`schedule_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 领导日程表 ====================
+CREATE TABLE IF NOT EXISTS `leader_schedules` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `leader_id` CHAR(36) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `schedule_date` DATE NOT NULL,
+  `start_time` TIME NOT NULL,
+  `end_time` TIME NOT NULL,
+  `schedule_type` VARCHAR(50) NOT NULL DEFAULT 'internal_meeting',
+  `location` VARCHAR(255) DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_leader_id` (`leader_id`),
+  KEY `idx_schedule_date` (`schedule_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 待办事项表 ====================
+CREATE TABLE IF NOT EXISTS `todo_items` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `business_type` VARCHAR(50) NOT NULL,
+  `business_id` CHAR(36) DEFAULT NULL,
+  `initiator_id` CHAR(36) DEFAULT NULL,
+  `assignee_id` CHAR(36) NOT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `priority` VARCHAR(20) NOT NULL DEFAULT 'normal',
+  `source` VARCHAR(20) NOT NULL DEFAULT 'internal',
+  `source_system` VARCHAR(100) DEFAULT NULL,
+  `source_department` VARCHAR(100) DEFAULT NULL,
+  `action_url` VARCHAR(500) DEFAULT NULL,
+  `due_date` DATETIME DEFAULT NULL,
+  `processed_at` DATETIME DEFAULT NULL,
+  `processed_by` CHAR(36) DEFAULT NULL,
+  `process_result` VARCHAR(50) DEFAULT NULL,
+  `process_notes` TEXT DEFAULT NULL,
+  `approval_instance_id` CHAR(36) DEFAULT NULL,
+  `approval_version_number` INT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_assignee_id` (`assignee_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_business_type` (`business_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 办公用品表 ====================
+CREATE TABLE IF NOT EXISTS `office_supplies` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `name` VARCHAR(255) NOT NULL,
+  `specification` VARCHAR(255) DEFAULT NULL,
+  `unit` VARCHAR(20) NOT NULL DEFAULT '个',
+  `current_stock` INT NOT NULL DEFAULT 0,
+  `min_stock` INT NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 文件收发表 ====================
+CREATE TABLE IF NOT EXISTS `file_transfers` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `title` VARCHAR(255) NOT NULL,
+  `doc_number` VARCHAR(100) NOT NULL,
+  `send_unit` VARCHAR(255) NOT NULL,
+  `send_unit_id` CHAR(36) DEFAULT NULL,
+  `security_level` VARCHAR(20) NOT NULL DEFAULT '公开',
+  `urgency` VARCHAR(20) NOT NULL DEFAULT '普通',
+  `file_type` VARCHAR(50) DEFAULT '中央文件',
+  `source_unit` VARCHAR(255) DEFAULT NULL,
+  `document_date` DATE DEFAULT NULL,
+  `main_unit` VARCHAR(255) DEFAULT NULL,
+  `copy_unit` TEXT DEFAULT NULL,
+  `sign_leader` VARCHAR(100) DEFAULT NULL,
+  `sign_date` DATE DEFAULT NULL,
+  `copies` INT DEFAULT 1,
+  `send_type` VARCHAR(50) DEFAULT '不限制份数',
+  `notify_type` VARCHAR(50) DEFAULT '不通知',
+  `contact_person` VARCHAR(100) DEFAULT NULL,
+  `contact_phone` VARCHAR(50) DEFAULT NULL,
+  `confidential_period` VARCHAR(100) DEFAULT NULL,
+  `description` TEXT DEFAULT NULL,
+  `attachments` JSON DEFAULT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT '待签收',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_send_unit_id` (`send_unit_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 审批模板表 ====================
+CREATE TABLE IF NOT EXISTS `approval_templates` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `code` VARCHAR(50) NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `category` VARCHAR(50) NOT NULL DEFAULT '外出管理',
+  `icon` VARCHAR(50) NOT NULL DEFAULT '📋',
+  `business_type` VARCHAR(50) NOT NULL DEFAULT 'absence',
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `allow_withdraw` TINYINT(1) NOT NULL DEFAULT 1,
+  `allow_transfer` TINYINT(1) NOT NULL DEFAULT 0,
+  `notify_initiator` TINYINT(1) NOT NULL DEFAULT 1,
+  `notify_approver` TINYINT(1) NOT NULL DEFAULT 1,
+  `auto_approve_timeout` INT DEFAULT NULL,
+  `callback_url` VARCHAR(500) DEFAULT NULL,
+  `current_version_id` CHAR(36) DEFAULT NULL,
+  `last_process_saved_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_code` (`code`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 审批节点表 ====================
+CREATE TABLE IF NOT EXISTS `approval_nodes` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `template_id` CHAR(36) NOT NULL,
+  `node_name` VARCHAR(255) NOT NULL,
+  `node_type` VARCHAR(50) NOT NULL DEFAULT 'approver',
+  `approver_type` VARCHAR(50) NOT NULL DEFAULT 'specific',
+  `approver_ids` JSON DEFAULT NULL,
+  `approval_mode` VARCHAR(50) NOT NULL DEFAULT 'countersign',
+  `condition_expression` JSON DEFAULT NULL,
+  `field_permissions` JSON DEFAULT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_template_id` (`template_id`),
+  KEY `idx_sort_order` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 审批实例表 ====================
+CREATE TABLE IF NOT EXISTS `approval_instances` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `template_id` CHAR(36) NOT NULL,
+  `version_id` CHAR(36) NOT NULL,
+  `version_number` INT NOT NULL,
+  `business_type` VARCHAR(50) NOT NULL,
+  `business_id` CHAR(36) NOT NULL,
+  `initiator_id` CHAR(36) NOT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `current_node_index` INT NOT NULL DEFAULT 0,
+  `form_data` JSON DEFAULT NULL,
+  `started_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `completed_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_template_id` (`template_id`),
+  KEY `idx_business_id` (`business_id`),
+  KEY `idx_initiator_id` (`initiator_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 审批记录表 ====================
+CREATE TABLE IF NOT EXISTS `approval_records` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `instance_id` CHAR(36) NOT NULL,
+  `node_index` INT NOT NULL,
+  `node_name` VARCHAR(255) NOT NULL,
+  `node_type` VARCHAR(50) NOT NULL,
+  `approver_id` CHAR(36) NOT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `comment` TEXT DEFAULT NULL,
+  `transferred_to` CHAR(36) DEFAULT NULL,
+  `processed_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_instance_id` (`instance_id`),
+  KEY `idx_approver_id` (`approver_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 假期余额表 ====================
+CREATE TABLE IF NOT EXISTS `leave_balances` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `contact_id` CHAR(36) NOT NULL,
+  `year` INT NOT NULL DEFAULT (YEAR(CURRENT_DATE)),
+  `annual_leave_total` DECIMAL(10,2) NOT NULL DEFAULT 5,
+  `annual_leave_used` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `sick_leave_total` DECIMAL(10,2) NOT NULL DEFAULT 10,
+  `sick_leave_used` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `personal_leave_total` DECIMAL(10,2) NOT NULL DEFAULT 5,
+  `personal_leave_used` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_contact_year` (`contact_id`, `year`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 通知图片表 ====================
+CREATE TABLE IF NOT EXISTS `notice_images` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `title` VARCHAR(255) NOT NULL DEFAULT '',
+  `image_url` VARCHAR(500) NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 初始化默认数据 ====================
+
+-- 插入默认角色
+INSERT INTO `roles` (`id`, `name`, `label`, `is_system`, `sort_order`) VALUES
+(UUID(), 'admin', '系统管理员', 1, 1),
+(UUID(), 'user', '普通用户', 1, 2);
+
+-- 插入示例组织
+INSERT INTO `organizations` (`id`, `name`, `short_name`, `level`, `sort_order`) VALUES
+(UUID(), 'xx州人民政府', '州政府', 1, 1);
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ==================== 登录验证存储过程 ====================
+DELIMITER //
+
+CREATE PROCEDURE IF NOT EXISTS `verify_contact_login`(
+  IN p_mobile VARCHAR(20),
+  IN p_password VARCHAR(255)
+)
+BEGIN
+  SELECT 
+    c.id as contact_id,
+    c.name as contact_name,
+    c.mobile as contact_mobile,
+    c.position as contact_position,
+    c.department as contact_department,
+    o.name as organization_name,
+    c.security_level as contact_security_level,
+    c.organization_id as contact_organization_id
+  FROM contacts c
+  LEFT JOIN organizations o ON c.organization_id = o.id
+  WHERE c.mobile = p_mobile 
+    AND c.password_hash = p_password 
+    AND c.is_active = 1;
+END //
+
+DELIMITER ;
+
+-- 完成
+SELECT '数据库初始化完成!' as message;
