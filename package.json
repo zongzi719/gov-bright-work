@@ -45,7 +45,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@supabase/supabase-js": "^2.91.0",
     "@tanstack/react-query": "^5.83.0",
-    "@vitejs/plugin-legacy": "^7.2.1",
+    "@vitejs/plugin-legacy": "^5.4.3",
     "antd-mobile": "^5.42.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
