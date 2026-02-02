@@ -1,4 +1,4 @@
-// Polyfill for older browsers (Kylin V10 Firefox 62) - must be first
+// ResizeObserver polyfill for older browsers (Kylin V10 Firefox 62)
 import ResizeObserverPolyfill from "resize-observer-polyfill";
 if (typeof window !== "undefined" && !window.ResizeObserver) {
   (window as any).ResizeObserver = ResizeObserverPolyfill;
