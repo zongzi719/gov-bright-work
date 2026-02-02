@@ -117,7 +117,8 @@ sudo ./scripts/install.sh
 
 | 文件路径 | 说明 | 是否需要修改 |
 |----------|------|:------------:|
-| `web/config.js` | 前端运行时配置，设置 API 地址 | ✅ 必须修改 |
+| `web/config.js` | 前端运行时配置，设置 API 地址（启用离线模式） | ✅ 必须修改 |
+| `web/index.html` | 离线部署专用的 index.html 模板 | ⚠️ 可选参考 |
 
 #### config.js 配置项说明
 
@@ -130,9 +131,19 @@ window.GOV_CONFIG = {
   APP_NAME: 'xx州党政办公平台',
   
   // 版本号
-  VERSION: '1.0.0'
+  VERSION: '1.0.0',
+  
+  // 离线模式标识（此配置存在即表示启用离线模式）
+  OFFLINE_MODE: true
 };
 ```
+
+#### 离线模式说明
+
+当 `window.GOV_CONFIG` 存在时，前端会自动切换到离线模式：
+- 登录验证使用本地 API（`/api/auth/login`）
+- 数据查询使用本地 API（如 `/api/notices`、`/api/contacts` 等）
+- 不再尝试连接 Supabase 云服务
 
 ---
 

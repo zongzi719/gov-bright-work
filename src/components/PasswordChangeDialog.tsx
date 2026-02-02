@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { Eye, EyeOff } from "lucide-react";
 
 interface PasswordChangeDialogProps {
@@ -51,30 +52,42 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId }: PasswordChangeDial
 
     setLoading(true);
     try {
-      // First verify old password
-      const { data: user, error: verifyError } = await supabase
-        .from("contacts")
-        .select("id")
-        .eq("id", userId)
-        .eq("password_hash", oldPassword)
-        .single();
+      if (isOfflineMode()) {
+        // 离线模式
+        const { data, error } = await offlineApi.changePassword(userId, oldPassword, newPassword);
+        
+        if (error || !data?.success) {
+          toast({
+            title: error?.message || "原密码错误",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // 在线模式
+        const { data: user, error: verifyError } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("id", userId)
+          .eq("password_hash", oldPassword)
+          .single();
 
-      if (verifyError || !user) {
-        toast({
-          title: "原密码错误",
-          variant: "destructive",
-        });
-        return;
-      }
+        if (verifyError || !user) {
+          toast({
+            title: "原密码错误",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      // Update password
-      const { error: updateError } = await supabase
-        .from("contacts")
-        .update({ password_hash: newPassword })
-        .eq("id", userId);
+        const { error: updateError } = await supabase
+          .from("contacts")
+          .update({ password_hash: newPassword })
+          .eq("id", userId);
 
-      if (updateError) {
-        throw updateError;
+        if (updateError) {
+          throw updateError;
+        }
       }
 
       toast({
@@ -82,13 +95,11 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId }: PasswordChangeDial
         description: "请使用新密码重新登录",
       });
 
-      // Clear form and close dialog
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
       onOpenChange(false);
 
-      // Update localStorage with indication to re-login
       localStorage.removeItem("frontendUser");
       window.location.href = "/login";
     } catch (err) {
@@ -184,7 +195,6 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId }: PasswordChangeDial
             </div>
           </div>
         </form>
-        {/* 固定底部操作按钮 */}
         <div className="px-6 py-4 border-t bg-background flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
             取消
