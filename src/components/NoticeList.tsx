@@ -65,20 +65,32 @@ const NoticeList = () => {
   };
 
   const fetchImages = async () => {
-    // 离线模式暂不支持通知图片轮播，使用空数组
-    if (isOfflineMode()) {
-      setImages([]);
-      return;
-    }
+    try {
+      let data: NoticeImage[] | null = null;
+      let error: any = null;
 
-    const { data, error } = await supabase
-      .from("notice_images")
-      .select("id, image_url, title")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-    
-    if (!error && data) {
-      setImages(data);
+      if (isOfflineMode()) {
+        // 离线模式
+        const result = await offlineApi.getNoticeImages();
+        data = result.data;
+        error = result.error;
+      } else {
+        // 在线模式
+        const result = await supabase
+          .from("notice_images")
+          .select("id, image_url, title")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+        data = result.data;
+        error = result.error;
+      }
+      
+      if (!error && data) {
+        setImages(data);
+      }
+    } catch (err) {
+      console.error('Fetch notice images error:', err);
+      setImages([]);
     }
   };
 

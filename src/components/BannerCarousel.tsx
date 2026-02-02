@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 
 interface BannerItem {
   id: string;
@@ -36,20 +37,38 @@ const BannerCarousel = () => {
   // 从数据库获取启用的Banner
   useEffect(() => {
     const fetchBanners = async () => {
-      const { data, error } = await supabase
-        .from("banners")
-        .select("id, image_url, title")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
+      try {
+        let data: any[] | null = null;
+        let error: any = null;
 
-      if (!error && data && data.length > 0) {
-        setBanners(data.map(b => ({
-          id: b.id,
-          image: b.image_url,
-          title: b.title
-        })));
-      } else {
-        // 如果数据库没有数据，使用默认banners
+        if (isOfflineMode()) {
+          // 离线模式
+          const result = await offlineApi.getBanners();
+          data = result.data;
+          error = result.error;
+        } else {
+          // 在线模式
+          const result = await supabase
+            .from("banners")
+            .select("id, image_url, title")
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true });
+          data = result.data;
+          error = result.error;
+        }
+
+        if (!error && data && data.length > 0) {
+          setBanners(data.map(b => ({
+            id: b.id,
+            image: b.image_url,
+            title: b.title
+          })));
+        } else {
+          // 如果数据库没有数据，使用默认banners
+          setBanners(defaultBanners);
+        }
+      } catch (err) {
+        console.error('Fetch banners error:', err);
         setBanners(defaultBanners);
       }
       setLoading(false);

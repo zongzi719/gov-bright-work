@@ -218,12 +218,26 @@ app.get('/api/notices', async (req, res) => {
   }
 });
 
+// ==================== 通知图片 ====================
+
+app.get('/api/notice-images', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id, image_url, title FROM notice_images WHERE is_active = 1 ORDER BY sort_order'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Get notice images error:', error);
+    res.status(500).json({ error: '获取通知图片失败' });
+  }
+});
+
 // ==================== 轮播图/导航背景 ====================
 
 app.get('/api/banners', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order LIMIT 1'
+      'SELECT id, image_url, title FROM banners WHERE is_active = 1 ORDER BY sort_order'
     );
     res.json(rows);
   } catch (error) {

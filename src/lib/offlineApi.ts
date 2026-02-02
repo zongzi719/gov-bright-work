@@ -118,6 +118,12 @@ export async function getNotices(params?: { is_published?: boolean }) {
   return request<any[]>(`/api/notices${query ? `?${query}` : ''}`);
 }
 
+// ==================== 通知图片 ====================
+
+export async function getNoticeImages() {
+  return request<any[]>('/api/notice-images');
+}
+
 // ==================== 轮播图/背景 ====================
 
 export async function getBanners() {
@@ -275,6 +281,7 @@ export const offlineApi = {
   getContacts,
   getContact,
   getNotices,
+  getNoticeImages,
   getBanners,
   saveBanner,
   getCanteenMenus,
