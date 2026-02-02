@@ -324,6 +324,139 @@ app.get('/api/todo-items/count', async (req, res) => {
   }
 });
 
+// 待办列表（带发起人信息）
+app.get('/api/todo-items/list', async (req, res) => {
+  try {
+    const { assignee_id, filter } = req.query;
+    
+    if (!assignee_id) {
+      return res.status(400).json({ error: '缺少 assignee_id 参数' });
+    }
+    
+    let sql = `SELECT t.id, t.title, t.source_system, t.source_department, 
+               t.created_at, t.priority, t.status, t.business_type, t.business_id,
+               t.action_url, t.approval_instance_id, t.assignee_id, 
+               t.process_result, t.processed_at,
+               i.name as initiator_name, i.department as initiator_department
+               FROM todo_items t
+               LEFT JOIN contacts i ON t.initiator_id = i.id
+               WHERE t.assignee_id = ?`;
+    const params = [assignee_id];
+    
+    if (filter === 'pending') {
+      sql += ` AND t.status IN ('pending', 'processing')`;
+    } else if (filter === 'completed') {
+      sql += ` AND t.status IN ('approved', 'rejected', 'completed') AND (t.process_result IS NULL OR t.process_result != 'cc_notified')`;
+    } else if (filter === 'cc') {
+      sql += ` AND t.process_result = 'cc_notified'`;
+    }
+    
+    if (filter === 'completed') {
+      sql += ' ORDER BY t.processed_at DESC';
+    } else {
+      sql += ' ORDER BY t.created_at DESC';
+    }
+    
+    sql += ' LIMIT 50';
+    
+    const [rows] = await pool.execute(sql, params);
+    
+    // 格式化返回数据，匹配前端期望的结构
+    const items = rows.map(row => ({
+      id: row.id,
+      title: row.title,
+      source_system: row.source_system,
+      source_department: row.source_department,
+      created_at: row.created_at,
+      priority: row.priority,
+      status: row.status,
+      business_type: row.business_type,
+      business_id: row.business_id,
+      action_url: row.action_url,
+      approval_instance_id: row.approval_instance_id,
+      assignee_id: row.assignee_id,
+      process_result: row.process_result,
+      processed_at: row.processed_at,
+      initiator: row.initiator_name ? {
+        name: row.initiator_name,
+        department: row.initiator_department
+      } : null
+    }));
+    
+    res.json(items);
+  } catch (error) {
+    console.error('Get todo items list error:', error);
+    res.status(500).json({ error: '获取待办列表失败' });
+  }
+});
+
+// 更新待办状态
+app.put('/api/todo-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, process_result, process_notes, processed_by } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (status) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+    if (process_result !== undefined) {
+      updates.push('process_result = ?');
+      params.push(process_result);
+    }
+    if (process_notes !== undefined) {
+      updates.push('process_notes = ?');
+      params.push(process_notes);
+    }
+    if (processed_by) {
+      updates.push('processed_by = ?');
+      params.push(processed_by);
+    }
+    
+    updates.push('processed_at = NOW()');
+    updates.push('updated_at = NOW()');
+    
+    params.push(id);
+    
+    await pool.execute(
+      `UPDATE todo_items SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update todo item error:', error);
+    res.status(500).json({ error: '更新待办失败' });
+  }
+});
+
+// 删除待办
+app.delete('/api/todo-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM todo_items WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete todo item error:', error);
+    res.status(500).json({ error: '删除待办失败' });
+  }
+});
+
+// 根据审批实例ID删除待办
+app.delete('/api/todo-items/by-instance/:instanceId', async (req, res) => {
+  try {
+    const { instanceId } = req.params;
+    await pool.execute('DELETE FROM todo_items WHERE approval_instance_id = ?', [instanceId]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete todo items by instance error:', error);
+    res.status(500).json({ error: '删除待办失败' });
+  }
+});
+
 // ==================== 请假/外出/出差记录 ====================
 
 app.get('/api/absence-records', async (req, res) => {

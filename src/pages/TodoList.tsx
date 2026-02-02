@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -100,51 +101,73 @@ const TodoList = () => {
 
     setLoading(true);
 
-    const { data: pendingData } = await supabase
-      .from("todo_items")
-      .select(`
-        id, title, source_system, source_department, created_at, priority, status,
-        business_type, business_id, action_url, approval_instance_id, assignee_id,
-        process_result, processed_at,
-        initiator:contacts!todo_items_initiator_id_fkey(name, department)
-      `)
-      .eq("assignee_id", currentUser.id)
-      .in("status", ["pending", "processing"])
-      .order("created_at", { ascending: false });
+    if (isOfflineMode()) {
+      // 离线模式：使用本地 API
+      const [pendingRes, completedRes, ccRes] = await Promise.all([
+        offlineApi.getTodoItemsWithInitiator(currentUser.id, 'pending'),
+        offlineApi.getTodoItemsWithInitiator(currentUser.id, 'completed'),
+        offlineApi.getTodoItemsWithInitiator(currentUser.id, 'cc'),
+      ]);
 
-    const filteredPending = (pendingData || []).filter(
-      (item) => !item.process_result || item.process_result !== "cc_notified"
-    );
-    setPendingItems(filteredPending as unknown as TodoItem[]);
+      const pendingData = pendingRes.data || [];
+      const filteredPending = pendingData.filter(
+        (item) => !item.process_result || item.process_result !== "cc_notified"
+      );
+      setPendingItems(filteredPending as unknown as TodoItem[]);
 
-    const { data: completedData } = await supabase
-      .from("todo_items")
-      .select(`
-        id, title, source_system, source_department, created_at, priority, status,
-        business_type, business_id, action_url, approval_instance_id, assignee_id,
-        process_result, processed_at,
-        initiator:contacts!todo_items_initiator_id_fkey(name, department)
-      `)
-      .eq("assignee_id", currentUser.id)
-      .in("status", ["approved", "rejected", "completed"])
-      .neq("process_result", "cc_notified")
-      .order("processed_at", { ascending: false });
+      const completedData = completedRes.data || [];
+      setCompletedItems(completedData as unknown as TodoItem[]);
 
-    setCompletedItems((completedData || []) as unknown as TodoItem[]);
+      const ccData = ccRes.data || [];
+      setCCItems(ccData as unknown as TodoItem[]);
+    } else {
+      // 在线模式：使用 Supabase
+      const { data: pendingData } = await supabase
+        .from("todo_items")
+        .select(`
+          id, title, source_system, source_department, created_at, priority, status,
+          business_type, business_id, action_url, approval_instance_id, assignee_id,
+          process_result, processed_at,
+          initiator:contacts!todo_items_initiator_id_fkey(name, department)
+        `)
+        .eq("assignee_id", currentUser.id)
+        .in("status", ["pending", "processing"])
+        .order("created_at", { ascending: false });
 
-    const { data: ccData } = await supabase
-      .from("todo_items")
-      .select(`
-        id, title, source_system, source_department, created_at, priority, status,
-        business_type, business_id, action_url, approval_instance_id, assignee_id,
-        process_result, processed_at,
-        initiator:contacts!todo_items_initiator_id_fkey(name, department)
-      `)
-      .eq("assignee_id", currentUser.id)
-      .eq("process_result", "cc_notified")
-      .order("created_at", { ascending: false });
+      const filteredPending = (pendingData || []).filter(
+        (item) => !item.process_result || item.process_result !== "cc_notified"
+      );
+      setPendingItems(filteredPending as unknown as TodoItem[]);
 
-    setCCItems((ccData || []) as unknown as TodoItem[]);
+      const { data: completedData } = await supabase
+        .from("todo_items")
+        .select(`
+          id, title, source_system, source_department, created_at, priority, status,
+          business_type, business_id, action_url, approval_instance_id, assignee_id,
+          process_result, processed_at,
+          initiator:contacts!todo_items_initiator_id_fkey(name, department)
+        `)
+        .eq("assignee_id", currentUser.id)
+        .in("status", ["approved", "rejected", "completed"])
+        .neq("process_result", "cc_notified")
+        .order("processed_at", { ascending: false });
+
+      setCompletedItems((completedData || []) as unknown as TodoItem[]);
+
+      const { data: ccData } = await supabase
+        .from("todo_items")
+        .select(`
+          id, title, source_system, source_department, created_at, priority, status,
+          business_type, business_id, action_url, approval_instance_id, assignee_id,
+          process_result, processed_at,
+          initiator:contacts!todo_items_initiator_id_fkey(name, department)
+        `)
+        .eq("assignee_id", currentUser.id)
+        .eq("process_result", "cc_notified")
+        .order("created_at", { ascending: false });
+
+      setCCItems((ccData || []) as unknown as TodoItem[]);
+    }
 
     setLoading(false);
   };

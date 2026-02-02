@@ -139,6 +139,27 @@ export async function getCanteenMenus() {
 
 // ==================== 待办事项 ====================
 
+export interface TodoItemWithInitiator {
+  id: string;
+  title: string;
+  source_system: string | null;
+  source_department: string | null;
+  created_at: string;
+  priority: 'urgent' | 'normal' | 'low';
+  status: string;
+  business_type: string;
+  business_id: string | null;
+  action_url: string | null;
+  approval_instance_id: string | null;
+  assignee_id: string;
+  process_result: string | null;
+  processed_at: string | null;
+  initiator?: {
+    name: string;
+    department: string | null;
+  } | null;
+}
+
 export async function getTodoItems(params?: { assignee_id?: string; status?: string }) {
   const searchParams = new URLSearchParams();
   if (params?.assignee_id) searchParams.set('assignee_id', params.assignee_id);
@@ -148,8 +169,36 @@ export async function getTodoItems(params?: { assignee_id?: string; status?: str
   return request<any[]>(`/api/todo-items${query ? `?${query}` : ''}`);
 }
 
+export async function getTodoItemsWithInitiator(assigneeId: string, filter: 'pending' | 'completed' | 'cc') {
+  return request<TodoItemWithInitiator[]>(`/api/todo-items/list?assignee_id=${assigneeId}&filter=${filter}`);
+}
+
 export async function getTodoCount(assigneeId: string) {
   return request<{ count: number }>(`/api/todo-items/count?assignee_id=${assigneeId}`);
+}
+
+export async function updateTodoStatus(todoId: string, updates: {
+  status: string;
+  process_result?: string;
+  process_notes?: string;
+  processed_by?: string;
+}) {
+  return request<{ success: boolean }>(`/api/todo-items/${todoId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteTodoItem(todoId: string) {
+  return request<{ success: boolean }>(`/api/todo-items/${todoId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function deleteTodoItemsByInstanceId(instanceId: string) {
+  return request<{ success: boolean }>(`/api/todo-items/by-instance/${instanceId}`, {
+    method: 'DELETE',
+  });
 }
 
 // ==================== 请假/外出/出差记录 ====================
@@ -230,7 +279,11 @@ export const offlineApi = {
   saveBanner,
   getCanteenMenus,
   getTodoItems,
+  getTodoItemsWithInitiator,
   getTodoCount,
+  updateTodoStatus,
+  deleteTodoItem,
+  deleteTodoItemsByInstanceId,
   getAbsenceRecords,
   createAbsenceRecord,
   getFileTransfers,
