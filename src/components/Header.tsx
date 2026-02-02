@@ -7,6 +7,7 @@ import { useFrontendAuth } from "@/hooks/useFrontendAuth";
 import { useState, useEffect } from "react";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import partyEmblem from "@/assets/party-emblem.png";
 import {
   DropdownMenu,
@@ -31,16 +32,25 @@ const Header = () => {
   // Fetch header background image
   useEffect(() => {
     const fetchHeaderBg = async () => {
-      const { data, error } = await supabase
-        .from("banners")
-        .select("image_url")
-        .eq("is_active", true)
-        .order("sort_order")
-        .limit(1)
-        .single();
+      if (isOfflineMode()) {
+        // 离线模式
+        const { data, error } = await offlineApi.getBanners();
+        if (!error && data && data.length > 0) {
+          setHeaderBgUrl(data[0].image_url);
+        }
+      } else {
+        // 在线模式
+        const { data, error } = await supabase
+          .from("banners")
+          .select("image_url")
+          .eq("is_active", true)
+          .order("sort_order")
+          .limit(1)
+          .single();
 
-      if (!error && data?.image_url) {
-        setHeaderBgUrl(data.image_url);
+        if (!error && data?.image_url) {
+          setHeaderBgUrl(data.image_url);
+        }
       }
     };
 
@@ -52,14 +62,23 @@ const Header = () => {
     const fetchTodoCount = async () => {
       if (!user?.id) return;
 
-      const { count, error } = await supabase
-        .from("todo_items")
-        .select("*", { count: "exact", head: true })
-        .eq("assignee_id", user.id)
-        .in("status", ["pending", "processing"]);
+      if (isOfflineMode()) {
+        // 离线模式
+        const { data, error } = await offlineApi.getTodoCount(user.id);
+        if (!error && data) {
+          setTodoCount(data.count);
+        }
+      } else {
+        // 在线模式
+        const { count, error } = await supabase
+          .from("todo_items")
+          .select("*", { count: "exact", head: true })
+          .eq("assignee_id", user.id)
+          .in("status", ["pending", "processing"]);
 
-      if (!error && count !== null) {
-        setTodoCount(count);
+        if (!error && count !== null) {
+          setTodoCount(count);
+        }
       }
     };
 

@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { LogIn } from "lucide-react";
+import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,57 +29,88 @@ const Login = () => {
 
     setLoading(true);
     try {
-      // Use the secure RPC function for login verification
-      const { data, error } = await supabase.rpc("verify_contact_login", {
-        p_mobile: mobile.trim(),
-        p_password: password,
-      });
+      let userData: any = null;
 
-      if (error) {
-        console.error("Login error:", error);
-        toast({
-          title: "登录失败",
-          description: "系统错误，请稍后重试",
-          variant: "destructive",
+      // 检测是否为离线模式
+      if (isOfflineMode()) {
+        // 离线模式：使用本地 API
+        const { data, error } = await offlineApi.login(mobile.trim(), password);
+        
+        if (error || !data || data.length === 0) {
+          toast({
+            title: "登录失败",
+            description: error?.message || "手机号或密码错误",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        const user = data[0];
+        userData = {
+          id: user.id,
+          name: user.name,
+          mobile: user.mobile,
+          position: user.position,
+          department: user.department,
+          organization: user.organization_name,
+          organization_id: user.organization_id,
+          security_level: user.security_level || "一般",
+          is_leader: user.is_leader || false,
+        };
+      } else {
+        // 在线模式：使用 Supabase
+        const { data, error } = await supabase.rpc("verify_contact_login", {
+          p_mobile: mobile.trim(),
+          p_password: password,
         });
-        return;
+
+        if (error) {
+          console.error("Login error:", error);
+          toast({
+            title: "登录失败",
+            description: "系统错误，请稍后重试",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          toast({
+            title: "登录失败",
+            description: "手机号或密码错误",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const user = data[0];
+
+        // Fetch is_leader status from contacts table
+        const { data: contactData } = await supabase
+          .from("contacts")
+          .select("is_leader")
+          .eq("id", user.contact_id)
+          .single();
+
+        userData = {
+          id: user.contact_id,
+          name: user.contact_name,
+          mobile: user.contact_mobile,
+          position: user.contact_position,
+          department: user.contact_department,
+          organization: user.organization_name,
+          organization_id: user.contact_organization_id,
+          security_level: user.contact_security_level || "一般",
+          is_leader: contactData?.is_leader || false,
+        };
       }
-
-      if (!data || data.length === 0) {
-        toast({
-          title: "登录失败",
-          description: "手机号或密码错误",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const userData = data[0];
-
-      // Fetch is_leader status from contacts table
-      const { data: contactData } = await supabase
-        .from("contacts")
-        .select("is_leader")
-        .eq("id", userData.contact_id)
-        .single();
 
       // Store user info in localStorage for session
-      const userInfo = {
-        id: userData.contact_id,
-        name: userData.contact_name,
-        mobile: userData.contact_mobile,
-        position: userData.contact_position,
-        department: userData.contact_department,
-        organization: userData.organization_name,
-        organization_id: userData.contact_organization_id,
-        security_level: userData.contact_security_level || "一般",
-        is_leader: contactData?.is_leader || false,
-      };
-      localStorage.setItem("frontendUser", JSON.stringify(userInfo));
+      localStorage.setItem("frontendUser", JSON.stringify(userData));
 
       toast({
         title: "登录成功",
-        description: `欢迎回来，${userData.contact_name}`,
+        description: `欢迎回来，${userData.name}`,
       });
 
       navigate("/");
@@ -102,7 +134,6 @@ const Login = () => {
             <span className="text-primary text-2xl font-bold">政</span>
           </div>
           <CardTitle className="text-2xl">xx州党政办公平台</CardTitle>
-          {/* <CardDescription>请使用您的手机号登录</CardDescription> */}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">

@@ -67,7 +67,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { mobile, password } = req.body;
     const [rows] = await pool.execute(
       `SELECT c.id, c.name, c.mobile, c.position, c.department, 
-              c.security_level, c.organization_id, o.name as organization_name
+              c.security_level, c.organization_id, c.is_leader, o.name as organization_name
        FROM contacts c
        LEFT JOIN organizations o ON c.organization_id = o.id
        WHERE c.mobile = ? AND c.password_hash = ? AND c.is_active = 1`,
