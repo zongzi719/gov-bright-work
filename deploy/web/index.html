@@ -6,9 +6,13 @@
     <title>xx州党政办公平台</title>
     <meta name="description" content="党政办公平台">
     
-    <!-- Polyfills for older browsers - must load before config -->
+    <!-- 
+      CRITICAL: Script loading order for legacy browser support (Kylin V10)
+      1. polyfills.js - Must load FIRST to define globalThis, queueMicrotask, etc.
+      2. config.js - Offline mode configuration
+      3. Main application bundle (added by Vite build)
+    -->
     <script src="/polyfills.js"></script>
-    <!-- 离线模式配置 - 必须在其他脚本之前加载 -->
     <script src="/config.js"></script>
     
     <link rel="icon" type="image/png" href="/favicon.ico">
@@ -16,6 +20,11 @@
 
   <body>
     <div id="root"></div>
-    <!-- 以下脚本标签将在构建时自动替换 -->
+    <!-- 
+      构建后的脚本将在这里添加
+      对于 Vite legacy 构建，会生成:
+      - index-legacy.js (nomodule) - 用于老浏览器
+      - index.js (type="module") - 用于现代浏览器
+    -->
   </body>
 </html>
