@@ -392,9 +392,19 @@ INSERT INTO `roles` (`id`, `name`, `label`, `is_system`, `sort_order`) VALUES
 (UUID(), 'admin', '系统管理员', 1, 1),
 (UUID(), 'user', '普通用户', 1, 2);
 
--- 插入示例组织
+-- 插入示例组织（使用固定ID以便后续关联）
+SET @org_id = UUID();
 INSERT INTO `organizations` (`id`, `name`, `short_name`, `level`, `sort_order`) VALUES
-(UUID(), 'xx州人民政府', '州政府', 1, 1);
+(@org_id, 'xx州人民政府', '州政府', 1, 1);
+
+-- 插入默认测试用户
+SET @admin_id = UUID();
+INSERT INTO `contacts` (`id`, `name`, `mobile`, `position`, `department`, `organization_id`, `is_leader`, `is_active`, `security_level`, `password_hash`) VALUES
+(@admin_id, '系统管理员', '13800000001', '管理员', '信息中心', @org_id, 1, 1, '机密', '123456');
+
+-- 为测试用户分配管理员角色
+INSERT INTO `user_roles` (`id`, `user_id`, `role`) VALUES
+(UUID(), @admin_id, 'admin');
 
 SET FOREIGN_KEY_CHECKS = 1;
 
