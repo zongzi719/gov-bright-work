@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, subWeeks, addWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -90,14 +91,11 @@ const SchedulePanel = () => {
     setLoading(true);
     // 获取两周的数据
     const twoWeeksEnd = addDays(currentWeekStart, 13);
-    const { data, error } = await supabase
-      .from("schedules")
-      .select("*, contact:contacts(id, name, department)")
-      .eq("contact_id", currentUser.id)
-      .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(twoWeeksEnd, "yyyy-MM-dd"))
-      .order("schedule_date")
-      .order("start_time");
+    const { data, error } = await dataAdapter.getSchedules({
+      contact_id: currentUser.id,
+      start_date: format(currentWeekStart, "yyyy-MM-dd"),
+      end_date: format(twoWeeksEnd, "yyyy-MM-dd"),
+    });
 
     if (!error && data) {
       setSchedules(data as Schedule[]);
@@ -186,17 +184,14 @@ const SchedulePanel = () => {
 
     try {
       if (editingSchedule) {
-        const { error } = await supabase
-          .from("schedules")
-          .update({
-            title: formData.title,
-            schedule_date: formData.schedule_date,
-            start_time: formData.start_time,
-            end_time: formData.end_time,
-            location: formData.location || null,
-            notes: formData.notes || null,
-          })
-          .eq("id", editingSchedule.id);
+        const { error } = await dataAdapter.updateSchedule(editingSchedule.id, {
+          title: formData.title,
+          schedule_date: formData.schedule_date,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          location: formData.location || null,
+          notes: formData.notes || null,
+        });
 
         if (error) {
           toast.error("修改日程失败");
@@ -207,7 +202,7 @@ const SchedulePanel = () => {
           fetchSchedules();
         }
       } else {
-        const { error } = await supabase.from("schedules").insert({
+        const { error } = await dataAdapter.createSchedule({
           contact_id: contactId,
           title: formData.title,
           schedule_date: formData.schedule_date,
@@ -240,7 +235,7 @@ const SchedulePanel = () => {
   const confirmDelete = async () => {
     if (!scheduleToDelete) return;
 
-    const { error } = await supabase.from("schedules").delete().eq("id", scheduleToDelete.id);
+    const { error } = await dataAdapter.deleteSchedule(scheduleToDelete.id);
 
     if (error) {
       toast.error("删除日程失败");
