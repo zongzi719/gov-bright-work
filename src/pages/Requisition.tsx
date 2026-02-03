@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { toast } from "sonner";
@@ -90,11 +90,7 @@ const Requisition = () => {
     if (!currentUser?.name) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from("supply_requisitions")
-      .select("id, requisition_by, requisition_date, status, created_at")
-      .eq("requisition_by", currentUser.name)
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getSupplyRequisitions({ requisition_by: currentUser.name });
 
     if (!error && data) {
       setRecords(data as SupplyRequisition[]);
@@ -103,12 +99,8 @@ const Requisition = () => {
   };
 
   const fetchSupplies = async () => {
-    const { data } = await supabase
-      .from("office_supplies")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
-    if (data) setSupplies(data);
+    const { data } = await dataAdapter.getOfficeSupplies({ is_active: true });
+    if (data) setSupplies(data as OfficeSupply[]);
   };
 
   useEffect(() => {
@@ -137,16 +129,21 @@ const Requisition = () => {
     if (record) {
       setSelectedRecord(record);
       // Fetch items for this requisition
-      const { data } = await supabase
-        .from("supply_requisition_items")
-        .select(`
-          id, supply_id, quantity,
-          office_supplies (name, specification, unit)
-        `)
-        .eq("requisition_id", record.id);
+      const { data } = await dataAdapter.getSupplyRequisitionItems(record.id);
       
       if (data) {
-        setSelectedItems(data as RequisitionItem[]);
+        // 格式化数据以匹配接口
+        const formattedItems = data.map((item: any) => ({
+          id: item.id,
+          supply_id: item.supply_id,
+          quantity: item.quantity,
+          office_supplies: item.office_supplies || (item.supply_name ? {
+            name: item.supply_name,
+            specification: item.specification,
+            unit: item.unit
+          } : null)
+        }));
+        setSelectedItems(formattedItems as RequisitionItem[]);
       }
       setDetailOpen(true);
     }
@@ -192,16 +189,10 @@ const Requisition = () => {
 
     setSubmitting(true);
 
-    const { data: record, error } = await supabase
-      .from("supply_requisitions")
-      .insert({
-        requisition_by: currentUser?.name || "",
-        requisition_date: format(requisitionDate, "yyyy-MM-dd"),
-        supply_id: null,
-        quantity: null,
-      } as any)
-      .select("id")
-      .single();
+    const { data: record, error } = await dataAdapter.createSupplyRequisition({
+      requisition_by: currentUser?.name || "",
+      requisition_date: format(requisitionDate, "yyyy-MM-dd"),
+    });
 
     if (error || !record) {
       toast.error("提交领用申请失败");
@@ -215,9 +206,7 @@ const Requisition = () => {
       quantity: item.quantity,
     }));
 
-    const { error: itemsError } = await supabase
-      .from("supply_requisition_items")
-      .insert(itemsToInsert);
+    const { error: itemsError } = await dataAdapter.createSupplyRequisitionItems(itemsToInsert);
 
     if (itemsError) {
       toast.error("保存物品明细失败");
@@ -450,7 +439,7 @@ const Requisition = () => {
                                 <TableRow key={item.id}>
                                   <TableCell>{item.office_supplies?.name || "-"}</TableCell>
                                   <TableCell>{item.office_supplies?.specification || "-"}</TableCell>
-                                  <TableCell>{item.quantity} {item.office_supplies?.unit}</TableCell>
+                                  <TableCell>{item.quantity} {item.office_supplies?.unit || ""}</TableCell>
                                 </TableRow>
                               ))
                             )}
@@ -465,7 +454,10 @@ const Requisition = () => {
               <TabsContent value="approval" className="flex-1 m-0 overflow-hidden">
                 <ScrollArea className="h-[calc(85vh-180px)]">
                   <div className="px-6 py-4">
-                    <ApprovalTimeline businessId={selectedRecord.id} businessType="supply_requisition" />
+                    <ApprovalTimeline 
+                      businessId={selectedRecord.id}
+                      businessType="supply_requisition"
+                    />
                   </div>
                 </ScrollArea>
               </TabsContent>

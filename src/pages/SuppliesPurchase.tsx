@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { toast } from "sonner";
@@ -107,11 +107,7 @@ const SuppliesPurchase = () => {
     if (!currentUser?.name) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from("supply_purchases")
-      .select("*")
-      .eq("applicant_name", currentUser.name)
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getSupplyPurchases({ applicant_name: currentUser.name });
 
     if (!error && data) {
       setRecords(data as SupplyPurchase[]);
@@ -120,12 +116,8 @@ const SuppliesPurchase = () => {
   };
 
   const fetchSupplies = async () => {
-    const { data } = await supabase
-      .from("office_supplies")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
-    if (data) setSupplies(data);
+    const { data } = await dataAdapter.getOfficeSupplies({ is_active: true });
+    if (data) setSupplies(data as OfficeSupply[]);
   };
 
   useEffect(() => {
@@ -156,10 +148,7 @@ const SuppliesPurchase = () => {
     const record = records.find(r => r.id === item.id);
     if (record) {
       setSelectedRecord(record);
-      const { data } = await supabase
-        .from("supply_purchase_items")
-        .select("*")
-        .eq("purchase_id", record.id);
+      const { data } = await dataAdapter.getSupplyPurchaseItems(record.id);
       
       if (data) {
         setSelectedItems(data as PurchaseItem[]);
@@ -225,18 +214,14 @@ const SuppliesPurchase = () => {
 
     const calculatedTotal = validItems.reduce((sum, item) => sum + item.amount, 0);
 
-    const { data: record, error } = await supabase
-      .from("supply_purchases")
-      .insert({
-        department,
-        purchase_date: format(purchaseDate, "yyyy-MM-dd"),
-        reason: reason || null,
-        total_amount: calculatedTotal,
-        applicant_id: currentUser?.id || "",
-        applicant_name: currentUser?.name || "",
-      })
-      .select("id")
-      .single();
+    const { data: record, error } = await dataAdapter.createSupplyPurchase({
+      department,
+      purchase_date: format(purchaseDate, "yyyy-MM-dd"),
+      reason: reason || null,
+      total_amount: calculatedTotal,
+      applicant_id: currentUser?.id || "",
+      applicant_name: currentUser?.name || "",
+    });
 
     if (error || !record) {
       toast.error("提交采购申请失败");
@@ -256,9 +241,7 @@ const SuppliesPurchase = () => {
       unit: item.unit || "个",
     }));
 
-    const { error: itemsError } = await supabase
-      .from("supply_purchase_items")
-      .insert(itemsToInsert);
+    const { error: itemsError } = await dataAdapter.createSupplyPurchaseItems(itemsToInsert);
 
     if (itemsError) {
       toast.error("保存物品明细失败");
@@ -458,12 +441,8 @@ const SuppliesPurchase = () => {
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={3} className="text-right font-medium">
-                        合计金额（元）
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-primary">
-                        ¥{totalAmount.toFixed(2)}
-                      </TableCell>
+                      <TableCell colSpan={3} className="text-right font-medium">合计金额：</TableCell>
+                      <TableCell className="font-bold text-primary">¥{totalAmount.toFixed(2)}</TableCell>
                       <TableCell colSpan={2}></TableCell>
                     </TableRow>
                   </TableBody>
@@ -471,14 +450,13 @@ const SuppliesPurchase = () => {
               </div>
             </div>
 
-            {/* 购置理由 */}
             <div className="space-y-2">
-              <Label>购置理由</Label>
+              <Label>采购原因/用途</Label>
               <Textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="请填写购置理由（如：日常办公所需、会议保障等）"
-                rows={3}
+                placeholder="请输入采购原因或用途说明"
+                rows={2}
               />
             </div>
           </div>
@@ -493,7 +471,7 @@ const SuppliesPurchase = () => {
 
       {/* 详情对话框 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg font-semibold">采购详情</DialogTitle>
@@ -530,60 +508,52 @@ const SuppliesPurchase = () => {
                         <div className="text-sm">{selectedRecord.department}</div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground font-normal">申请日期</Label>
-                        <div className="text-sm">{selectedRecord.purchase_date}</div>
-                      </div>
-                      <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">经办人</Label>
                         <div className="text-sm">{selectedRecord.applicant_name}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">申请日期</Label>
+                        <div className="text-sm">{selectedRecord.purchase_date}</div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">合计金额</Label>
                         <div className="text-sm font-medium text-primary">¥{selectedRecord.total_amount.toFixed(2)}</div>
                       </div>
-                      {selectedRecord.reason && (
-                        <div className="col-span-2 space-y-1.5">
-                          <Label className="text-xs text-muted-foreground font-normal">购置理由</Label>
-                          <div className="text-sm">{selectedRecord.reason}</div>
-                        </div>
-                      )}
                     </div>
                     
+                    {selectedRecord.reason && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground font-normal">采购原因/用途</Label>
+                        <div className="text-sm">{selectedRecord.reason}</div>
+                      </div>
+                    )}
+                    
                     <div className="space-y-2 pt-2">
-                      <Label className="text-xs text-muted-foreground font-normal">采购物品明细</Label>
+                      <Label className="text-xs text-muted-foreground font-normal">物品明细</Label>
                       <div className="border rounded-lg overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted/30">
-                              <TableHead>名称</TableHead>
-                              <TableHead className="text-center">数量</TableHead>
-                              <TableHead className="text-right">单价</TableHead>
-                              <TableHead className="text-right">金额</TableHead>
-                              <TableHead>备注</TableHead>
+                              <TableHead>物品名称</TableHead>
+                              <TableHead>数量</TableHead>
+                              <TableHead>单价</TableHead>
+                              <TableHead>金额</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {selectedItems.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">暂无明细</TableCell>
                               </TableRow>
                             ) : (
-                              <>
-                                {selectedItems.map((item) => (
-                                  <TableRow key={item.id}>
-                                    <TableCell>{item.item_name}</TableCell>
-                                    <TableCell className="text-center">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">¥{item.unit_price.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right">¥{item.amount.toFixed(2)}</TableCell>
-                                    <TableCell>{item.remarks || "-"}</TableCell>
-                                  </TableRow>
-                                ))}
-                                <TableRow className="bg-muted/30">
-                                  <TableCell colSpan={3} className="text-right font-medium">合计</TableCell>
-                                  <TableCell className="text-right font-bold">¥{selectedRecord.total_amount.toFixed(2)}</TableCell>
-                                  <TableCell></TableCell>
+                              selectedItems.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell>{item.item_name}</TableCell>
+                                  <TableCell>{item.quantity} {item.unit || ""}</TableCell>
+                                  <TableCell>¥{item.unit_price.toFixed(2)}</TableCell>
+                                  <TableCell>¥{item.amount.toFixed(2)}</TableCell>
                                 </TableRow>
-                              </>
+                              ))
                             )}
                           </TableBody>
                         </Table>
@@ -596,7 +566,10 @@ const SuppliesPurchase = () => {
               <TabsContent value="approval" className="flex-1 m-0 overflow-hidden">
                 <ScrollArea className="h-[calc(85vh-180px)]">
                   <div className="px-6 py-4">
-                    <ApprovalTimeline businessId={selectedRecord.id} businessType="supply_purchase" />
+                    <ApprovalTimeline 
+                      businessId={selectedRecord.id}
+                      businessType="supply_purchase"
+                    />
                   </div>
                 </ScrollArea>
               </TabsContent>

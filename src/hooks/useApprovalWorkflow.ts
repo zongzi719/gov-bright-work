@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import type { Database } from "@/integrations/supabase/types";
 
 type TodoBusinessType = Database["public"]["Enums"]["todo_business_type"];
@@ -47,6 +47,7 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
   out: "absence",
   supply_requisition: "supply_requisition",
   purchase_request: "purchase_request",
+  supply_purchase: "supply_purchase",
 };
 
 /**
@@ -59,39 +60,32 @@ export const useApprovalWorkflow = () => {
    * 根据业务类型查找对应的审批模版
    */
   const findTemplateByBusinessType = async (businessType: string): Promise<ApprovalTemplate | null> => {
-    const { data, error } = await supabase
-      .from("approval_templates")
-      .select("id, code, business_type")
-      .eq("business_type", businessType)
-      .eq("is_active", true)
-      .maybeSingle();
+    const { data, error } = await dataAdapter.getApprovalTemplates();
 
-    if (error) {
+    if (error || !data) {
       console.error("Failed to find template:", error);
       return null;
     }
-    return data;
+    
+    const template = data.find((t: any) => t.business_type === businessType && t.is_active !== false);
+    return template || null;
   };
 
   /**
    * 获取模版的最新发布版本
    */
   const getLatestPublishedVersion = async (templateId: string): Promise<ProcessVersion | null> => {
-    const { data, error } = await supabase
-      .from("approval_process_versions")
-      .select("id, version_number, nodes_snapshot")
-      .eq("template_id", templateId)
-      .eq("is_current", true)
-      .maybeSingle();
+    const { data, error } = await dataAdapter.getApprovalProcessVersions(templateId, true);
 
     if (error) {
       console.error("Failed to get latest version:", error);
       return null;
     }
     
-    if (data) {
+    if (data && !Array.isArray(data) && data.id) {
       return {
-        ...data,
+        id: data.id,
+        version_number: data.version_number,
         nodes_snapshot: (data.nodes_snapshot as unknown) as ApprovalNode[]
       };
     }
@@ -226,35 +220,31 @@ export const useApprovalWorkflow = () => {
         
         for (const recipientId of ccRecipientIds) {
           // 创建审批记录（状态设为 pending 表示未阅）
-          await supabase
-            .from("approval_records")
-            .insert({
-              instance_id: instanceId,
-              node_index: i,
-              node_name: node.node_name,
-              node_type: "cc",
-              approver_id: recipientId,
-              status: "pending", // 抄送节点初始状态为未阅
-              comment: null,
-            } as never);
+          await dataAdapter.createApprovalRecord({
+            instance_id: instanceId,
+            node_index: i,
+            node_name: node.node_name,
+            node_type: "cc",
+            approver_id: recipientId,
+            status: "pending",
+            comment: null,
+          });
 
           // 创建待办通知（状态设为 pending，表示未阅）
-          await supabase
-            .from("todo_items")
-            .insert({
-              source: "internal",
-              business_type: todoBusinessType,
-              business_id: businessId,
-              title: `[抄送] ${title}`,
-              description: `${initiatorName} 发起的申请 - 抄送通知`,
-              priority: "normal",
-              status: "pending", // 抄送待办初始状态为未阅
-              process_result: "cc_notified",
-              initiator_id: initiatorId,
-              assignee_id: recipientId,
-              approval_instance_id: instanceId,
-              approval_version_number: versionNumber,
-            });
+          await dataAdapter.createTodoItem({
+            source: "internal",
+            business_type: todoBusinessType,
+            business_id: businessId,
+            title: `[抄送] ${title}`,
+            description: `${initiatorName} 发起的申请 - 抄送通知`,
+            priority: "normal",
+            status: "pending",
+            process_result: "cc_notified",
+            initiator_id: initiatorId,
+            assignee_id: recipientId,
+            approval_instance_id: instanceId,
+            approval_version_number: versionNumber,
+          });
         }
       }
     }
@@ -294,23 +284,17 @@ export const useApprovalWorkflow = () => {
       console.log("Starting approval workflow, first node:", firstNode.node_name, "at index:", firstNodeIndex);
 
       // 4. 创建审批实例
-      const instanceInsert = {
+      const { data: instance, error: instanceError } = await dataAdapter.createApprovalInstance({
         template_id: template.id,
         version_id: version.id,
         version_number: version.version_number,
         business_type: businessType,
         business_id: businessId,
         initiator_id: initiatorId,
-        status: "pending" as const,
-        current_node_index: firstNodeIndex, // 使用第一个审批节点的索引
+        status: "pending",
+        current_node_index: firstNodeIndex,
         form_data: formData || {},
-      };
-
-      const { data: instance, error: instanceError } = await supabase
-        .from("approval_instances")
-        .insert(instanceInsert as never)
-        .select("id")
-        .single();
+      });
 
       if (instanceError || !instance) {
         console.error("Failed to create approval instance:", instanceError);
@@ -339,37 +323,33 @@ export const useApprovalWorkflow = () => {
       
       for (const approverId of approverIds) {
         // 创建审批记录
-        const { error: recordError } = await supabase
-          .from("approval_records")
-          .insert({
-            instance_id: instance.id,
-            node_index: firstNodeIndex,
-            node_name: firstNode.node_name,
-            node_type: firstNode.node_type,
-            approver_id: approverId,
-            status: "pending",
-          });
+        const { error: recordError } = await dataAdapter.createApprovalRecord({
+          instance_id: instance.id,
+          node_index: firstNodeIndex,
+          node_name: firstNode.node_name,
+          node_type: firstNode.node_type,
+          approver_id: approverId,
+          status: "pending",
+        });
 
         if (recordError) {
           console.error("Failed to create approval record:", recordError);
         }
 
         // 创建待办事项
-        const { error: todoError } = await supabase
-          .from("todo_items")
-          .insert({
-            source: "internal",
-            business_type: todoBusinessType,
-            business_id: businessId,
-            title: title,
-            description: `${initiatorName} 发起的${getBusinessTypeLabel(businessType)}申请`,
-            priority: "normal",
-            status: "pending",
-            initiator_id: initiatorId,
-            assignee_id: approverId,
-            approval_instance_id: instance.id,
-            approval_version_number: version.version_number,
-          });
+        const { error: todoError } = await dataAdapter.createTodoItem({
+          source: "internal",
+          business_type: todoBusinessType,
+          business_id: businessId,
+          title: title,
+          description: `${initiatorName} 发起的${getBusinessTypeLabel(businessType)}申请`,
+          priority: "normal",
+          status: "pending",
+          initiator_id: initiatorId,
+          assignee_id: approverId,
+          approval_instance_id: instance.id,
+          approval_version_number: version.version_number,
+        });
 
         if (todoError) {
           console.error("Failed to create todo item:", todoError);
@@ -394,6 +374,7 @@ export const useApprovalWorkflow = () => {
       out: "外出",
       supply_requisition: "领用",
       purchase_request: "采购",
+      supply_purchase: "办公采购",
     };
     return labels[businessType] || businessType;
   };
