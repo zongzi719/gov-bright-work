@@ -56,6 +56,62 @@ export async function getOfficeSupplies(params?: { is_active?: boolean }) {
   return { data, error };
 }
 
+export async function getAllOfficeSupplies() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/office-supplies');
+  }
+  
+  const { data, error } = await supabase
+    .from("office_supplies")
+    .select("*")
+    .order("name");
+  return { data, error };
+}
+
+export async function createOfficeSupply(supply: {
+  name: string;
+  specification?: string | null;
+  unit: string;
+  current_stock: number;
+  min_stock: number;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/office-supplies', {
+      method: 'POST',
+      body: JSON.stringify(supply),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("office_supplies")
+    .insert(supply)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateOfficeSupply(id: string, updates: {
+  name?: string;
+  specification?: string | null;
+  unit?: string;
+  current_stock?: number;
+  min_stock?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/office-supplies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("office_supplies")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
 // ==================== Schedules ====================
 
 export async function getSchedules(params: {
@@ -78,6 +134,19 @@ export async function getSchedules(params: {
     .gte("schedule_date", params.start_date)
     .lte("schedule_date", params.end_date)
     .order("schedule_date")
+    .order("start_time");
+  return { data, error };
+}
+
+export async function getAllSchedules() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/schedules');
+  }
+  
+  const { data, error } = await supabase
+    .from("schedules")
+    .select("*, contact:contacts(id, name, department, organization:organizations(name))")
+    .order("schedule_date", { ascending: false })
     .order("start_time");
   return { data, error };
 }
@@ -147,6 +216,18 @@ export async function getSupplyRequisitions(params: { requisition_by: string }) 
   return { data, error };
 }
 
+export async function getAllSupplyRequisitions() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/supply-requisitions');
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_requisitions")
+    .select("*, office_supplies(*)")
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
 export async function createSupplyRequisition(requisition: {
   requisition_by: string;
   requisition_date: string;
@@ -164,6 +245,44 @@ export async function createSupplyRequisition(requisition: {
     .select("id")
     .single();
   return { data, error };
+}
+
+export async function createDirectSupplyRequisition(requisition: {
+  supply_id: string;
+  quantity: number;
+  requisition_by: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/supply-requisitions', {
+      method: 'POST',
+      body: JSON.stringify(requisition),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_requisitions")
+    .insert(requisition as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateSupplyRequisition(id: string, updates: {
+  status?: 'pending' | 'approved' | 'rejected' | 'completed';
+  approved_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/supply-requisitions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("supply_requisitions")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
 }
 
 export async function getSupplyRequisitionItems(requisitionId: string) {
@@ -205,6 +324,18 @@ export async function getSupplyPurchases(params: { applicant_name: string }) {
     .from("supply_purchases")
     .select("*")
     .eq("applicant_name", params.applicant_name)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function getAllSupplyPurchases() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/supply-purchases');
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_purchases")
+    .select("*")
     .order("created_at", { ascending: false });
   return { data, error };
 }
@@ -278,6 +409,18 @@ export async function getPurchaseRequests(params: { requested_by: string }) {
   return { data, error };
 }
 
+export async function getAllPurchaseRequests() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/purchase-requests');
+  }
+  
+  const { data, error } = await supabase
+    .from("purchase_requests")
+    .select("*, office_supplies(*)")
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
 export async function createPurchaseRequest(request: {
   requested_by: string;
   purchase_date: string;
@@ -302,6 +445,46 @@ export async function createPurchaseRequest(request: {
     .select("id")
     .single();
   return { data, error };
+}
+
+export async function createDirectPurchaseRequest(request: {
+  supply_id: string;
+  quantity: number;
+  reason?: string | null;
+  requested_by: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/purchase-requests', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("purchase_requests")
+    .insert(request as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updatePurchaseRequest(id: string, updates: {
+  status?: 'pending' | 'approved' | 'rejected' | 'completed';
+  approved_at?: string;
+  completed_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/purchase-requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("purchase_requests")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
 }
 
 export async function getPurchaseRequestItems(requestId: string) {
@@ -414,6 +597,19 @@ export async function getAbsenceRecords(params: {
     .eq("type", params.type)
     .eq("contact_id", params.contact_id)
     .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function getAbsenceRecordById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/absence-records/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("absence_records")
+    .select("*, contacts!absence_records_contact_id_fkey(id, name, department)")
+    .eq("id", id)
+    .maybeSingle();
   return { data, error };
 }
 
@@ -618,6 +814,31 @@ export async function getContacts(params?: { is_active?: boolean; is_leader?: bo
   return { data, error };
 }
 
+export async function getContactsWithOrgForAdmin() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/contacts?with_org=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("id, name, department, organization:organizations(name)")
+    .eq("is_active", true)
+    .order("sort_order");
+  return { data, error };
+}
+
+export async function getContactsByIds(ids: string[]) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/contacts?ids=${ids.join(',')}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("id, name, department")
+    .in("id", ids);
+  return { data, error };
+}
+
 // ==================== Todo Items (待办事项) ====================
 
 export async function getTodoItems(params: {
@@ -708,6 +929,65 @@ export async function updateTodoItem(id: string, updates: {
 }
 
 // ==================== Approval Workflow ====================
+
+export async function getApprovalInstanceById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/approval-instances/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_instances")
+    .select(`
+      *,
+      initiator:contacts!approval_instances_initiator_id_fkey(name, department)
+    `)
+    .eq("id", id)
+    .single();
+  return { data, error };
+}
+
+export async function getApprovalProcessVersionById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/approval-process-versions/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_process_versions")
+    .select("nodes_snapshot")
+    .eq("id", id)
+    .single();
+  return { data, error };
+}
+
+export async function getApprovalRecordsByInstance(instanceId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/approval-records?instance_id=${instanceId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_records")
+    .select(`
+      *,
+      approver:contacts!approval_records_approver_id_fkey(name, department)
+    `)
+    .eq("instance_id", instanceId)
+    .order("node_index", { ascending: true })
+    .order("created_at", { ascending: true });
+  return { data, error };
+}
+
+export async function getApprovalFormFields(templateId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/approval-form-fields?template_id=${templateId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_form_fields")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("sort_order", { ascending: true });
+  return { data, error };
+}
 
 export async function createApprovalInstance(instance: {
   template_id: string;
@@ -938,47 +1218,113 @@ export async function updateOfficeSupplyStock(id: string, currentStock: number) 
   return { data: null, error };
 }
 
+// ==================== Supply Requisition By ID ====================
+
+export async function getSupplyRequisitionById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/supply-requisitions/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_requisitions")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return { data, error };
+}
+
+// ==================== Supply Purchase By ID ====================
+
+export async function getSupplyPurchaseById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/supply-purchases/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_purchases")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return { data, error };
+}
+
+// ==================== Purchase Request By ID ====================
+
+export async function getPurchaseRequestById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/purchase-requests/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("purchase_requests")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return { data, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
   getOfficeSupplies,
+  getAllOfficeSupplies,
+  createOfficeSupply,
+  updateOfficeSupply,
   updateOfficeSupplyStock,
   // Schedules
   getSchedules,
+  getAllSchedules,
   createSchedule,
   updateSchedule,
   deleteSchedule,
   // Supply Requisitions
   getSupplyRequisitions,
+  getAllSupplyRequisitions,
   createSupplyRequisition,
+  createDirectSupplyRequisition,
+  updateSupplyRequisition,
   getSupplyRequisitionItems,
   createSupplyRequisitionItems,
+  getSupplyRequisitionById,
   // Supply Purchases
   getSupplyPurchases,
+  getAllSupplyPurchases,
   createSupplyPurchase,
   getSupplyPurchaseItems,
   createSupplyPurchaseItems,
+  getSupplyPurchaseById,
   // Purchase Requests
   getPurchaseRequests,
+  getAllPurchaseRequests,
   createPurchaseRequest,
+  createDirectPurchaseRequest,
+  updatePurchaseRequest,
   getPurchaseRequestItems,
   createPurchaseRequestItems,
+  getPurchaseRequestById,
   // Canteen Menus
   getCanteenMenus,
   updateCanteenMenu,
   createCanteenMenu,
   // Absence Records
   getAbsenceRecords,
+  getAbsenceRecordById,
   createAbsenceRecord,
   updateAbsenceRecord,
   // Contacts
   getContactsWithOrg,
+  getContactsWithOrgForAdmin,
   getOrganizations,
   getContacts,
+  getContactsByIds,
   // Approval
   getApprovalTemplates,
   getApprovalInstances,
+  getApprovalInstanceById,
   getApprovalRecords,
+  getApprovalRecordsByInstance,
+  getApprovalFormFields,
+  getApprovalProcessVersionById,
   createApprovalInstance,
   updateApprovalInstance,
   createApprovalRecord,

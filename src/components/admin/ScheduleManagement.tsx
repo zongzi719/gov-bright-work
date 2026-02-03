@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,27 +88,19 @@ const ScheduleManagement = () => {
 
   const fetchSchedules = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("schedules")
-      .select("*, contact:contacts(id, name, department, organization:organizations(name))")
-      .order("schedule_date", { ascending: false })
-      .order("start_time");
+    const { data, error } = await dataAdapter.getAllSchedules();
 
     if (error) {
       toast.error("获取日程列表失败");
       console.error(error);
     } else {
-      setSchedules(data as Schedule[]);
+      setSchedules((data as Schedule[]) || []);
     }
     setLoading(false);
   };
 
   const fetchContacts = async () => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, name, department, organization:organizations(name)")
-      .eq("is_active", true)
-      .order("sort_order");
+    const { data, error } = await dataAdapter.getContactsWithOrgForAdmin();
 
     if (!error && data) {
       setContacts(data);
@@ -132,10 +124,7 @@ const ScheduleManagement = () => {
     };
 
     if (editingSchedule) {
-      const { error } = await supabase
-        .from("schedules")
-        .update(payload)
-        .eq("id", editingSchedule.id);
+      const { error } = await dataAdapter.updateSchedule(editingSchedule.id, payload);
 
       if (error) {
         toast.error("更新日程失败");
@@ -146,7 +135,7 @@ const ScheduleManagement = () => {
         closeDialog();
       }
     } else {
-      const { error } = await supabase.from("schedules").insert(payload);
+      const { error } = await dataAdapter.createSchedule(payload);
 
       if (error) {
         toast.error("添加日程失败");
@@ -176,7 +165,7 @@ const ScheduleManagement = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除这条日程吗？")) return;
 
-    const { error } = await supabase.from("schedules").delete().eq("id", id);
+    const { error } = await dataAdapter.deleteSchedule(id);
 
     if (error) {
       toast.error("删除失败");
