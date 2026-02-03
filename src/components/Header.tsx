@@ -119,7 +119,7 @@ const Header = () => {
             <div className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0">
               <img src={partyEmblem} alt="党徽" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-base md:text-xl font-bold text-white tracking-wide truncate">xx州党政办公平台</h1>
+            <h1 className="text-base md:text-xl font-bold text-white tracking-wide truncate">昌吉州党政办公平台</h1>
           </div>
 
           {/* 右侧：日期、用户信息、退出 */}
