@@ -562,10 +562,387 @@ export async function getLeaderSchedulePermissions(userId: string) {
   return { data, error };
 }
 
+// ==================== Create Absence Record ====================
+
+export async function createAbsenceRecord(record: {
+  contact_id: string;
+  type: 'out' | 'leave' | 'business_trip';
+  reason: string;
+  start_time: string;
+  end_time?: string | null;
+  leave_type?: string | null;
+  out_type?: string | null;
+  out_location?: string | null;
+  destination?: string | null;
+  transport_type?: string | null;
+  companions?: string[] | null;
+  estimated_cost?: number | null;
+  duration_hours?: number | null;
+  duration_days?: number | null;
+  handover_person_id?: string | null;
+  handover_notes?: string | null;
+  contact_phone?: string | null;
+  notes?: string | null;
+  status?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/absence-records', {
+      method: 'POST',
+      body: JSON.stringify(record),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("absence_records")
+    .insert(record as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+// ==================== Contacts (通讯录) ====================
+
+export async function getContacts(params?: { is_active?: boolean; is_leader?: boolean }) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    if (params?.is_active !== undefined) searchParams.set('is_active', String(params.is_active));
+    if (params?.is_leader !== undefined) searchParams.set('is_leader', String(params.is_leader));
+    const query = searchParams.toString();
+    return offlineRequest<any[]>(`/api/contacts${query ? `?${query}` : ''}`);
+  }
+  
+  let query = supabase.from("contacts").select("id, name, department, position, organization_id");
+  if (params?.is_active !== undefined) query = query.eq("is_active", params.is_active);
+  if (params?.is_leader !== undefined) query = query.eq("is_leader", params.is_leader);
+  const { data, error } = await query.order("sort_order");
+  return { data, error };
+}
+
+// ==================== Todo Items (待办事项) ====================
+
+export async function getTodoItems(params: {
+  assignee_id: string;
+  status?: string[];
+  process_result_ne?: string;
+  limit?: number;
+}) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('assignee_id', params.assignee_id);
+    if (params.status) searchParams.set('status', params.status.join(','));
+    if (params.process_result_ne) searchParams.set('process_result_ne', params.process_result_ne);
+    if (params.limit) searchParams.set('limit', String(params.limit));
+    return offlineRequest<any[]>(`/api/todo-items?${searchParams.toString()}`);
+  }
+  
+  let query = supabase
+    .from("todo_items")
+    .select(`
+      id, title, source_system, source_department, created_at, priority, status,
+      business_type, business_id, action_url, approval_instance_id, assignee_id,
+      process_result, processed_at,
+      initiator:contacts!todo_items_initiator_id_fkey(name, department)
+    `)
+    .eq("assignee_id", params.assignee_id);
+  
+  if (params.status && params.status.length > 0) {
+    query = query.in("status", params.status as any);
+  }
+  if (params.process_result_ne) {
+    query = query.neq("process_result", params.process_result_ne);
+  }
+  
+  const { data, error } = await query
+    .order("created_at", { ascending: false })
+    .limit(params.limit || 20);
+  return { data, error };
+}
+
+export async function createTodoItem(item: {
+  source?: string;
+  business_type: string;
+  business_id: string;
+  title: string;
+  description?: string;
+  priority?: string;
+  status?: string;
+  process_result?: string | null;
+  initiator_id: string;
+  assignee_id: string;
+  approval_instance_id?: string;
+  approval_version_number?: number;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/todo-items', {
+      method: 'POST',
+      body: JSON.stringify(item),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("todo_items")
+    .insert(item as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateTodoItem(id: string, updates: {
+  status?: string;
+  process_result?: string;
+  processed_at?: string;
+  processed_by?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/todo-items/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("todo_items")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// ==================== Approval Workflow ====================
+
+export async function createApprovalInstance(instance: {
+  template_id: string;
+  version_id: string;
+  version_number: number;
+  business_type: string;
+  business_id: string;
+  initiator_id: string;
+  status?: string;
+  current_node_index?: number;
+  form_data?: Record<string, unknown>;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/approval-instances', {
+      method: 'POST',
+      body: JSON.stringify(instance),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_instances")
+    .insert(instance as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateApprovalInstance(id: string, updates: {
+  status?: string;
+  current_node_index?: number;
+  completed_at?: string;
+  form_data?: Record<string, unknown>;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-instances/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_instances")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function createApprovalRecord(record: {
+  instance_id: string;
+  node_index: number;
+  node_name: string;
+  node_type: string;
+  approver_id: string;
+  status?: string;
+  comment?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/approval-records', {
+      method: 'POST',
+      body: JSON.stringify(record),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_records")
+    .insert(record as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateApprovalRecord(id: string, updates: {
+  status?: string;
+  comment?: string;
+  processed_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-records/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_records")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function updateAbsenceRecord(id: string, updates: {
+  status?: string;
+  approved_at?: string;
+  approved_by?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/absence-records/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("absence_records")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function getApprovalProcessVersions(templateId: string, isCurrent?: boolean) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('template_id', templateId);
+    if (isCurrent !== undefined) searchParams.set('is_current', String(isCurrent));
+    return offlineRequest<any[]>(`/api/approval-process-versions?${searchParams.toString()}`);
+  }
+  
+  let query = supabase
+    .from("approval_process_versions")
+    .select("id, version_number, nodes_snapshot")
+    .eq("template_id", templateId);
+  
+  if (isCurrent !== undefined) {
+    query = query.eq("is_current", isCurrent);
+  }
+  
+  const { data, error } = await query.maybeSingle();
+  return { data, error };
+}
+
+// ==================== Banners ====================
+
+export async function getBanners() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/banners');
+  }
+  
+  const { data, error } = await supabase
+    .from("banners")
+    .select("id, image_url, title")
+    .eq("is_active", true)
+    .order("sort_order");
+  return { data, error };
+}
+
+// ==================== Notice Images ====================
+
+export async function getNoticeImages() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/notice-images');
+  }
+  
+  const { data, error } = await supabase
+    .from("notice_images")
+    .select("id, image_url, title")
+    .eq("is_active", true)
+    .order("sort_order");
+  return { data, error };
+}
+
+// ==================== Notices ====================
+
+export async function getNotices(params?: {
+  is_published?: boolean;
+  organization_id?: string;
+  security_level?: string;
+  limit?: number;
+}) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    if (params?.is_published !== undefined) searchParams.set('is_published', String(params.is_published));
+    if (params?.organization_id) searchParams.set('organization_id', params.organization_id);
+    if (params?.security_level) searchParams.set('security_level', params.security_level);
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return offlineRequest<any[]>(`/api/notices${query ? `?${query}` : ''}`);
+  }
+  
+  let query = supabase.from("notices").select("*");
+  if (params?.is_published !== undefined) query = query.eq("is_published", params.is_published);
+  const { data, error } = await query
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(params?.limit || 100);
+  return { data, error };
+}
+
+// ==================== Stock Movements ====================
+
+export async function createStockMovement(movement: {
+  supply_id: string;
+  movement_type: string;
+  quantity: number;
+  before_stock: number;
+  after_stock: number;
+  reference_type?: string;
+  reference_id?: string;
+  operator_name?: string;
+  notes?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/stock-movements', {
+      method: 'POST',
+      body: JSON.stringify(movement),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("stock_movements")
+    .insert(movement as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateOfficeSupplyStock(id: string, currentStock: number) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/office-supplies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ current_stock: currentStock }),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("office_supplies")
+    .update({ current_stock: currentStock })
+    .eq("id", id);
+  return { data: null, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
   getOfficeSupplies,
+  updateOfficeSupplyStock,
   // Schedules
   getSchedules,
   createSchedule,
@@ -592,19 +969,37 @@ export const dataAdapter = {
   createCanteenMenu,
   // Absence Records
   getAbsenceRecords,
+  createAbsenceRecord,
+  updateAbsenceRecord,
   // Contacts
   getContactsWithOrg,
   getOrganizations,
+  getContacts,
   // Approval
   getApprovalTemplates,
   getApprovalInstances,
   getApprovalRecords,
+  createApprovalInstance,
+  updateApprovalInstance,
+  createApprovalRecord,
+  updateApprovalRecord,
+  getApprovalProcessVersions,
   // Leave Balances
   getLeaveBalance,
   // Leader Schedules
   getLeaderSchedules,
   getLeaders,
   getLeaderSchedulePermissions,
+  // Todo Items
+  getTodoItems,
+  createTodoItem,
+  updateTodoItem,
+  // Banners & Notices
+  getBanners,
+  getNoticeImages,
+  getNotices,
+  // Stock
+  createStockMovement,
   // Utilities
   isOfflineMode,
 };

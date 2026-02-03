@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { format, differenceInHours, differenceInDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -65,23 +65,14 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   }, [open, currentUser?.id]);
 
   const fetchContacts = async () => {
-    const { data } = await supabase
-      .from("contacts")
-      .select("id, name, department")
-      .eq("is_active", true)
-      .order("sort_order");
+    const { data } = await dataAdapter.getContacts({ is_active: true });
     if (data) setContacts(data);
   };
 
   const fetchLeaveBalance = async () => {
     if (!currentUser?.id) return;
     const currentYear = new Date().getFullYear();
-    const { data } = await supabase
-      .from("leave_balances")
-      .select("*")
-      .eq("contact_id", currentUser.id)
-      .eq("year", currentYear)
-      .maybeSingle();
+    const { data } = await dataAdapter.getLeaveBalance(currentUser.id, currentYear);
     if (data) setLeaveBalance(data);
   };
 
@@ -127,7 +118,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     try {
       const durationData = calculateDuration();
       
-      const { data: record, error } = await supabase.from("absence_records").insert({
+      const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "leave",
         leave_type: form.leave_type,
@@ -140,7 +131,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         duration_days: durationData?.days || null,
         notes: form.notes || null,
         status: "pending",
-      } as any).select("id").single();
+      });
 
       if (error || !record) {
         toast.error("提交失败");

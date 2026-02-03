@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { format, differenceInHours, set } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -84,19 +84,19 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
       const endDateTime = getFullDateTime(form.end_date || form.start_date, form.end_time);
       const durationData = calculateDuration();
       
-      const { data: record, error } = await supabase.from("absence_records").insert({
+      const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "out",
         out_type: form.out_type,
         out_location: form.out_location,
         reason: form.reason,
-        start_time: startDateTime?.toISOString(),
+        start_time: startDateTime?.toISOString() || "",
         end_time: endDateTime?.toISOString() || null,
         contact_phone: form.contact_phone || null,
         duration_hours: durationData?.hours || null,
         notes: form.notes || null,
         status: "pending",
-      } as any).select("id").single();
+      });
 
       if (error || !record) {
         toast.error("提交失败");

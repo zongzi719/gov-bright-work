@@ -1182,6 +1182,328 @@ app.delete('/api/schedules/:id', async (req, res) => {
   }
 });
 
+// ==================== 待办事项扩展 ====================
+
+app.get('/api/todo-items', async (req, res) => {
+  try {
+    const { assignee_id, status, process_result_ne, limit = 20 } = req.query;
+    
+    let sql = `
+      SELECT t.*, 
+             c.name as initiator_name, c.department as initiator_department
+      FROM todo_items t
+      LEFT JOIN contacts c ON t.initiator_id = c.id
+      WHERE t.assignee_id = ?
+    `;
+    const params = [assignee_id];
+    
+    if (status) {
+      const statusList = status.split(',');
+      sql += ` AND t.status IN (${statusList.map(() => '?').join(',')})`;
+      params.push(...statusList);
+    }
+    
+    if (process_result_ne) {
+      sql += ` AND (t.process_result IS NULL OR t.process_result != ?)`;
+      params.push(process_result_ne);
+    }
+    
+    sql += ` ORDER BY t.created_at DESC LIMIT ?`;
+    params.push(parseInt(limit));
+    
+    const [rows] = await pool.execute(sql, params);
+    
+    // 格式化为前端期望的结构
+    const items = rows.map(row => ({
+      ...row,
+      initiator: {
+        name: row.initiator_name,
+        department: row.initiator_department
+      }
+    }));
+    
+    res.json(items);
+  } catch (error) {
+    console.error('Get todo items error:', error);
+    res.status(500).json({ error: '获取待办失败' });
+  }
+});
+
+app.post('/api/todo-items', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { 
+      source = 'internal', business_type, business_id, title, description,
+      priority = 'normal', status = 'pending', process_result,
+      initiator_id, assignee_id, approval_instance_id, approval_version_number
+    } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO todo_items (id, source, business_type, business_id, title, description, priority, status, process_result, initiator_id, assignee_id, approval_instance_id, approval_version_number)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, source, business_type, business_id, title, description, priority, status, process_result, initiator_id, assignee_id, approval_instance_id, approval_version_number]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create todo item error:', error);
+    res.status(500).json({ error: '创建待办失败' });
+  }
+});
+
+app.put('/api/todo-items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, process_result, processed_at, processed_by } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (process_result !== undefined) { updates.push('process_result = ?'); params.push(process_result); }
+    if (processed_at !== undefined) { updates.push('processed_at = ?'); params.push(processed_at); }
+    if (processed_by !== undefined) { updates.push('processed_by = ?'); params.push(processed_by); }
+    updates.push('updated_at = NOW()');
+    
+    params.push(id);
+    
+    await pool.execute(
+      `UPDATE todo_items SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update todo item error:', error);
+    res.status(500).json({ error: '更新待办失败' });
+  }
+});
+
+// ==================== 审批实例扩展 ====================
+
+app.post('/api/approval-instances', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { 
+      template_id, version_id, version_number, business_type, business_id,
+      initiator_id, status = 'pending', current_node_index = 0, form_data = {}
+    } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO approval_instances (id, template_id, version_id, version_number, business_type, business_id, initiator_id, status, current_node_index, form_data)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, template_id, version_id, version_number, business_type, business_id, initiator_id, status, current_node_index, JSON.stringify(form_data)]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create approval instance error:', error);
+    res.status(500).json({ error: '创建审批实例失败' });
+  }
+});
+
+app.put('/api/approval-instances/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, current_node_index, completed_at, form_data } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (current_node_index !== undefined) { updates.push('current_node_index = ?'); params.push(current_node_index); }
+    if (completed_at !== undefined) { updates.push('completed_at = ?'); params.push(completed_at); }
+    if (form_data !== undefined) { updates.push('form_data = ?'); params.push(JSON.stringify(form_data)); }
+    updates.push('updated_at = NOW()');
+    
+    params.push(id);
+    
+    await pool.execute(
+      `UPDATE approval_instances SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update approval instance error:', error);
+    res.status(500).json({ error: '更新审批实例失败' });
+  }
+});
+
+// ==================== 审批记录扩展 ====================
+
+app.post('/api/approval-records', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { instance_id, node_index, node_name, node_type, approver_id, status = 'pending', comment } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO approval_records (id, instance_id, node_index, node_name, node_type, approver_id, status, comment)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, instance_id, node_index, node_name, node_type, approver_id, status, comment]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create approval record error:', error);
+    res.status(500).json({ error: '创建审批记录失败' });
+  }
+});
+
+app.put('/api/approval-records/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, comment, processed_at } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (comment !== undefined) { updates.push('comment = ?'); params.push(comment); }
+    if (processed_at !== undefined) { updates.push('processed_at = ?'); params.push(processed_at); }
+    updates.push('updated_at = NOW()');
+    
+    params.push(id);
+    
+    await pool.execute(
+      `UPDATE approval_records SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update approval record error:', error);
+    res.status(500).json({ error: '更新审批记录失败' });
+  }
+});
+
+// ==================== 审批流程版本 ====================
+
+app.get('/api/approval-process-versions', async (req, res) => {
+  try {
+    const { template_id, is_current } = req.query;
+    
+    let sql = 'SELECT id, version_number, nodes_snapshot FROM approval_process_versions WHERE template_id = ?';
+    const params = [template_id];
+    
+    if (is_current !== undefined) {
+      sql += ' AND is_current = ?';
+      params.push(is_current === 'true' ? 1 : 0);
+    }
+    
+    sql += ' ORDER BY version_number DESC LIMIT 1';
+    
+    const [rows] = await pool.execute(sql, params);
+    
+    if (rows.length > 0) {
+      const row = rows[0];
+      res.json({
+        ...row,
+        nodes_snapshot: typeof row.nodes_snapshot === 'string' ? JSON.parse(row.nodes_snapshot) : row.nodes_snapshot
+      });
+    } else {
+      res.json(null);
+    }
+  } catch (error) {
+    console.error('Get approval process versions error:', error);
+    res.status(500).json({ error: '获取审批流程版本失败' });
+  }
+});
+
+// ==================== 缺勤记录扩展 ====================
+
+app.post('/api/absence-records', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const {
+      contact_id, type, reason, start_time, end_time,
+      leave_type, out_type, out_location, destination, transport_type,
+      companions, estimated_cost, duration_hours, duration_days,
+      handover_person_id, handover_notes, contact_phone, notes, status = 'pending'
+    } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO absence_records (id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, companions, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, companions ? JSON.stringify(companions) : null, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create absence record error:', error);
+    res.status(500).json({ error: '创建缺勤记录失败' });
+  }
+});
+
+app.put('/api/absence-records/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, approved_at, approved_by } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+    if (approved_at !== undefined) { updates.push('approved_at = ?'); params.push(approved_at); }
+    if (approved_by !== undefined) { updates.push('approved_by = ?'); params.push(approved_by); }
+    updates.push('updated_at = NOW()');
+    
+    params.push(id);
+    
+    await pool.execute(
+      `UPDATE absence_records SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update absence record error:', error);
+    res.status(500).json({ error: '更新缺勤记录失败' });
+  }
+});
+
+// ==================== 库存变动 ====================
+
+app.post('/api/stock-movements', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const {
+      supply_id, movement_type, quantity, before_stock, after_stock,
+      reference_type, reference_id, operator_name, notes
+    } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO stock_movements (id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type, reference_id, operator_name, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type, reference_id, operator_name, notes]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create stock movement error:', error);
+    res.status(500).json({ error: '创建库存变动失败' });
+  }
+});
+
+// ==================== 办公用品库存更新 ====================
+
+app.put('/api/office-supplies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { current_stock } = req.body;
+    
+    await pool.execute(
+      'UPDATE office_supplies SET current_stock = ?, updated_at = NOW() WHERE id = ?',
+      [current_stock, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update office supply error:', error);
+    res.status(500).json({ error: '更新办公用品失败' });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {
