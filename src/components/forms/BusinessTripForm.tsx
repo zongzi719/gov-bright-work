@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays, isBefore, startOfDay } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -62,11 +62,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
   }, [open]);
 
   const fetchContacts = async () => {
-    const { data } = await supabase
-      .from("contacts")
-      .select("id, name, department")
-      .eq("is_active", true)
-      .order("sort_order");
+    const { data } = await dataAdapter.getContacts({ is_active: true });
     if (data) setContacts(data);
   };
 
@@ -145,7 +141,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
       const endTime = new Date(form.end_date);
       endTime.setHours(endHour, 0, 0, 0);
       
-      const { data: record, error } = await supabase.from("absence_records").insert({
+      const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "business_trip",
         reason: form.reason,
@@ -159,7 +155,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
         duration_days: durationData?.days || null,
         notes: form.notes || null,
         status: "pending",
-      } as any).select("id").single();
+      });
 
       if (error || !record) {
         toast.error("提交失败");

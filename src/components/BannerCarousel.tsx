@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
+import * as dataAdapter from "@/lib/dataAdapter";
 
 interface BannerItem {
   id: string;
@@ -38,24 +37,7 @@ const BannerCarousel = () => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        let data: any[] | null = null;
-        let error: any = null;
-
-        if (isOfflineMode()) {
-          // 离线模式
-          const result = await offlineApi.getBanners();
-          data = result.data;
-          error = result.error;
-        } else {
-          // 在线模式
-          const result = await supabase
-            .from("banners")
-            .select("id, image_url, title")
-            .eq("is_active", true)
-            .order("sort_order", { ascending: true });
-          data = result.data;
-          error = result.error;
-        }
+        const { data, error } = await dataAdapter.getBanners();
 
         if (!error && data && data.length > 0) {
           setBanners(data.map(b => ({
