@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
-import { supabase } from "@/integrations/supabase/client";
+import { getAbsenceRecords } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import BusinessTripForm from "@/components/forms/BusinessTripForm";
@@ -57,18 +57,10 @@ const BusinessTrip = () => {
     if (!currentUser?.id) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from("absence_records")
-      .select(`
-        *,
-        contacts:contacts!absence_records_contact_id_fkey (
-          name,
-          department
-        )
-      `)
-      .eq("type", "business_trip")
-      .eq("contact_id", currentUser.id)
-      .order("created_at", { ascending: false });
+    const { data, error } = await getAbsenceRecords({
+      contact_id: currentUser.id,
+      type: "business_trip"
+    });
 
     if (!error && data) {
       setRecords(data as AbsenceRecord[]);

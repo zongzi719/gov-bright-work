@@ -386,6 +386,182 @@ export async function createCanteenMenu(menu: {
   return { data: null, error };
 }
 
+// ==================== Absence Records (请假/外出/出差) ====================
+
+export async function getAbsenceRecords(params: {
+  contact_id: string;
+  type: 'out' | 'leave' | 'business_trip';
+}) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('contact_id', params.contact_id);
+    searchParams.set('type', params.type);
+    return offlineRequest<any[]>(`/api/absence-records?${searchParams.toString()}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("absence_records")
+    .select(`
+      *,
+      contacts:contacts!absence_records_contact_id_fkey (
+        name,
+        department
+      ),
+      handover_person:contacts!absence_records_handover_person_id_fkey (
+        name
+      )
+    `)
+    .eq("type", params.type)
+    .eq("contact_id", params.contact_id)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+// ==================== Contacts (通讯录) ====================
+
+export async function getContactsWithOrg() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/contacts?with_org=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .select(`
+      id, name, department, position, mobile, phone, email, office_location, status, is_leader, organization_id, security_level,
+      organization:organizations (name)
+    `)
+    .eq("is_active", true)
+    .order("sort_order");
+  return { data, error };
+}
+
+export async function getOrganizations() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/organizations');
+  }
+  
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("id, name, parent_id, sort_order")
+    .order("sort_order");
+  return { data, error };
+}
+
+// ==================== Approval (审批) ====================
+
+export async function getApprovalTemplates() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/approval-templates');
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_templates")
+    .select("*")
+    .eq("is_active", true);
+  return { data, error };
+}
+
+export async function getApprovalInstances(params: { business_id: string; business_type: string }) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('business_id', params.business_id);
+    searchParams.set('business_type', params.business_type);
+    return offlineRequest<any[]>(`/api/approval-instances?${searchParams.toString()}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_instances")
+    .select("*")
+    .eq("business_id", params.business_id)
+    .eq("business_type", params.business_type)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function getApprovalRecords(instanceId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/approval-records?instance_id=${instanceId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_records")
+    .select(`
+      *,
+      approver:contacts!approval_records_approver_id_fkey (name, department)
+    `)
+    .eq("instance_id", instanceId)
+    .order("node_index");
+  return { data, error };
+}
+
+// ==================== Leave Balances (假期余额) ====================
+
+export async function getLeaveBalance(contactId: string, year: number) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/leave-balances/${contactId}?year=${year}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("leave_balances")
+    .select("*")
+    .eq("contact_id", contactId)
+    .eq("year", year)
+    .maybeSingle();
+  return { data, error };
+}
+
+// ==================== Leader Schedules (领导日程) ====================
+
+export async function getLeaderSchedules(params: {
+  leader_ids: string[];
+  start_date: string;
+  end_date: string;
+}) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('leader_ids', params.leader_ids.join(','));
+    searchParams.set('start_date', params.start_date);
+    searchParams.set('end_date', params.end_date);
+    return offlineRequest<any[]>(`/api/leader-schedules?${searchParams.toString()}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedules")
+    .select("*, leader:contacts!leader_schedules_leader_id_fkey(id, name, department, position)")
+    .in("leader_id", params.leader_ids)
+    .gte("schedule_date", params.start_date)
+    .lte("schedule_date", params.end_date)
+    .order("schedule_date")
+    .order("start_time");
+  return { data, error };
+}
+
+export async function getLeaders() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/contacts?is_leader=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("id, name, department, position, organization_id")
+    .eq("is_leader", true)
+    .eq("is_active", true)
+    .order("sort_order");
+  return { data, error };
+}
+
+export async function getLeaderSchedulePermissions(userId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/leader-schedule-permissions?user_id=${userId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedule_permissions")
+    .select("*")
+    .eq("user_id", userId);
+  return { data, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
@@ -414,6 +590,21 @@ export const dataAdapter = {
   getCanteenMenus,
   updateCanteenMenu,
   createCanteenMenu,
+  // Absence Records
+  getAbsenceRecords,
+  // Contacts
+  getContactsWithOrg,
+  getOrganizations,
+  // Approval
+  getApprovalTemplates,
+  getApprovalInstances,
+  getApprovalRecords,
+  // Leave Balances
+  getLeaveBalance,
+  // Leader Schedules
+  getLeaderSchedules,
+  getLeaders,
+  getLeaderSchedulePermissions,
   // Utilities
   isOfflineMode,
 };

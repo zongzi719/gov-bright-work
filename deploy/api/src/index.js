@@ -976,6 +976,212 @@ app.put('/api/canteen-menus/:dayOfWeek', async (req, res) => {
   }
 });
 
+// ==================== 审批模板 ====================
+
+app.get('/api/approval-templates', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT * FROM approval_templates WHERE is_active = 1'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Get approval templates error:', error);
+    res.status(500).json({ error: '获取审批模板失败' });
+  }
+});
+
+// ==================== 审批实例 ====================
+
+app.get('/api/approval-instances', async (req, res) => {
+  try {
+    const { business_id, business_type } = req.query;
+    let sql = 'SELECT * FROM approval_instances WHERE 1=1';
+    const params = [];
+    
+    if (business_id) {
+      sql += ' AND business_id = ?';
+      params.push(business_id);
+    }
+    if (business_type) {
+      sql += ' AND business_type = ?';
+      params.push(business_type);
+    }
+    
+    sql += ' ORDER BY created_at DESC';
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get approval instances error:', error);
+    res.status(500).json({ error: '获取审批实例失败' });
+  }
+});
+
+// ==================== 审批记录 ====================
+
+app.get('/api/approval-records', async (req, res) => {
+  try {
+    const { instance_id } = req.query;
+    const [rows] = await pool.execute(
+      `SELECT ar.*, c.name as approver_name, c.department as approver_department
+       FROM approval_records ar
+       LEFT JOIN contacts c ON ar.approver_id = c.id
+       WHERE ar.instance_id = ?
+       ORDER BY ar.node_index`,
+      [instance_id]
+    );
+    
+    // 格式化为前端期望的结构
+    const records = rows.map(row => ({
+      ...row,
+      approver: row.approver_name ? {
+        name: row.approver_name,
+        department: row.approver_department
+      } : null
+    }));
+    
+    res.json(records);
+  } catch (error) {
+    console.error('Get approval records error:', error);
+    res.status(500).json({ error: '获取审批记录失败' });
+  }
+});
+
+// ==================== 假期余额 ====================
+
+app.get('/api/leave-balances/:contactId', async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    const { year } = req.query;
+    const currentYear = year || new Date().getFullYear();
+    
+    const [rows] = await pool.execute(
+      'SELECT * FROM leave_balances WHERE contact_id = ? AND year = ?',
+      [contactId, currentYear]
+    );
+    
+    res.json(rows.length > 0 ? rows[0] : null);
+  } catch (error) {
+    console.error('Get leave balance error:', error);
+    res.status(500).json({ error: '获取假期余额失败' });
+  }
+});
+
+// ==================== 领导日程 ====================
+
+app.get('/api/leader-schedules', async (req, res) => {
+  try {
+    const { leader_ids, start_date, end_date } = req.query;
+    
+    if (!leader_ids) {
+      return res.json([]);
+    }
+    
+    const ids = leader_ids.split(',');
+    const placeholders = ids.map(() => '?').join(',');
+    
+    let sql = `SELECT ls.*, c.id as leader_id, c.name as leader_name, c.department as leader_department, c.position as leader_position
+               FROM leader_schedules ls
+               LEFT JOIN contacts c ON ls.leader_id = c.id
+               WHERE ls.leader_id IN (${placeholders})`;
+    const params = [...ids];
+    
+    if (start_date) {
+      sql += ' AND ls.schedule_date >= ?';
+      params.push(start_date);
+    }
+    if (end_date) {
+      sql += ' AND ls.schedule_date <= ?';
+      params.push(end_date);
+    }
+    
+    sql += ' ORDER BY ls.schedule_date, ls.start_time';
+    
+    const [rows] = await pool.execute(sql, params);
+    
+    // 格式化为前端期望的结构
+    const schedules = rows.map(row => ({
+      ...row,
+      leader: {
+        id: row.leader_id,
+        name: row.leader_name,
+        department: row.leader_department,
+        position: row.leader_position
+      }
+    }));
+    
+    res.json(schedules);
+  } catch (error) {
+    console.error('Get leader schedules error:', error);
+    res.status(500).json({ error: '获取领导日程失败' });
+  }
+});
+
+// ==================== 领导日程权限 ====================
+
+app.get('/api/leader-schedule-permissions', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    const [rows] = await pool.execute(
+      'SELECT * FROM leader_schedule_permissions WHERE user_id = ?',
+      [user_id]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Get leader schedule permissions error:', error);
+    res.status(500).json({ error: '获取权限失败' });
+  }
+});
+
+// ==================== 日程管理 CRUD ====================
+
+app.post('/api/schedules', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { contact_id, title, schedule_date, start_time, end_time, location, notes } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO schedules (id, contact_id, title, schedule_date, start_time, end_time, location, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, contact_id, title, schedule_date, start_time, end_time, location, notes]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create schedule error:', error);
+    res.status(500).json({ error: '创建日程失败' });
+  }
+});
+
+app.put('/api/schedules/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, schedule_date, start_time, end_time, location, notes } = req.body;
+    
+    await pool.execute(
+      `UPDATE schedules SET title = ?, schedule_date = ?, start_time = ?, end_time = ?, location = ?, notes = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [title, schedule_date, start_time, end_time, location, notes, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update schedule error:', error);
+    res.status(500).json({ error: '更新日程失败' });
+  }
+});
+
+app.delete('/api/schedules/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM schedules WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete schedule error:', error);
+    res.status(500).json({ error: '删除日程失败' });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {
