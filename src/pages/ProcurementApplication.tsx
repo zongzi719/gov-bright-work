@@ -93,6 +93,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { toast } from "sonner";
@@ -163,13 +164,13 @@ const RequisitionContent = () => {
   const fetchRecords = async () => {
     if (!currentUser?.name) return;
     setLoading(true);
-    const { data } = await supabase.from("supply_requisitions").select("id, requisition_by, requisition_date, status, created_at").eq("requisition_by", currentUser.name).order("created_at", { ascending: false });
+    const { data } = await dataAdapter.getSupplyRequisitions({ requisition_by: currentUser.name });
     if (data) setRecords(data);
     setLoading(false);
   };
 
   const fetchSupplies = async () => {
-    const { data } = await supabase.from("office_supplies").select("*").eq("is_active", true).order("name");
+    const { data } = await dataAdapter.getOfficeSupplies({ is_active: true });
     if (data) setSupplies(data);
   };
 
@@ -190,7 +191,7 @@ const RequisitionContent = () => {
     const record = records.find(r => r.id === item.id);
     if (record) {
       setSelectedRecord(record);
-      const { data } = await supabase.from("supply_requisition_items").select(`id, supply_id, quantity, office_supplies (name, specification, unit)`).eq("requisition_id", record.id);
+      const { data } = await dataAdapter.getSupplyRequisitionItems(record.id);
       if (data) setSelectedItems(data as RequisitionItem[]);
       setDetailOpen(true);
     }
@@ -216,10 +217,10 @@ const RequisitionContent = () => {
       if (supply && item.quantity > supply.current_stock) { toast.error(`${supply.name} 库存不足，当前库存: ${supply.current_stock}`); return; }
     }
     setSubmitting(true);
-    const { data: record, error } = await supabase.from("supply_requisitions").insert({ requisition_by: currentUser?.name || "", requisition_date: format(requisitionDate, "yyyy-MM-dd"), supply_id: null, quantity: null } as any).select("id").single();
+    const { data: record, error } = await dataAdapter.createSupplyRequisition({ requisition_by: currentUser?.name || "", requisition_date: format(requisitionDate, "yyyy-MM-dd") });
     if (error || !record) { toast.error("提交领用申请失败"); setSubmitting(false); return; }
     const itemsToInsert = validItems.map(item => ({ requisition_id: record.id, supply_id: item.supply_id, quantity: item.quantity }));
-    const { error: itemsError } = await supabase.from("supply_requisition_items").insert(itemsToInsert);
+    const { error: itemsError } = await dataAdapter.createSupplyRequisitionItems(itemsToInsert);
     if (itemsError) { toast.error("保存物品明细失败"); setSubmitting(false); return; }
     const itemNames = validItems.map(item => { const supply = supplies.find(s => s.id === item.supply_id); return `${supply?.name || "物品"} x ${item.quantity}`; }).join(", ");
     const approvalResult = await startApproval({ businessType: "supply_requisition", businessId: record.id, initiatorId: currentUser?.id || "", initiatorName: currentUser?.name || "未知用户", title: `领用申请 - ${itemNames.substring(0, 50)}${itemNames.length > 50 ? "..." : ""}`, formData: { items: validItems.map(item => { const supply = supplies.find(s => s.id === item.supply_id); return { supply_id: item.supply_id, supply_name: supply?.name, quantity: item.quantity }; }), requisition_date: format(requisitionDate, "yyyy-MM-dd") } });
@@ -388,7 +389,7 @@ const PurchaseContent = () => {
   const fetchRecords = async () => {
     if (!currentUser?.name) return;
     setLoading(true);
-    const { data } = await supabase.from("purchase_requests").select("id, requested_by, department, purchase_date, procurement_method, funding_source, funding_detail, budget_amount, expected_completion_date, purpose, total_amount, reason, status, created_at").eq("requested_by", currentUser.name).order("created_at", { ascending: false });
+    const { data } = await dataAdapter.getPurchaseRequests({ requested_by: currentUser.name });
     if (data) setRecords(data);
     setLoading(false);
   };
@@ -403,7 +404,7 @@ const PurchaseContent = () => {
     const record = records.find(r => r.id === item.id);
     if (record) {
       setSelectedRecord(record);
-      const { data } = await supabase.from("purchase_request_items").select("id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks").eq("request_id", record.id);
+      const { data } = await dataAdapter.getPurchaseRequestItems(record.id);
       if (data) setSelectedItems(data as PurchaseItem[]);
       setDetailOpen(true);
     }
@@ -440,10 +441,10 @@ const PurchaseContent = () => {
     if (!procurementMethod) { toast.error("请选择采购方式"); return; }
     if (!fundingSource) { toast.error("请选择资金来源"); return; }
     setSubmitting(true);
-    const { data: record, error } = await supabase.from("purchase_requests").insert({ requested_by: currentUser?.name || "", department: department.trim() || null, purchase_date: format(purchaseDate, "yyyy-MM-dd"), procurement_method: procurementMethod, funding_source: fundingSource, funding_detail: fundingDetail.trim() || null, budget_amount: budgetAmount || null, expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null, purpose: purpose.trim() || null, total_amount: Number(totalAmount.toFixed(2)), supply_id: null, quantity: null, unit_price: null } as any).select("id").single();
+    const { data: record, error } = await dataAdapter.createPurchaseRequest({ requested_by: currentUser?.name || "", department: department.trim() || null, purchase_date: format(purchaseDate, "yyyy-MM-dd"), procurement_method: procurementMethod, funding_source: fundingSource, funding_detail: fundingDetail.trim() || null, budget_amount: budgetAmount || null, expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null, purpose: purpose.trim() || null });
     if (error || !record) { toast.error("提交采购申请失败"); setSubmitting(false); return; }
     const itemsToInsert = validItems.map(item => ({ request_id: record.id, item_name: item.item_name.trim(), specification: item.specification.trim() || null, unit: item.unit || "个", quantity: item.quantity, unit_price: Number(item.unit_price.toFixed(2)), amount: Number(item.amount.toFixed(2)), category_link: item.category_link.trim() || null, remarks: item.remarks.trim() || null }));
-    const { error: itemsError } = await supabase.from("purchase_request_items").insert(itemsToInsert);
+    const { error: itemsError } = await dataAdapter.createPurchaseRequestItems(itemsToInsert);
     if (itemsError) { toast.error("保存采购明细失败"); setSubmitting(false); return; }
     const itemNames = validItems.map(item => `${item.item_name} x ${item.quantity}`).join(", ");
     const approvalResult = await startApproval({ businessType: "purchase_request", businessId: record.id, initiatorId: currentUser?.id || "", initiatorName: currentUser?.name || "未知用户", title: `采购申请 - ${itemNames.substring(0, 50)}${itemNames.length > 50 ? "..." : ""}`, formData: { department, purchase_date: format(purchaseDate, "yyyy-MM-dd"), procurement_method: procurementMethod, funding_source: fundingSource, funding_detail: fundingDetail, budget_amount: budgetAmount, expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null, purpose, items: validItems, total_amount: totalAmount } });
@@ -606,7 +607,7 @@ const SuppliesPurchaseContent = () => {
   const fetchRecords = async () => {
     if (!currentUser?.name) return;
     setLoading(true);
-    const { data } = await supabase.from("supply_purchases").select("*").eq("applicant_name", currentUser.name).order("created_at", { ascending: false });
+    const { data } = await dataAdapter.getSupplyPurchases({ applicant_name: currentUser.name });
     if (data) setRecords(data);
     setLoading(false);
   };
@@ -622,7 +623,7 @@ const SuppliesPurchaseContent = () => {
     const record = records.find(r => r.id === item.id);
     if (record) {
       setSelectedRecord(record);
-      const { data } = await supabase.from("supply_purchase_items").select("*").eq("purchase_id", record.id);
+      const { data } = await dataAdapter.getSupplyPurchaseItems(record.id);
       if (data) setSelectedItems(data as SupplyPurchaseItem[]);
       setDetailOpen(true);
     }
@@ -650,10 +651,10 @@ const SuppliesPurchaseContent = () => {
     if (validItems.length === 0) { toast.error("请至少添加一条物品明细"); return; }
     setSubmitting(true);
     const calculatedTotal = validItems.reduce((sum, item) => sum + item.amount, 0);
-    const { data: record, error } = await supabase.from("supply_purchases").insert({ department, purchase_date: format(purchaseDate, "yyyy-MM-dd"), reason: reason || null, total_amount: calculatedTotal, applicant_id: currentUser?.id || "", applicant_name: currentUser?.name || "" }).select("id").single();
+    const { data: record, error } = await dataAdapter.createSupplyPurchase({ department, purchase_date: format(purchaseDate, "yyyy-MM-dd"), reason: reason || null, total_amount: calculatedTotal, applicant_id: currentUser?.id || "", applicant_name: currentUser?.name || "" });
     if (error || !record) { toast.error("提交采购申请失败"); setSubmitting(false); return; }
     const itemsToInsert = validItems.map(item => ({ purchase_id: record.id, item_name: item.item_name, quantity: item.quantity, unit_price: item.unit_price, amount: item.amount, remarks: item.remarks || null }));
-    const { error: itemsError } = await supabase.from("supply_purchase_items").insert(itemsToInsert);
+    const { error: itemsError } = await dataAdapter.createSupplyPurchaseItems(itemsToInsert);
     if (itemsError) { toast.error("保存物品明细失败"); setSubmitting(false); return; }
     const itemNames = validItems.map(item => item.item_name).join(", ");
     const approvalResult = await startApproval({ businessType: "supply_purchase", businessId: record.id, initiatorId: currentUser?.id || "", initiatorName: currentUser?.name || "未知用户", title: `办公用品采购 - ${itemNames.substring(0, 30)}${itemNames.length > 30 ? "..." : ""}`, formData: { department, purchase_date: format(purchaseDate, "yyyy-MM-dd"), reason, total_amount: calculatedTotal, items: validItems } });

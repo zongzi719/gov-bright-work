@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,10 +47,7 @@ const MenuManagement = () => {
   }, []);
 
   const fetchMenus = async () => {
-    const { data, error } = await supabase
-      .from("canteen_menus")
-      .select("*")
-      .order("day_of_week");
+    const { data, error } = await dataAdapter.getCanteenMenus();
 
     if (error) {
       toast.error("获取菜谱失败");
@@ -81,10 +79,7 @@ const MenuManagement = () => {
       dinner: formData.dinner.split(/[,，、]/).map((s) => s.trim()).filter(Boolean),
     };
 
-    const { error } = await supabase
-      .from("canteen_menus")
-      .update(updateData)
-      .eq("id", editingMenu.id);
+    const { error } = await dataAdapter.updateCanteenMenu(editingMenu.id, updateData);
 
     if (error) {
       toast.error("更新失败");
@@ -97,7 +92,7 @@ const MenuManagement = () => {
   };
 
   const handleAddDay = async (dayOfWeek: number) => {
-    const { error } = await supabase.from("canteen_menus").insert({
+    const { error } = await dataAdapter.createCanteenMenu({
       day_of_week: dayOfWeek,
       breakfast: [],
       lunch: [],
