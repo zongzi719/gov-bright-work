@@ -583,6 +583,399 @@ app.post('/api/file-transfers', async (req, res) => {
   }
 });
 
+// ==================== 管理员认证 ====================
+
+// 管理员登录
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // 查找管理员账户（通过email字段或预设管理员）
+    // 离线版管理员存储在 contacts 表，通过 user_roles 关联 admin 角色
+    const [admins] = await pool.execute(
+      `SELECT c.id, c.name, c.email, c.mobile
+       FROM contacts c
+       INNER JOIN user_roles ur ON ur.user_id = c.id
+       WHERE (c.email = ? OR c.mobile = ?) 
+         AND c.password_hash = ?
+         AND ur.role = 'admin'
+         AND c.is_active = 1`,
+      [email, email, password]
+    );
+    
+    if (admins.length === 0) {
+      return res.status(401).json({ error: '账号或密码错误，或没有管理员权限' });
+    }
+    
+    res.json({ 
+      success: true, 
+      admin: {
+        id: admins[0].id,
+        email: admins[0].email || admins[0].mobile,
+        name: admins[0].name,
+        role: 'admin'
+      }
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({ error: '登录失败' });
+  }
+});
+
+// ==================== 办公用品 ====================
+
+app.get('/api/office-supplies', async (req, res) => {
+  try {
+    const { is_active } = req.query;
+    let sql = 'SELECT * FROM office_supplies WHERE 1=1';
+    const params = [];
+    
+    if (is_active !== undefined) {
+      sql += ' AND is_active = ?';
+      params.push(is_active === 'true' ? 1 : 0);
+    }
+    
+    sql += ' ORDER BY name';
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get office supplies error:', error);
+    res.status(500).json({ error: '获取办公用品失败' });
+  }
+});
+
+// ==================== 日程管理 ====================
+
+app.get('/api/schedules', async (req, res) => {
+  try {
+    const { contact_id, schedule_date } = req.query;
+    let sql = `SELECT s.*, c.name as contact_name 
+               FROM schedules s
+               LEFT JOIN contacts c ON s.contact_id = c.id
+               WHERE 1=1`;
+    const params = [];
+    
+    if (contact_id) {
+      sql += ' AND s.contact_id = ?';
+      params.push(contact_id);
+    }
+    if (schedule_date) {
+      sql += ' AND s.schedule_date = ?';
+      params.push(schedule_date);
+    }
+    
+    sql += ' ORDER BY s.schedule_date, s.start_time';
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get schedules error:', error);
+    res.status(500).json({ error: '获取日程失败' });
+  }
+});
+
+// ==================== 物资领用 ====================
+
+app.get('/api/supply-requisitions', async (req, res) => {
+  try {
+    const { requisition_by, status } = req.query;
+    let sql = `SELECT sr.*, c.name as requisition_by_name
+               FROM supply_requisitions sr
+               LEFT JOIN contacts c ON sr.requisition_by = c.id
+               WHERE 1=1`;
+    const params = [];
+    
+    if (requisition_by) {
+      sql += ' AND sr.requisition_by = ?';
+      params.push(requisition_by);
+    }
+    if (status) {
+      sql += ' AND sr.status = ?';
+      params.push(status);
+    }
+    
+    sql += ' ORDER BY sr.created_at DESC';
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get supply requisitions error:', error);
+    res.status(500).json({ error: '获取领用申请失败' });
+  }
+});
+
+app.post('/api/supply-requisitions', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { requisition_by, supply_id, quantity, reason } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO supply_requisitions (id, requisition_by, supply_id, quantity, status)
+       VALUES (?, ?, ?, ?, 'pending')`,
+      [id, requisition_by, supply_id, quantity]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create supply requisition error:', error);
+    res.status(500).json({ error: '创建领用申请失败' });
+  }
+});
+
+// 领用明细
+app.get('/api/supply-requisition-items', async (req, res) => {
+  try {
+    const { requisition_id } = req.query;
+    let sql = `SELECT sri.*, os.name as supply_name, os.unit, os.specification
+               FROM supply_requisition_items sri
+               LEFT JOIN office_supplies os ON sri.supply_id = os.id
+               WHERE 1=1`;
+    const params = [];
+    
+    if (requisition_id) {
+      sql += ' AND sri.requisition_id = ?';
+      params.push(requisition_id);
+    }
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get supply requisition items error:', error);
+    res.status(500).json({ error: '获取领用明细失败' });
+  }
+});
+
+app.post('/api/supply-requisition-items', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { requisition_id, supply_id, quantity } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO supply_requisition_items (id, requisition_id, supply_id, quantity)
+       VALUES (?, ?, ?, ?)`,
+      [id, requisition_id, supply_id, quantity]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create supply requisition item error:', error);
+    res.status(500).json({ error: '创建领用明细失败' });
+  }
+});
+
+// ==================== 物资采购 ====================
+
+app.get('/api/supply-purchases', async (req, res) => {
+  try {
+    const { applicant_id, status } = req.query;
+    let sql = 'SELECT * FROM supply_purchases WHERE 1=1';
+    const params = [];
+    
+    if (applicant_id) {
+      sql += ' AND applicant_id = ?';
+      params.push(applicant_id);
+    }
+    if (status) {
+      sql += ' AND status = ?';
+      params.push(status);
+    }
+    
+    sql += ' ORDER BY created_at DESC';
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get supply purchases error:', error);
+    res.status(500).json({ error: '获取采购申请失败' });
+  }
+});
+
+app.post('/api/supply-purchases', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { applicant_id, applicant_name, department, reason, total_amount } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO supply_purchases (id, applicant_id, applicant_name, department, reason, total_amount, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+      [id, applicant_id, applicant_name, department, reason, total_amount || 0]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create supply purchase error:', error);
+    res.status(500).json({ error: '创建采购申请失败' });
+  }
+});
+
+app.get('/api/supply-purchase-items', async (req, res) => {
+  try {
+    const { purchase_id } = req.query;
+    let sql = `SELECT spi.*, os.name as supply_name
+               FROM supply_purchase_items spi
+               LEFT JOIN office_supplies os ON spi.supply_id = os.id
+               WHERE 1=1`;
+    const params = [];
+    
+    if (purchase_id) {
+      sql += ' AND spi.purchase_id = ?';
+      params.push(purchase_id);
+    }
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get supply purchase items error:', error);
+    res.status(500).json({ error: '获取采购明细失败' });
+  }
+});
+
+app.post('/api/supply-purchase-items', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { purchase_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, remarks } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO supply_purchase_items (id, purchase_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, remarks)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, purchase_id, supply_id, item_name, specification, unit, quantity || 1, unit_price || 0, amount || 0, remarks]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create supply purchase item error:', error);
+    res.status(500).json({ error: '创建采购明细失败' });
+  }
+});
+
+// ==================== 采购申请 ====================
+
+app.get('/api/purchase-requests', async (req, res) => {
+  try {
+    const { requested_by, status } = req.query;
+    let sql = `SELECT pr.*, c.name as requested_by_name, os.name as supply_name
+               FROM purchase_requests pr
+               LEFT JOIN contacts c ON pr.requested_by = c.id
+               LEFT JOIN office_supplies os ON pr.supply_id = os.id
+               WHERE 1=1`;
+    const params = [];
+    
+    if (requested_by) {
+      sql += ' AND pr.requested_by = ?';
+      params.push(requested_by);
+    }
+    if (status) {
+      sql += ' AND pr.status = ?';
+      params.push(status);
+    }
+    
+    sql += ' ORDER BY pr.created_at DESC';
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get purchase requests error:', error);
+    res.status(500).json({ error: '获取采购申请失败' });
+  }
+});
+
+app.post('/api/purchase-requests', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { requested_by, department, purpose, reason, funding_source, funding_detail, 
+            procurement_method, budget_amount, total_amount, expected_completion_date } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO purchase_requests (id, requested_by, department, purpose, reason, funding_source, 
+       funding_detail, procurement_method, budget_amount, total_amount, expected_completion_date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [id, requested_by, department, purpose, reason, funding_source, 
+       funding_detail, procurement_method, budget_amount || 0, total_amount || 0, expected_completion_date]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create purchase request error:', error);
+    res.status(500).json({ error: '创建采购申请失败' });
+  }
+});
+
+app.get('/api/purchase-request-items', async (req, res) => {
+  try {
+    const { request_id } = req.query;
+    let sql = `SELECT pri.*, os.name as supply_name
+               FROM purchase_request_items pri
+               LEFT JOIN office_supplies os ON pri.supply_id = os.id
+               WHERE 1=1`;
+    const params = [];
+    
+    if (request_id) {
+      sql += ' AND pri.request_id = ?';
+      params.push(request_id);
+    }
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get purchase request items error:', error);
+    res.status(500).json({ error: '获取采购明细失败' });
+  }
+});
+
+app.post('/api/purchase-request-items', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { request_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO purchase_request_items (id, request_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, request_id, supply_id, item_name, specification, unit, quantity || 1, unit_price || 0, amount || 0, category_link, remarks]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create purchase request item error:', error);
+    res.status(500).json({ error: '创建采购明细失败' });
+  }
+});
+
+// ==================== 菜单更新 ====================
+
+app.put('/api/canteen-menus/:dayOfWeek', async (req, res) => {
+  try {
+    const { dayOfWeek } = req.params;
+    const { breakfast, lunch, dinner } = req.body;
+    
+    // 检查是否存在
+    const [existing] = await pool.execute(
+      'SELECT id FROM canteen_menus WHERE day_of_week = ?',
+      [dayOfWeek]
+    );
+    
+    if (existing.length > 0) {
+      await pool.execute(
+        `UPDATE canteen_menus SET breakfast = ?, lunch = ?, dinner = ?, updated_at = NOW()
+         WHERE day_of_week = ?`,
+        [JSON.stringify(breakfast || []), JSON.stringify(lunch || []), JSON.stringify(dinner || []), dayOfWeek]
+      );
+    } else {
+      const id = uuidv4();
+      await pool.execute(
+        `INSERT INTO canteen_menus (id, day_of_week, breakfast, lunch, dinner)
+         VALUES (?, ?, ?, ?, ?)`,
+        [id, dayOfWeek, JSON.stringify(breakfast || []), JSON.stringify(lunch || []), JSON.stringify(dinner || [])]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update canteen menu error:', error);
+    res.status(500).json({ error: '更新菜单失败' });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {

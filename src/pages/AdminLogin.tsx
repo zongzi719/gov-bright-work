@@ -6,6 +6,15 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
+import { isOfflineMode } from "@/lib/offlineApi";
+
+// 获取 API 基础地址
+const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL) {
+    return (window as any).GOV_CONFIG.API_BASE_URL;
+  }
+  return 'http://localhost:3001';
+};
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -13,10 +22,35 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  // 离线模式管理员登录
+  const handleOfflineLogin = async () => {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        toast.error("登录失败：" + (result.error || "账号或密码错误"));
+        return;
+      }
+
+      // 存储管理员信息
+      localStorage.setItem('adminUser', JSON.stringify(result.admin));
+      toast.success("登录成功");
+      navigate("/admin");
+    } catch (error) {
+      console.error('Admin login error:', error);
+      toast.error("登录失败：网络错误");
+    }
+  };
+
+  // 在线模式管理员登录
+  const handleOnlineLogin = async () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -46,6 +80,19 @@ const AdminLogin = () => {
       navigate("/admin");
     } catch {
       toast.error("登录失败，请重试");
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (isOfflineMode()) {
+        await handleOfflineLogin();
+      } else {
+        await handleOnlineLogin();
+      }
     } finally {
       setLoading(false);
     }
