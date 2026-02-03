@@ -35,7 +35,7 @@ const Login = () => {
       if (isOfflineMode()) {
         // 离线模式：使用本地 API
         const { data, error } = await offlineApi.login(mobile.trim(), password);
-        
+
         if (error || !data || data.length === 0) {
           toast({
             title: "登录失败",
@@ -44,7 +44,7 @@ const Login = () => {
           });
           return;
         }
-        
+
         const user = data[0];
         userData = {
           id: user.id,
@@ -133,7 +133,7 @@ const Login = () => {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-primary text-2xl font-bold">政</span>
           </div>
-          <CardTitle className="text-2xl">xx州党政办公平台</CardTitle>
+          <CardTitle className="text-2xl">昌吉州党政办公平台</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
