@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -217,10 +217,7 @@ const SupplyManagement = () => {
 
   // 获取办公用品列表
   const fetchSupplies = async () => {
-    const { data, error } = await supabase
-      .from("office_supplies")
-      .select("*")
-      .order("name");
+    const { data, error } = await dataAdapter.getAllOfficeSupplies();
 
     if (error) {
       toast.error("获取办公用品列表失败");
@@ -231,10 +228,7 @@ const SupplyManagement = () => {
 
   // 获取采购申请列表
   const fetchPurchaseRequests = async () => {
-    const { data, error } = await supabase
-      .from("purchase_requests")
-      .select("*, office_supplies(*)")
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getAllPurchaseRequests();
 
     if (error) {
       toast.error("获取采购申请列表失败");
@@ -245,10 +239,7 @@ const SupplyManagement = () => {
 
   // 获取领用记录列表
   const fetchRequisitions = async () => {
-    const { data, error } = await supabase
-      .from("supply_requisitions")
-      .select("*, office_supplies(*)")
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getAllSupplyRequisitions();
 
     if (error) {
       toast.error("获取领用记录列表失败");
@@ -259,10 +250,7 @@ const SupplyManagement = () => {
 
   // 获取办公采购记录列表
   const fetchOfficePurchases = async () => {
-    const { data, error } = await supabase
-      .from("supply_purchases")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getAllSupplyPurchases();
 
     if (error) {
       toast.error("获取办公采购列表失败");
@@ -273,11 +261,7 @@ const SupplyManagement = () => {
 
   // 获取办公采购明细
   const fetchOfficePurchaseItems = async (purchaseId: string) => {
-    const { data, error } = await supabase
-      .from("supply_purchase_items")
-      .select("*")
-      .eq("purchase_id", purchaseId)
-      .order("created_at");
+    const { data, error } = await dataAdapter.getSupplyPurchaseItems(purchaseId);
 
     if (error) {
       toast.error("获取采购明细失败");
@@ -325,16 +309,13 @@ const SupplyManagement = () => {
     }
 
     if (editingSupply) {
-      const { error } = await supabase
-        .from("office_supplies")
-        .update({
-          name: supplyForm.name.trim(),
-          specification: supplyForm.specification.trim() || null,
-          unit: supplyForm.unit,
-          current_stock: supplyForm.current_stock,
-          min_stock: supplyForm.min_stock,
-        })
-        .eq("id", editingSupply.id);
+      const { error } = await dataAdapter.updateOfficeSupply(editingSupply.id, {
+        name: supplyForm.name.trim(),
+        specification: supplyForm.specification.trim() || null,
+        unit: supplyForm.unit,
+        current_stock: supplyForm.current_stock,
+        min_stock: supplyForm.min_stock,
+      });
 
       if (error) {
         toast.error("更新失败");
@@ -342,7 +323,7 @@ const SupplyManagement = () => {
       }
       toast.success("更新成功");
     } else {
-      const { error } = await supabase.from("office_supplies").insert({
+      const { error } = await dataAdapter.createOfficeSupply({
         name: supplyForm.name.trim(),
         specification: supplyForm.specification.trim() || null,
         unit: supplyForm.unit,
@@ -364,10 +345,7 @@ const SupplyManagement = () => {
   const handleDeleteSupply = async () => {
     if (!deleteSupplyId) return;
 
-    const { error } = await supabase
-      .from("office_supplies")
-      .update({ is_active: false })
-      .eq("id", deleteSupplyId);
+    const { error } = await dataAdapter.updateOfficeSupply(deleteSupplyId, { is_active: false });
 
     if (error) {
       toast.error("删除失败");
@@ -404,7 +382,7 @@ const SupplyManagement = () => {
       return;
     }
 
-    const { error } = await supabase.from("purchase_requests").insert({
+    const { error } = await dataAdapter.createDirectPurchaseRequest({
       supply_id: purchaseForm.supply_id,
       quantity: purchaseForm.quantity,
       reason: purchaseForm.reason.trim() || null,
@@ -422,13 +400,10 @@ const SupplyManagement = () => {
   };
 
   const handleApprovePurchase = async (id: string) => {
-    const { error } = await supabase
-      .from("purchase_requests")
-      .update({
-        status: "approved",
-        approved_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+    const { error } = await dataAdapter.updatePurchaseRequest(id, {
+      status: "approved",
+      approved_at: new Date().toISOString(),
+    });
 
     if (error) {
       toast.error("审批失败");
@@ -440,10 +415,7 @@ const SupplyManagement = () => {
   };
 
   const handleRejectPurchase = async (id: string) => {
-    const { error } = await supabase
-      .from("purchase_requests")
-      .update({ status: "rejected" })
-      .eq("id", id);
+    const { error } = await dataAdapter.updatePurchaseRequest(id, { status: "rejected" });
 
     if (error) {
       toast.error("拒绝失败");
@@ -456,13 +428,10 @@ const SupplyManagement = () => {
 
   const handleCompletePurchase = async (request: PurchaseRequest) => {
     // 更新采购状态为已完成
-    const { error: updateError } = await supabase
-      .from("purchase_requests")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", request.id);
+    const { error: updateError } = await dataAdapter.updatePurchaseRequest(request.id, {
+      status: "completed",
+      completed_at: new Date().toISOString(),
+    });
 
     if (updateError) {
       toast.error("操作失败");
@@ -472,12 +441,10 @@ const SupplyManagement = () => {
     // 更新库存数量
     const supply = supplies.find((s) => s.id === request.supply_id);
     if (supply) {
-      const { error: stockError } = await supabase
-        .from("office_supplies")
-        .update({
-          current_stock: supply.current_stock + request.quantity,
-        })
-        .eq("id", request.supply_id);
+      const { error: stockError } = await dataAdapter.updateOfficeSupplyStock(
+        request.supply_id,
+        supply.current_stock + request.quantity
+      );
 
       if (stockError) {
         toast.error("更新库存失败");
@@ -520,7 +487,7 @@ const SupplyManagement = () => {
       return;
     }
 
-    const { error } = await supabase.from("supply_requisitions").insert({
+    const { error } = await dataAdapter.createDirectSupplyRequisition({
       supply_id: requisitionForm.supply_id,
       quantity: requisitionForm.quantity,
       requisition_by: requisitionForm.requisition_by.trim(),
@@ -537,13 +504,10 @@ const SupplyManagement = () => {
   };
 
   const handleApproveRequisition = async (id: string) => {
-    const { error } = await supabase
-      .from("supply_requisitions")
-      .update({
-        status: "approved",
-        approved_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+    const { error } = await dataAdapter.updateSupplyRequisition(id, {
+      status: "approved",
+      approved_at: new Date().toISOString(),
+    });
 
     if (error) {
       toast.error("审批失败");
@@ -555,10 +519,7 @@ const SupplyManagement = () => {
   };
 
   const handleRejectRequisition = async (id: string) => {
-    const { error } = await supabase
-      .from("supply_requisitions")
-      .update({ status: "rejected" })
-      .eq("id", id);
+    const { error } = await dataAdapter.updateSupplyRequisition(id, { status: "rejected" });
 
     if (error) {
       toast.error("拒绝失败");
@@ -577,10 +538,7 @@ const SupplyManagement = () => {
     }
 
     // 更新领用状态为已完成
-    const { error: updateError } = await supabase
-      .from("supply_requisitions")
-      .update({ status: "completed" })
-      .eq("id", requisition.id);
+    const { error: updateError } = await dataAdapter.updateSupplyRequisition(requisition.id, { status: "completed" });
 
     if (updateError) {
       toast.error("操作失败");
@@ -589,12 +547,10 @@ const SupplyManagement = () => {
 
     // 更新库存数量
     if (supply) {
-      const { error: stockError } = await supabase
-        .from("office_supplies")
-        .update({
-          current_stock: supply.current_stock - requisition.quantity,
-        })
-        .eq("id", requisition.supply_id);
+      const { error: stockError } = await dataAdapter.updateOfficeSupplyStock(
+        requisition.supply_id,
+        supply.current_stock - requisition.quantity
+      );
 
       if (stockError) {
         toast.error("更新库存失败");
