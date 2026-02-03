@@ -273,6 +273,27 @@ export async function checkHealth() {
   return request<{ status: string; database: string }>('/api/health');
 }
 
+// ==================== 管理员认证 ====================
+
+export interface AdminLoginResult {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
+export async function adminLogin(email: string, password: string) {
+  const result = await request<{ success: boolean; admin: AdminLoginResult }>('/api/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (result.data?.admin) {
+    return { data: result.data.admin, error: null };
+  }
+  return { data: null, error: result.error };
+}
+
 // 导出一个兼容 Supabase 风格的客户端接口
 export const offlineApi = {
   login,
@@ -297,6 +318,7 @@ export const offlineApi = {
   createFileTransfer,
   uploadFile,
   checkHealth,
+  adminLogin,
   isOfflineMode,
 };
 
