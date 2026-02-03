@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 
 interface StockMovementRecord {
   supply_id: string;
@@ -24,14 +24,16 @@ export const useStockManagement = () => {
     try {
       for (const record of records) {
         // 获取当前库存
-        const { data: supply, error: fetchError } = await supabase
-          .from("office_supplies")
-          .select("id, current_stock, name")
-          .eq("id", record.supply_id)
-          .single();
+        const { data: supplies, error: fetchError } = await dataAdapter.getOfficeSupplies();
+        
+        if (fetchError || !supplies) {
+          console.error("Failed to fetch supplies:", fetchError);
+          continue;
+        }
 
-        if (fetchError || !supply) {
-          console.error("Failed to fetch supply:", fetchError);
+        const supply = supplies.find((s: any) => s.id === record.supply_id);
+        if (!supply) {
+          console.error("Supply not found:", record.supply_id);
           continue;
         }
 
@@ -45,10 +47,7 @@ export const useStockManagement = () => {
         }
 
         // 更新库存
-        const { error: updateError } = await supabase
-          .from("office_supplies")
-          .update({ current_stock: afterStock })
-          .eq("id", record.supply_id);
+        const { error: updateError } = await dataAdapter.updateOfficeSupplyStock(record.supply_id, afterStock);
 
         if (updateError) {
           console.error("Failed to update stock:", updateError);
@@ -56,19 +55,17 @@ export const useStockManagement = () => {
         }
 
         // 记录库存变动
-        const { error: movementError } = await supabase
-          .from("stock_movements")
-          .insert({
-            supply_id: record.supply_id,
-            movement_type: record.movement_type,
-            quantity: record.quantity,
-            before_stock: beforeStock,
-            after_stock: afterStock,
-            reference_type: record.reference_type,
-            reference_id: record.reference_id,
-            operator_name: record.operator_name || null,
-            notes: record.notes || null,
-          });
+        const { error: movementError } = await dataAdapter.createStockMovement({
+          supply_id: record.supply_id,
+          movement_type: record.movement_type,
+          quantity: record.quantity,
+          before_stock: beforeStock,
+          after_stock: afterStock,
+          reference_type: record.reference_type,
+          reference_id: record.reference_id,
+          operator_name: record.operator_name || undefined,
+          notes: record.notes || undefined,
+        });
 
         if (movementError) {
           console.error("Failed to record stock movement:", movementError);
@@ -99,17 +96,11 @@ export const useStockManagement = () => {
 
       if (referenceType === "purchase_request") {
         // 采购申请 - 从 purchase_request_items 获取
-        const { data } = await supabase
-          .from("purchase_request_items")
-          .select("supply_id, quantity, item_name")
-          .eq("request_id", referenceId);
+        const { data } = await dataAdapter.getPurchaseRequestItems(referenceId);
         items = data || [];
       } else {
         // 办公采购 - 从 supply_purchase_items 获取
-        const { data } = await supabase
-          .from("supply_purchase_items")
-          .select("supply_id, quantity, item_name")
-          .eq("purchase_id", referenceId);
+        const { data } = await dataAdapter.getSupplyPurchaseItems(referenceId);
         items = data || [];
       }
 
@@ -147,28 +138,21 @@ export const useStockManagement = () => {
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       // 从 supply_requisition_items 获取领用物品
-      const { data: items } = await supabase
-        .from("supply_requisition_items")
-        .select(`
-          supply_id, 
-          quantity,
-          office_supplies (name)
-        `)
-        .eq("requisition_id", referenceId);
+      const { data: items } = await dataAdapter.getSupplyRequisitionItems(referenceId);
 
       if (!items || items.length === 0) {
         console.log("No stock items to update for this requisition");
         return { success: true };
       }
 
-      const movements: StockMovementRecord[] = items.map(item => ({
+      const movements: StockMovementRecord[] = items.map((item: any) => ({
         supply_id: item.supply_id,
         movement_type: "requisition_out" as const,
         quantity: item.quantity,
         reference_type: "supply_requisition",
         reference_id: referenceId,
         operator_name: operatorName,
-        notes: `领用出库: ${(item.office_supplies as any)?.name || "物品"}`,
+        notes: `领用出库: ${item.office_supplies?.name || item.supply_name || "物品"}`,
       }));
 
       return await updateStock(movements);
@@ -186,12 +170,14 @@ export const useStockManagement = () => {
   ): Promise<{ valid: boolean; errors: string[] }> => {
     const errors: string[] = [];
 
+    const { data: supplies } = await dataAdapter.getOfficeSupplies();
+    
+    if (!supplies) {
+      return { valid: false, errors: ["无法获取库存信息"] };
+    }
+
     for (const item of items) {
-      const { data: supply } = await supabase
-        .from("office_supplies")
-        .select("id, name, current_stock")
-        .eq("id", item.supply_id)
-        .single();
+      const supply = supplies.find((s: any) => s.id === item.supply_id);
 
       if (!supply) {
         errors.push(`物品不存在`);
