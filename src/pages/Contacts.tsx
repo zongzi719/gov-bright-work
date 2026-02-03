@@ -3,7 +3,7 @@ import PageLayout from "@/components/PageLayout";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getContactsWithOrg, getOrganizations } from "@/lib/dataAdapter";
 import OrganizationTree from "@/components/contacts/OrganizationTree";
 import ContactTable from "@/components/contacts/ContactTable";
 import ContactDetailDialog from "@/components/contacts/ContactDetailDialog";
@@ -55,18 +55,8 @@ const Contacts = () => {
     setLoading(true);
     
     const [contactsRes, orgsRes] = await Promise.all([
-      supabase
-        .from("contacts")
-        .select(`
-          id, name, department, position, mobile, phone, email, office_location, status, is_leader, organization_id, security_level,
-          organization:organizations (name)
-        `)
-        .eq("is_active", true)
-        .order("sort_order"),
-      supabase
-        .from("organizations")
-        .select("id, name, parent_id")
-        .order("sort_order")
+      getContactsWithOrg(),
+      getOrganizations()
     ]);
 
     if (!contactsRes.error && contactsRes.data) {

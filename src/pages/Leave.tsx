@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
-import { supabase } from "@/integrations/supabase/client";
+import { getAbsenceRecords } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import LeaveForm from "@/components/forms/LeaveForm";
@@ -59,21 +59,10 @@ const Leave = () => {
     if (!currentUser?.id) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from("absence_records")
-      .select(`
-        *,
-        contacts:contacts!absence_records_contact_id_fkey (
-          name,
-          department
-        ),
-        handover_person:contacts!absence_records_handover_person_id_fkey (
-          name
-        )
-      `)
-      .eq("type", "leave")
-      .eq("contact_id", currentUser.id)
-      .order("created_at", { ascending: false });
+    const { data, error } = await getAbsenceRecords({
+      contact_id: currentUser.id,
+      type: "leave"
+    });
 
     if (!error && data) {
       setRecords(data as AbsenceRecord[]);

@@ -267,6 +267,22 @@ export async function uploadFile(file: File, type: string = 'misc') {
   }
 }
 
+// ==================== 缺勤记录创建 ====================
+
+export async function createAbsenceRecordOffline(data: {
+  contact_id: string;
+  type: 'out' | 'leave' | 'business_trip';
+  reason: string;
+  start_time: string;
+  end_time?: string | null;
+  [key: string]: any;
+}) {
+  return request<{ success: boolean; id: string }>('/api/absence-records', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 // ==================== 健康检查 ====================
 
 export async function checkHealth() {
