@@ -15,6 +15,18 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
+// 日期格式转换 - ISO 8601 转 MySQL DATETIME
+function formatDateForMySQL(isoString) {
+  if (!isoString) return null;
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+  } catch {
+    return isoString;
+  }
+}
+
 // 数据库连接池
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -61,21 +73,21 @@ const upload = multer({
 
 // ==================== 认证相关 ====================
 
-// 登录验证
+// 登录验证 - 支持账号或手机号登录
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { mobile, password } = req.body;
+    const { mobile, password } = req.body; // mobile 字段现在可以是账号或手机号
     const [rows] = await pool.execute(
-      `SELECT c.id, c.name, c.mobile, c.position, c.department, 
+      `SELECT c.id, c.name, c.mobile, c.account, c.position, c.department, 
               c.security_level, c.organization_id, c.is_leader, o.name as organization_name
        FROM contacts c
        LEFT JOIN organizations o ON c.organization_id = o.id
-       WHERE c.mobile = ? AND c.password_hash = ? AND c.is_active = 1`,
-      [mobile, password]
+       WHERE (c.mobile = ? OR c.account = ?) AND c.password_hash = ? AND c.is_active = 1`,
+      [mobile, mobile, password]
     );
     
     if (rows.length === 0) {
-      return res.status(401).json({ error: '手机号或密码错误' });
+      return res.status(401).json({ error: '账号或密码错误' });
     }
     
     res.json({ success: true, user: rows[0] });
@@ -288,19 +300,20 @@ app.post('/api/contacts', async (req, res) => {
     const { 
       organization_id, name, position, department, phone, mobile, email, 
       office_location, sort_order, is_active, status, status_note, 
-      security_level, is_leader, first_work_date, password_hash 
+      security_level, is_leader, first_work_date, password_hash, account 
     } = req.body;
     const id = uuidv4();
     
     await pool.execute(
       `INSERT INTO contacts (id, organization_id, name, position, department, phone, mobile, email, 
        office_location, sort_order, is_active, status, status_note, security_level, is_leader, 
-       first_work_date, password_hash, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+       first_work_date, password_hash, account, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [id, organization_id, name, position || null, department || null, phone || null, 
        mobile || null, email || null, office_location || null, sort_order || 0, 
        is_active !== false ? 1 : 0, status || 'on_duty', status_note || null, 
-       security_level || '公开', is_leader ? 1 : 0, first_work_date || null, password_hash || '123456']
+       security_level || '公开', is_leader ? 1 : 0, first_work_date || null, password_hash || '123456',
+       account || null]
     );
     
     res.json({ id });
@@ -333,6 +346,7 @@ app.put('/api/contacts/:id', async (req, res) => {
     if (updates.security_level !== undefined) { fields.push('security_level = ?'); values.push(updates.security_level); }
     if (updates.is_leader !== undefined) { fields.push('is_leader = ?'); values.push(updates.is_leader ? 1 : 0); }
     if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date); }
+    if (updates.account !== undefined) { fields.push('account = ?'); values.push(updates.account); }
     
     if (fields.length === 0) {
       return res.json({ success: true });
@@ -2037,10 +2051,14 @@ app.post('/api/absence-records', async (req, res) => {
       handover_person_id, handover_notes, contact_phone, notes, status = 'pending'
     } = req.body;
     
+    // 转换日期格式为 MySQL 格式
+    const formattedStartTime = formatDateForMySQL(start_time);
+    const formattedEndTime = formatDateForMySQL(end_time);
+    
     await pool.execute(
       `INSERT INTO absence_records (id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, companions, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, companions ? JSON.stringify(companions) : null, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status]
+      [id, contact_id, type, reason, formattedStartTime, formattedEndTime, leave_type, out_type, out_location, destination, transport_type, companions ? JSON.stringify(companions) : null, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status]
     );
     
     res.json({ id });

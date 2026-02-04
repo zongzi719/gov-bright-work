@@ -505,9 +505,28 @@ mysql -h localhost -u root -p gov_platform -e "SELECT 1"
 5. **采购申请** (`/api/purchase-requests`, `/api/supply-purchases`)
    - 自动填充 `purchase_date` 字段
 
+6. **账号登录支持** (本次更新)
+   - contacts 表新增 `account` 字段
+   - 登录接口支持账号或手机号登录
+   - 日期格式自动转换 (ISO 8601 → MySQL DATETIME)
+
 ---
 
-## 七、文件清单
+## 七、数据库更新 - 账号字段
+
+如需启用账号登录功能，执行以下 SQL：
+
+```sql
+-- 添加账号字段
+ALTER TABLE contacts ADD COLUMN account VARCHAR(100) NULL AFTER mobile;
+
+-- 创建索引
+CREATE INDEX idx_contacts_account ON contacts(account);
+```
+
+---
+
+## 八、文件清单
 
 需要部署的文件：
 
@@ -515,7 +534,7 @@ mysql -h localhost -u root -p gov_platform -e "SELECT 1"
 服务器 /opt/gov-platform/
 ├── api/
 │   ├── src/
-│   │   └── index.js          ← 更新
+│   │   └── index.js          ← 更新（支持账号登录、日期格式转换）
 │   ├── .env                  ← 检查配置
 │   └── package.json
 ├── web/

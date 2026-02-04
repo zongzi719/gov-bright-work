@@ -60,6 +60,7 @@ export interface LoginResult {
   id: string;
   name: string;
   mobile: string;
+  account: string | null;
   position: string;
   department: string;
   security_level: string;
