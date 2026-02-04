@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import type { Database } from "@/integrations/supabase/types";
 
 type TodoBusinessType = Database["public"]["Enums"]["todo_business_type"];
@@ -42,31 +42,21 @@ const handleStockUpdate = async (
   try {
     // 采购申请完成后入库
     if (businessType === "purchase_request") {
-      const { data: items } = await supabase
-        .from("purchase_request_items")
-        .select("supply_id, quantity, item_name")
-        .eq("request_id", businessId);
+      const { data: items } = await dataAdapter.getPurchaseRequestItems(businessId);
 
       if (items) {
         for (const item of items) {
           if (!item.supply_id) continue;
           
-          const { data: supply } = await supabase
-            .from("office_supplies")
-            .select("id, current_stock, name")
-            .eq("id", item.supply_id)
-            .single();
+          const { data: supply } = await dataAdapter.getOfficeSupplyById(item.supply_id);
 
           if (supply) {
             const beforeStock = supply.current_stock;
             const afterStock = beforeStock + item.quantity;
             
-            await supabase
-              .from("office_supplies")
-              .update({ current_stock: afterStock })
-              .eq("id", item.supply_id);
+            await dataAdapter.updateOfficeSupply(item.supply_id, { current_stock: afterStock });
 
-            await supabase.from("stock_movements").insert({
+            await dataAdapter.createStockMovement({
               supply_id: item.supply_id,
               movement_type: "purchase_in",
               quantity: item.quantity,
@@ -85,31 +75,21 @@ const handleStockUpdate = async (
 
     // 办公采购完成后入库
     if (businessType === "supply_purchase") {
-      const { data: items } = await supabase
-        .from("supply_purchase_items")
-        .select("supply_id, quantity, item_name")
-        .eq("purchase_id", businessId);
+      const { data: items } = await dataAdapter.getSupplyPurchaseItemsById(businessId);
 
       if (items) {
         for (const item of items) {
           if (!item.supply_id) continue;
           
-          const { data: supply } = await supabase
-            .from("office_supplies")
-            .select("id, current_stock, name")
-            .eq("id", item.supply_id)
-            .single();
+          const { data: supply } = await dataAdapter.getOfficeSupplyById(item.supply_id);
 
           if (supply) {
             const beforeStock = supply.current_stock;
             const afterStock = beforeStock + item.quantity;
             
-            await supabase
-              .from("office_supplies")
-              .update({ current_stock: afterStock })
-              .eq("id", item.supply_id);
+            await dataAdapter.updateOfficeSupply(item.supply_id, { current_stock: afterStock });
 
-            await supabase.from("stock_movements").insert({
+            await dataAdapter.createStockMovement({
               supply_id: item.supply_id,
               movement_type: "purchase_in",
               quantity: item.quantity,
@@ -128,29 +108,19 @@ const handleStockUpdate = async (
 
     // 领用申请完成后出库
     if (businessType === "supply_requisition") {
-      const { data: items } = await supabase
-        .from("supply_requisition_items")
-        .select(`supply_id, quantity, office_supplies (name)`)
-        .eq("requisition_id", businessId);
+      const { data: items } = await dataAdapter.getSupplyRequisitionItemsById(businessId);
 
       if (items) {
         for (const item of items) {
-          const { data: supply } = await supabase
-            .from("office_supplies")
-            .select("id, current_stock, name")
-            .eq("id", item.supply_id)
-            .single();
+          const { data: supply } = await dataAdapter.getOfficeSupplyById(item.supply_id);
 
           if (supply) {
             const beforeStock = supply.current_stock;
             const afterStock = Math.max(0, beforeStock - item.quantity);
             
-            await supabase
-              .from("office_supplies")
-              .update({ current_stock: afterStock })
-              .eq("id", item.supply_id);
+            await dataAdapter.updateOfficeSupply(item.supply_id, { current_stock: afterStock });
 
-            await supabase.from("stock_movements").insert({
+            await dataAdapter.createStockMovement({
               supply_id: item.supply_id,
               movement_type: "requisition_out",
               quantity: item.quantity,
@@ -183,26 +153,19 @@ const updateBusinessAndContactStatus = async (
     // 只有外出、请假、出差需要联动联系人状态
     if (["business_trip", "leave", "out"].includes(businessType)) {
       // 获取业务记录
-      const { data: record } = await supabase
-        .from("absence_records")
-        .select("contact_id")
-        .eq("id", businessId)
-        .single();
+      const { data: record } = await dataAdapter.getAbsenceRecordContactId(businessId);
       
       if (record?.contact_id) {
         // 更新业务记录状态
-        await supabase
-          .from("absence_records")
-          .update({ status: newStatus, approved_at: new Date().toISOString() })
-          .eq("id", businessId);
+        await dataAdapter.updateAbsenceRecord(businessId, { 
+          status: newStatus, 
+          approved_at: new Date().toISOString() 
+        });
         
         // 审批通过时更新联系人状态
         if (newStatus === "approved") {
-          const contactStatus = businessTypeToContactStatus[businessType] as "business_trip" | "leave" | "out" | "on_duty" | "meeting" || "on_duty";
-          await supabase
-            .from("contacts")
-            .update({ status: contactStatus })
-            .eq("id", record.contact_id);
+          const contactStatus = businessTypeToContactStatus[businessType] || "on_duty";
+          await dataAdapter.updateContact(record.contact_id, { status: contactStatus });
           console.log(`Updated contact ${record.contact_id} status to ${contactStatus}`);
         }
       }
@@ -327,8 +290,6 @@ export const useApprovalProgression = () => {
 
   /**
    * 检查当前节点是否完成审批
-   * 注意：只检查当前批次的审批记录（按 pending 状态的记录判断）
-   * 重新提交后会创建新的 pending 记录，老的 rejected 记录不影响判断
    */
   const checkNodeComplete = async (
     instanceId: string,
@@ -336,18 +297,13 @@ export const useApprovalProgression = () => {
     approvalMode: string = "countersign"
   ): Promise<{ complete: boolean; allApproved: boolean }> => {
     // 获取该节点所有审批记录，按创建时间倒序
-    const { data: allRecords } = await supabase
-      .from("approval_records")
-      .select("status, created_at, approver_id")
-      .eq("instance_id", instanceId)
-      .eq("node_name", nodeName)
-      .order("created_at", { ascending: false });
+    const { data: allRecords } = await dataAdapter.getApprovalRecordsByNodeName(instanceId, nodeName);
 
     if (!allRecords || allRecords.length === 0) {
       return { complete: false, allApproved: false };
     }
 
-    // 获取每个审批人的最新记录（重新提交后可能有多条记录）
+    // 获取每个审批人的最新记录
     const latestRecordsByApprover = new Map<string, { status: string; created_at: string }>();
     for (const record of allRecords) {
       if (!latestRecordsByApprover.has(record.approver_id)) {
@@ -358,7 +314,6 @@ export const useApprovalProgression = () => {
       }
     }
 
-    // 只统计每个审批人的最新记录
     const latestRecords = Array.from(latestRecordsByApprover.values());
     const approvedCount = latestRecords.filter(r => r.status === "approved").length;
     const rejectedCount = latestRecords.filter(r => r.status === "rejected").length;
@@ -366,7 +321,6 @@ export const useApprovalProgression = () => {
     const totalCount = latestRecords.length;
 
     if (approvalMode === "or_sign") {
-      // 或签：任一审批人同意或拒绝即完成
       if (approvedCount > 0) {
         return { complete: true, allApproved: true };
       }
@@ -375,7 +329,6 @@ export const useApprovalProgression = () => {
       }
       return { complete: false, allApproved: false };
     } else {
-      // 会签：所有审批人都同意才完成，有一人拒绝即终止
       if (rejectedCount > 0) {
         return { complete: true, allApproved: false };
       }
@@ -406,41 +359,35 @@ export const useApprovalProgression = () => {
     console.log(`Processing CC node "${node.node_name}" for recipients:`, ccRecipientIds);
 
     for (const recipientId of ccRecipientIds) {
-      // 创建审批记录（状态设为 pending 表示未阅）
-      await supabase
-        .from("approval_records")
-        .insert({
-          instance_id: instanceId,
-          node_index: nodeIndex,
-          node_name: node.node_name,
-          node_type: "cc",
-          approver_id: recipientId,
-          status: "pending", // 抄送节点初始状态为未阅
-          comment: null,
-        });
+      await dataAdapter.createApprovalRecord({
+        instance_id: instanceId,
+        node_index: nodeIndex,
+        node_name: node.node_name,
+        node_type: "cc",
+        approver_id: recipientId,
+        status: "pending",
+        comment: null,
+      });
 
-      // 创建待办通知（状态设为 pending，表示未阅）
-      await supabase
-        .from("todo_items")
-        .insert({
-          source: "internal",
-          business_type: todoBusinessType,
-          business_id: businessId,
-          title: `[抄送] ${title}`,
-          description: `${initiatorName} 发起的申请 - 抄送通知`,
-          priority: "normal",
-          status: "pending", // 抄送待办初始状态为未阅
-          process_result: "cc_notified",
-          initiator_id: initiatorId,
-          assignee_id: recipientId,
-          approval_instance_id: instanceId,
-          approval_version_number: versionNumber,
-        });
+      await dataAdapter.createTodoItem({
+        source: "internal",
+        business_type: todoBusinessType,
+        business_id: businessId,
+        title: `[抄送] ${title}`,
+        description: `${initiatorName} 发起的申请 - 抄送通知`,
+        priority: "normal",
+        status: "pending",
+        process_result: "cc_notified",
+        initiator_id: initiatorId,
+        assignee_id: recipientId,
+        approval_instance_id: instanceId,
+        approval_version_number: versionNumber,
+      });
     }
   };
 
   /**
-   * 推进审批流程到下一节点（递归处理抄送节点）
+   * 推进审批流程到下一节点
    */
   const advanceToNextNode = async (
     instanceId: string,
@@ -455,7 +402,6 @@ export const useApprovalProgression = () => {
     currentNodeName: string
   ): Promise<{ success: boolean; completed?: boolean; error?: string }> => {
     try {
-      // 使用 initiatorId 进行扁平化以确保条件评估一致
       const flatNodes = flattenNodesForExecution(nodesSnapshot, formData, initiatorId);
       
       console.log("Flat nodes for progression:", flatNodes.map(n => n.node_name));
@@ -480,22 +426,21 @@ export const useApprovalProgression = () => {
 
       if (!allApproved) {
         console.log("Node rejected, terminating workflow");
-        await supabase
-          .from("approval_instances")
-          .update({ status: "rejected", completed_at: new Date().toISOString() })
-          .eq("id", instanceId);
+        await dataAdapter.updateApprovalInstance(instanceId, { 
+          status: "rejected", 
+          completed_at: new Date().toISOString() 
+        });
         
         return { success: true, completed: true };
       }
 
-      // 递归推进到下一个审批节点（跳过所有抄送节点）
+      // 递归推进到下一个审批节点
       let nextIndex = currentIndex + 1;
       
       while (nextIndex < flatNodes.length) {
         const nextNode = flatNodes[nextIndex];
         
         if (nextNode.node_type === "cc") {
-          // 处理抄送节点并继续
           console.log(`Skipping CC node "${nextNode.node_name}", processing notifications...`);
           await processCCNode(
             instanceId,
@@ -510,26 +455,19 @@ export const useApprovalProgression = () => {
           );
           nextIndex++;
         } else {
-          // 找到下一个审批节点，停止循环
           break;
         }
       }
       
       if (nextIndex >= flatNodes.length) {
         console.log("No more nodes, workflow completed");
-        await supabase
-          .from("approval_instances")
-          .update({ 
-            status: "approved", 
-            completed_at: new Date().toISOString(),
-            current_node_index: flatNodes.length - 1,
-          })
-          .eq("id", instanceId);
+        await dataAdapter.updateApprovalInstance(instanceId, { 
+          status: "approved", 
+          completed_at: new Date().toISOString(),
+          current_node_index: flatNodes.length - 1,
+        });
         
-        // 联动更新业务表状态和联系人状态
         await updateBusinessAndContactStatus(businessType, businessId, "approved");
-        
-        // 处理库存变动（采购入库或领用出库）
         await handleStockUpdate(businessType, businessId, initiatorName);
         
         return { success: true, completed: true };
@@ -539,10 +477,7 @@ export const useApprovalProgression = () => {
       
       console.log("Advancing to next approver node:", nextNode.node_name, "at index:", nextIndex);
       
-      await supabase
-        .from("approval_instances")
-        .update({ current_node_index: nextIndex })
-        .eq("id", instanceId);
+      await dataAdapter.updateApprovalInstance(instanceId, { current_node_index: nextIndex });
 
       const approverIds = nextNode.approver_ids || [];
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
@@ -550,36 +485,32 @@ export const useApprovalProgression = () => {
       console.log("Creating todos for approvers:", approverIds);
 
       for (const approverId of approverIds) {
-        const { error: recordError } = await supabase
-          .from("approval_records")
-          .insert({
-            instance_id: instanceId,
-            node_index: nextIndex,
-            node_name: nextNode.node_name,
-            node_type: nextNode.node_type,
-            approver_id: approverId,
-            status: "pending",
-          });
+        const { error: recordError } = await dataAdapter.createApprovalRecord({
+          instance_id: instanceId,
+          node_index: nextIndex,
+          node_name: nextNode.node_name,
+          node_type: nextNode.node_type,
+          approver_id: approverId,
+          status: "pending",
+        });
 
         if (recordError) {
           console.error("Failed to create approval record:", recordError);
         }
 
-        const { error: todoError } = await supabase
-          .from("todo_items")
-          .insert({
-            source: "internal",
-            business_type: todoBusinessType,
-            business_id: businessId,
-            title: title,
-            description: `${initiatorName} 发起的申请 - ${nextNode.node_name}`,
-            priority: "normal",
-            status: "pending",
-            initiator_id: initiatorId,
-            assignee_id: approverId,
-            approval_instance_id: instanceId,
-            approval_version_number: versionNumber,
-          });
+        const { error: todoError } = await dataAdapter.createTodoItem({
+          source: "internal",
+          business_type: todoBusinessType,
+          business_id: businessId,
+          title: title,
+          description: `${initiatorName} 发起的申请 - ${nextNode.node_name}`,
+          priority: "normal",
+          status: "pending",
+          initiator_id: initiatorId,
+          assignee_id: approverId,
+          approval_instance_id: instanceId,
+          approval_version_number: versionNumber,
+        });
 
         if (todoError) {
           console.error("Failed to create todo item:", todoError);
@@ -596,7 +527,6 @@ export const useApprovalProgression = () => {
 
   /**
    * 退回发起人（当前节点继续）
-   * 发起人修改后由退回节点继续审批
    */
   const returnToInitiatorCurrentNode = async (
     instanceId: string,
@@ -611,12 +541,7 @@ export const useApprovalProgression = () => {
     try {
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
-      // 更新审批实例：保持 pending 状态（等待发起人修改后重新提交），通过form_data保存退回信息
-      const { data: currentInstance } = await supabase
-        .from("approval_instances")
-        .select("form_data")
-        .eq("id", instanceId)
-        .single();
+      const { data: currentInstance } = await dataAdapter.getApprovalInstanceById(instanceId);
 
       const updatedFormData = {
         ...(currentInstance?.form_data as Record<string, any> || {}),
@@ -628,35 +553,24 @@ export const useApprovalProgression = () => {
         }
       };
 
-      await supabase
-        .from("approval_instances")
-        .update({ 
-          status: "pending", // 保持 pending 状态，等待发起人修改后重新提交
-          form_data: updatedFormData,
-        })
-        .eq("id", instanceId);
+      await dataAdapter.updateApprovalInstance(instanceId, { 
+        status: "pending",
+        form_data: updatedFormData,
+      });
 
-      // 为发起人创建修改待办
-      const { error: todoError } = await supabase
-        .from("todo_items")
-        .insert({
-          source: "internal",
-          business_type: todoBusinessType,
-          business_id: businessId,
-          title: `[需修改] ${title}`,
-          description: `您的申请被退回，请修改后重新提交。修改后由当前节点继续审批。\n退回意见：${comment}`,
-          priority: "urgent",
-          status: "pending",
-          initiator_id: initiatorId,
-          assignee_id: initiatorId,
-          approval_instance_id: instanceId,
-          approval_version_number: versionNumber,
-          process_notes: JSON.stringify({ 
-            return_type: "return_to_initiator", 
-            return_node_index: currentNodeIndex,
-            comment 
-          }),
-        });
+      const { error: todoError } = await dataAdapter.createTodoItem({
+        source: "internal",
+        business_type: todoBusinessType,
+        business_id: businessId,
+        title: `[需修改] ${title}`,
+        description: `您的申请被退回，请修改后重新提交。修改后由当前节点继续审批。\n退回意见：${comment}`,
+        priority: "urgent",
+        status: "pending",
+        initiator_id: initiatorId,
+        assignee_id: initiatorId,
+        approval_instance_id: instanceId,
+        approval_version_number: versionNumber,
+      });
 
       if (todoError) {
         console.error("Failed to create todo for initiator:", todoError);
@@ -672,7 +586,6 @@ export const useApprovalProgression = () => {
 
   /**
    * 退回发起人（重新审批）
-   * 发起人修改后所有节点需重新审批
    */
   const returnToInitiatorRestart = async (
     instanceId: string,
@@ -686,12 +599,7 @@ export const useApprovalProgression = () => {
     try {
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
-      // 更新审批实例：保持 pending 状态（等待发起人修改后重新提交），重置节点索引为0
-      const { data: currentInstance } = await supabase
-        .from("approval_instances")
-        .select("form_data")
-        .eq("id", instanceId)
-        .single();
+      const { data: currentInstance } = await dataAdapter.getApprovalInstanceById(instanceId);
 
       const updatedFormData = {
         ...(currentInstance?.form_data as Record<string, any> || {}),
@@ -702,35 +610,25 @@ export const useApprovalProgression = () => {
         }
       };
 
-      await supabase
-        .from("approval_instances")
-        .update({ 
-          status: "pending", // 保持 pending 状态，等待发起人修改后重新提交
-          current_node_index: 0,
-          form_data: updatedFormData,
-        })
-        .eq("id", instanceId);
+      await dataAdapter.updateApprovalInstance(instanceId, { 
+        status: "pending",
+        current_node_index: 0,
+        form_data: updatedFormData,
+      });
 
-      // 为发起人创建修改待办
-      const { error: todoError } = await supabase
-        .from("todo_items")
-        .insert({
-          source: "internal",
-          business_type: todoBusinessType,
-          business_id: businessId,
-          title: `[需修改-重审] ${title}`,
-          description: `您的申请被退回，请修改后重新提交。修改后需要重新走完整审批流程。\n退回意见：${comment}`,
-          priority: "urgent",
-          status: "pending",
-          initiator_id: initiatorId,
-          assignee_id: initiatorId,
-          approval_instance_id: instanceId,
-          approval_version_number: versionNumber,
-          process_notes: JSON.stringify({ 
-            return_type: "return_restart",
-            comment 
-          }),
-        });
+      const { error: todoError } = await dataAdapter.createTodoItem({
+        source: "internal",
+        business_type: todoBusinessType,
+        business_id: businessId,
+        title: `[需修改-重审] ${title}`,
+        description: `您的申请被退回，请修改后重新提交。修改后需要重新走完整审批流程。\n退回意见：${comment}`,
+        priority: "urgent",
+        status: "pending",
+        initiator_id: initiatorId,
+        assignee_id: initiatorId,
+        approval_instance_id: instanceId,
+        approval_version_number: versionNumber,
+      });
 
       if (todoError) {
         console.error("Failed to create todo for initiator:", todoError);
@@ -761,11 +659,9 @@ export const useApprovalProgression = () => {
     comment: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // 获取上一个节点
       const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
       
       if (currentNodeIndex <= 0) {
-        // 如果是第一个节点，退回给发起人
         return returnToInitiatorCurrentNode(
           instanceId,
           businessId,
@@ -787,51 +683,40 @@ export const useApprovalProgression = () => {
 
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
-      // 更新审批实例状态（保持 pending 表示流程进行中）
-      await supabase
-        .from("approval_instances")
-        .update({ 
-          status: "pending",
-          current_node_index: previousNodeIndex,
-        })
-        .eq("id", instanceId);
+      await dataAdapter.updateApprovalInstance(instanceId, { 
+        status: "pending",
+        current_node_index: previousNodeIndex,
+      });
 
-      // 为上一节点的审批人创建新的审批记录和待办（保留历史记录，不要更新）
       const approverIds = previousNode.approver_ids || [];
       
       for (const approverId of approverIds) {
-        // 创建新的 pending 审批记录（保留历史通过记录）
-        const { error: recordError } = await supabase
-          .from("approval_records")
-          .insert({
-            instance_id: instanceId,
-            node_index: previousNodeIndex,
-            node_name: previousNode.node_name,
-            node_type: previousNode.node_type,
-            approver_id: approverId,
-            status: "pending",
-          });
+        const { error: recordError } = await dataAdapter.createApprovalRecord({
+          instance_id: instanceId,
+          node_index: previousNodeIndex,
+          node_name: previousNode.node_name,
+          node_type: previousNode.node_type,
+          approver_id: approverId,
+          status: "pending",
+        });
 
         if (recordError) {
           console.error("Failed to create approval record for previous node:", recordError);
         }
 
-        // 创建新的待办
-        const { error: todoError } = await supabase
-          .from("todo_items")
-          .insert({
-            source: "internal",
-            business_type: todoBusinessType,
-            business_id: businessId,
-            title: `[退回重审] ${title}`,
-            description: `申请被下一节点退回，需要重新审批。\n退回意见：${comment}`,
-            priority: "urgent",
-            status: "pending",
-            initiator_id: initiatorId,
-            assignee_id: approverId,
-            approval_instance_id: instanceId,
-            approval_version_number: versionNumber,
-          });
+        const { error: todoError } = await dataAdapter.createTodoItem({
+          source: "internal",
+          business_type: todoBusinessType,
+          business_id: businessId,
+          title: `[退回重审] ${title}`,
+          description: `申请被下一节点退回，需要重新审批。\n退回意见：${comment}`,
+          priority: "urgent",
+          status: "pending",
+          initiator_id: initiatorId,
+          assignee_id: approverId,
+          approval_instance_id: instanceId,
+          approval_version_number: versionNumber,
+        });
 
         if (todoError) {
           console.error("Failed to create todo for previous node:", todoError);
@@ -847,7 +732,6 @@ export const useApprovalProgression = () => {
 
   /**
    * 发起人撤回申请
-   * 只有当下一节点未进行任何操作时才能撤回
    */
   const withdrawApplication = async (
     instanceId: string,
@@ -855,12 +739,7 @@ export const useApprovalProgression = () => {
     currentUserId: string
   ): Promise<{ success: boolean; canWithdraw: boolean; error?: string }> => {
     try {
-      // 验证是否是发起人
-      const { data: instance } = await supabase
-        .from("approval_instances")
-        .select("initiator_id, status, current_node_index")
-        .eq("id", instanceId)
-        .single();
+      const { data: instance } = await dataAdapter.getApprovalInstanceById(instanceId);
 
       if (!instance) {
         return { success: false, canWithdraw: false, error: "找不到审批实例" };
@@ -874,50 +753,32 @@ export const useApprovalProgression = () => {
         return { success: false, canWithdraw: false, error: "当前状态不允许撤回" };
       }
 
-      // 检查当前节点是否有人已操作
-      const { data: records } = await supabase
-        .from("approval_records")
-        .select("status")
-        .eq("instance_id", instanceId)
-        .eq("node_index", instance.current_node_index);
+      const { data: records } = await dataAdapter.getApprovalRecordsByInstance(instanceId);
 
-      const hasProcessed = records?.some(r => r.status === "approved" || r.status === "rejected");
+      const currentNodeRecords = records?.filter(r => r.node_index === instance.current_node_index);
+      const hasProcessed = currentNodeRecords?.some(r => r.status === "approved" || r.status === "rejected");
       
       if (hasProcessed) {
         return { success: false, canWithdraw: false, error: "当前节点已有人审批，无法撤回" };
       }
 
-      // 可以撤回 - 更新审批实例状态（使用 cancelled 表示撤回）
-      await supabase
-        .from("approval_instances")
-        .update({ 
-          status: "cancelled", // 使用 cancelled 表示撤回
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", instanceId);
+      await dataAdapter.updateApprovalInstance(instanceId, { 
+        status: "cancelled",
+        completed_at: new Date().toISOString(),
+      });
 
-      // 将所有 pending 状态的待办标记为已取消
-      await supabase
-        .from("todo_items")
-        .update({ 
-          status: "completed",
-          process_result: "withdrawn",
-          process_notes: "发起人已撤回申请",
-          processed_at: new Date().toISOString(),
-        })
-        .eq("approval_instance_id", instanceId)
-        .eq("status", "pending");
+      await dataAdapter.updateTodosByInstanceId(instanceId, "pending", { 
+        status: "completed",
+        process_result: "withdrawn",
+        process_notes: "发起人已撤回申请",
+        processed_at: new Date().toISOString(),
+      });
 
-      // 将所有 pending 状态的审批记录标记为已取消
-      await supabase
-        .from("approval_records")
-        .update({ 
-          status: "approved", // 使用 approved 状态表示流程结束
-          comment: "发起人已撤回申请",
-          processed_at: new Date().toISOString(),
-        })
-        .eq("instance_id", instanceId)
-        .eq("status", "pending");
+      await dataAdapter.updateApprovalRecordsByInstanceId(instanceId, "pending", { 
+        status: "approved",
+        comment: "发起人已撤回申请",
+        processed_at: new Date().toISOString(),
+      });
 
       return { success: true, canWithdraw: true };
     } catch (error) {
@@ -934,11 +795,7 @@ export const useApprovalProgression = () => {
     currentUserId: string
   ): Promise<boolean> => {
     try {
-      const { data: instance } = await supabase
-        .from("approval_instances")
-        .select("initiator_id, status, current_node_index")
-        .eq("id", instanceId)
-        .single();
+      const { data: instance } = await dataAdapter.getApprovalInstanceById(instanceId);
 
       if (!instance || instance.initiator_id !== currentUserId) {
         return false;
@@ -948,14 +805,10 @@ export const useApprovalProgression = () => {
         return false;
       }
 
-      // 检查当前节点是否有人已操作
-      const { data: records } = await supabase
-        .from("approval_records")
-        .select("status")
-        .eq("instance_id", instanceId)
-        .eq("node_index", instance.current_node_index);
+      const { data: records } = await dataAdapter.getApprovalRecordsByInstance(instanceId);
 
-      const hasProcessed = records?.some(r => r.status === "approved" || r.status === "rejected");
+      const currentNodeRecords = records?.filter(r => r.node_index === instance.current_node_index);
+      const hasProcessed = currentNodeRecords?.some(r => r.status === "approved" || r.status === "rejected");
       
       return !hasProcessed;
     } catch (error) {
@@ -968,18 +821,12 @@ export const useApprovalProgression = () => {
    * 获取申请人信息
    */
   const getInitiatorInfo = async (initiatorId: string): Promise<{ name: string; department: string | null } | null> => {
-    const { data } = await supabase
-      .from("contacts")
-      .select("name, department")
-      .eq("id", initiatorId)
-      .maybeSingle();
-    
+    const { data } = await dataAdapter.getContactById(initiatorId);
     return data;
   };
 
   /**
    * 发起人重新提交被退回的申请
-   * 根据退回类型决定从哪个节点继续
    */
   const resubmitAfterReturn = async (
     instanceId: string,
@@ -994,12 +841,7 @@ export const useApprovalProgression = () => {
     todoItemId: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // 获取审批实例，获取退回信息
-      const { data: instanceData } = await supabase
-        .from("approval_instances")
-        .select("form_data, current_node_index")
-        .eq("id", instanceId)
-        .single();
+      const { data: instanceData } = await dataAdapter.getApprovalInstanceById(instanceId);
 
       if (!instanceData) {
         return { success: false, error: "找不到审批实例" };
@@ -1011,17 +853,12 @@ export const useApprovalProgression = () => {
       }
 
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
-      
-      // 扁平化节点列表
       const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
 
-      // 根据退回类型决定从哪个节点继续
       let startNodeIndex: number;
       if (returnInfo.type === "return_restart") {
-        // 重新审批 - 从第一个节点开始
         startNodeIndex = 0;
       } else {
-        // 从退回节点继续 - 使用保存的节点索引
         startNodeIndex = returnInfo.return_node_index || 0;
       }
 
@@ -1030,63 +867,46 @@ export const useApprovalProgression = () => {
         return { success: false, error: "找不到起始审批节点" };
       }
 
-      // 清除退回信息，准备重新审批
       const updatedFormData = { ...formData };
       delete updatedFormData._return_info;
 
-      // 更新审批实例状态为 pending
-      await supabase
-        .from("approval_instances")
-        .update({
-          status: "pending",
-          current_node_index: startNodeIndex,
-          form_data: updatedFormData,
-        })
-        .eq("id", instanceId);
+      await dataAdapter.updateApprovalInstance(instanceId, {
+        status: "pending",
+        current_node_index: startNodeIndex,
+        form_data: updatedFormData,
+      });
 
-      // 将当前修改待办标记为已完成
-      await supabase
-        .from("todo_items")
-        .update({
-          status: "completed",
-          process_result: "resubmitted",
-          process_notes: "已重新提交",
-          processed_at: new Date().toISOString(),
-        })
-        .eq("id", todoItemId);
+      await dataAdapter.updateTodoItem(todoItemId, {
+        status: "completed",
+        process_result: "resubmitted",
+        processed_at: new Date().toISOString(),
+      });
 
-      // 为起始节点的审批人创建新的审批记录和待办
       const approverIds = startNode.approver_ids || [];
       
       for (const approverId of approverIds) {
-        // 创建审批记录
-        await supabase
-          .from("approval_records")
-          .insert({
-            instance_id: instanceId,
-            node_index: startNodeIndex,
-            node_name: startNode.node_name,
-            node_type: startNode.node_type,
-            approver_id: approverId,
-            status: "pending",
-          });
+        await dataAdapter.createApprovalRecord({
+          instance_id: instanceId,
+          node_index: startNodeIndex,
+          node_name: startNode.node_name,
+          node_type: startNode.node_type,
+          approver_id: approverId,
+          status: "pending",
+        });
 
-        // 创建待办事项
-        await supabase
-          .from("todo_items")
-          .insert({
-            source: "internal",
-            business_type: todoBusinessType,
-            business_id: businessId,
-            title: title.replace(/^\[需修改(-重审)?\]\s*/, ""), // 移除前缀
-            description: `${initiatorName} 重新提交的申请`,
-            priority: "normal",
-            status: "pending",
-            initiator_id: initiatorId,
-            assignee_id: approverId,
-            approval_instance_id: instanceId,
-            approval_version_number: versionNumber,
-          });
+        await dataAdapter.createTodoItem({
+          source: "internal",
+          business_type: todoBusinessType,
+          business_id: businessId,
+          title: title.replace(/^\[需修改(-重审)?\]\s*/, ""),
+          description: `${initiatorName} 重新提交的申请`,
+          priority: "normal",
+          status: "pending",
+          initiator_id: initiatorId,
+          assignee_id: approverId,
+          approval_instance_id: instanceId,
+          approval_version_number: versionNumber,
+        });
       }
 
       return { success: true };

@@ -2023,6 +2023,134 @@ export async function getPurchaseRequestById(id: string) {
   return { data, error };
 }
 
+// ==================== Approval Progression 专用函数 ====================
+
+// 按节点名称和实例查询审批记录
+export async function getApprovalRecordsByNodeName(instanceId: string, nodeName: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/approval-records?instance_id=${instanceId}&node_name=${encodeURIComponent(nodeName)}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_records")
+    .select("status, created_at, approver_id")
+    .eq("instance_id", instanceId)
+    .eq("node_name", nodeName)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+// 批量更新待办事项（按实例ID和状态）
+export async function updateTodosByInstanceId(instanceId: string, status: string, updates: {
+  status?: string;
+  process_result?: string;
+  process_notes?: string;
+  processed_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/todo-items/by-instance/${instanceId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ current_status: status, updates }),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("todo_items")
+    .update(updates as any)
+    .eq("approval_instance_id", instanceId)
+    .eq("status", status as any);
+  return { data: null, error };
+}
+
+// 批量更新审批记录（按实例ID和状态）
+export async function updateApprovalRecordsByInstanceId(instanceId: string, status: string, updates: {
+  status?: string;
+  comment?: string;
+  processed_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-records/by-instance/${instanceId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ current_status: status, updates }),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_records")
+    .update(updates as any)
+    .eq("instance_id", instanceId)
+    .eq("status", status as any);
+  return { data: null, error };
+}
+
+// 获取缺勤记录的联系人ID
+export async function getAbsenceRecordContactId(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ contact_id: string }>(`/api/absence-records/${id}/contact`);
+  }
+  
+  const { data, error } = await supabase
+    .from("absence_records")
+    .select("contact_id")
+    .eq("id", id)
+    .single();
+  return { data, error };
+}
+
+// 按ID获取物资
+export async function getOfficeSupplyById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/office-supplies/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("office_supplies")
+    .select("id, current_stock, name")
+    .eq("id", id)
+    .single();
+  return { data, error };
+}
+
+// 按ID获取联系人
+export async function getContactById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/contacts/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("name, department")
+    .eq("id", id)
+    .maybeSingle();
+  return { data, error };
+}
+
+// 按ID获取采购申请明细
+export async function getSupplyPurchaseItemsById(purchaseId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_purchase_items")
+    .select("supply_id, quantity, item_name")
+    .eq("purchase_id", purchaseId);
+  return { data, error };
+}
+
+// 按ID获取领用申请明细
+export async function getSupplyRequisitionItemsById(requisitionId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_requisition_items")
+    .select("supply_id, quantity, office_supplies(name)")
+    .eq("requisition_id", requisitionId);
+  return { data, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
@@ -2145,6 +2273,15 @@ export const dataAdapter = {
   deleteLeaderSchedulePermissionsByUser,
   // Stock
   createStockMovement,
+  // Approval Progression 专用
+  getApprovalRecordsByNodeName,
+  updateTodosByInstanceId,
+  updateApprovalRecordsByInstanceId,
+  getAbsenceRecordContactId,
+  getSupplyPurchaseItemsById,
+  getSupplyRequisitionItemsById,
+  getOfficeSupplyById,
+  getContactById,
   // Utilities
   isOfflineMode,
 };
