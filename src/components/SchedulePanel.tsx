@@ -256,17 +256,29 @@ const SchedulePanel = () => {
         <h2 className="gov-card-title text-sm md:text-base">日程管理</h2>
         <div className="flex items-center gap-1 md:gap-2">
           <button 
-            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors"
+            className="text-xs hover:underline flex items-center gap-0.5"
+            style={{ color: '#3b82f6' }}
             onClick={() => {
-              // Navigate to a schedule list view
+              window.location.href = '/schedule-list';
             }}
           >
             查看全部
             <ChevronRight className="w-3 h-3" />
           </button>
-          <Button size="sm" variant="ghost" onClick={openAddDialog} className="h-6 w-6 md:h-7 md:w-7 p-0">
+          <button 
+            onClick={openAddDialog} 
+            className="flex items-center justify-center rounded"
+            style={{ 
+              width: '28px', 
+              height: '28px', 
+              backgroundColor: '#3b82f6', 
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
             <Plus className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -277,12 +289,18 @@ const SchedulePanel = () => {
             {format(currentWeekStart, "yyyy年M月", { locale: zhCN })}
           </span>
           <div className="flex items-center gap-1">
-            <button className="p-1 hover:bg-muted rounded" onClick={handlePrevWeek}>
-              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            <button 
+              style={{ padding: '4px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: 'white', cursor: 'pointer' }} 
+              onClick={handlePrevWeek}
+            >
+              <ChevronLeft className="w-4 h-4" style={{ color: '#6b7280' }} />
             </button>
-            <span className="text-xs text-muted-foreground px-1">两周</span>
-            <button className="p-1 hover:bg-muted rounded" onClick={handleNextWeek}>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <span style={{ fontSize: '12px', color: '#6b7280', padding: '0 4px' }}>两周</span>
+            <button 
+              style={{ padding: '4px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: 'white', cursor: 'pointer' }} 
+              onClick={handleNextWeek}
+            >
+              <ChevronRight className="w-4 h-4" style={{ color: '#6b7280' }} />
             </button>
           </div>
         </div>
