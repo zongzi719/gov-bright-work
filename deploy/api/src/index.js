@@ -708,10 +708,12 @@ app.get('/api/absence-records', async (req, res) => {
     const { contact_id, type, status } = req.query;
     let sql = `SELECT ar.*, 
                c.name as contact_name, c.department as contact_department,
-               hp.name as handover_person_name
+               hp.name as handover_person_name,
+               ai.status as approval_status, ai.form_data as approval_form_data
                FROM absence_records ar
                LEFT JOIN contacts c ON ar.contact_id = c.id
                LEFT JOIN contacts hp ON ar.handover_person_id = hp.id
+               LEFT JOIN approval_instances ai ON ai.business_id = ar.id AND ai.business_type = ar.type
                WHERE 1=1`;
     const params = [];
     
@@ -733,16 +735,51 @@ app.get('/api/absence-records', async (req, res) => {
     const [rows] = await pool.execute(sql, params);
     
     // 格式化返回数据，模拟 Supabase 的关联数据结构
-    const result = rows.map(row => ({
-      ...row,
-      contacts: row.contact_id ? {
-        name: row.contact_name,
-        department: row.contact_department
-      } : null,
-      handover_person: row.handover_person_name ? {
-        name: row.handover_person_name
-      } : null
-    }));
+    // 同时合并审批实例的真实状态
+    const result = rows.map(row => {
+      let displayStatus = row.status;
+      
+      // 如果有审批实例，使用审批实例的状态
+      if (row.approval_status) {
+        displayStatus = row.approval_status;
+        
+        // 检查是否有退回信息
+        if (row.approval_status === 'pending' && row.approval_form_data) {
+          try {
+            const formData = typeof row.approval_form_data === 'string' 
+              ? JSON.parse(row.approval_form_data) 
+              : row.approval_form_data;
+            if (formData._return_info) {
+              const returnType = formData._return_info.type;
+              if (returnType === 'return_to_initiator_current') {
+                displayStatus = 'returned_to_initiator';
+              } else if (returnType === 'return_restart') {
+                displayStatus = 'returned_restart';
+              } else if (returnType === 'return_to_previous') {
+                displayStatus = 'returned_to_previous';
+              } else {
+                displayStatus = 'returned_to_initiator';
+              }
+            }
+          } catch (e) {
+            // JSON 解析失败，使用原状态
+          }
+        }
+      }
+      
+      return {
+        ...row,
+        // 使用审批实例的真实状态覆盖业务表状态
+        status: displayStatus,
+        contacts: row.contact_id ? {
+          name: row.contact_name,
+          department: row.contact_department
+        } : null,
+        handover_person: row.handover_person_name ? {
+          name: row.handover_person_name
+        } : null
+      };
+    });
     
     res.json(result);
   } catch (error) {
@@ -2363,7 +2400,7 @@ app.put('/api/absence-records/:id', async (req, res) => {
     const params = [];
     
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
-    if (approved_at !== undefined) { updates.push('approved_at = ?'); params.push(approved_at); }
+    if (approved_at !== undefined) { updates.push('approved_at = ?'); params.push(formatDateForMySQL(approved_at)); }
     if (approved_by !== undefined) { updates.push('approved_by = ?'); params.push(approved_by); }
     updates.push('updated_at = NOW()');
     
