@@ -706,6 +706,7 @@ app.delete('/api/todo-items/by-instance/:instanceId', async (req, res) => {
 app.get('/api/absence-records', async (req, res) => {
   try {
     const { contact_id, type, status } = req.query;
+    // 使用 CAST 确保 UUID 比较正确（MariaDB 兼容性）
     let sql = `SELECT ar.*, 
                c.name as contact_name, c.department as contact_department,
                hp.name as handover_person_name,
@@ -713,7 +714,7 @@ app.get('/api/absence-records', async (req, res) => {
                FROM absence_records ar
                LEFT JOIN contacts c ON ar.contact_id = c.id
                LEFT JOIN contacts hp ON ar.handover_person_id = hp.id
-               LEFT JOIN approval_instances ai ON ai.business_id = ar.id AND ai.business_type = ar.type
+               LEFT JOIN approval_instances ai ON CAST(ai.business_id AS CHAR) = CAST(ar.id AS CHAR) AND ai.business_type = ar.type
                WHERE 1=1`;
     const params = [];
     
@@ -732,7 +733,11 @@ app.get('/api/absence-records', async (req, res) => {
     
     sql += ' ORDER BY ar.created_at DESC';
     
+    console.log('Fetching absence records with approval status, SQL:', sql, 'Params:', params);
+    
     const [rows] = await pool.execute(sql, params);
+    
+    console.log('Absence records fetched:', rows.length, 'First row approval_status:', rows[0]?.approval_status);
     
     // 格式化返回数据，模拟 Supabase 的关联数据结构
     // 同时合并审批实例的真实状态
