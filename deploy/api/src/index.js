@@ -1941,6 +1941,263 @@ app.put('/api/office-supplies/:id', async (req, res) => {
   }
 });
 
+// ==================== 通知公告管理 ====================
+
+// 获取所有通知公告（管理后台）
+app.get('/api/notices', async (req, res) => {
+  try {
+    const { department, is_published } = req.query;
+    let sql = 'SELECT * FROM notices';
+    const conditions = [];
+    const params = [];
+    
+    if (department && department !== 'all') {
+      conditions.push('department = ?');
+      params.push(department);
+    }
+    if (is_published !== undefined) {
+      conditions.push('is_published = ?');
+      params.push(is_published === 'true' ? 1 : 0);
+    }
+    
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY is_pinned DESC, created_at DESC';
+    
+    const [rows] = await pool.execute(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get notices error:', error);
+    res.status(500).json({ error: '获取通知公告失败' });
+  }
+});
+
+// 创建通知公告
+app.post('/api/notices', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { title, department, content, is_pinned, is_published, security_level, publish_scope, publish_scope_ids } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO notices (id, title, department, content, is_pinned, is_published, security_level, publish_scope, publish_scope_ids)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, title, department, content || null, is_pinned ? 1 : 0, is_published !== false ? 1 : 0, 
+       security_level || '公开', publish_scope || 'all', JSON.stringify(publish_scope_ids || [])]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create notice error:', error);
+    res.status(500).json({ error: '创建通知公告失败' });
+  }
+});
+
+// 更新通知公告
+app.put('/api/notices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const setClauses = [];
+    const params = [];
+    
+    Object.keys(updates).forEach(key => {
+      if (key === 'publish_scope_ids') {
+        setClauses.push(`${key} = ?`);
+        params.push(JSON.stringify(updates[key]));
+      } else if (key === 'is_pinned' || key === 'is_published') {
+        setClauses.push(`${key} = ?`);
+        params.push(updates[key] ? 1 : 0);
+      } else {
+        setClauses.push(`${key} = ?`);
+        params.push(updates[key]);
+      }
+    });
+    
+    params.push(id);
+    await pool.execute(`UPDATE notices SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update notice error:', error);
+    res.status(500).json({ error: '更新通知公告失败' });
+  }
+});
+
+// 删除通知公告
+app.delete('/api/notices/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM notices WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete notice error:', error);
+    res.status(500).json({ error: '删除通知公告失败' });
+  }
+});
+
+// ==================== 通知公告图片管理 ====================
+
+// 获取所有通知图片
+app.get('/api/notice-images', async (req, res) => {
+  try {
+    const { all } = req.query;
+    let sql = 'SELECT * FROM notice_images';
+    if (!all) {
+      sql += ' WHERE is_active = 1';
+    }
+    sql += ' ORDER BY sort_order';
+    
+    const [rows] = await pool.execute(sql);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get notice images error:', error);
+    res.status(500).json({ error: '获取通知图片失败' });
+  }
+});
+
+// 创建通知图片
+app.post('/api/notice-images', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { image_url, title, sort_order, is_active } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO notice_images (id, image_url, title, sort_order, is_active)
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, image_url, title || '', sort_order || 0, is_active !== false ? 1 : 0]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create notice image error:', error);
+    res.status(500).json({ error: '创建通知图片失败' });
+  }
+});
+
+// 更新通知图片
+app.put('/api/notice-images/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const setClauses = [];
+    const params = [];
+    
+    Object.keys(updates).forEach(key => {
+      if (key === 'is_active') {
+        setClauses.push(`${key} = ?`);
+        params.push(updates[key] ? 1 : 0);
+      } else {
+        setClauses.push(`${key} = ?`);
+        params.push(updates[key]);
+      }
+    });
+    
+    params.push(id);
+    await pool.execute(`UPDATE notice_images SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update notice image error:', error);
+    res.status(500).json({ error: '更新通知图片失败' });
+  }
+});
+
+// 删除通知图片
+app.delete('/api/notice-images/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM notice_images WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete notice image error:', error);
+    res.status(500).json({ error: '删除通知图片失败' });
+  }
+});
+
+// ==================== 领导日程权限管理 ====================
+
+// 获取所有领导日程权限
+app.get('/api/leader-schedule-permissions', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    
+    let sql = `SELECT lsp.*, c.name as leader_name 
+               FROM leader_schedule_permissions lsp
+               LEFT JOIN contacts c ON lsp.leader_id = c.id`;
+    const params = [];
+    
+    if (user_id) {
+      sql += ' WHERE lsp.user_id = ?';
+      params.push(user_id);
+    }
+    sql += ' ORDER BY lsp.created_at DESC';
+    
+    const [rows] = await pool.execute(sql, params);
+    
+    // 转换为前端期望的格式
+    const result = rows.map(row => ({
+      ...row,
+      leader: row.leader_name ? { name: row.leader_name } : null
+    }));
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Get leader schedule permissions error:', error);
+    res.status(500).json({ error: '获取领导日程权限失败' });
+  }
+});
+
+// 创建领导日程权限
+app.post('/api/leader-schedule-permissions', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { user_id, leader_id, can_view_all } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO leader_schedule_permissions (id, user_id, leader_id, can_view_all)
+       VALUES (?, ?, ?, ?)`,
+      [id, user_id, leader_id || null, can_view_all ? 1 : 0]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create leader schedule permission error:', error);
+    res.status(500).json({ error: '创建领导日程权限失败' });
+  }
+});
+
+// 批量创建领导日程权限
+app.post('/api/leader-schedule-permissions/batch', async (req, res) => {
+  try {
+    const { permissions } = req.body;
+    
+    for (const perm of permissions) {
+      const id = uuidv4();
+      await pool.execute(
+        `INSERT INTO leader_schedule_permissions (id, user_id, leader_id, can_view_all)
+         VALUES (?, ?, ?, ?)`,
+        [id, perm.user_id, perm.leader_id || null, perm.can_view_all ? 1 : 0]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Batch create leader schedule permissions error:', error);
+    res.status(500).json({ error: '批量创建领导日程权限失败' });
+  }
+});
+
+// 删除用户的所有领导日程权限
+app.delete('/api/leader-schedule-permissions/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    await pool.execute('DELETE FROM leader_schedule_permissions WHERE user_id = ?', [userId]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete leader schedule permissions error:', error);
+    res.status(500).json({ error: '删除领导日程权限失败' });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {

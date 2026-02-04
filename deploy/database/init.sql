@@ -573,6 +573,15 @@ INSERT INTO `office_supplies` (`id`, `name`, `specification`, `unit`, `current_s
 (UUID(), '笔记本', 'A5软皮', '本', 30, 10, 1),
 (UUID(), '胶带', '透明48mm', '卷', 40, 10, 1);
 
+-- ==================== 初始化默认审批模板 ====================
+INSERT INTO `approval_templates` (`id`, `code`, `name`, `description`, `category`, `icon`, `business_type`, `is_active`) VALUES
+(UUID(), 'PROC_LEAVE', '请假申请', '员工请假申请流程', '外出管理', '🏖️', 'leave', 1),
+(UUID(), 'PROC_OUT', '外出申请', '员工临时外出申请流程', '外出管理', '🚶', 'out', 1),
+(UUID(), 'PROC_TRIP', '出差申请', '员工出差申请流程', '外出管理', '🚗', 'business_trip', 1),
+(UUID(), 'PROC_REQ', '物品领用', '办公用品领用申请流程', '办公用品', '📦', 'supply_requisition', 1),
+(UUID(), 'PROC_PURCHASE', '办公采购', '处室办公用品采购申请流程', '办公用品', '🛒', 'supply_purchase', 1),
+(UUID(), 'PROC_GOV', '政府采购申请', '政府采购申请流程', '采购管理', '💰', 'purchase_request', 1);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ==================== 登录验证存储过程 ====================
