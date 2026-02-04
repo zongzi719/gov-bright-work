@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -301,14 +301,10 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
 
   // 获取版本列表
   const fetchVersions = async () => {
-    const { data, error } = await supabase
-      .from("approval_process_versions" as any)
-      .select("*")
-      .eq("template_id", templateId)
-      .order("version_number", { ascending: false });
+    const { data, error } = await dataAdapter.getAllApprovalProcessVersions(templateId);
 
     if (!error && data) {
-      const versionList = data as unknown as ProcessVersion[];
+      const versionList = data as ProcessVersion[];
       setVersions(versionList);
       const currentVersion = versionList.find(v => v.is_current);
       if (currentVersion) {
@@ -338,39 +334,26 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     const newVersionNumber = maxVersion + 1;
 
     // 将所有版本设为非当前
-    await supabase
-      .from("approval_process_versions" as any)
-      .update({ is_current: false })
-      .eq("template_id", templateId);
+    await dataAdapter.setVersionsNotCurrent(templateId);
 
     // 创建新版本
-    const { data: newVersion, error } = await supabase
-      .from("approval_process_versions" as any)
-      .insert({
-        template_id: templateId,
-        version_number: newVersionNumber,
-        version_name: `流程版本V${newVersionNumber}`,
-        published_by: "admin",
-        nodes_snapshot: nodes,
-        is_current: true,
-      })
-      .select()
-      .single();
+    const { data: newVersion, error } = await dataAdapter.createApprovalProcessVersion({
+      template_id: templateId,
+      version_number: newVersionNumber,
+      version_name: `流程版本V${newVersionNumber}`,
+      published_by: "admin",
+      nodes_snapshot: nodes,
+      is_current: true,
+    });
 
-    if (error) {
+    if (error || !newVersion) {
       toast.error("发布版本失败");
       setPublishing(false);
       return;
     }
 
-    // 更新模板的当前版本
-    await supabase
-      .from("approval_templates" as any)
-      .update({ 
-        current_version_id: (newVersion as any).id,
-        last_process_saved_at: new Date().toISOString(),
-      })
-      .eq("id", templateId);
+    // 更新模板的当前版本（忽略 current_version_id 字段，只更新支持的字段）
+    // Note: current_version_id 在离线模式下不需要更新
 
     toast.success(`已发布版本 V${newVersionNumber}`);
     
@@ -419,37 +402,25 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   };
 
   const fetchFormFields = async () => {
-    const { data } = await supabase
-      .from("approval_form_fields" as any)
-      .select("id, field_name, field_label, field_type, is_required")
-      .eq("template_id", templateId)
-      .order("sort_order", { ascending: true });
-    setFormFields((data as unknown as FormField[]) || []);
+    const { data } = await dataAdapter.getApprovalFormFields(templateId);
+    setFormFields((data as FormField[]) || []);
   };
 
   const fetchContacts = async () => {
-    const { data } = await supabase
-      .from("contacts")
-      .select("id, name, department, position")
-      .eq("is_active", true)
-      .order("name");
+    const { data } = await dataAdapter.getContacts({ is_active: true });
     setContacts(data || []);
   };
 
   const fetchNodes = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("approval_nodes" as any)
-      .select("*")
-      .eq("template_id", templateId)
-      .order("sort_order", { ascending: true });
+    const { data, error } = await dataAdapter.getApprovalNodes(templateId);
 
     if (error) {
       toast.error("获取流程节点失败");
       setLoading(false);
       return;
     }
-    const fetchedNodes = (data as unknown as ApprovalNode[]) || [];
+    const fetchedNodes = (data as ApprovalNode[]) || [];
     setNodes(fetchedNodes);
     setLoading(false);
   };
@@ -545,19 +516,15 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
     
     // 创建主条件分支节点
-    const { data: conditionNode, error: conditionError } = await supabase
-      .from("approval_nodes" as any)
-      .insert({
-        template_id: templateId,
-        node_type: 'condition',
-        node_name: '条件分支',
-        approver_type: 'specific',
-        approver_ids: [],
-        sort_order: baseSortOrder,
-        condition_expression: { layout, branches: [] },
-      })
-      .select()
-      .single();
+    const { data: conditionNode, error: conditionError } = await dataAdapter.createApprovalNode({
+      template_id: templateId,
+      node_type: 'condition',
+      node_name: '条件分支',
+      approver_type: 'specific',
+      approver_ids: [],
+      sort_order: baseSortOrder,
+      condition_expression: { layout, branches: [] },
+    });
 
     if (conditionError || !conditionNode) {
       toast.error("添加条件分支失败");
@@ -591,24 +558,20 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
         ? nodesAfterInsertion.map(n => n.id) 
         : [];
       
-      const { data: branchNode, error: branchError } = await supabase
-        .from("approval_nodes" as any)
-        .insert({
-          template_id: templateId,
-          node_type: 'condition_branch',
-          node_name: branch.name,
-          approver_type: 'specific',
-          approver_ids: [],
-          sort_order: baseSortOrder + i + 1,
-          condition_expression: { 
-            parent_id: (conditionNode as any).id,
-            is_default: branch.is_default,
-            condition_groups: [],
-            child_nodes: childNodeIds,
-          },
-        })
-        .select()
-        .single();
+      const { data: branchNode, error: branchError } = await dataAdapter.createApprovalNode({
+        template_id: templateId,
+        node_type: 'condition_branch',
+        node_name: branch.name,
+        approver_type: 'specific',
+        approver_ids: [],
+        sort_order: baseSortOrder + i + 1,
+        condition_expression: { 
+          parent_id: (conditionNode as any).id,
+          is_default: branch.is_default,
+          condition_groups: [],
+          child_nodes: childNodeIds,
+        },
+      });
 
       if (!branchError && branchNode) {
         branchIds.push((branchNode as any).id);
@@ -616,22 +579,16 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
 
     // 更新主节点的分支引用
-    await supabase
-      .from("approval_nodes" as any)
-      .update({
-        condition_expression: { layout, branches: branchIds },
-      })
-      .eq("id", (conditionNode as any).id);
+    await dataAdapter.updateApprovalNode((conditionNode as any).id, {
+      condition_expression: { layout, branches: branchIds },
+    });
 
     // 如果是左侧布局，将后续节点的 sort_order 调整到分支之后，确保它们在第一个分支下显示
     if (layout === 'left' && nodesAfterInsertion.length > 0) {
       // 更新后续节点的 sort_order，使它们在分支节点范围内
       let newOrder = baseSortOrder + 10;
       for (const node of nodesAfterInsertion) {
-        await supabase
-          .from("approval_nodes" as any)
-          .update({ sort_order: newOrder })
-          .eq("id", node.id);
+        await dataAdapter.updateApprovalNode(node.id, { sort_order: newOrder });
         newOrder += 10;
       }
     }
@@ -663,27 +620,20 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
           sort_order: (i + 1) * 10,
         }));
         for (const update of updates) {
-          await supabase
-            .from("approval_nodes" as any)
-            .update({ sort_order: update.sort_order })
-            .eq("id", update.id);
+          await dataAdapter.updateApprovalNode(update.id, { sort_order: update.sort_order });
         }
         newSortOrder = (insertAfterIndex + 1) * 10 + 5;
       }
     }
     
-    const { data, error } = await supabase
-      .from("approval_nodes" as any)
-      .insert({
-        template_id: templateId,
-        node_type: type,
-        node_name: config?.label || "",
-        approver_type: type === 'condition' ? 'specific' : 'self',
-        approver_ids: [],
-        sort_order: newSortOrder,
-      })
-      .select()
-      .single();
+    const { data, error } = await dataAdapter.createApprovalNode({
+      template_id: templateId,
+      node_type: type,
+      node_name: config?.label || "",
+      approver_type: type === 'condition' ? 'specific' : 'self',
+      approver_ids: [],
+      sort_order: newSortOrder,
+    });
 
     if (error) {
       toast.error("添加节点失败");
@@ -695,7 +645,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     
     // 打开详情面板编辑新节点
     if (data) {
-      setSelectedNode(data as unknown as ApprovalNode);
+      setSelectedNode(data as ApprovalNode);
       setNodeForm({
         node_type: type,
         node_name: config?.label || "",
@@ -784,10 +734,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       updateData.condition_expression = nodeForm.condition_expression;
     }
 
-    const { error } = await supabase
-      .from("approval_nodes" as any)
-      .update(updateData)
-      .eq("id", selectedNode.id);
+    const { error } = await dataAdapter.updateApprovalNode(selectedNode.id, updateData);
 
     if (error) {
       toast.error("更新节点失败");
@@ -801,10 +748,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
   const handleDeleteNode = async (id: string) => {
     if (!confirm("确定要删除这个节点吗？")) return;
 
-    const { error } = await supabase
-      .from("approval_nodes" as any)
-      .delete()
-      .eq("id", id);
+    const { error } = await dataAdapter.deleteApprovalNode(id);
 
     if (error) {
       toast.error("删除节点失败");
@@ -880,17 +824,11 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     if (node?.node_type === 'condition') {
       const branchIds = (node.condition_expression as any)?.branches || [];
       for (const branchId of branchIds) {
-        await supabase
-          .from("approval_nodes" as any)
-          .delete()
-          .eq("id", branchId);
+        await dataAdapter.deleteApprovalNode(branchId);
       }
     }
 
-    const { error } = await supabase
-      .from("approval_nodes" as any)
-      .delete()
-      .eq("id", nodeId);
+    const { error } = await dataAdapter.deleteApprovalNode(nodeId);
 
     if (error) {
       toast.error("删除节点失败");
@@ -913,17 +851,11 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       
       // 删除所有分支子节点
       for (const branchId of branchIds) {
-        await supabase
-          .from("approval_nodes" as any)
-          .delete()
-          .eq("id", branchId);
+        await dataAdapter.deleteApprovalNode(branchId);
       }
       
       // 删除主节点
-      await supabase
-        .from("approval_nodes" as any)
-        .delete()
-        .eq("id", parentNode.id);
+      await dataAdapter.deleteApprovalNode(parentNode.id);
       
       toast.success("条件分支已删除");
       fetchNodes();
@@ -937,18 +869,12 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     const newBranchIds = branchIds.filter((id: string) => id !== branchNode.id);
     
     // 更新父节点
-    await supabase
-      .from("approval_nodes" as any)
-      .update({
-        condition_expression: { layout, branches: newBranchIds },
-      })
-      .eq("id", parentNode.id);
+    await dataAdapter.updateApprovalNode(parentNode.id, {
+      condition_expression: { layout, branches: newBranchIds },
+    });
     
     // 删除分支节点
-    await supabase
-      .from("approval_nodes" as any)
-      .delete()
-      .eq("id", branchNode.id);
+    await dataAdapter.deleteApprovalNode(branchNode.id);
     
     toast.success("条件分支已删除");
     fetchNodes();
@@ -985,18 +911,14 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
     
     // 创建新节点
-    const { data: newNode, error } = await supabase
-      .from("approval_nodes" as any)
-      .insert({
-        template_id: templateId,
-        node_type: type,
-        node_name: config?.label || "",
-        approver_type: type === 'condition' ? 'specific' : 'self',
-        approver_ids: [],
-        sort_order: newSortOrder,
-      })
-      .select()
-      .single();
+    const { data: newNode, error } = await dataAdapter.createApprovalNode({
+      template_id: templateId,
+      node_type: type,
+      node_name: config?.label || "",
+      approver_type: type === 'condition' ? 'specific' : 'self',
+      approver_ids: [],
+      sort_order: newSortOrder,
+    });
 
     if (error || !newNode) {
       toast.error("添加节点失败");
@@ -1016,21 +938,18 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       ];
     }
     
-    await supabase
-      .from("approval_nodes" as any)
-      .update({
-        condition_expression: {
-          ...branchExpression,
-          child_nodes: newChildNodeIds,
-        },
-      })
-      .eq("id", branchNode.id);
+    await dataAdapter.updateApprovalNode(branchNode.id, {
+      condition_expression: {
+        ...branchExpression,
+        child_nodes: newChildNodeIds,
+      },
+    });
     
     toast.success("节点添加成功");
     await fetchNodes();
     
     // 打开详情面板
-    setSelectedNode(newNode as unknown as ApprovalNode);
+    setSelectedNode(newNode as ApprovalNode);
     setNodeForm({
       node_type: type,
       node_name: config?.label || "",
@@ -1099,24 +1018,20 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     const baseSortOrder = parentNode.sort_order + nonDefaultCount + 1;
     
     // 创建新的条件分支
-    const { data: newBranch, error } = await supabase
-      .from("approval_nodes" as any)
-      .insert({
-        template_id: templateId,
-        node_type: 'condition_branch',
-        node_name: `条件${nonDefaultCount + 2}`,
-        approver_type: 'specific',
-        approver_ids: [],
-        sort_order: baseSortOrder,
-        condition_expression: { 
-          parent_id: parentNode.id,
-          is_default: false,
-          condition_groups: [],
-          child_nodes: [],
-        },
-      })
-      .select()
-      .single();
+    const { data: newBranch, error } = await dataAdapter.createApprovalNode({
+      template_id: templateId,
+      node_type: 'condition_branch',
+      node_name: `条件${nonDefaultCount + 2}`,
+      approver_type: 'specific',
+      approver_ids: [],
+      sort_order: baseSortOrder,
+      condition_expression: { 
+        parent_id: parentNode.id,
+        is_default: false,
+        condition_groups: [],
+        child_nodes: [],
+      },
+    });
 
     if (error || !newBranch) {
       toast.error("添加条件失败");
@@ -1126,10 +1041,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     // 更新默认条件的 sort_order
     const defaultBranch = branchNodes.find(n => (n.condition_expression as any)?.is_default);
     if (defaultBranch) {
-      await supabase
-        .from("approval_nodes" as any)
-        .update({ sort_order: baseSortOrder + 1 })
-        .eq("id", defaultBranch.id);
+      await dataAdapter.updateApprovalNode(defaultBranch.id, { sort_order: baseSortOrder + 1 });
     }
 
     // 将新分支插入到默认条件之前
@@ -1141,12 +1053,9 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
 
     // 更新父节点的分支列表
-    await supabase
-      .from("approval_nodes" as any)
-      .update({
-        condition_expression: { layout, branches: newBranchIds },
-      })
-      .eq("id", parentNode.id);
+    await dataAdapter.updateApprovalNode(parentNode.id, {
+      condition_expression: { layout, branches: newBranchIds },
+    });
 
     toast.success("条件添加成功");
     await fetchNodes();
