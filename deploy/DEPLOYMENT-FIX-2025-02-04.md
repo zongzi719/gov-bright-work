@@ -737,12 +737,14 @@ cp -r dist/* /opt/gov-platform/web/
 ### 根因
 1. 列表显示的状态来自 `absence_records.status`，但审批完成时只更新了 `approval_instances.status`
 2. 后端 API 返回记录时没有联查审批实例的真实状态
+3. **MariaDB 兼容性问题**：UUID 比较需要显式 CAST 为 CHAR 类型
 
-### 修复内容
+### 修复内容（v2 - 2025-02-05）
 1. **后端修复**：`deploy/api/src/index.js` 
    - `GET /api/absence-records` 接口增加 LEFT JOIN 查询 `approval_instances` 表
+   - **关键修复**：使用 `CAST(ai.business_id AS CHAR) = CAST(ar.id AS CHAR)` 确保 UUID 比较正确
    - 返回时使用审批实例的真实状态覆盖业务表状态
-   - 同时处理退回状态的显示逻辑
+   - 添加调试日志便于排查
 2. **后端修复**：`PUT /api/absence-records/:id` 接口的 `approved_at` 日期格式转换
 
 ### 部署步骤
@@ -754,12 +756,16 @@ cp deploy/api/src/index.js /opt/gov-platform/api/src/
 pm2 restart gov-api
 # 或
 systemctl restart gov-api
+
+# 3. 查看日志确认 JOIN 生效
+tail -f /opt/gov-platform/logs/api.log | grep "approval_status"
 ```
 
 ### 验证
 1. 提交新的请假申请
 2. 所有审批人依次审批通过
 3. 返回列表页面，状态应显示"已通过"而非"待审批"
+4. 查看后端日志确认 `approval_status` 字段有值
 
 ---
 
