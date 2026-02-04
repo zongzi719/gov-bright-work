@@ -1818,32 +1818,210 @@ app.put('/api/approval-records/:id', async (req, res) => {
 
 app.get('/api/approval-process-versions', async (req, res) => {
   try {
-    const { template_id, is_current } = req.query;
+    const { template_id, is_current, all } = req.query;
     
-    let sql = 'SELECT id, version_number, nodes_snapshot FROM approval_process_versions WHERE template_id = ?';
+    let sql = 'SELECT * FROM approval_process_versions WHERE template_id = ?';
     const params = [template_id];
     
-    if (is_current !== undefined) {
+    if (!all && is_current !== undefined) {
       sql += ' AND is_current = ?';
       params.push(is_current === 'true' ? 1 : 0);
     }
     
-    sql += ' ORDER BY version_number DESC LIMIT 1';
+    sql += ' ORDER BY version_number DESC';
+    
+    if (!all) {
+      sql += ' LIMIT 1';
+    }
     
     const [rows] = await pool.execute(sql, params);
     
-    if (rows.length > 0) {
-      const row = rows[0];
-      res.json({
-        ...row,
-        nodes_snapshot: typeof row.nodes_snapshot === 'string' ? JSON.parse(row.nodes_snapshot) : row.nodes_snapshot
-      });
-    } else {
+    const result = rows.map(row => ({
+      ...row,
+      nodes_snapshot: typeof row.nodes_snapshot === 'string' ? JSON.parse(row.nodes_snapshot) : row.nodes_snapshot
+    }));
+    
+    if (!all && result.length > 0) {
+      res.json(result[0]);
+    } else if (!all) {
       res.json(null);
+    } else {
+      res.json(result);
     }
   } catch (error) {
     console.error('Get approval process versions error:', error);
     res.status(500).json({ error: '获取审批流程版本失败' });
+  }
+});
+
+app.post('/api/approval-process-versions', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { template_id, version_number, version_name, nodes_snapshot, is_current, published_by } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO approval_process_versions (id, template_id, version_number, version_name, nodes_snapshot, is_current, published_by, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [id, template_id, version_number, version_name, JSON.stringify(nodes_snapshot), is_current ? 1 : 0, published_by || 'admin']
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create approval process version error:', error);
+    res.status(500).json({ error: '创建审批流程版本失败' });
+  }
+});
+
+app.put('/api/approval-process-versions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_current } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (is_current !== undefined) {
+      updates.push('is_current = ?');
+      params.push(is_current ? 1 : 0);
+    }
+    
+    if (updates.length === 0) {
+      return res.json({ success: true });
+    }
+    
+    params.push(id);
+    await pool.execute(`UPDATE approval_process_versions SET ${updates.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update approval process version error:', error);
+    res.status(500).json({ error: '更新审批流程版本失败' });
+  }
+});
+
+app.put('/api/approval-process-versions/unset-current/:templateId', async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    await pool.execute('UPDATE approval_process_versions SET is_current = 0 WHERE template_id = ?', [templateId]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Unset current versions error:', error);
+    res.status(500).json({ error: '取消当前版本失败' });
+  }
+});
+
+// ==================== 审批节点 ====================
+
+app.get('/api/approval-nodes', async (req, res) => {
+  try {
+    const { template_id } = req.query;
+    
+    const [rows] = await pool.execute(
+      'SELECT * FROM approval_nodes WHERE template_id = ? ORDER BY sort_order',
+      [template_id]
+    );
+    
+    // 解析 JSON 字段
+    const result = rows.map(row => ({
+      ...row,
+      approver_ids: typeof row.approver_ids === 'string' ? JSON.parse(row.approver_ids) : row.approver_ids,
+      condition_expression: typeof row.condition_expression === 'string' ? JSON.parse(row.condition_expression) : row.condition_expression,
+      field_permissions: typeof row.field_permissions === 'string' ? JSON.parse(row.field_permissions) : row.field_permissions,
+    }));
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Get approval nodes error:', error);
+    res.status(500).json({ error: '获取审批节点失败' });
+  }
+});
+
+app.post('/api/approval-nodes', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { 
+      template_id, node_type, node_name, approver_type, approver_ids, 
+      sort_order, condition_expression, field_permissions, approval_mode 
+    } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO approval_nodes (id, template_id, node_type, node_name, approver_type, approver_ids, sort_order, condition_expression, field_permissions, approval_mode)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, 
+        template_id, 
+        node_type, 
+        node_name, 
+        approver_type || 'self', 
+        JSON.stringify(approver_ids || []), 
+        sort_order || 0, 
+        condition_expression ? JSON.stringify(condition_expression) : null,
+        field_permissions ? JSON.stringify(field_permissions) : null,
+        approval_mode || 'countersign'
+      ]
+    );
+    
+    // 返回创建的节点
+    const [rows] = await pool.execute('SELECT * FROM approval_nodes WHERE id = ?', [id]);
+    const row = rows[0];
+    
+    res.json({
+      ...row,
+      approver_ids: typeof row.approver_ids === 'string' ? JSON.parse(row.approver_ids) : row.approver_ids,
+      condition_expression: typeof row.condition_expression === 'string' ? JSON.parse(row.condition_expression) : row.condition_expression,
+      field_permissions: typeof row.field_permissions === 'string' ? JSON.parse(row.field_permissions) : row.field_permissions,
+    });
+  } catch (error) {
+    console.error('Create approval node error:', error);
+    res.status(500).json({ error: '创建审批节点失败' });
+  }
+});
+
+app.put('/api/approval-nodes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const setClauses = [];
+    const params = [];
+    
+    Object.keys(updates).forEach(key => {
+      if (['approver_ids', 'condition_expression', 'field_permissions'].includes(key)) {
+        setClauses.push(`${key} = ?`);
+        params.push(updates[key] ? JSON.stringify(updates[key]) : null);
+      } else {
+        setClauses.push(`${key} = ?`);
+        params.push(updates[key]);
+      }
+    });
+    
+    setClauses.push('updated_at = NOW()');
+    params.push(id);
+    
+    await pool.execute(`UPDATE approval_nodes SET ${setClauses.join(', ')} WHERE id = ?`, params);
+    
+    // 返回更新后的节点
+    const [rows] = await pool.execute('SELECT * FROM approval_nodes WHERE id = ?', [id]);
+    const row = rows[0];
+    
+    res.json({
+      ...row,
+      approver_ids: typeof row.approver_ids === 'string' ? JSON.parse(row.approver_ids) : row.approver_ids,
+      condition_expression: typeof row.condition_expression === 'string' ? JSON.parse(row.condition_expression) : row.condition_expression,
+      field_permissions: typeof row.field_permissions === 'string' ? JSON.parse(row.field_permissions) : row.field_permissions,
+    });
+  } catch (error) {
+    console.error('Update approval node error:', error);
+    res.status(500).json({ error: '更新审批节点失败' });
+  }
+});
+
+app.delete('/api/approval-nodes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM approval_nodes WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete approval node error:', error);
+    res.status(500).json({ error: '删除审批节点失败' });
   }
 });
 

@@ -1429,6 +1429,154 @@ export async function getApprovalProcessVersions(templateId: string, isCurrent?:
   return { data, error };
 }
 
+// ==================== Approval Nodes (审批节点) ====================
+
+export async function getApprovalNodes(templateId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/approval-nodes?template_id=${templateId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_nodes")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("sort_order", { ascending: true });
+  return { data, error };
+}
+
+export async function createApprovalNode(node: {
+  template_id: string;
+  node_type: string;
+  node_name: string;
+  approver_type?: string;
+  approver_ids?: string[] | null;
+  sort_order?: number;
+  condition_expression?: any;
+  field_permissions?: any;
+  approval_mode?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/approval-nodes', {
+      method: 'POST',
+      body: JSON.stringify(node),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_nodes")
+    .insert(node as any)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function updateApprovalNode(id: string, updates: {
+  node_name?: string;
+  node_type?: string;
+  approver_type?: string;
+  approver_ids?: string[] | null;
+  sort_order?: number;
+  condition_expression?: any;
+  field_permissions?: any;
+  approval_mode?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-nodes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_nodes")
+    .update(updates as any)
+    .eq("id", id)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function deleteApprovalNode(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-nodes/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_nodes")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function getAllApprovalProcessVersions(templateId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/approval-process-versions?template_id=${templateId}&all=true`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_process_versions")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("version_number", { ascending: false });
+  return { data, error };
+}
+
+export async function createApprovalProcessVersion(version: {
+  template_id: string;
+  version_number: number;
+  version_name: string;
+  nodes_snapshot: any;
+  is_current?: boolean;
+  published_by?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/approval-process-versions', {
+      method: 'POST',
+      body: JSON.stringify(version),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_process_versions")
+    .insert(version as any)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function updateApprovalProcessVersion(id: string, updates: {
+  is_current?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-process-versions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_process_versions")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function setVersionsNotCurrent(templateId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-process-versions/unset-current/${templateId}`, {
+      method: 'PUT',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_process_versions")
+    .update({ is_current: false })
+    .eq("template_id", templateId);
+  return { data: null, error };
+}
+
 // ==================== Banners ====================
 
 export async function getBanners() {
@@ -1870,6 +2018,15 @@ export const dataAdapter = {
   createApprovalRecord,
   updateApprovalRecord,
   getApprovalProcessVersions,
+  // Approval Nodes
+  getApprovalNodes,
+  createApprovalNode,
+  updateApprovalNode,
+  deleteApprovalNode,
+  getAllApprovalProcessVersions,
+  createApprovalProcessVersion,
+  updateApprovalProcessVersion,
+  setVersionsNotCurrent,
   // Leave Balances
   getLeaveBalance,
   // Leader Schedules
