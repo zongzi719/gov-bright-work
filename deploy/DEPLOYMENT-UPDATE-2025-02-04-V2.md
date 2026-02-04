@@ -47,13 +47,28 @@ curl http://localhost:3001/api/health
 
 ## 🗄️ 第二步：初始化审批模板数据
 
-### 2.1 连接数据库
+### 2.1 连接数据库（必须指定 UTF-8 编码）
 
 ```bash
-mysql -u root -p gov_platform
+# ⚠️ 关键：必须使用 --default-character-set=utf8mb4 参数
+mysql -u root -p --default-character-set=utf8mb4 gov_platform
 ```
 
-### 2.2 执行以下 SQL 语句
+### 2.2 设置会话编码（重要！）
+
+连接后，先执行以下命令确保编码正确：
+
+```sql
+-- 设置会话编码为 UTF-8
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
+-- 验证编码设置
+SHOW VARIABLES LIKE 'character%';
+-- 应该看到 utf8mb4 相关的值
+```
+
+### 2.3 执行以下 SQL 语句
 
 ```sql
 -- ============================================
