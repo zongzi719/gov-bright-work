@@ -117,6 +117,7 @@ interface Contact {
   security_level: SecurityLevel;
   is_leader: boolean;
   first_work_date: string | null;
+  account: string | null;
   organization?: Organization;
 }
 
@@ -162,6 +163,7 @@ const ContactManagement = () => {
     security_level: "公开" as SecurityLevel,
     is_leader: false,
     first_work_date: "",
+    account: "",
   });
 
   // 导入对话框
@@ -299,6 +301,7 @@ const ContactManagement = () => {
       security_level: contactFormData.security_level,
       is_leader: contactFormData.is_leader,
       first_work_date: contactFormData.first_work_date || null,
+      account: contactFormData.account || null,
     };
 
     if (editingContact) {
@@ -341,6 +344,7 @@ const ContactManagement = () => {
       security_level: contact.security_level || "公开",
       is_leader: contact.is_leader || false,
       first_work_date: contact.first_work_date || "",
+      account: contact.account || "",
     });
     setContactDialogOpen(true);
   };
@@ -376,6 +380,7 @@ const ContactManagement = () => {
       security_level: "公开",
       is_leader: false,
       first_work_date: "",
+      account: "",
     });
     setContactDialogOpen(false);
   };
@@ -679,6 +684,16 @@ const ContactManagement = () => {
                             onChange={(e) =>
                               setContactFormData({ ...contactFormData, phone: e.target.value })
                             }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>登录账号</Label>
+                          <Input
+                            value={contactFormData.account}
+                            onChange={(e) =>
+                              setContactFormData({ ...contactFormData, account: e.target.value })
+                            }
+                            placeholder="用于系统登录的账号"
                           />
                         </div>
                         <div className="space-y-2">

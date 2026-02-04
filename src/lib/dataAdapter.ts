@@ -750,6 +750,7 @@ export async function createContact(contact: {
   security_level?: string;
   is_leader?: boolean;
   first_work_date?: string | null;
+  account?: string | null;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ id: string }>('/api/contacts', {
@@ -783,6 +784,7 @@ export async function updateContact(id: string, updates: {
   security_level?: string;
   is_leader?: boolean;
   first_work_date?: string | null;
+  account?: string | null;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ success: boolean }>(`/api/contacts/${id}`, {
