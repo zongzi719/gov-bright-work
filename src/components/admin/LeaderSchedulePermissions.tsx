@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -97,15 +97,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   };
 
   const fetchPermissions = async () => {
-    const { data, error } = await supabase
-      .from("leader_schedule_permissions")
-      .select(
-        `
-        *,
-        leader:contacts!leader_id(name)
-      `,
-      )
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getAllLeaderSchedulePermissions();
 
     if (error) {
       console.error("获取权限列表失败:", error);
@@ -114,22 +106,22 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
 
     // 获取用户信息 - 从contacts表获取
     if (data && data.length > 0) {
-      const userIds = [...new Set(data.map((p) => p.user_id))];
-      const { data: contactsData } = await supabase.from("contacts").select("id, name, mobile").in("id", userIds);
+      const userIds = [...new Set(data.map((p: any) => p.user_id))];
+      const { data: contactsData } = await dataAdapter.getContactsByIds(userIds as string[]);
 
-      const contactMap = new Map(contactsData?.map((c) => [c.id, c]) || []);
-      const enrichedData = data.map((p) => ({
+      const contactMap = new Map(contactsData?.map((c: any) => [c.id, c]) || []);
+      const enrichedData = data.map((p: any) => ({
         ...p,
         profile: {
-          display_name: contactMap.get(p.user_id)?.name || null,
-          email: contactMap.get(p.user_id)?.mobile || null,
+          display_name: (contactMap.get(p.user_id) as any)?.name || null,
+          email: (contactMap.get(p.user_id) as any)?.mobile || null,
         },
       }));
       setPermissions(enrichedData);
 
       // 按用户分组
       const grouped = new Map<string, GroupedPermission>();
-      enrichedData.forEach((p) => {
+      enrichedData.forEach((p: any) => {
         if (!grouped.has(p.user_id)) {
           grouped.set(p.user_id, {
             user_id: p.user_id,
@@ -157,11 +149,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   };
 
   const fetchContactUsers = async () => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, name, position, department, mobile")
-      .eq("is_active", true)
-      .order("name");
+    const { data, error } = await dataAdapter.getContacts({ is_active: true });
 
     if (error) {
       console.error("获取通讯录用户列表失败:", error);
@@ -183,11 +171,11 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
 
     try {
       // 先删除该用户现有的所有权限
-      await supabase.from("leader_schedule_permissions").delete().eq("user_id", formData.contact_id);
+      await dataAdapter.deleteLeaderSchedulePermissionsByUser(formData.contact_id);
 
       if (formData.can_view_all) {
         // 如果是查看全部，只插入一条记录
-        const { error } = await supabase.from("leader_schedule_permissions").insert({
+        const { error } = await dataAdapter.createLeaderSchedulePermission({
           user_id: formData.contact_id,
           leader_id: null,
           can_view_all: true,
@@ -201,7 +189,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
           can_view_all: false,
         }));
 
-        const { error } = await supabase.from("leader_schedule_permissions").insert(permissionRecords);
+        const { error } = await dataAdapter.createLeaderSchedulePermissions(permissionRecords);
         if (error) throw error;
       }
 
@@ -218,7 +206,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("确定要删除该用户的所有权限吗？")) return;
 
-    const { error } = await supabase.from("leader_schedule_permissions").delete().eq("user_id", userId);
+    const { error } = await dataAdapter.deleteLeaderSchedulePermissionsByUser(userId);
 
     if (error) {
       toast.error("删除失败");
@@ -294,7 +282,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                 添加授权
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>{editMode ? "编辑日程查看权限" : "添加日程查看权限"}</DialogTitle>
               </DialogHeader>

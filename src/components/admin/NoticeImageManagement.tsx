@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { supabase } from "@/integrations/supabase/client";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -49,10 +51,7 @@ const NoticeImageManagement = () => {
   }, []);
 
   const fetchImages = async () => {
-    const { data, error } = await supabase
-      .from("notice_images")
-      .select("*")
-      .order("sort_order", { ascending: true });
+    const { data, error } = await dataAdapter.getAllNoticeImages();
 
     if (error) {
       toast.error("获取图片列表失败");
@@ -82,6 +81,14 @@ const NoticeImageManagement = () => {
     setUploading(true);
 
     try {
+      // 离线模式下使用本地路径
+      if (isOfflineMode()) {
+        // 离线模式暂不支持文件上传，提示用户输入URL
+        toast.info("离线模式请直接输入图片URL");
+        setUploading(false);
+        return;
+      }
+
       const fileExt = file.name.split(".").pop();
       const fileName = `notice-${Date.now()}.${fileExt}`;
       const filePath = `notice-images/${fileName}`;
@@ -114,15 +121,12 @@ const NoticeImageManagement = () => {
     e.preventDefault();
 
     if (!formData.image_url) {
-      toast.error("请上传图片");
+      toast.error("请上传图片或输入图片URL");
       return;
     }
 
     if (editingImage) {
-      const { error } = await supabase
-        .from("notice_images")
-        .update(formData)
-        .eq("id", editingImage.id);
+      const { error } = await dataAdapter.updateNoticeImage(editingImage.id, formData);
 
       if (error) {
         toast.error("更新失败");
@@ -130,7 +134,7 @@ const NoticeImageManagement = () => {
       }
       toast.success("更新成功");
     } else {
-      const { error } = await supabase.from("notice_images").insert(formData);
+      const { error } = await dataAdapter.createNoticeImage(formData);
 
       if (error) {
         toast.error("添加失败");
@@ -158,7 +162,7 @@ const NoticeImageManagement = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除这张图片吗？")) return;
 
-    const { error } = await supabase.from("notice_images").delete().eq("id", id);
+    const { error } = await dataAdapter.deleteNoticeImage(id);
 
     if (error) {
       toast.error("删除失败");
@@ -193,7 +197,7 @@ const NoticeImageManagement = () => {
               添加图片
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>{editingImage ? "编辑图片" : "添加图片"}</DialogTitle>
             </DialogHeader>
@@ -239,6 +243,13 @@ const NoticeImageManagement = () => {
                         disabled={uploading}
                       />
                     </label>
+                  )}
+                  {isOfflineMode() && !formData.image_url && (
+                    <Input
+                      placeholder="离线模式：请输入图片URL，如 /uploads/image.jpg"
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                    />
                   )}
                 </div>
               </div>

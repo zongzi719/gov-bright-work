@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { usePagination } from "@/hooks/use-pagination";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -89,16 +89,9 @@ const NoticeManagement = () => {
   };
 
   const fetchNotices = async () => {
-    let query = supabase
-      .from("notices")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (filterDepartment && filterDepartment !== "all") {
-      query = query.eq("department", filterDepartment);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await dataAdapter.getAllNotices(
+      filterDepartment && filterDepartment !== "all" ? { department: filterDepartment } : undefined
+    );
 
     if (error) {
       toast.error("获取通知公告失败");
@@ -109,10 +102,7 @@ const NoticeManagement = () => {
   };
 
   const fetchOrganizations = async () => {
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("id, name, parent_id, level")
-      .order("sort_order", { ascending: true });
+    const { data, error } = await dataAdapter.getAllOrganizations();
 
     if (error) {
       toast.error("获取单位列表失败");
@@ -126,10 +116,7 @@ const NoticeManagement = () => {
     e.preventDefault();
 
     if (editingNotice) {
-      const { error } = await supabase
-        .from("notices")
-        .update(formData)
-        .eq("id", editingNotice.id);
+      const { error } = await dataAdapter.updateNotice(editingNotice.id, formData);
 
       if (error) {
         toast.error("更新失败");
@@ -137,7 +124,7 @@ const NoticeManagement = () => {
       }
       toast.success("更新成功");
     } else {
-      const { error } = await supabase.from("notices").insert(formData);
+      const { error } = await dataAdapter.createNotice(formData);
 
       if (error) {
         toast.error("添加失败");
@@ -169,7 +156,7 @@ const NoticeManagement = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除这条通知吗？")) return;
 
-    const { error } = await supabase.from("notices").delete().eq("id", id);
+    const { error } = await dataAdapter.deleteNotice(id);
 
     if (error) {
       toast.error("删除失败");
@@ -250,7 +237,7 @@ const NoticeManagement = () => {
               添加通知
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto]">
+          <DialogContent className="max-w-3xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto]" aria-describedby={undefined}>
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>{editingNotice ? "编辑通知" : "添加通知"}</DialogTitle>
             </DialogHeader>

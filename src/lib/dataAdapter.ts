@@ -1444,7 +1444,7 @@ export async function getBanners() {
   return { data, error };
 }
 
-// ==================== Notice Images ====================
+// ==================== Notice Images (Admin CRUD) ====================
 
 export async function getNoticeImages() {
   if (isOfflineMode()) {
@@ -1459,7 +1459,74 @@ export async function getNoticeImages() {
   return { data, error };
 }
 
-// ==================== Notices ====================
+export async function getAllNoticeImages() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/notice-images?all=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("notice_images")
+    .select("*")
+    .order("sort_order");
+  return { data, error };
+}
+
+export async function createNoticeImage(image: {
+  image_url: string;
+  title?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/notice-images', {
+      method: 'POST',
+      body: JSON.stringify(image),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("notice_images")
+    .insert(image)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateNoticeImage(id: string, updates: {
+  image_url?: string;
+  title?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/notice-images/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("notice_images")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function deleteNoticeImage(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/notice-images/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("notice_images")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// ==================== Notices (Admin CRUD) ====================
 
 export async function getNotices(params?: {
   is_published?: boolean;
@@ -1484,6 +1551,151 @@ export async function getNotices(params?: {
     .order("created_at", { ascending: false })
     .limit(params?.limit || 100);
   return { data, error };
+}
+
+export async function getAllNotices(params?: { department?: string }) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    if (params?.department) searchParams.set('department', params.department);
+    const query = searchParams.toString();
+    return offlineRequest<any[]>(`/api/notices${query ? `?${query}` : ''}`);
+  }
+  
+  let query = supabase.from("notices").select("*");
+  if (params?.department && params.department !== 'all') {
+    query = query.eq("department", params.department);
+  }
+  const { data, error } = await query.order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function createNotice(notice: {
+  title: string;
+  department: string;
+  content?: string;
+  is_pinned?: boolean;
+  is_published?: boolean;
+  security_level?: string;
+  publish_scope?: string;
+  publish_scope_ids?: string[];
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/notices', {
+      method: 'POST',
+      body: JSON.stringify(notice),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("notices")
+    .insert(notice)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateNotice(id: string, updates: {
+  title?: string;
+  department?: string;
+  content?: string;
+  is_pinned?: boolean;
+  is_published?: boolean;
+  security_level?: string;
+  publish_scope?: string;
+  publish_scope_ids?: string[];
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/notices/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("notices")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function deleteNotice(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/notices/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("notices")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// ==================== Leader Schedule Permissions (Admin CRUD) ====================
+
+export async function getAllLeaderSchedulePermissions() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/leader-schedule-permissions');
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedule_permissions")
+    .select(`*, leader:contacts!leader_id(name)`)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function createLeaderSchedulePermission(permission: {
+  user_id: string;
+  leader_id?: string | null;
+  can_view_all?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/leader-schedule-permissions', {
+      method: 'POST',
+      body: JSON.stringify(permission),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedule_permissions")
+    .insert(permission)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function createLeaderSchedulePermissions(permissions: Array<{
+  user_id: string;
+  leader_id?: string | null;
+  can_view_all?: boolean;
+}>) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>('/api/leader-schedule-permissions/batch', {
+      method: 'POST',
+      body: JSON.stringify({ permissions }),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("leader_schedule_permissions")
+    .insert(permissions);
+  return { data: null, error };
+}
+
+export async function deleteLeaderSchedulePermissionsByUser(userId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/leader-schedule-permissions/user/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("leader_schedule_permissions")
+    .delete()
+    .eq("user_id", userId);
+  return { data: null, error };
 }
 
 // ==================== Stock Movements ====================
@@ -1671,7 +1883,20 @@ export const dataAdapter = {
   // Banners & Notices
   getBanners,
   getNoticeImages,
+  getAllNoticeImages,
+  createNoticeImage,
+  updateNoticeImage,
+  deleteNoticeImage,
   getNotices,
+  getAllNotices,
+  createNotice,
+  updateNotice,
+  deleteNotice,
+  // Leader Schedule Permissions
+  getAllLeaderSchedulePermissions,
+  createLeaderSchedulePermission,
+  createLeaderSchedulePermissions,
+  deleteLeaderSchedulePermissionsByUser,
   // Stock
   createStockMovement,
   // Utilities
