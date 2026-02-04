@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import {
@@ -106,18 +106,15 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     return [...new Set(ids)];
   };
 
-  // 获取审批人信息
+  // 获取审批人信息 - 使用 dataAdapter
   const fetchApproverContacts = async (approverIds: string[]) => {
     if (approverIds.length === 0) return;
     
-    const { data } = await supabase
-      .from("contacts")
-      .select("id, name, department")
-      .in("id", approverIds);
+    const { data } = await dataAdapter.getContactsByIds(approverIds);
     
     if (data) {
       const contactMap = new Map<string, ContactInfo>();
-      data.forEach(c => contactMap.set(c.id, c));
+      data.forEach((c: any) => contactMap.set(c.id, c));
       setApproverContacts(contactMap);
     }
   };
@@ -283,16 +280,8 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
     setLoading(true);
     
     try {
-      // 获取审批实例
-      const { data: instanceData, error: instanceError } = await supabase
-        .from("approval_instances")
-        .select(`
-          *,
-          initiator:contacts!approval_instances_initiator_id_fkey(name, department)
-        `)
-        .eq("business_id", businessId)
-        .eq("business_type", businessType)
-        .single();
+      // 获取审批实例 - 使用 dataAdapter
+      const { data: instanceData, error: instanceError } = await dataAdapter.getApprovalInstanceByBusinessId(businessId, businessType);
 
       if (instanceError || !instanceData) {
         setLoading(false);
@@ -304,11 +293,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
       // 获取版本快照中的节点
       let nodes: ApprovalNode[] = [];
       if (instanceData?.version_id) {
-        const { data: versionData } = await supabase
-          .from("approval_process_versions")
-          .select("nodes_snapshot")
-          .eq("id", instanceData.version_id)
-          .single();
+        const { data: versionData } = await dataAdapter.getApprovalProcessVersionById(instanceData.version_id);
         
         if (versionData?.nodes_snapshot) {
           nodes = versionData.nodes_snapshot as unknown as ApprovalNode[];
@@ -324,16 +309,8 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
         }
       }
 
-      // 获取审批记录
-      const { data: recordsData } = await supabase
-        .from("approval_records")
-        .select(`
-          *,
-          approver:contacts!approval_records_approver_id_fkey(name, department)
-        `)
-        .eq("instance_id", instanceData.id)
-        .order("node_index", { ascending: true })
-        .order("created_at", { ascending: true });
+      // 获取审批记录 - 使用 dataAdapter
+      const { data: recordsData } = await dataAdapter.getApprovalRecordsByInstance(instanceData.id);
 
       if (recordsData) {
         setRecords(recordsData as unknown as ApprovalRecord[]);
