@@ -4,16 +4,56 @@
 
 ---
 
+## 🔥 紧急修复：CORS错误导致请假申请失败
+
+### 症状
+- 提交请假/外出/出差申请时报错 "Failed to create todo item"
+- 浏览器控制台显示 "已拦截跨源请求 (CORS)" 
+- 请求地址显示为 `cwhdztfkfsrtbjmwfzhb.supabase.co` 而非本地 API
+
+### 根因
+**构建后的 `dist/index.html` 没有正确引入 `config.js` 和 `polyfills.js`**
+
+### 快速修复
+
+1. **检查 `/opt/gov-platform/web/index.html`**，确保 `<head>` 中有：
+```html
+<head>
+  <!-- ⚠️ 必须在最前面，顺序不能变！ -->
+  <script src="/polyfills.js"></script>
+  <script src="/config.js"></script>
+  <!-- ... 其他内容 ... -->
+</head>
+```
+
+2. **确认 `/opt/gov-platform/web/config.js` 存在且内容正确**：
+```javascript
+window.GOV_CONFIG = {
+  API_BASE_URL: "http://你的服务器IP:3001",  // 修改为实际IP
+  OFFLINE_MODE: true,
+  APP_NAME: "昌吉州党政办公平台",
+  VERSION: "1.0.0"
+};
+```
+
+3. **在浏览器控制台验证**：按 F12，输入 `window.GOV_CONFIG`，应显示配置对象。若显示 `undefined`，说明 config.js 未加载。
+
+4. **清除浏览器缓存**后重试。
+
+---
+
 ## 问题清单
 
 | 序号 | 问题描述 | 影响模块 | 根本原因 |
 |------|----------|----------|----------|
+| 0 | **请假申请CORS报错** | 所有申请模块 | config.js未正确加载，前端调用Supabase而非本地API |
 | 1 | 日程管理-创建记录失败 | 日程管理 | API参数不匹配(start_date/end_date vs schedule_date) |
 | 2 | 出差申请/请假申请/外出申请-创建记录失败 | 考勤模块 | absence_records表字段不完整 |
 | 3 | 采购申请/办公采购-创建采购申请失败 | 采购模块 | purchase_date字段缺失 |
 | 4 | admin@gov.cn管理员登录不上 | 管理后台 | 管理员认证逻辑不支持email登录 |
 | 5 | 领用申请中办公用品下拉无内容 | 领用模块 | is_active字段类型匹配问题+无初始数据 |
 | 6 | 日程添加后日历不显示 | 日程管理 | 返回数据格式不匹配前端期望结构 |
+| 7 | **通讯录密级显示不正确** | 通讯录 | 数据库默认值为"一般"而非"公开" |
 
 ---
 
@@ -220,7 +260,15 @@ INSERT INTO user_roles (id, user_id, role)
 SELECT UUID(), c.id, 'admin' FROM contacts c WHERE c.mobile = '13800000001'
   AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id = c.id AND role = 'admin');
 
--- ==================== 3. 初始化办公用品数据 ====================
+-- ==================== 3. 修复通讯录密级显示 ====================
+
+-- 将所有"一般"密级改为"公开"（四级标准：机密、秘密、内部、公开）
+UPDATE contacts SET security_level = '公开' WHERE security_level = '一般';
+
+-- 修改字段默认值为"公开"
+ALTER TABLE contacts MODIFY COLUMN security_level VARCHAR(20) NOT NULL DEFAULT '公开';
+
+-- ==================== 4. 初始化办公用品数据 ====================
 
 -- 检查是否已有办公用品，如果没有则插入
 INSERT INTO office_supplies (id, name, specification, unit, current_stock, min_stock, is_active)

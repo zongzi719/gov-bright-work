@@ -1,33 +1,31 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>昌吉州党政办公平台</title>
     <meta name="description" content="党政办公平台" />
-    <!-- 离线部署配置文件 - 在内网部署时需要创建此文件 -->
+    
+    <!-- 
+      ⚠️ 离线部署关键配置 - 必须按此顺序加载:
+      1. polyfills.js - 浏览器兼容性补丁（必须最先加载）
+      2. config.js - 离线模式配置（包含 API_BASE_URL 和 OFFLINE_MODE）
+    -->
+    <script src="/polyfills.js"></script>
     <script src="/config.js"></script>
+    
     <meta name="author" content="Lovable" />
-
-    <!-- TODO: Update og:title to match your application name -->
-
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     <meta property="og:title" content="昌吉州党政办公平台" />
+    <meta property="og:description" content="党政办公平台" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="昌吉州党政办公平台" />
-    <meta property="og:description" content="Lovable Generated Project" />
-    <meta name="twitter:description" content="Lovable Generated Project" />
+    <meta name="twitter:description" content="党政办公平台" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   </head>
 
   <body>
     <div id="root"></div>
-    <!-- Polyfills for older browsers - must load before main script -->
-    <script src="/polyfills.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
