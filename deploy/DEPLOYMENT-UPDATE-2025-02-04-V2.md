@@ -209,10 +209,12 @@ npm run build
 ls -la dist/
 ```
 
-### 3.2 准备部署文件
+### 3.2 ⚠️ 关键步骤：配置离线模式
+
+构建后 **必须** 修改 `dist/config.js` 文件启用离线模式：
 
 ```bash
-# 确保 config.js 使用正确的 API 地址
+# ⚠️ 关键：替换 config.js 为实际配置（必须执行！）
 cat > dist/config.js << 'EOF'
 window.GOV_CONFIG = {
   // ⚠️ 修改为实际服务器IP
@@ -223,9 +225,12 @@ window.GOV_CONFIG = {
 };
 EOF
 
-# 确保 polyfills.js 存在
-cp public/polyfills.js dist/
+# 验证 config.js 内容
+cat dist/config.js
+# 应该看到 window.GOV_CONFIG = { ... } 内容
 ```
+
+> ⚠️ **重要**：如果不执行此步骤，前端将尝试连接 Supabase 云服务导致报错！
 
 ### 3.3 上传到服务器
 
@@ -246,6 +251,10 @@ mv /opt/gov-platform/web /opt/gov-platform/web.bak.$(date +%Y%m%d)
 cd /tmp
 tar -xzvf dist.tar.gz
 mv dist /opt/gov-platform/web
+
+# ⚠️ 再次验证 config.js 内容正确
+cat /opt/gov-platform/web/config.js
+# 必须看到 window.GOV_CONFIG 配置，且 OFFLINE_MODE: true
 
 # 验证文件
 ls -la /opt/gov-platform/web/
