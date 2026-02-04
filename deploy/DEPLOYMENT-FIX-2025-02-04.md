@@ -499,7 +499,35 @@ systemctl reload nginx
 
 ## 五、问题排查
 
-### 问题1：API无法访问
+### 问题1：请假申请报 "创建待办失败"
+
+**症状**：提交申请时控制台显示 `API Request Error [/api/todo-items]` 且错误为 "创建待办失败"
+
+**排查步骤**：
+
+```bash
+# 1. 查看后端API日志
+tail -50 /opt/gov-platform/logs/api.log
+
+# 2. 检查是否有详细错误信息
+# 如果看到类似 "ER_NO_SUCH_TABLE" 或 "ER_BAD_FIELD_ERROR"，说明数据库表或字段缺失
+
+# 3. 验证数据库表存在
+mysql -u root -p gov_platform -e "SHOW TABLES LIKE '%todo%';"
+mysql -u root -p gov_platform -e "DESCRIBE todo_items;"
+
+# 4. 验证审批表存在
+mysql -u root -p gov_platform -e "DESCRIBE approval_instances;"
+mysql -u root -p gov_platform -e "DESCRIBE approval_records;"
+```
+
+**解决方案**：如果表不存在，重新执行完整的数据库初始化脚本：
+
+```bash
+mysql -u root -p gov_platform < /opt/gov-platform/database/init.sql
+```
+
+### 问题2：API无法访问
 
 ```bash
 # 检查API进程
@@ -512,7 +540,7 @@ netstat -tlnp | grep 3001
 tail -100 /opt/gov-platform/logs/api.log
 ```
 
-### 问题2：数据库连接失败
+### 问题3：数据库连接失败
 
 ```bash
 # 检查.env配置
@@ -522,11 +550,30 @@ cat /opt/gov-platform/api/.env
 mysql -h localhost -u root -p gov_platform -e "SELECT 1"
 ```
 
-### 问题3：前端白屏
+### 问题4：前端白屏或CORS错误
 
 1. 检查浏览器控制台错误
-2. 确认 `config.js` 和 `polyfills.js` 正确加载
-3. 确认 `index.html` 中脚本引入顺序正确
+2. 验证 `window.GOV_CONFIG` 是否正确：按 F12 → Console → 输入 `window.GOV_CONFIG`
+3. 确认 `/opt/gov-platform/web/index.html` 中脚本引入顺序正确：
+   ```html
+   <head>
+     <script src="/polyfills.js"></script>
+     <script src="/config.js"></script>
+     <!-- 其他脚本在后面 -->
+   </head>
+   ```
+4. 确认 `/opt/gov-platform/web/config.js` 存在且内容正确
+
+### 问题5：CORS错误仍在调用Supabase
+
+**症状**：控制台显示请求 `cwhdztfkfsrtbjmwfzhb.supabase.co` 被CORS拦截
+
+**原因**：`config.js` 未在应用启动前加载，导致 `isOfflineMode()` 返回 `false`
+
+**解决**：
+1. 确保 `config.js` 在 `index.html` 的 `<head>` 最前面加载
+2. 清除浏览器缓存（Ctrl+Shift+Delete）
+3. 强制刷新（Ctrl+F5）
 
 ---
 
@@ -553,7 +600,16 @@ mysql -h localhost -u root -p gov_platform -e "SELECT 1"
 5. **采购申请** (`/api/purchase-requests`, `/api/supply-purchases`)
    - 自动填充 `purchase_date` 字段
 
-6. **账号登录支持** (本次更新)
+6. **待办事项创建** (`/api/todo-items`) - **2025-02-04 更新**
+   - 增强参数验证和错误处理
+   - 处理 `undefined` 值为 `null`
+   - 添加详细错误日志便于调试
+
+7. **审批实例创建** (`/api/approval-instances`) - **2025-02-04 更新**
+   - 增强必填字段验证
+   - 添加详细日志记录
+
+8. **账号登录支持**
    - contacts 表新增 `account` 字段
    - 登录接口支持账号或手机号登录
    - 日期格式自动转换 (ISO 8601 → MySQL DATETIME)
@@ -582,7 +638,7 @@ CREATE INDEX idx_contacts_account ON contacts(account);
 服务器 /opt/gov-platform/
 ├── api/
 │   ├── src/
-│   │   └── index.js          ← 更新（支持账号登录、日期格式转换）
+│   │   └── index.js          ← 更新（增强待办/审批创建错误处理）
 │   ├── .env                  ← 检查配置
 │   └── package.json
 ├── web/
@@ -596,4 +652,34 @@ CREATE INDEX idx_contacts_account ON contacts(account);
 
 ---
 
-**部署完成后，请按验证清单逐项测试功能。如有问题，查看API日志和浏览器控制台错误信息。**
+## 九、紧急修复命令汇总
+
+如果请假申请仍报错，请依次执行：
+
+```bash
+# 1. 更新后端API
+cp /path/to/new/index.js /opt/gov-platform/api/src/index.js
+
+# 2. 重启API服务
+cd /opt/gov-platform/api
+pkill -f "node src/index.js"
+nohup node src/index.js > ../logs/api.log 2>&1 &
+
+# 3. 验证服务
+curl http://localhost:3001/api/health
+
+# 4. 查看日志
+tail -f /opt/gov-platform/logs/api.log
+```
+
+在客户端浏览器：
+```
+1. 按 Ctrl+Shift+Delete 清除缓存
+2. 按 Ctrl+F5 强制刷新
+3. 按 F12 打开控制台，输入 window.GOV_CONFIG 验证配置
+4. 重新测试请假申请
+```
+
+---
+
+**部署完成后，请按验证清单逐项测试功能。如有问题，查看 `/opt/gov-platform/logs/api.log` 和浏览器控制台错误信息。**
