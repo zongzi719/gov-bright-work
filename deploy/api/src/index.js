@@ -2407,6 +2407,133 @@ app.delete('/api/leader-schedule-permissions/user/:userId', async (req, res) => 
   }
 });
 
+// ==================== 审批表单字段 ====================
+
+app.get('/api/approval-form-fields', async (req, res) => {
+  try {
+    const { template_id } = req.query;
+    if (!template_id) {
+      return res.status(400).json({ error: '缺少 template_id 参数' });
+    }
+    
+    const [rows] = await pool.execute(
+      `SELECT * FROM approval_form_fields WHERE template_id = ? ORDER BY sort_order ASC`,
+      [template_id]
+    );
+    
+    // 解析 field_options JSON 字段
+    const fields = rows.map(row => ({
+      ...row,
+      field_options: row.field_options ? (typeof row.field_options === 'string' ? JSON.parse(row.field_options) : row.field_options) : null
+    }));
+    
+    res.json(fields);
+  } catch (error) {
+    console.error('Get approval form fields error:', error);
+    res.status(500).json({ error: '获取表单字段失败' });
+  }
+});
+
+app.post('/api/approval-form-fields', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { 
+      template_id, field_type = 'text', field_name, field_label, 
+      placeholder, is_required = false, sort_order = 0, field_options, col_span = 2, default_value
+    } = req.body;
+    
+    if (!template_id || !field_name || !field_label) {
+      return res.status(400).json({ error: '缺少必填字段: template_id, field_name, field_label' });
+    }
+    
+    await pool.execute(
+      `INSERT INTO approval_form_fields (id, template_id, field_type, field_name, field_label, placeholder, is_required, sort_order, field_options, col_span, default_value)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, template_id, field_type, field_name, field_label, placeholder, is_required ? 1 : 0, sort_order, field_options ? JSON.stringify(field_options) : null, col_span, default_value]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create approval form field error:', error);
+    res.status(500).json({ error: '创建表单字段失败' });
+  }
+});
+
+app.put('/api/approval-form-fields/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { field_type, field_label, placeholder, is_required, sort_order, field_options, col_span, default_value } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (field_type !== undefined) { updates.push('field_type = ?'); params.push(field_type); }
+    if (field_label !== undefined) { updates.push('field_label = ?'); params.push(field_label); }
+    if (placeholder !== undefined) { updates.push('placeholder = ?'); params.push(placeholder); }
+    if (is_required !== undefined) { updates.push('is_required = ?'); params.push(is_required ? 1 : 0); }
+    if (sort_order !== undefined) { updates.push('sort_order = ?'); params.push(sort_order); }
+    if (field_options !== undefined) { updates.push('field_options = ?'); params.push(field_options ? JSON.stringify(field_options) : null); }
+    if (col_span !== undefined) { updates.push('col_span = ?'); params.push(col_span); }
+    if (default_value !== undefined) { updates.push('default_value = ?'); params.push(default_value); }
+    updates.push('updated_at = NOW()');
+    
+    params.push(id);
+    
+    await pool.execute(
+      `UPDATE approval_form_fields SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update approval form field error:', error);
+    res.status(500).json({ error: '更新表单字段失败' });
+  }
+});
+
+app.delete('/api/approval-form-fields/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM approval_form_fields WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete approval form field error:', error);
+    res.status(500).json({ error: '删除表单字段失败' });
+  }
+});
+
+// 批量插入表单字段（用于初始化默认字段）
+app.post('/api/approval-form-fields/batch', async (req, res) => {
+  try {
+    const { fields } = req.body;
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
+      return res.status(400).json({ error: '缺少字段数组' });
+    }
+    
+    const insertedIds = [];
+    for (const field of fields) {
+      const id = uuidv4();
+      const { 
+        template_id, field_type = 'text', field_name, field_label, 
+        placeholder, is_required = false, sort_order = 0, field_options, col_span = 2
+      } = field;
+      
+      await pool.execute(
+        `INSERT INTO approval_form_fields (id, template_id, field_type, field_name, field_label, placeholder, is_required, sort_order, field_options, col_span)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, template_id, field_type, field_name, field_label, placeholder, is_required ? 1 : 0, sort_order, field_options ? JSON.stringify(field_options) : null, col_span]
+      );
+      
+      insertedIds.push(id);
+    }
+    
+    res.json({ success: true, count: insertedIds.length, ids: insertedIds });
+  } catch (error) {
+    console.error('Batch create approval form fields error:', error);
+    res.status(500).json({ error: '批量创建表单字段失败' });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {

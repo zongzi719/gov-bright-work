@@ -1,8 +1,69 @@
 # 离线部署更新指南 (2025-02-04 V2)
 
-> 本次更新包含：6个默认审批模板 + 完整的 Supabase 调用修复 + 审批记录创建修复
+> 本次更新包含：6个默认审批模板 + 完整的 Supabase 调用修复 + 审批记录创建修复 + **表单设计修复**
 
 ## 🔥 重要修复 (2025-02-04 最新)
+
+### ⭐ 审批流程表单设计为空问题修复
+
+**问题现象**：管理员配置审批流程时，"表单设计" 标签页内容为空
+
+**原因分析**：
+1. 数据库缺少 `approval_form_fields` 表
+2. 后端 API 缺少表单字段的 CRUD 端点
+3. 前端组件直接调用 Supabase 而非 dataAdapter
+
+**修复内容**：
+1. **数据库** (`deploy/database/init.sql`):
+   - 新增 `approval_form_fields` 表
+
+2. **后端 API** (`deploy/api/src/index.js`):
+   - 新增 `GET /api/approval-form-fields` - 获取表单字段
+   - 新增 `POST /api/approval-form-fields` - 创建字段
+   - 新增 `PUT /api/approval-form-fields/:id` - 更新字段
+   - 新增 `DELETE /api/approval-form-fields/:id` - 删除字段
+   - 新增 `POST /api/approval-form-fields/batch` - 批量创建字段
+
+3. **前端** (`src/components/admin/approval/ApprovalFormDesign.tsx`):
+   - 使用 dataAdapter 替代直接 Supabase 调用
+
+**部署步骤**：
+```bash
+# 1. 在数据库中执行建表语句
+mysql -u root -p gov_platform < deploy/database/init.sql
+
+# 或手动执行：
+mysql -u root -p gov_platform -e "
+CREATE TABLE IF NOT EXISTS approval_form_fields (
+  id CHAR(36) NOT NULL DEFAULT (UUID()),
+  template_id CHAR(36) NOT NULL,
+  field_type VARCHAR(50) NOT NULL DEFAULT 'text',
+  field_name VARCHAR(100) NOT NULL,
+  field_label VARCHAR(100) NOT NULL,
+  placeholder VARCHAR(255) DEFAULT NULL,
+  is_required TINYINT(1) NOT NULL DEFAULT 0,
+  sort_order INT NOT NULL DEFAULT 0,
+  field_options JSON DEFAULT NULL,
+  col_span INT NOT NULL DEFAULT 2,
+  default_value VARCHAR(255) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_template_id (template_id),
+  KEY idx_sort_order (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+"
+
+# 2. 更新后端 API
+cp deploy/api/src/index.js /opt/gov-platform/api/src/
+systemctl restart gov-api
+
+# 3. 重新构建前端
+npm run build
+# 同步 dist 目录到服务器
+```
+
+---
 
 ### 请假/外出/出差申请创建报错修复
 

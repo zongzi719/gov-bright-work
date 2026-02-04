@@ -1302,6 +1302,93 @@ export async function getApprovalFormFields(templateId: string) {
   return { data, error };
 }
 
+export async function createApprovalFormField(field: {
+  template_id: string;
+  field_type: string;
+  field_name: string;
+  field_label: string;
+  placeholder?: string | null;
+  is_required?: boolean;
+  sort_order?: number;
+  field_options?: string[] | null;
+  col_span?: number;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/approval-form-fields', {
+      method: 'POST',
+      body: JSON.stringify(field),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_form_fields")
+    .insert(field as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function createApprovalFormFieldsBatch(fields: Array<{
+  template_id: string;
+  field_type: string;
+  field_name: string;
+  field_label: string;
+  placeholder?: string | null;
+  is_required?: boolean;
+  sort_order?: number;
+  field_options?: string[] | null;
+  col_span?: number;
+}>) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean; count: number }>('/api/approval-form-fields/batch', {
+      method: 'POST',
+      body: JSON.stringify({ fields }),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_form_fields")
+    .insert(fields as any);
+  return { data: { success: !error, count: fields.length }, error };
+}
+
+export async function updateApprovalFormField(id: string, updates: {
+  field_type?: string;
+  field_label?: string;
+  placeholder?: string | null;
+  is_required?: boolean;
+  sort_order?: number;
+  field_options?: string[] | null;
+  col_span?: number;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-form-fields/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_form_fields")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function deleteApprovalFormField(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-form-fields/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_form_fields")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
 export async function createApprovalInstance(instance: {
   template_id: string;
   version_id: string;

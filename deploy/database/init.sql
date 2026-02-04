@@ -337,6 +337,26 @@ CREATE TABLE IF NOT EXISTS `approval_instances` (
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ==================== 审批表单字段表 ====================
+CREATE TABLE IF NOT EXISTS `approval_form_fields` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `template_id` CHAR(36) NOT NULL,
+  `field_type` VARCHAR(50) NOT NULL DEFAULT 'text',
+  `field_name` VARCHAR(100) NOT NULL,
+  `field_label` VARCHAR(100) NOT NULL,
+  `placeholder` VARCHAR(255) DEFAULT NULL,
+  `is_required` TINYINT(1) NOT NULL DEFAULT 0,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `field_options` JSON DEFAULT NULL,
+  `col_span` INT NOT NULL DEFAULT 2,
+  `default_value` VARCHAR(255) DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_template_id` (`template_id`),
+  KEY `idx_sort_order` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ==================== 审批记录表 ====================
 CREATE TABLE IF NOT EXISTS `approval_records` (
   `id` CHAR(36) NOT NULL DEFAULT (UUID()),
