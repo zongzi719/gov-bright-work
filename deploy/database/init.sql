@@ -553,12 +553,25 @@ INSERT INTO `organizations` (`id`, `name`, `short_name`, `level`, `sort_order`) 
 
 -- 插入默认测试用户
 SET @admin_id = UUID();
-INSERT INTO `contacts` (`id`, `name`, `mobile`, `position`, `department`, `organization_id`, `is_leader`, `is_active`, `security_level`, `password_hash`) VALUES
-(@admin_id, '系统管理员', '13800000001', '管理员', '信息中心', @org_id, 1, 1, '机密', '123456');
+INSERT INTO `contacts` (`id`, `name`, `mobile`, `email`, `position`, `department`, `organization_id`, `is_leader`, `is_active`, `security_level`, `password_hash`) VALUES
+(@admin_id, '系统管理员', '13800000001', 'admin@gov.cn', '管理员', '信息中心', @org_id, 1, 1, '机密', '123456');
 
 -- 为测试用户分配管理员角色
 INSERT INTO `user_roles` (`id`, `user_id`, `role`) VALUES
 (UUID(), @admin_id, 'admin');
+
+-- ==================== 插入示例办公用品数据 ====================
+INSERT INTO `office_supplies` (`id`, `name`, `specification`, `unit`, `current_stock`, `min_stock`, `is_active`) VALUES
+(UUID(), '中性笔', '0.5mm黑色', '支', 100, 20, 1),
+(UUID(), 'A4复印纸', '70g 500张/包', '包', 50, 10, 1),
+(UUID(), '订书机', '小号', '个', 20, 5, 1),
+(UUID(), '订书钉', '24/6', '盒', 100, 20, 1),
+(UUID(), '文件夹', 'A4单夹', '个', 80, 15, 1),
+(UUID(), '档案盒', 'A4厚型', '个', 50, 10, 1),
+(UUID(), '回形针', '29mm', '盒', 60, 10, 1),
+(UUID(), '便签纸', '76x76mm', '本', 40, 10, 1),
+(UUID(), '笔记本', 'A5软皮', '本', 30, 10, 1),
+(UUID(), '胶带', '透明48mm', '卷', 40, 10, 1);
 
 SET FOREIGN_KEY_CHECKS = 1;
 

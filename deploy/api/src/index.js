@@ -610,7 +610,20 @@ app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // 查找管理员账户（通过email字段或预设管理员）
+    // 首先检查是否为硬编码的超级管理员（admin@gov.cn）
+    if (email === 'admin@gov.cn' && password === 'admin123456') {
+      return res.json({ 
+        success: true, 
+        admin: {
+          id: 'super-admin',
+          email: 'admin@gov.cn',
+          name: '超级管理员',
+          role: 'admin'
+        }
+      });
+    }
+    
+    // 查找管理员账户（通过email字段或mobile字段）
     // 离线版管理员存储在 contacts 表，通过 user_roles 关联 admin 角色
     const [admins] = await pool.execute(
       `SELECT c.id, c.name, c.email, c.mobile
@@ -623,7 +636,30 @@ app.post('/api/admin/login', async (req, res) => {
       [email, email, password]
     );
     
+    // 如果未找到，尝试检查 is_leader 为 true 的用户是否有管理权限
     if (admins.length === 0) {
+      const [leaders] = await pool.execute(
+        `SELECT c.id, c.name, c.email, c.mobile
+         FROM contacts c
+         WHERE (c.email = ? OR c.mobile = ?) 
+           AND c.password_hash = ?
+           AND c.is_leader = 1
+           AND c.is_active = 1`,
+        [email, email, password]
+      );
+      
+      if (leaders.length > 0) {
+        return res.json({ 
+          success: true, 
+          admin: {
+            id: leaders[0].id,
+            email: leaders[0].email || leaders[0].mobile,
+            name: leaders[0].name,
+            role: 'admin'
+          }
+        });
+      }
+      
       return res.status(401).json({ error: '账号或密码错误，或没有管理员权限' });
     }
     
@@ -651,14 +687,23 @@ app.get('/api/office-supplies', async (req, res) => {
     const params = [];
     
     if (is_active !== undefined) {
-      sql += ' AND is_active = ?';
+      // 同时支持字符串 'true'/'false' 和数字 1/0
+      sql += ' AND (is_active = ? OR is_active = ?)';
       params.push(is_active === 'true' ? 1 : 0);
+      params.push(is_active === 'true' ? 'true' : 'false');
     }
     
     sql += ' ORDER BY name';
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    
+    // 确保返回数据格式正确，将 is_active 转为 boolean
+    const formattedRows = rows.map(row => ({
+      ...row,
+      is_active: row.is_active === 1 || row.is_active === '1' || row.is_active === true || row.is_active === 'true'
+    }));
+    
+    res.json(formattedRows);
   } catch (error) {
     console.error('Get office supplies error:', error);
     res.status(500).json({ error: '获取办公用品失败' });
@@ -670,9 +715,11 @@ app.get('/api/office-supplies', async (req, res) => {
 app.get('/api/schedules', async (req, res) => {
   try {
     const { contact_id, schedule_date, start_date, end_date } = req.query;
-    let sql = `SELECT s.*, c.name as contact_name, c.department as contact_department
+    let sql = `SELECT s.*, c.name as contact_name, c.department as contact_department,
+               o.name as organization_name
                FROM schedules s
                LEFT JOIN contacts c ON s.contact_id = c.id
+               LEFT JOIN organizations o ON c.organization_id = o.id
                WHERE 1=1`;
     const params = [];
     
@@ -697,7 +744,28 @@ app.get('/api/schedules', async (req, res) => {
     sql += ' ORDER BY s.schedule_date, s.start_time';
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    
+    // 格式化返回数据，添加嵌套的 contact 对象以匹配前端期望格式
+    const formattedRows = rows.map(row => ({
+      id: row.id,
+      contact_id: row.contact_id,
+      title: row.title,
+      schedule_date: row.schedule_date,
+      start_time: row.start_time,
+      end_time: row.end_time,
+      location: row.location,
+      notes: row.notes,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      contact: {
+        id: row.contact_id,
+        name: row.contact_name,
+        department: row.contact_department,
+        organization: row.organization_name ? { name: row.organization_name } : null
+      }
+    }));
+    
+    res.json(formattedRows);
   } catch (error) {
     console.error('Get schedules error:', error);
     res.status(500).json({ error: '获取日程失败' });
