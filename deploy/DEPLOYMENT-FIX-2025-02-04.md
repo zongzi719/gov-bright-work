@@ -757,7 +757,7 @@ pm2 restart gov-api
 # 或
 systemctl restart gov-api
 
-# 3. 查看日志确认 JOIN 生效
+# 3. 查看日志确认状态查询生效
 tail -f /opt/gov-platform/logs/api.log | grep "approval_status"
 ```
 
@@ -766,6 +766,45 @@ tail -f /opt/gov-platform/logs/api.log | grep "approval_status"
 2. 所有审批人依次审批通过
 3. 返回列表页面，状态应显示"已通过"而非"待审批"
 4. 查看后端日志确认 `approval_status` 字段有值
+
+---
+
+## 十、审批状态查询优化（2025-02-05 v3更新）
+
+### 问题描述
+即使使用 CAST 进行 UUID 比较，LEFT JOIN 仍然可能因 MariaDB 类型兼容性问题导致匹配失败
+
+### 根因分析
+MariaDB 的 UUID 类型与 CHAR 类型比较可能存在隐式转换问题，导致 JOIN 条件不满足
+
+### 优化方案
+改用**分离查询 + 内存合并**策略：
+1. 先查询 `absence_records` 基础数据
+2. 单独查询 `approval_instances` 获取审批状态
+3. 在应用层通过 `business_id` 进行匹配
+
+### 技术优势
+- 避免 JOIN 类型转换问题
+- 增加详细日志便于排查
+- 更可靠的状态映射
+
+### 部署步骤
+```bash
+# 1. 更新后端文件
+cp deploy/api/src/index.js /opt/gov-platform/api/src/
+
+# 2. 重启API服务
+pm2 restart gov-api
+
+# 3. 验证日志输出
+tail -100 /opt/gov-platform/logs/api.log | grep "Record"
+# 应看到类似: "Record xxx: absence_status=pending, approval_status=approved"
+```
+
+### 验证检查点
+1. 后端日志应显示 `Approval status map: X entries`
+2. 每条记录应显示 `approval_status` 值
+3. 列表状态应与审批流程状态一致
 
 ---
 

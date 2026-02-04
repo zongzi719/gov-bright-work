@@ -706,54 +706,80 @@ app.delete('/api/todo-items/by-instance/:instanceId', async (req, res) => {
 app.get('/api/absence-records', async (req, res) => {
   try {
     const { contact_id, type, status } = req.query;
-    // 使用 CAST 确保 UUID 比较正确（MariaDB 兼容性）
-    let sql = `SELECT ar.*, 
+    
+    // 先获取基础数据
+    let baseSql = `SELECT ar.*, 
                c.name as contact_name, c.department as contact_department,
-               hp.name as handover_person_name,
-               ai.status as approval_status, ai.form_data as approval_form_data
+               hp.name as handover_person_name
                FROM absence_records ar
                LEFT JOIN contacts c ON ar.contact_id = c.id
                LEFT JOIN contacts hp ON ar.handover_person_id = hp.id
-               LEFT JOIN approval_instances ai ON CAST(ai.business_id AS CHAR) = CAST(ar.id AS CHAR) AND ai.business_type = ar.type
                WHERE 1=1`;
     const params = [];
     
     if (contact_id) {
-      sql += ' AND ar.contact_id = ?';
+      baseSql += ' AND ar.contact_id = ?';
       params.push(contact_id);
     }
     if (type) {
-      sql += ' AND ar.type = ?';
+      baseSql += ' AND ar.type = ?';
       params.push(type);
     }
     if (status) {
-      sql += ' AND ar.status = ?';
+      baseSql += ' AND ar.status = ?';
       params.push(status);
     }
     
-    sql += ' ORDER BY ar.created_at DESC';
+    baseSql += ' ORDER BY ar.created_at DESC';
     
-    console.log('Fetching absence records with approval status, SQL:', sql, 'Params:', params);
+    const [rows] = await pool.execute(baseSql, params);
     
-    const [rows] = await pool.execute(sql, params);
+    // 批量查询审批实例状态（避免 JOIN 类型问题）
+    const businessIds = rows.map(r => r.id);
+    let approvalStatusMap = {};
     
-    console.log('Absence records fetched:', rows.length, 'First row approval_status:', rows[0]?.approval_status);
+    if (businessIds.length > 0) {
+      // 分别查询每种业务类型的审批实例
+      const businessTypes = [...new Set(rows.map(r => r.type))];
+      
+      for (const bType of businessTypes) {
+        const typeBusinessIds = rows.filter(r => r.type === bType).map(r => r.id);
+        if (typeBusinessIds.length === 0) continue;
+        
+        const placeholders = typeBusinessIds.map(() => '?').join(',');
+        const [aiRows] = await pool.execute(
+          `SELECT business_id, status, form_data FROM approval_instances 
+           WHERE business_id IN (${placeholders}) AND business_type = ?`,
+          [...typeBusinessIds, bType]
+        );
+        
+        for (const ai of aiRows) {
+          approvalStatusMap[ai.business_id] = {
+            status: ai.status,
+            form_data: ai.form_data
+          };
+        }
+      }
+    }
     
-    // 格式化返回数据，模拟 Supabase 的关联数据结构
-    // 同时合并审批实例的真实状态
+    console.log('Approval status map:', Object.keys(approvalStatusMap).length, 'entries');
+    
+    // 格式化返回数据，合并审批实例的真实状态
     const result = rows.map(row => {
       let displayStatus = row.status;
+      const approvalInfo = approvalStatusMap[row.id];
       
       // 如果有审批实例，使用审批实例的状态
-      if (row.approval_status) {
-        displayStatus = row.approval_status;
+      if (approvalInfo) {
+        console.log(`Record ${row.id}: absence_status=${row.status}, approval_status=${approvalInfo.status}`);
+        displayStatus = approvalInfo.status;
         
         // 检查是否有退回信息
-        if (row.approval_status === 'pending' && row.approval_form_data) {
+        if (approvalInfo.status === 'pending' && approvalInfo.form_data) {
           try {
-            const formData = typeof row.approval_form_data === 'string' 
-              ? JSON.parse(row.approval_form_data) 
-              : row.approval_form_data;
+            const formData = typeof approvalInfo.form_data === 'string' 
+              ? JSON.parse(approvalInfo.form_data) 
+              : approvalInfo.form_data;
             if (formData._return_info) {
               const returnType = formData._return_info.type;
               if (returnType === 'return_to_initiator_current') {
@@ -770,6 +796,8 @@ app.get('/api/absence-records', async (req, res) => {
             // JSON 解析失败，使用原状态
           }
         }
+      } else {
+        console.log(`Record ${row.id}: NO approval instance found, using absence_status=${row.status}`);
       }
       
       return {
