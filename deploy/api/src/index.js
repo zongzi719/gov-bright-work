@@ -706,9 +706,12 @@ app.delete('/api/todo-items/by-instance/:instanceId', async (req, res) => {
 app.get('/api/absence-records', async (req, res) => {
   try {
     const { contact_id, type, status } = req.query;
-    let sql = `SELECT ar.*, c.name as contact_name 
+    let sql = `SELECT ar.*, 
+               c.name as contact_name, c.department as contact_department,
+               hp.name as handover_person_name
                FROM absence_records ar
                LEFT JOIN contacts c ON ar.contact_id = c.id
+               LEFT JOIN contacts hp ON ar.handover_person_id = hp.id
                WHERE 1=1`;
     const params = [];
     
@@ -728,7 +731,20 @@ app.get('/api/absence-records', async (req, res) => {
     sql += ' ORDER BY ar.created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    
+    // 格式化返回数据，模拟 Supabase 的关联数据结构
+    const result = rows.map(row => ({
+      ...row,
+      contacts: row.contact_id ? {
+        name: row.contact_name,
+        department: row.contact_department
+      } : null,
+      handover_person: row.handover_person_name ? {
+        name: row.handover_person_name
+      } : null
+    }));
+    
+    res.json(result);
   } catch (error) {
     console.error('Get absence records error:', error);
     res.status(500).json({ error: '获取记录失败' });
@@ -801,6 +817,52 @@ app.post('/api/absence-records', async (req, res) => {
   } catch (error) {
     console.error('Create absence record error:', error);
     res.status(500).json({ error: '创建记录失败', detail: error.message });
+  }
+});
+
+// 获取单条缺勤记录详情（含联系人信息）
+app.get('/api/absence-records/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      `SELECT ar.*, 
+              c.id as contact_id, c.name as contact_name, c.department as contact_department,
+              hp.name as handover_person_name
+       FROM absence_records ar
+       LEFT JOIN contacts c ON ar.contact_id = c.id
+       LEFT JOIN contacts hp ON ar.handover_person_id = hp.id
+       WHERE ar.id = ?`,
+      [id]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+    
+    const row = rows[0];
+    
+    // 格式化返回数据，模拟 Supabase 的关联数据结构
+    const result = {
+      ...row,
+      contacts: row.contact_id ? {
+        id: row.contact_id,
+        name: row.contact_name,
+        department: row.contact_department
+      } : null,
+      handover_person: row.handover_person_name ? {
+        name: row.handover_person_name
+      } : null
+    };
+    
+    // 删除冗余字段
+    delete result.contact_name;
+    delete result.contact_department;
+    delete result.handover_person_name;
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Get absence record by id error:', error);
+    res.status(500).json({ error: '获取缺勤记录失败' });
   }
 });
 

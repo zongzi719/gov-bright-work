@@ -1,8 +1,27 @@
 # 离线部署更新指南 (2025-02-04 V2)
 
-> 本次更新包含：6个默认审批模板 + 完整的 Supabase 调用修复 + 审批记录创建修复 + **表单设计修复** + **通讯录密级修复**
+> 本次更新包含：6个默认审批模板 + 完整的 Supabase 调用修复 + 审批记录创建修复 + **表单设计修复** + **通讯录密级修复** + **请假申请及审批详情修复**
 
 ## 🔥 重要修复 (2025-02-04 最新)
+
+### ⭐ 请假/外出/出差申请提交 CORS 错误 + 审批详情空白问题
+
+**问题现象**：
+1. 提交请假申请时报 CORS 错误，控制台显示尝试访问 `supabase.co`
+2. 审批人收到待办消息，但打开详情后申请人、时间等字段均为 `-`
+
+**原因分析**：
+1. `src/pages/AbsenceApplication.tsx` 仍直接调用 Supabase 而非 dataAdapter
+2. 后端 API 缺少 `GET /api/absence-records/:id` 端点（获取单条记录详情）
+3. 后端 API 返回数据缺少 `contacts` 关联信息
+
+**修复内容**：
+1. **前端** (`src/pages/AbsenceApplication.tsx`)：改用 `dataAdapter.getAbsenceRecords()`
+2. **后端 API** (`deploy/api/src/index.js`)：
+   - 新增 `GET /api/absence-records/:id` 返回单条记录及关联的 contacts 信息
+   - 修改 `GET /api/absence-records` 返回关联的 contacts 和 handover_person 信息
+
+---
 
 ### ⭐ 通讯录密级显示不正确问题修复
 
