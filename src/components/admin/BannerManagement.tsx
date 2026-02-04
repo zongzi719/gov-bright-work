@@ -1,4 +1,6 @@
 import { useEffect, useState, useRef } from "react";
+import * as dataAdapter from "@/lib/dataAdapter";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,13 +32,14 @@ const BannerManagement = () => {
   }, []);
 
   const fetchBanner = async () => {
-    const { data, error } = await supabase.from("banners").select("*").order("sort_order").limit(1).single();
+    const { data, error } = await dataAdapter.getAllBanners();
 
-    if (!error && data) {
-      setBanner(data);
+    if (!error && data && data.length > 0) {
+      const firstBanner = data[0];
+      setBanner(firstBanner);
       setFormData({
-        image_url: data.image_url,
-        title: data.title || "导航栏背景",
+        image_url: firstBanner.image_url,
+        title: firstBanner.title || "导航栏背景",
       });
     }
     setLoading(false);
@@ -54,20 +57,17 @@ const BannerManagement = () => {
     try {
       if (banner) {
         // 更新现有记录
-        const { error } = await supabase
-          .from("banners")
-          .update({
-            image_url: formData.image_url,
-            title: formData.title,
-            is_active: true,
-          })
-          .eq("id", banner.id);
+        const { error } = await dataAdapter.updateBanner(banner.id, {
+          image_url: formData.image_url,
+          title: formData.title,
+          is_active: true,
+        });
 
         if (error) throw error;
         toast.success("背景更新成功");
       } else {
         // 创建新记录
-        const { error } = await supabase.from("banners").insert({
+        const { error } = await dataAdapter.createBanner({
           image_url: formData.image_url,
           title: formData.title,
           sort_order: 1,
@@ -136,7 +136,7 @@ const BannerManagement = () => {
 
     if (!confirm("确定要清除导航栏背景图吗？")) return;
 
-    const { error } = await supabase.from("banners").delete().eq("id", banner.id);
+    const { error } = await dataAdapter.deleteBanner(banner.id);
 
     if (error) {
       toast.error("清除失败");
