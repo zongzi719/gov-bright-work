@@ -321,9 +321,23 @@ export const useApprovalWorkflow = () => {
       const approverIds = firstNode.approver_ids || [];
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
       
+      console.log("First approver node:", firstNode.node_name, "approver_ids:", approverIds);
+      
+      // 如果没有配置审批人，流程也应该能启动成功（后续可手动分配或跳过）
+      if (approverIds.length === 0) {
+        console.warn("No approvers configured for first node, approval may need manual assignment");
+        return { success: true, instanceId: instance.id };
+      }
+      
       for (const approverId of approverIds) {
+        // 跳过无效的审批人 ID
+        if (!approverId || approverId === "") {
+          console.warn("Skipping empty approver_id");
+          continue;
+        }
+        
         // 创建审批记录
-        const { error: recordError } = await dataAdapter.createApprovalRecord({
+        const { data: recordData, error: recordError } = await dataAdapter.createApprovalRecord({
           instance_id: instance.id,
           node_index: firstNodeIndex,
           node_name: firstNode.node_name,
@@ -334,6 +348,8 @@ export const useApprovalWorkflow = () => {
 
         if (recordError) {
           console.error("Failed to create approval record:", recordError);
+          // 不要因为单个记录失败而中断整个流程
+          continue;
         }
 
         // 创建待办事项
