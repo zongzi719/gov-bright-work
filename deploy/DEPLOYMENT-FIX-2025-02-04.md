@@ -208,16 +208,17 @@ CREATE TABLE IF NOT EXISTS `leader_schedule_permissions` (
 -- 检查是否已有管理员，如果有则更新email
 UPDATE contacts SET email = 'admin@gov.cn' WHERE mobile = '13800000001';
 
--- 如果没有管理员账户，插入一个
-INSERT IGNORE INTO contacts (id, name, mobile, email, position, department, organization_id, is_leader, is_active, security_level, password_hash)
+-- 如果没有管理员账户，插入一个（使用正确的MariaDB语法）
+INSERT INTO contacts (id, name, mobile, email, position, department, organization_id, is_leader, is_active, security_level, password_hash)
 SELECT UUID(), '系统管理员', '13800000001', 'admin@gov.cn', '管理员', '信息中心', 
        (SELECT id FROM organizations LIMIT 1), 1, 1, '机密', '123456'
+FROM dual
 WHERE NOT EXISTS (SELECT 1 FROM contacts WHERE mobile = '13800000001');
 
 -- 确保管理员有admin角色
-INSERT IGNORE INTO user_roles (id, user_id, role)
+INSERT INTO user_roles (id, user_id, role)
 SELECT UUID(), c.id, 'admin' FROM contacts c WHERE c.mobile = '13800000001'
-AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id = c.id AND role = 'admin');
+  AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id = c.id AND role = 'admin');
 
 -- ==================== 3. 初始化办公用品数据 ====================
 
