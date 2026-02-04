@@ -696,4 +696,37 @@ tail -f /opt/gov-platform/logs/api.log
 
 ---
 
+## 八、审批流程推进问题修复（2025-02-05更新）
+
+### 问题描述
+1. 审批人1审批通过后，审批人2没有收到待办
+2. 审批流程时间线显示"系统管理员"而非配置的审批人
+
+### 根因
+1. 审批通过时只更新了待办状态，没有同步更新 `approval_records` 表的审批记录状态
+2. `advanceToNextNode` 中的节点完成检查依赖于 `approval_records` 表的状态，但该状态未被更新
+
+### 修复内容
+1. **前端修复**：`src/components/TodoDetailDialog.tsx` - 在审批通过时先更新 `approval_records` 表中当前审批记录的状态
+2. **后端修复**：`deploy/api/src/index.js` - 确保日期格式转换正确
+
+### 部署步骤
+```bash
+# 1. 更新后端文件
+cp deploy/api/src/index.js /opt/gov-platform/api/src/
+
+# 2. 重启API服务
+pm2 restart gov-api
+# 或
+systemctl restart gov-api
+
+# 3. 重新构建前端
+npm run build
+
+# 4. 部署前端（记得添加config.js引用）
+cp -r dist/* /opt/gov-platform/web/
+```
+
+---
+
 **部署完成后，请按验证清单逐项测试功能。如有问题，查看 `/opt/gov-platform/logs/api.log` 和浏览器控制台错误信息。**
