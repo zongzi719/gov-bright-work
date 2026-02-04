@@ -649,8 +649,8 @@ app.get('/api/office-supplies', async (req, res) => {
 
 app.get('/api/schedules', async (req, res) => {
   try {
-    const { contact_id, schedule_date } = req.query;
-    let sql = `SELECT s.*, c.name as contact_name 
+    const { contact_id, schedule_date, start_date, end_date } = req.query;
+    let sql = `SELECT s.*, c.name as contact_name, c.department as contact_department
                FROM schedules s
                LEFT JOIN contacts c ON s.contact_id = c.id
                WHERE 1=1`;
@@ -663,6 +663,15 @@ app.get('/api/schedules', async (req, res) => {
     if (schedule_date) {
       sql += ' AND s.schedule_date = ?';
       params.push(schedule_date);
+    }
+    // 支持日期范围查询
+    if (start_date) {
+      sql += ' AND s.schedule_date >= ?';
+      params.push(start_date);
+    }
+    if (end_date) {
+      sql += ' AND s.schedule_date <= ?';
+      params.push(end_date);
     }
     
     sql += ' ORDER BY s.schedule_date, s.start_time';
