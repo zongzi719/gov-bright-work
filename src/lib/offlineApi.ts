@@ -15,11 +15,24 @@ const getApiBaseUrl = (): string => {
 export const isOfflineMode = (): boolean => {
   // 检查是否配置了 GOV_CONFIG（离线部署时会加载 config.js）
   if (typeof window !== 'undefined' && (window as any).GOV_CONFIG) {
+    // 打印调试信息（仅首次）
+    if (!(window as any)._offlineModeLogged) {
+      console.log('[Offline Mode] GOV_CONFIG detected:', {
+        API_BASE_URL: (window as any).GOV_CONFIG.API_BASE_URL,
+        OFFLINE_MODE: (window as any).GOV_CONFIG.OFFLINE_MODE,
+      });
+      (window as any)._offlineModeLogged = true;
+    }
     return true;
   }
   // 检查环境变量标志
   if (import.meta.env.VITE_OFFLINE_MODE === 'true') {
     return true;
+  }
+  // 如果都不满足，打印警告（仅首次）
+  if (typeof window !== 'undefined' && !(window as any)._offlineModeWarned) {
+    console.warn('[Offline Mode] window.GOV_CONFIG is undefined! config.js may not be loaded correctly.');
+    (window as any)._offlineModeWarned = true;
   }
   return false;
 };
