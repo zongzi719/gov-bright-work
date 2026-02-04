@@ -957,6 +957,26 @@ app.get('/api/office-supplies', async (req, res) => {
   }
 });
 
+// 获取单个办公用品
+app.get('/api/office-supplies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT id, current_stock, name FROM office_supplies WHERE id = ?',
+      [id]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '物品不存在' });
+    }
+    
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Get office supply by id error:', error);
+    res.status(500).json({ error: '获取办公用品失败' });
+  }
+});
+
 // ==================== 日程管理 ====================
 
 app.get('/api/schedules', async (req, res) => {
@@ -1472,7 +1492,21 @@ app.get('/api/approval-instances', async (req, res) => {
 
 app.get('/api/approval-records', async (req, res) => {
   try {
-    const { instance_id } = req.query;
+    const { instance_id, node_name } = req.query;
+    
+    // 如果有 node_name 参数，返回简化结构用于审批流程推进
+    if (node_name) {
+      const [rows] = await pool.execute(
+        `SELECT status, created_at, approver_id
+         FROM approval_records
+         WHERE instance_id = ? AND node_name = ?
+         ORDER BY created_at DESC`,
+        [instance_id, node_name]
+      );
+      return res.json(rows);
+    }
+    
+    // 默认返回完整结构
     const [rows] = await pool.execute(
       `SELECT ar.*, c.name as approver_name, c.department as approver_department
        FROM approval_records ar
@@ -1495,6 +1529,83 @@ app.get('/api/approval-records', async (req, res) => {
   } catch (error) {
     console.error('Get approval records error:', error);
     res.status(500).json({ error: '获取审批记录失败' });
+  }
+});
+
+// 批量更新审批记录（按实例ID和状态）
+app.put('/api/approval-records/by-instance/:instanceId', async (req, res) => {
+  try {
+    const { instanceId } = req.params;
+    const { current_status, updates } = req.body;
+    
+    const setClauses = [];
+    const params = [];
+    
+    if (updates.status !== undefined) { setClauses.push('status = ?'); params.push(updates.status); }
+    if (updates.comment !== undefined) { setClauses.push('comment = ?'); params.push(updates.comment); }
+    if (updates.processed_at !== undefined) { setClauses.push('processed_at = ?'); params.push(formatDateForMySQL(updates.processed_at)); }
+    setClauses.push('updated_at = NOW()');
+    
+    params.push(instanceId, current_status);
+    
+    await pool.execute(
+      `UPDATE approval_records SET ${setClauses.join(', ')} WHERE instance_id = ? AND status = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Batch update approval records error:', error);
+    res.status(500).json({ error: '批量更新审批记录失败' });
+  }
+});
+
+// 批量更新待办事项（按实例ID和状态）
+app.put('/api/todo-items/by-instance/:instanceId', async (req, res) => {
+  try {
+    const { instanceId } = req.params;
+    const { current_status, updates } = req.body;
+    
+    const setClauses = [];
+    const params = [];
+    
+    if (updates.status !== undefined) { setClauses.push('status = ?'); params.push(updates.status); }
+    if (updates.process_result !== undefined) { setClauses.push('process_result = ?'); params.push(updates.process_result); }
+    if (updates.process_notes !== undefined) { setClauses.push('process_notes = ?'); params.push(updates.process_notes); }
+    if (updates.processed_at !== undefined) { setClauses.push('processed_at = ?'); params.push(formatDateForMySQL(updates.processed_at)); }
+    setClauses.push('updated_at = NOW()');
+    
+    params.push(instanceId, current_status);
+    
+    await pool.execute(
+      `UPDATE todo_items SET ${setClauses.join(', ')} WHERE approval_instance_id = ? AND status = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Batch update todo items error:', error);
+    res.status(500).json({ error: '批量更新待办事项失败' });
+  }
+});
+
+// 获取缺勤记录的联系人ID
+app.get('/api/absence-records/:id/contact', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT contact_id FROM absence_records WHERE id = ?',
+      [id]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+    
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Get absence record contact error:', error);
+    res.status(500).json({ error: '获取联系人失败' });
   }
 });
 
