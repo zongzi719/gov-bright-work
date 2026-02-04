@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Briefcase, CalendarOff, LogOut } from "lucide-react";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import BusinessTripForm from "@/components/forms/BusinessTripForm";
@@ -123,12 +123,10 @@ const AbsenceApplication = () => {
   const fetchTripRecords = async () => {
     if (!currentUser?.id) return;
     setTripLoading(true);
-    const { data } = await supabase
-      .from("absence_records")
-      .select("*")
-      .eq("type", "business_trip")
-      .eq("contact_id", currentUser.id)
-      .order("created_at", { ascending: false });
+    const { data } = await dataAdapter.getAbsenceRecords({
+      contact_id: currentUser.id,
+      type: "business_trip",
+    });
     if (data) setTripRecords(data);
     setTripLoading(false);
   };
@@ -137,12 +135,10 @@ const AbsenceApplication = () => {
   const fetchLeaveRecords = async () => {
     if (!currentUser?.id) return;
     setLeaveLoading(true);
-    const { data } = await supabase
-      .from("absence_records")
-      .select(`*, handover_person:contacts!absence_records_handover_person_id_fkey (name)`)
-      .eq("type", "leave")
-      .eq("contact_id", currentUser.id)
-      .order("created_at", { ascending: false });
+    const { data } = await dataAdapter.getAbsenceRecords({
+      contact_id: currentUser.id,
+      type: "leave",
+    });
     if (data) setLeaveRecords(data);
     setLeaveLoading(false);
   };
@@ -151,12 +147,10 @@ const AbsenceApplication = () => {
   const fetchOutRecords = async () => {
     if (!currentUser?.id) return;
     setOutLoading(true);
-    const { data } = await supabase
-      .from("absence_records")
-      .select("*")
-      .eq("type", "out")
-      .eq("contact_id", currentUser.id)
-      .order("created_at", { ascending: false });
+    const { data } = await dataAdapter.getAbsenceRecords({
+      contact_id: currentUser.id,
+      type: "out",
+    });
     if (data) setOutRecords(data);
     setOutLoading(false);
   };
