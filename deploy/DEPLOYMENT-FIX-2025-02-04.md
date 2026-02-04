@@ -608,11 +608,25 @@ mysql -h localhost -u root -p gov_platform -e "SELECT 1"
 7. **审批实例创建** (`/api/approval-instances`) - **2025-02-04 更新**
    - 增强必填字段验证
    - 添加详细日志记录
+   - **新增**：联合查询返回 `initiator` 信息
+   - **新增**：`/api/approval-instances/:id` 按ID获取单条实例
 
-8. **账号登录支持**
+8. **审批流程版本** (`/api/approval-process-versions`) - **2025-02-04 更新**
+   - **新增**：`/api/approval-process-versions/:id` 按ID获取单条版本快照
+
+9. **账号登录支持**
    - contacts 表新增 `account` 字段
    - 登录接口支持账号或手机号登录
    - 日期格式自动转换 (ISO 8601 → MySQL DATETIME)
+
+### 前端修复 - **2025-02-04 V3 更新**
+
+1. **ApprovalTimeline 组件**
+   - 改用 `dataAdapter` 替代直接 Supabase 调用
+   - 修复离线模式下审批流程不显示问题
+
+2. **dataAdapter 新增函数**
+   - `getApprovalInstanceByBusinessId(businessId, businessType)` - 按业务ID获取审批实例
 
 ---
 

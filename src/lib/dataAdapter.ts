@@ -987,6 +987,27 @@ export async function getApprovalInstances(params: { business_id: string; busine
   return { data, error };
 }
 
+// 按 business_id 和 business_type 获取单条审批实例（含发起人信息）
+export async function getApprovalInstanceByBusinessId(businessId: string, businessType: string) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('business_id', businessId);
+    searchParams.set('business_type', businessType);
+    return offlineRequest<any>(`/api/approval-instances?${searchParams.toString()}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_instances")
+    .select(`
+      *,
+      initiator:contacts!approval_instances_initiator_id_fkey(name, department)
+    `)
+    .eq("business_id", businessId)
+    .eq("business_type", businessType)
+    .maybeSingle();
+  return { data, error };
+}
+
 export async function getApprovalRecords(instanceId: string) {
   if (isOfflineMode()) {
     return offlineRequest<any[]>(`/api/approval-records?instance_id=${instanceId}`);
@@ -2225,6 +2246,7 @@ export const dataAdapter = {
   updateApprovalTemplate,
   seedApprovalTemplates,
   getApprovalInstances,
+  getApprovalInstanceByBusinessId,
   getApprovalInstanceById,
   getApprovalRecords,
   getApprovalRecordsByInstance,

@@ -1528,25 +1528,100 @@ app.post('/api/approval-templates/seed', async (req, res) => {
 app.get('/api/approval-instances', async (req, res) => {
   try {
     const { business_id, business_type } = req.query;
-    let sql = 'SELECT * FROM approval_instances WHERE 1=1';
+    // 联合查询获取 initiator 信息
+    let sql = `SELECT ai.*, c.name as initiator_name, c.department as initiator_department
+               FROM approval_instances ai
+               LEFT JOIN contacts c ON ai.initiator_id = c.id
+               WHERE 1=1`;
     const params = [];
     
     if (business_id) {
-      sql += ' AND business_id = ?';
+      sql += ' AND ai.business_id = ?';
       params.push(business_id);
     }
     if (business_type) {
-      sql += ' AND business_type = ?';
+      sql += ' AND ai.business_type = ?';
       params.push(business_type);
     }
     
-    sql += ' ORDER BY created_at DESC';
+    sql += ' ORDER BY ai.created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    
+    // 格式化返回数据，添加嵌套的 initiator 对象
+    const result = rows.map(row => ({
+      ...row,
+      form_data: typeof row.form_data === 'string' ? JSON.parse(row.form_data) : row.form_data,
+      initiator: row.initiator_name ? {
+        name: row.initiator_name,
+        department: row.initiator_department
+      } : null
+    }));
+    
+    // 如果查询单条，返回第一条
+    if (business_id && business_type && result.length > 0) {
+      res.json(result[0]);
+    } else {
+      res.json(result);
+    }
   } catch (error) {
     console.error('Get approval instances error:', error);
     res.status(500).json({ error: '获取审批实例失败' });
+  }
+});
+
+// 获取单个审批实例（按ID）
+app.get('/api/approval-instances/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      `SELECT ai.*, c.name as initiator_name, c.department as initiator_department
+       FROM approval_instances ai
+       LEFT JOIN contacts c ON ai.initiator_id = c.id
+       WHERE ai.id = ?`,
+      [id]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '审批实例不存在' });
+    }
+    
+    const row = rows[0];
+    res.json({
+      ...row,
+      form_data: typeof row.form_data === 'string' ? JSON.parse(row.form_data) : row.form_data,
+      initiator: row.initiator_name ? {
+        name: row.initiator_name,
+        department: row.initiator_department
+      } : null
+    });
+  } catch (error) {
+    console.error('Get approval instance by id error:', error);
+    res.status(500).json({ error: '获取审批实例失败' });
+  }
+});
+
+// 获取版本信息（按ID）
+app.get('/api/approval-process-versions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT * FROM approval_process_versions WHERE id = ?',
+      [id]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '版本不存在' });
+    }
+    
+    const row = rows[0];
+    res.json({
+      ...row,
+      nodes_snapshot: typeof row.nodes_snapshot === 'string' ? JSON.parse(row.nodes_snapshot) : row.nodes_snapshot
+    });
+  } catch (error) {
+    console.error('Get approval process version by id error:', error);
+    res.status(500).json({ error: '获取审批流程版本失败' });
   }
 });
 
