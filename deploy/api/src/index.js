@@ -1788,16 +1788,29 @@ app.post('/api/approval-records', async (req, res) => {
     const id = uuidv4();
     const { instance_id, node_index, node_name, node_type, approver_id, status = 'pending', comment } = req.body;
     
+    // 验证必填字段
+    if (!instance_id) {
+      return res.status(400).json({ error: '缺少 instance_id', detail: 'instance_id is required' });
+    }
+    if (!approver_id) {
+      return res.status(400).json({ error: '缺少审批人ID', detail: 'approver_id is required' });
+    }
+    if (!node_name) {
+      return res.status(400).json({ error: '缺少节点名称', detail: 'node_name is required' });
+    }
+    
+    console.log('Creating approval record:', { id, instance_id, node_index, node_name, node_type, approver_id, status });
+    
     await pool.execute(
       `INSERT INTO approval_records (id, instance_id, node_index, node_name, node_type, approver_id, status, comment)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, instance_id, node_index, node_name, node_type, approver_id, status, comment]
+      [id, instance_id, node_index, node_name, node_type || 'approver', approver_id, status, comment || null]
     );
     
     res.json({ id });
   } catch (error) {
     console.error('Create approval record error:', error);
-    res.status(500).json({ error: '创建审批记录失败' });
+    res.status(500).json({ error: '创建审批记录失败', detail: error.message });
   }
 });
 
