@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   `id` CHAR(36) NOT NULL DEFAULT (UUID()),
   `name` VARCHAR(100) NOT NULL,
   `mobile` VARCHAR(20) DEFAULT NULL,
+  `account` VARCHAR(100) DEFAULT NULL COMMENT '登录账号',
   `phone` VARCHAR(50) DEFAULT NULL,
   `email` VARCHAR(255) DEFAULT NULL,
   `position` VARCHAR(100) DEFAULT NULL,
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   PRIMARY KEY (`id`),
   KEY `idx_organization_id` (`organization_id`),
   KEY `idx_mobile` (`mobile`),
+  KEY `idx_account` (`account`),
   KEY `idx_is_active` (`is_active`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -553,8 +555,8 @@ INSERT INTO `organizations` (`id`, `name`, `short_name`, `level`, `sort_order`) 
 
 -- 插入默认测试用户
 SET @admin_id = UUID();
-INSERT INTO `contacts` (`id`, `name`, `mobile`, `email`, `position`, `department`, `organization_id`, `is_leader`, `is_active`, `security_level`, `password_hash`) VALUES
-(@admin_id, '系统管理员', '13800000001', 'admin@gov.cn', '管理员', '信息中心', @org_id, 1, 1, '机密', '123456');
+INSERT INTO `contacts` (`id`, `name`, `mobile`, `account`, `email`, `position`, `department`, `organization_id`, `is_leader`, `is_active`, `security_level`, `password_hash`) VALUES
+(@admin_id, '系统管理员', '13800000001', 'admin@gov.cn', 'admin@gov.cn', '管理员', '信息中心', @org_id, 1, 1, '机密', '123456');
 
 -- 为测试用户分配管理员角色
 INSERT INTO `user_roles` (`id`, `user_id`, `role`) VALUES
@@ -588,7 +590,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 DELIMITER //
 
 CREATE PROCEDURE IF NOT EXISTS `verify_contact_login`(
-  IN p_mobile VARCHAR(20),
+  IN p_identifier VARCHAR(100),
   IN p_password VARCHAR(255)
 )
 BEGIN
@@ -596,6 +598,7 @@ BEGIN
     c.id as contact_id,
     c.name as contact_name,
     c.mobile as contact_mobile,
+    c.account as contact_account,
     c.position as contact_position,
     c.department as contact_department,
     o.name as organization_name,
@@ -603,7 +606,7 @@ BEGIN
     c.organization_id as contact_organization_id
   FROM contacts c
   LEFT JOIN organizations o ON c.organization_id = o.id
-  WHERE c.mobile = p_mobile 
+  WHERE (c.mobile = p_identifier OR c.account = p_identifier)
     AND c.password_hash = p_password 
     AND c.is_active = 1;
 END //
