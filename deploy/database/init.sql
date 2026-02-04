@@ -385,6 +385,160 @@ CREATE TABLE IF NOT EXISTS `notice_images` (
   KEY `idx_is_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ==================== 领用申请表 ====================
+CREATE TABLE IF NOT EXISTS `supply_requisitions` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `requisition_by` CHAR(36) NOT NULL,
+  `supply_id` CHAR(36) DEFAULT NULL,
+  `quantity` INT DEFAULT NULL,
+  `requisition_date` DATE NOT NULL DEFAULT (CURRENT_DATE),
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `approved_by` CHAR(36) DEFAULT NULL,
+  `approved_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_requisition_by` (`requisition_by`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 领用申请明细表 ====================
+CREATE TABLE IF NOT EXISTS `supply_requisition_items` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `requisition_id` CHAR(36) NOT NULL,
+  `supply_id` CHAR(36) NOT NULL,
+  `quantity` INT NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_requisition_id` (`requisition_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 采购申请表 ====================
+CREATE TABLE IF NOT EXISTS `purchase_requests` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `requested_by` CHAR(36) NOT NULL,
+  `supply_id` CHAR(36) DEFAULT NULL,
+  `quantity` INT DEFAULT NULL,
+  `unit_price` DECIMAL(10,2) DEFAULT NULL,
+  `reason` TEXT DEFAULT NULL,
+  `purpose` TEXT DEFAULT NULL,
+  `department` VARCHAR(100) DEFAULT NULL,
+  `funding_source` VARCHAR(100) DEFAULT NULL,
+  `funding_detail` VARCHAR(255) DEFAULT NULL,
+  `budget_amount` DECIMAL(10,2) DEFAULT 0,
+  `total_amount` DECIMAL(10,2) DEFAULT 0,
+  `procurement_method` VARCHAR(50) DEFAULT NULL,
+  `expected_completion_date` DATE DEFAULT NULL,
+  `purchase_date` DATE NOT NULL DEFAULT (CURRENT_DATE),
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `approved_by` CHAR(36) DEFAULT NULL,
+  `approved_at` DATETIME DEFAULT NULL,
+  `completed_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_requested_by` (`requested_by`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 采购申请明细表 ====================
+CREATE TABLE IF NOT EXISTS `purchase_request_items` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `request_id` CHAR(36) NOT NULL,
+  `supply_id` CHAR(36) DEFAULT NULL,
+  `item_name` VARCHAR(255) DEFAULT NULL,
+  `specification` VARCHAR(255) DEFAULT NULL,
+  `unit` VARCHAR(20) DEFAULT NULL,
+  `quantity` INT NOT NULL DEFAULT 1,
+  `unit_price` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `amount` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `category_link` VARCHAR(500) DEFAULT NULL,
+  `remarks` TEXT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_request_id` (`request_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 办公采购表 ====================
+CREATE TABLE IF NOT EXISTS `supply_purchases` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `applicant_id` CHAR(36) NOT NULL,
+  `applicant_name` VARCHAR(100) NOT NULL,
+  `department` VARCHAR(100) NOT NULL,
+  `reason` TEXT DEFAULT NULL,
+  `total_amount` DECIMAL(10,2) DEFAULT 0,
+  `purchase_date` DATE NOT NULL DEFAULT (CURRENT_DATE),
+  `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_applicant_id` (`applicant_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 办公采购明细表 ====================
+CREATE TABLE IF NOT EXISTS `supply_purchase_items` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `purchase_id` CHAR(36) NOT NULL,
+  `supply_id` CHAR(36) DEFAULT NULL,
+  `item_name` VARCHAR(255) NOT NULL,
+  `specification` VARCHAR(255) DEFAULT NULL,
+  `unit` VARCHAR(20) DEFAULT NULL,
+  `quantity` INT NOT NULL DEFAULT 1,
+  `unit_price` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `amount` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `remarks` TEXT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_purchase_id` (`purchase_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 库存变动记录表 ====================
+CREATE TABLE IF NOT EXISTS `stock_movements` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `supply_id` CHAR(36) NOT NULL,
+  `movement_type` VARCHAR(20) NOT NULL COMMENT 'in/out',
+  `quantity` INT NOT NULL,
+  `before_stock` INT NOT NULL,
+  `after_stock` INT NOT NULL,
+  `reference_type` VARCHAR(50) DEFAULT NULL,
+  `reference_id` CHAR(36) DEFAULT NULL,
+  `operator_name` VARCHAR(100) DEFAULT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_supply_id` (`supply_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 审批流程版本表 ====================
+CREATE TABLE IF NOT EXISTS `approval_process_versions` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `template_id` CHAR(36) NOT NULL,
+  `version_number` INT NOT NULL DEFAULT 1,
+  `version_name` VARCHAR(100) NOT NULL,
+  `nodes_snapshot` JSON DEFAULT NULL,
+  `is_current` TINYINT(1) NOT NULL DEFAULT 1,
+  `notes` TEXT DEFAULT NULL,
+  `published_by` CHAR(36) DEFAULT NULL,
+  `published_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_template_id` (`template_id`),
+  KEY `idx_is_current` (`is_current`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 领导日程查看权限表 ====================
+CREATE TABLE IF NOT EXISTS `leader_schedule_permissions` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `user_id` CHAR(36) NOT NULL,
+  `leader_id` CHAR(36) DEFAULT NULL,
+  `can_view_all` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ==================== 初始化默认数据 ====================
 
 -- 插入默认角色
