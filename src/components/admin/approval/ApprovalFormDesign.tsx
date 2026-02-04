@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import {
   DndContext,
   DragEndEvent,
@@ -46,11 +46,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
 
   const fetchFields = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("approval_form_fields" as any)
-      .select("*")
-      .eq("template_id", templateId)
-      .order("sort_order", { ascending: true });
+    const { data, error } = await dataAdapter.getApprovalFormFields(templateId);
 
     if (error) {
       toast.error("获取表单字段失败");
@@ -82,9 +78,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
       template_id: templateId,
     }));
 
-    const { error } = await supabase
-      .from("approval_form_fields" as any)
-      .insert(fieldsToInsert);
+    const { error } = await dataAdapter.createApprovalFormFieldsBatch(fieldsToInsert);
 
     if (error) {
       console.error("初始化默认字段失败:", error);
@@ -94,11 +88,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
     }
     
     // 重新获取字段后重置标志
-    const { data } = await supabase
-      .from("approval_form_fields" as any)
-      .select("*")
-      .eq("template_id", templateId)
-      .order("sort_order", { ascending: true });
+    const { data } = await dataAdapter.getApprovalFormFields(templateId);
     
     setFields((data as unknown as FormField[]) || []);
     setLoading(false);
@@ -140,10 +130,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
         }));
 
         for (const update of updates) {
-          await supabase
-            .from("approval_form_fields" as any)
-            .update({ sort_order: update.sort_order })
-            .eq("id", update.id);
+          await dataAdapter.updateApprovalFormField(update.id, { sort_order: update.sort_order });
         }
       }
     }
@@ -164,17 +151,14 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
   const handleSaveField = async (fieldData: Partial<FormField>) => {
     if (editingField) {
       // 更新现有字段
-      const { error } = await supabase
-        .from("approval_form_fields" as any)
-        .update({
-          field_type: fieldData.field_type,
-          field_label: fieldData.field_label,
-          placeholder: fieldData.placeholder,
-          is_required: fieldData.is_required,
-          field_options: fieldData.field_options,
-          col_span: fieldData.col_span,
-        })
-        .eq("id", editingField.id);
+      const { error } = await dataAdapter.updateApprovalFormField(editingField.id, {
+        field_type: fieldData.field_type,
+        field_label: fieldData.field_label,
+        placeholder: fieldData.placeholder,
+        is_required: fieldData.is_required,
+        field_options: fieldData.field_options,
+        col_span: fieldData.col_span,
+      });
 
       if (error) {
         toast.error("更新字段失败");
@@ -185,19 +169,17 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
       // 添加新字段
       const maxOrder = fields.length > 0 ? Math.max(...fields.map(f => f.sort_order)) : 0;
       
-      const { error } = await supabase
-        .from("approval_form_fields" as any)
-        .insert({
-          template_id: templateId,
-          field_type: fieldData.field_type,
-          field_name: fieldData.field_name,
-          field_label: fieldData.field_label,
-          placeholder: fieldData.placeholder,
-          is_required: fieldData.is_required,
-          field_options: fieldData.field_options,
-          col_span: fieldData.col_span,
-          sort_order: maxOrder + 1,
-        });
+      const { error } = await dataAdapter.createApprovalFormField({
+        template_id: templateId,
+        field_type: fieldData.field_type || 'text',
+        field_name: fieldData.field_name || `field_${Date.now()}`,
+        field_label: fieldData.field_label || '新字段',
+        placeholder: fieldData.placeholder,
+        is_required: fieldData.is_required,
+        field_options: fieldData.field_options,
+        col_span: fieldData.col_span,
+        sort_order: maxOrder + 1,
+      });
 
       if (error) {
         toast.error("添加字段失败");
@@ -213,10 +195,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
   const handleDeleteField = async (id: string) => {
     if (!confirm("确定要删除这个字段吗？")) return;
 
-    const { error } = await supabase
-      .from("approval_form_fields" as any)
-      .delete()
-      .eq("id", id);
+    const { error } = await dataAdapter.deleteApprovalFormField(id);
 
     if (error) {
       toast.error("删除字段失败");
@@ -227,10 +206,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
   };
 
   const handleColSpanChange = async (id: string, colSpan: number) => {
-    const { error } = await supabase
-      .from("approval_form_fields" as any)
-      .update({ col_span: colSpan })
-      .eq("id", id);
+    const { error } = await dataAdapter.updateApprovalFormField(id, { col_span: colSpan });
 
     if (error) {
       toast.error("更新失败");
