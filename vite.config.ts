@@ -38,8 +38,7 @@ export default defineConfig(({ mode }) => ({
     include: ["react", "react-dom"],
   },
   build: {
-    // 确保生成兼容旧浏览器的代码
-    target: "es2015",
+    // 注意：不设置 target，让 @vitejs/plugin-legacy 自动处理
     // 明确的 rollup 配置确保正确的模块分割
     rollupOptions: {
       output: {
