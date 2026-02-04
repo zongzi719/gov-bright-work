@@ -734,34 +734,36 @@ app.get('/api/absence-records', async (req, res) => {
     
     const [rows] = await pool.execute(baseSql, params);
     
-    // 批量查询审批实例状态（避免 JOIN 类型问题）
-    // 将所有 ID 转为小写字符串进行标准化
-    const businessIds = rows.map(r => String(r.id).toLowerCase());
+    // 批量查询审批实例状态（使用 SQL LOWER 函数确保大小写无关匹配）
     let approvalStatusMap = {};
     
-    if (businessIds.length > 0) {
+    if (rows.length > 0) {
       // 分别查询每种业务类型的审批实例
       const businessTypes = [...new Set(rows.map(r => r.type))];
       
       for (const bType of businessTypes) {
-        const typeBusinessIds = rows.filter(r => r.type === bType).map(r => String(r.id));
-        if (typeBusinessIds.length === 0) continue;
+        const typeRows = rows.filter(r => r.type === bType);
+        if (typeRows.length === 0) continue;
         
-        const placeholders = typeBusinessIds.map(() => '?').join(',');
-        const [aiRows] = await pool.execute(
-          `SELECT business_id, status, form_data FROM approval_instances 
-           WHERE business_id IN (${placeholders}) AND business_type = ?`,
-          [...typeBusinessIds, bType]
-        );
+        // 使用小写ID进行查询
+        const typeBusinessIds = typeRows.map(r => String(r.id).toLowerCase());
+        const placeholders = typeBusinessIds.map(() => 'LOWER(?)').join(',');
         
-        // 添加调试日志
-        console.log(`[DEBUG] Querying approval_instances for business_type=${bType}, ids:`, typeBusinessIds);
-        console.log(`[DEBUG] Found ${aiRows.length} approval instances`);
+        // SQL 中同时对 business_id 和参数都使用 LOWER 确保匹配
+        const sql = `SELECT business_id, status, form_data FROM approval_instances 
+           WHERE LOWER(business_id) IN (${placeholders}) AND business_type = ?`;
+        
+        console.log(`[DEBUG-v5] SQL: ${sql}`);
+        console.log(`[DEBUG-v5] Params:`, [...typeBusinessIds, bType]);
+        
+        const [aiRows] = await pool.execute(sql, [...typeBusinessIds, bType]);
+        
+        console.log(`[DEBUG-v5] Query result for business_type=${bType}: found ${aiRows.length} approval instances`);
         
         for (const ai of aiRows) {
           // 标准化 business_id 为小写字符串
           const normalizedId = String(ai.business_id).toLowerCase();
-          console.log(`[DEBUG] Mapping approval instance: business_id=${normalizedId}, status=${ai.status}`);
+          console.log(`[DEBUG-v5] Mapping: business_id=${normalizedId}, status=${ai.status}`);
           approvalStatusMap[normalizedId] = {
             status: ai.status,
             form_data: ai.form_data
@@ -770,7 +772,8 @@ app.get('/api/absence-records', async (req, res) => {
       }
     }
     
-    console.log('[DEBUG] Approval status map keys:', Object.keys(approvalStatusMap));
+    console.log('[DEBUG-v5] Approval status map keys:', Object.keys(approvalStatusMap));
+    console.log('[DEBUG-v5] Row IDs:', rows.map(r => String(r.id).toLowerCase()));
     
     // 格式化返回数据，合并审批实例的真实状态
     const result = rows.map(row => {
@@ -781,7 +784,7 @@ app.get('/api/absence-records', async (req, res) => {
       
       // 如果有审批实例，使用审批实例的状态
       if (approvalInfo) {
-        console.log(`[DEBUG] Record ${row.id}: matched approval_status=${approvalInfo.status}`);
+        console.log(`[DEBUG-v5] Record ${row.id}: MATCHED! approval_status=${approvalInfo.status}`);
         displayStatus = approvalInfo.status;
         
         // 检查是否有退回信息
@@ -807,7 +810,7 @@ app.get('/api/absence-records', async (req, res) => {
           }
         }
       } else {
-        console.log(`[DEBUG] Record ${row.id}: NO approval instance found (normalized: ${normalizedRowId})`);
+        console.log(`[DEBUG-v5] Record ${row.id}: NO MATCH found (normalized: ${normalizedRowId})`);
       }
       
       return {

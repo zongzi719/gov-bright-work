@@ -808,28 +808,28 @@ tail -100 /opt/gov-platform/logs/api.log | grep "Record"
 
 ---
 
-## 十一、审批状态 UUID 匹配问题修复（2025-02-05 v4更新）
+## 十一、审批状态 UUID 匹配问题修复（2025-02-05 v5更新）
 
 ### 问题描述
 审批流程完成后，列表状态仍显示"待审批"，即使审批详情显示所有节点均已通过
 
 ### 根因分析
-MariaDB 返回的 UUID 可能存在以下问题：
+MariaDB 的 UUID 处理存在以下问题：
 1. 大小写不一致（同一个 UUID 可能为大写或小写）
-2. 返回类型不一致（可能是 Buffer 或字符串）
-3. JavaScript Map 使用严格相等比较，导致匹配失败
+2. `IN` 查询时参数与存储值大小写不同导致无法匹配
+3. JavaScript 层面的标准化无法解决 SQL 层面的匹配问题
 
-### 解决方案
-在应用层**标准化所有 UUID 为小写字符串**后再进行匹配：
+### 解决方案（v5版本）
+**在 SQL 层面使用 LOWER() 函数进行大小写无关匹配**：
 
 ```javascript
-// 标准化所有 ID
-const normalizedRowId = String(row.id).toLowerCase();
-const normalizedBusinessId = String(ai.business_id).toLowerCase();
+// SQL 查询时对两端都使用 LOWER 函数
+const placeholders = typeBusinessIds.map(() => 'LOWER(?)').join(',');
+const sql = `SELECT business_id, status, form_data FROM approval_instances 
+   WHERE LOWER(business_id) IN (${placeholders}) AND business_type = ?`;
 
-// 使用标准化后的 ID 作为 Map 的 key 和查询条件
-approvalStatusMap[normalizedBusinessId] = { status, form_data };
-const approvalInfo = approvalStatusMap[normalizedRowId];
+// 参数使用小写
+const [aiRows] = await pool.execute(sql, [...typeBusinessIds.map(id => id.toLowerCase()), bType]);
 ```
 
 ### 部署步骤
@@ -840,17 +840,31 @@ cp deploy/api/src/index.js /opt/gov-platform/api/src/
 # 2. 重启API服务
 pm2 restart gov-api
 
-# 3. 验证日志输出（注意日志格式变化）
-tail -100 /opt/gov-platform/logs/api.log | grep "\[DEBUG\]"
+# 3. 验证日志输出（注意 v5 标记）
+tail -100 /opt/gov-platform/logs/api.log | grep "\[DEBUG-v5\]"
 # 应看到:
-# [DEBUG] Mapping approval instance: business_id=xxx, status=approved
-# [DEBUG] Record xxx: matched approval_status=approved
+# [DEBUG-v5] Query result for business_type=leave: found 3 approval instances
+# [DEBUG-v5] Record xxx: MATCHED! approval_status=approved
 ```
 
 ### 验证检查点
-1. 日志显示 `[DEBUG] Approval status map keys: ['id1', 'id2', ...]`
-2. 日志显示 `[DEBUG] Record xxx: matched approval_status=approved`
-3. 列表状态正确显示"已通过"
+1. 日志显示 `[DEBUG-v5] Query result ... found N approval instances`（N > 0）
+2. 日志显示 `[DEBUG-v5] Record xxx: MATCHED!`
+3. 如果仍显示 `NO MATCH found`，需检查数据库中是否存在对应的审批实例
+
+### 数据库验证查询
+```sql
+-- 检查是否存在审批实例
+SELECT id, business_id, business_type, status 
+FROM approval_instances 
+WHERE business_type = 'leave' 
+ORDER BY created_at DESC 
+LIMIT 10;
+
+-- 检查 UUID 大小写
+SELECT id, LOWER(id) as lower_id, HEX(id) FROM absence_records LIMIT 5;
+SELECT business_id, LOWER(business_id) as lower_bid FROM approval_instances LIMIT 5;
+```
 
 ---
 
