@@ -643,18 +643,329 @@ export async function getOrganizations() {
   return { data, error };
 }
 
+// 获取所有组织（管理后台用）
+export async function getAllOrganizations() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/organizations?all=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("*")
+    .order("sort_order");
+  return { data, error };
+}
+
+// 创建组织
+export async function createOrganization(org: {
+  name: string;
+  short_name?: string | null;
+  parent_id?: string | null;
+  level?: number;
+  sort_order?: number;
+  address?: string | null;
+  phone?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/organizations', {
+      method: 'POST',
+      body: JSON.stringify(org),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("organizations")
+    .insert(org as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+// 更新组织
+export async function updateOrganization(id: string, updates: {
+  name?: string;
+  short_name?: string | null;
+  parent_id?: string | null;
+  level?: number;
+  sort_order?: number;
+  address?: string | null;
+  phone?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/organizations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("organizations")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// 删除组织
+export async function deleteOrganization(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/organizations/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("organizations")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// 获取所有联系人（管理后台用）
+export async function getAllContacts() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/contacts?all=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("*, organization:organizations(*)")
+    .order("sort_order");
+  return { data, error };
+}
+
+// 创建联系人
+export async function createContact(contact: {
+  organization_id: string;
+  name: string;
+  position?: string | null;
+  department?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+  office_location?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+  status?: string;
+  status_note?: string | null;
+  security_level?: string;
+  is_leader?: boolean;
+  first_work_date?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/contacts', {
+      method: 'POST',
+      body: JSON.stringify(contact),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .insert(contact as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+// 更新联系人
+export async function updateContact(id: string, updates: {
+  organization_id?: string;
+  name?: string;
+  position?: string | null;
+  department?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+  office_location?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+  status?: string;
+  status_note?: string | null;
+  security_level?: string;
+  is_leader?: boolean;
+  first_work_date?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/contacts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("contacts")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// 删除联系人
+export async function deleteContact(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/contacts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("contacts")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// 获取所有 Banners（管理后台用）
+export async function getAllBanners() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/banners?all=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("banners")
+    .select("*")
+    .order("sort_order");
+  return { data, error };
+}
+
+// 创建 Banner
+export async function createBanner(banner: {
+  image_url: string;
+  title: string;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/banners', {
+      method: 'POST',
+      body: JSON.stringify(banner),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("banners")
+    .insert(banner as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+// 更新 Banner
+export async function updateBanner(id: string, updates: {
+  image_url?: string;
+  title?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/banners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("banners")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// 删除 Banner
+export async function deleteBanner(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/banners/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("banners")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
 // ==================== Approval (审批) ====================
 
-export async function getApprovalTemplates() {
+export async function getApprovalTemplates(params?: { include_inactive?: boolean }) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>('/api/approval-templates');
+    const searchParams = new URLSearchParams();
+    if (params?.include_inactive) searchParams.set('include_inactive', 'true');
+    const query = searchParams.toString();
+    return offlineRequest<any[]>(`/api/approval-templates${query ? `?${query}` : ''}`);
+  }
+  
+  let query = supabase.from("approval_templates").select("*");
+  if (!params?.include_inactive) {
+    query = query.eq("is_active", true);
+  }
+  const { data, error } = await query.order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function getAllApprovalTemplates() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/approval-templates?include_inactive=true');
   }
   
   const { data, error } = await supabase
     .from("approval_templates")
     .select("*")
-    .eq("is_active", true);
+    .order("created_at", { ascending: false });
   return { data, error };
+}
+
+export async function createApprovalTemplate(template: {
+  name: string;
+  code: string;
+  description?: string | null;
+  icon?: string;
+  business_type: string;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/approval-templates', {
+      method: 'POST',
+      body: JSON.stringify(template),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_templates")
+    .insert(template as any)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function updateApprovalTemplate(id: string, updates: {
+  name?: string;
+  description?: string | null;
+  icon?: string;
+  business_type?: string;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_templates")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function seedApprovalTemplates() {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean; count: number }>('/api/approval-templates/seed', {
+      method: 'POST',
+    });
+  }
+  // 在线模式不需要 seed，数据库已有
+  return { data: { success: true, count: 0 }, error: null };
 }
 
 export async function getApprovalInstances(params: { business_id: string; business_type: string }) {
@@ -1315,10 +1626,27 @@ export const dataAdapter = {
   getContactsWithOrg,
   getContactsWithOrgForAdmin,
   getOrganizations,
+  getAllOrganizations,
+  createOrganization,
+  updateOrganization,
+  deleteOrganization,
   getContacts,
+  getAllContacts,
+  createContact,
+  updateContact,
+  deleteContact,
   getContactsByIds,
+  // Banners
+  getAllBanners,
+  createBanner,
+  updateBanner,
+  deleteBanner,
   // Approval
   getApprovalTemplates,
+  getAllApprovalTemplates,
+  createApprovalTemplate,
+  updateApprovalTemplate,
+  seedApprovalTemplates,
   getApprovalInstances,
   getApprovalInstanceById,
   getApprovalRecords,

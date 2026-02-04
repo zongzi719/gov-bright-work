@@ -149,26 +149,114 @@ app.get('/api/organizations', async (req, res) => {
   }
 });
 
+app.post('/api/organizations', async (req, res) => {
+  try {
+    const { name, short_name, parent_id, level, sort_order, address, phone } = req.body;
+    const id = uuidv4();
+    
+    await pool.execute(
+      `INSERT INTO organizations (id, name, short_name, parent_id, level, sort_order, address, phone, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, name, short_name || null, parent_id || null, level || 1, sort_order || 0, address || null, phone || null]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create organization error:', error);
+    res.status(500).json({ error: '创建组织失败' });
+  }
+});
+
+app.put('/api/organizations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const fields = [];
+    const values = [];
+    
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+    if (updates.short_name !== undefined) { fields.push('short_name = ?'); values.push(updates.short_name); }
+    if (updates.parent_id !== undefined) { fields.push('parent_id = ?'); values.push(updates.parent_id || null); }
+    if (updates.level !== undefined) { fields.push('level = ?'); values.push(updates.level); }
+    if (updates.sort_order !== undefined) { fields.push('sort_order = ?'); values.push(updates.sort_order); }
+    if (updates.address !== undefined) { fields.push('address = ?'); values.push(updates.address); }
+    if (updates.phone !== undefined) { fields.push('phone = ?'); values.push(updates.phone); }
+    
+    if (fields.length === 0) {
+      return res.json({ success: true });
+    }
+    
+    fields.push('updated_at = NOW()');
+    values.push(id);
+    
+    await pool.execute(
+      `UPDATE organizations SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update organization error:', error);
+    res.status(500).json({ error: '更新组织失败' });
+  }
+});
+
+app.delete('/api/organizations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 先删除关联的联系人
+    await pool.execute('DELETE FROM contacts WHERE organization_id = ?', [id]);
+    // 再删除组织
+    await pool.execute('DELETE FROM organizations WHERE id = ?', [id]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete organization error:', error);
+    res.status(500).json({ error: '删除组织失败' });
+  }
+});
+
 // ==================== 通讯录 ====================
 
 app.get('/api/contacts', async (req, res) => {
   try {
-    const { organization_id, is_active } = req.query;
+    const { organization_id, is_active, all, with_org, is_leader, ids } = req.query;
     let sql = 'SELECT c.*, o.name as organization_name FROM contacts c LEFT JOIN organizations o ON c.organization_id = o.id WHERE 1=1';
     const params = [];
     
+    if (ids) {
+      const idList = ids.split(',');
+      sql += ` AND c.id IN (${idList.map(() => '?').join(',')})`;
+      params.push(...idList);
+    }
     if (organization_id) {
       sql += ' AND c.organization_id = ?';
       params.push(organization_id);
     }
-    if (is_active !== undefined) {
+    if (is_active !== undefined && all !== 'true') {
       sql += ' AND c.is_active = ?';
       params.push(is_active === 'true' ? 1 : 0);
+    }
+    if (is_leader !== undefined) {
+      sql += ' AND c.is_leader = ?';
+      params.push(is_leader === 'true' ? 1 : 0);
     }
     
     sql += ' ORDER BY c.sort_order, c.created_at';
     
     const [rows] = await pool.execute(sql, params);
+    
+    // 如果需要 with_org 格式，添加 organization 对象
+    if (with_org === 'true') {
+      const formatted = rows.map(row => ({
+        ...row,
+        organization: row.organization_name ? { name: row.organization_name } : null
+      }));
+      return res.json(formatted);
+    }
+    
     res.json(rows);
   } catch (error) {
     console.error('Get contacts error:', error);
@@ -192,6 +280,87 @@ app.get('/api/contacts/:id', async (req, res) => {
   } catch (error) {
     console.error('Get contact error:', error);
     res.status(500).json({ error: '获取联系人失败' });
+  }
+});
+
+app.post('/api/contacts', async (req, res) => {
+  try {
+    const { 
+      organization_id, name, position, department, phone, mobile, email, 
+      office_location, sort_order, is_active, status, status_note, 
+      security_level, is_leader, first_work_date, password_hash 
+    } = req.body;
+    const id = uuidv4();
+    
+    await pool.execute(
+      `INSERT INTO contacts (id, organization_id, name, position, department, phone, mobile, email, 
+       office_location, sort_order, is_active, status, status_note, security_level, is_leader, 
+       first_work_date, password_hash, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, organization_id, name, position || null, department || null, phone || null, 
+       mobile || null, email || null, office_location || null, sort_order || 0, 
+       is_active !== false ? 1 : 0, status || 'on_duty', status_note || null, 
+       security_level || '公开', is_leader ? 1 : 0, first_work_date || null, password_hash || '123456']
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create contact error:', error);
+    res.status(500).json({ error: '创建联系人失败' });
+  }
+});
+
+app.put('/api/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const fields = [];
+    const values = [];
+    
+    if (updates.organization_id !== undefined) { fields.push('organization_id = ?'); values.push(updates.organization_id); }
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+    if (updates.position !== undefined) { fields.push('position = ?'); values.push(updates.position); }
+    if (updates.department !== undefined) { fields.push('department = ?'); values.push(updates.department); }
+    if (updates.phone !== undefined) { fields.push('phone = ?'); values.push(updates.phone); }
+    if (updates.mobile !== undefined) { fields.push('mobile = ?'); values.push(updates.mobile); }
+    if (updates.email !== undefined) { fields.push('email = ?'); values.push(updates.email); }
+    if (updates.office_location !== undefined) { fields.push('office_location = ?'); values.push(updates.office_location); }
+    if (updates.sort_order !== undefined) { fields.push('sort_order = ?'); values.push(updates.sort_order); }
+    if (updates.is_active !== undefined) { fields.push('is_active = ?'); values.push(updates.is_active ? 1 : 0); }
+    if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
+    if (updates.status_note !== undefined) { fields.push('status_note = ?'); values.push(updates.status_note); }
+    if (updates.security_level !== undefined) { fields.push('security_level = ?'); values.push(updates.security_level); }
+    if (updates.is_leader !== undefined) { fields.push('is_leader = ?'); values.push(updates.is_leader ? 1 : 0); }
+    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date); }
+    
+    if (fields.length === 0) {
+      return res.json({ success: true });
+    }
+    
+    fields.push('updated_at = NOW()');
+    values.push(id);
+    
+    await pool.execute(
+      `UPDATE contacts SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update contact error:', error);
+    res.status(500).json({ error: '更新联系人失败' });
+  }
+});
+
+app.delete('/api/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM contacts WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete contact error:', error);
+    res.status(500).json({ error: '删除联系人失败' });
   }
 });
 
@@ -236,9 +405,13 @@ app.get('/api/notice-images', async (req, res) => {
 
 app.get('/api/banners', async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT id, image_url, title FROM banners WHERE is_active = 1 ORDER BY sort_order'
-    );
+    const { all } = req.query;
+    let sql = 'SELECT * FROM banners';
+    if (all !== 'true') {
+      sql += ' WHERE is_active = 1';
+    }
+    sql += ' ORDER BY sort_order';
+    const [rows] = await pool.execute(sql);
     res.json(rows);
   } catch (error) {
     console.error('Get banners error:', error);
@@ -248,7 +421,7 @@ app.get('/api/banners', async (req, res) => {
 
 app.post('/api/banners', async (req, res) => {
   try {
-    const { image_url, title } = req.body;
+    const { image_url, title, sort_order, is_active } = req.body;
     const id = uuidv4();
     
     // 先删除旧的
@@ -256,14 +429,57 @@ app.post('/api/banners', async (req, res) => {
     
     // 插入新的
     await pool.execute(
-      'INSERT INTO banners (id, image_url, title, sort_order, is_active) VALUES (?, ?, ?, 1, 1)',
-      [id, image_url, title || '导航栏背景']
+      'INSERT INTO banners (id, image_url, title, sort_order, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+      [id, image_url, title || '导航栏背景', sort_order || 1, is_active !== false ? 1 : 0]
     );
     
     res.json({ success: true, id });
   } catch (error) {
     console.error('Create banner error:', error);
     res.status(500).json({ error: '保存背景失败' });
+  }
+});
+
+app.put('/api/banners/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const fields = [];
+    const values = [];
+    
+    if (updates.image_url !== undefined) { fields.push('image_url = ?'); values.push(updates.image_url); }
+    if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
+    if (updates.sort_order !== undefined) { fields.push('sort_order = ?'); values.push(updates.sort_order); }
+    if (updates.is_active !== undefined) { fields.push('is_active = ?'); values.push(updates.is_active ? 1 : 0); }
+    
+    if (fields.length === 0) {
+      return res.json({ success: true });
+    }
+    
+    fields.push('updated_at = NOW()');
+    values.push(id);
+    
+    await pool.execute(
+      `UPDATE banners SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update banner error:', error);
+    res.status(500).json({ error: '更新背景失败' });
+  }
+});
+
+app.delete('/api/banners/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM banners WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete banner error:', error);
+    res.status(500).json({ error: '删除背景失败' });
   }
 });
 
@@ -1098,15 +1314,116 @@ app.put('/api/canteen-menus/:dayOfWeek', async (req, res) => {
 
 // ==================== 审批模板 ====================
 
+// 获取审批模板列表
 app.get('/api/approval-templates', async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT * FROM approval_templates WHERE is_active = 1'
-    );
+    const { include_inactive } = req.query;
+    let sql = 'SELECT * FROM approval_templates';
+    if (!include_inactive || include_inactive !== 'true') {
+      sql += ' WHERE is_active = 1';
+    }
+    sql += ' ORDER BY created_at DESC';
+    
+    const [rows] = await pool.execute(sql);
     res.json(rows);
   } catch (error) {
     console.error('Get approval templates error:', error);
     res.status(500).json({ error: '获取审批模板失败' });
+  }
+});
+
+// 创建审批模板
+app.post('/api/approval-templates', async (req, res) => {
+  try {
+    const { name, code, description, icon, business_type, is_active = true } = req.body;
+    const id = uuidv4();
+    
+    await pool.execute(
+      `INSERT INTO approval_templates (id, name, code, description, icon, business_type, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, name, code, description || null, icon || '📋', business_type, is_active ? 1 : 0]
+    );
+    
+    // 返回创建的模板完整信息
+    const [rows] = await pool.execute('SELECT * FROM approval_templates WHERE id = ?', [id]);
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Create approval template error:', error);
+    res.status(500).json({ error: '创建审批模板失败' });
+  }
+});
+
+// 更新审批模板
+app.put('/api/approval-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const fields = [];
+    const values = [];
+    
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+    if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
+    if (updates.icon !== undefined) { fields.push('icon = ?'); values.push(updates.icon); }
+    if (updates.business_type !== undefined) { fields.push('business_type = ?'); values.push(updates.business_type); }
+    if (updates.is_active !== undefined) { fields.push('is_active = ?'); values.push(updates.is_active ? 1 : 0); }
+    
+    if (fields.length === 0) {
+      return res.json({ success: true });
+    }
+    
+    fields.push('updated_at = NOW()');
+    values.push(id);
+    
+    await pool.execute(
+      `UPDATE approval_templates SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update approval template error:', error);
+    res.status(500).json({ error: '更新审批模板失败' });
+  }
+});
+
+// 初始化/种子审批模板
+app.post('/api/approval-templates/seed', async (req, res) => {
+  try {
+    // 预设的审批模板
+    const templates = [
+      { name: '出差申请', code: 'PROC_BUSINESS_TRIP', icon: '🚗', business_type: 'business_trip', description: '员工出差申请流程' },
+      { name: '请假申请', code: 'PROC_LEAVE', icon: '🏖️', business_type: 'leave', description: '员工请假申请流程' },
+      { name: '外出申请', code: 'PROC_OUT', icon: '🚶', business_type: 'out', description: '员工临时外出申请流程' },
+      { name: '物品领用', code: 'PROC_SUPPLY_REQ', icon: '📦', business_type: 'supply_requisition', description: '办公用品领用申请流程' },
+      { name: '采购申请', code: 'PROC_PURCHASE', icon: '💰', business_type: 'purchase_request', description: '办公用品采购申请流程' },
+      { name: '办公采购', code: 'PROC_SUPPLY_PURCHASE', icon: '🛒', business_type: 'supply_purchase', description: '处室办公用品采购申请流程' },
+    ];
+    
+    let insertedCount = 0;
+    
+    for (const tpl of templates) {
+      // 检查是否已存在该业务类型
+      const [existing] = await pool.execute(
+        'SELECT id FROM approval_templates WHERE business_type = ?',
+        [tpl.business_type]
+      );
+      
+      if (existing.length === 0) {
+        const id = uuidv4();
+        await pool.execute(
+          `INSERT INTO approval_templates (id, name, code, description, icon, business_type, is_active, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+          [id, tpl.name, tpl.code, tpl.description, tpl.icon, tpl.business_type]
+        );
+        insertedCount++;
+      }
+    }
+    
+    res.json({ success: true, count: insertedCount });
+  } catch (error) {
+    console.error('Seed approval templates error:', error);
+    res.status(500).json({ error: '初始化审批模板失败' });
   }
 });
 

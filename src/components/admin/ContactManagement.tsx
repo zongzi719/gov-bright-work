@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -178,10 +178,7 @@ const ContactManagement = () => {
   };
 
   const fetchOrganizations = async () => {
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("*")
-      .order("sort_order");
+    const { data, error } = await dataAdapter.getAllOrganizations();
 
     if (error) {
       toast.error("获取单位列表失败");
@@ -191,10 +188,7 @@ const ContactManagement = () => {
   };
 
   const fetchContacts = async () => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*, organization:organizations(*)")
-      .order("sort_order");
+    const { data, error } = await dataAdapter.getAllContacts();
 
     if (error) {
       toast.error("获取联系人列表失败");
@@ -218,10 +212,7 @@ const ContactManagement = () => {
     };
 
     if (editingOrg) {
-      const { error } = await supabase
-        .from("organizations")
-        .update(payload)
-        .eq("id", editingOrg.id);
+      const { error } = await dataAdapter.updateOrganization(editingOrg.id, payload);
 
       if (error) {
         toast.error("更新单位失败");
@@ -229,7 +220,7 @@ const ContactManagement = () => {
       }
       toast.success("单位已更新");
     } else {
-      const { error } = await supabase.from("organizations").insert(payload);
+      const { error } = await dataAdapter.createOrganization(payload);
 
       if (error) {
         toast.error("添加单位失败");
@@ -259,7 +250,7 @@ const ContactManagement = () => {
   const handleDeleteOrg = async (id: string) => {
     if (!confirm("确定要删除这个单位吗？关联的联系人也将被删除。")) return;
 
-    const { error } = await supabase.from("organizations").delete().eq("id", id);
+    const { error } = await dataAdapter.deleteOrganization(id);
 
     if (error) {
       toast.error("删除单位失败");
@@ -311,10 +302,7 @@ const ContactManagement = () => {
     };
 
     if (editingContact) {
-      const { error } = await supabase
-        .from("contacts")
-        .update(payload)
-        .eq("id", editingContact.id);
+      const { error } = await dataAdapter.updateContact(editingContact.id, payload);
 
       if (error) {
         toast.error("更新联系人失败");
@@ -322,7 +310,7 @@ const ContactManagement = () => {
       }
       toast.success("联系人已更新");
     } else {
-      const { error } = await supabase.from("contacts").insert(payload);
+      const { error } = await dataAdapter.createContact(payload);
 
       if (error) {
         toast.error("添加联系人失败");
@@ -360,7 +348,7 @@ const ContactManagement = () => {
   const handleDeleteContact = async (id: string) => {
     if (!confirm("确定要删除这个联系人吗？")) return;
 
-    const { error } = await supabase.from("contacts").delete().eq("id", id);
+    const { error } = await dataAdapter.deleteContact(id);
 
     if (error) {
       toast.error("删除联系人失败");
@@ -451,11 +439,7 @@ const ContactManagement = () => {
           if (existingOrg) {
             orgId = existingOrg.id;
           } else {
-            const { data: newOrg, error: orgError } = await supabase
-              .from("organizations")
-              .insert({ name: orgName })
-              .select()
-              .single();
+            const { data: newOrg, error: orgError } = await dataAdapter.createOrganization({ name: orgName });
 
             if (orgError || !newOrg) {
               errorCount++;
@@ -465,7 +449,7 @@ const ContactManagement = () => {
           }
 
           // 创建联系人
-          const { error: contactError } = await supabase.from("contacts").insert({
+          const { error: contactError } = await dataAdapter.createContact({
             organization_id: orgId,
             name,
             position: position || null,

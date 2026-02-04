@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import * as dataAdapter from "@/lib/dataAdapter";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Settings, FileText, GitBranch, Cog, Plus, ArrowLeft, Copy, Eye, FileQuestion, ClipboardList } from "lucide-react";
+import { Settings, FileText, GitBranch, Cog, Plus, ArrowLeft, Copy, Eye, FileQuestion, ClipboardList, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import ApprovalBasicSettings from "./approval/ApprovalBasicSettings";
 import ApprovalFormDesign from "./approval/ApprovalFormDesign";
@@ -102,10 +104,7 @@ const ApprovalSettings = () => {
 
   const fetchTemplates = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("approval_templates" as any)
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getAllApprovalTemplates();
 
     if (error) {
       console.error("Error fetching templates:", error);
@@ -116,12 +115,26 @@ const ApprovalSettings = () => {
     setLoading(false);
   };
 
+  const handleSeedTemplates = async () => {
+    setLoading(true);
+    const { data, error } = await dataAdapter.seedApprovalTemplates();
+    
+    if (error) {
+      toast.error("初始化模板失败");
+    } else if (data && data.count > 0) {
+      toast.success(`成功导入 ${data.count} 个审批模板`);
+      fetchTemplates();
+    } else {
+      toast.info("所有模板已存在，无需导入");
+    }
+    setLoading(false);
+  };
+
   const handleToggleActive = async (template: ApprovalTemplate, e: React.MouseEvent) => {
     e.stopPropagation();
-    const { error } = await supabase
-      .from("approval_templates" as any)
-      .update({ is_active: !template.is_active })
-      .eq("id", template.id);
+    const { error } = await dataAdapter.updateApprovalTemplate(template.id, { 
+      is_active: !template.is_active 
+    });
 
     if (error) {
       toast.error("更新状态失败");
@@ -162,18 +175,14 @@ const ApprovalSettings = () => {
 
     // 创建新模板并预填充信息
     const code = `PROC_${Date.now().toString(36).toUpperCase()}`;
-    const { data, error } = await supabase
-      .from("approval_templates" as any)
-      .insert({
-        name: form.name,
-        code,
-        description: form.description,
-        icon: form.icon,
-        business_type: form.business_type,
-        is_active: true,
-      })
-      .select()
-      .single();
+    const { data, error } = await dataAdapter.createApprovalTemplate({
+      name: form.name,
+      code,
+      description: form.description,
+      icon: form.icon,
+      business_type: form.business_type,
+      is_active: true,
+    });
 
     if (error) {
       toast.error("创建模板失败");
@@ -279,10 +288,18 @@ const ApprovalSettings = () => {
           <h2 className="text-2xl font-bold">审批流程设置</h2>
           <p className="text-muted-foreground">配置审批流程模板，支持内部审批和外部系统对接</p>
         </div>
-        <Button onClick={handleCreateNew}>
-          <Plus className="w-4 h-4 mr-2" />
-          新建模板
-        </Button>
+        <div className="flex gap-2">
+          {isOfflineMode() && (
+            <Button variant="outline" onClick={handleSeedTemplates} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              导入预设模板
+            </Button>
+          )}
+          <Button onClick={handleCreateNew}>
+            <Plus className="w-4 h-4 mr-2" />
+            新建模板
+          </Button>
+        </div>
       </div>
 
       <Card>
