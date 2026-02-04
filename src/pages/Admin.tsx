@@ -17,6 +17,7 @@ import SystemManagement from "@/components/admin/SystemManagement";
 import LeaderScheduleManagement from "@/components/admin/LeaderScheduleManagement";
 import ScheduleManagement from "@/components/admin/ScheduleManagement";
 import ApprovalSettings from "@/components/admin/ApprovalSettings";
+import { isOfflineMode } from "@/lib/offlineApi";
 
 const Admin = () => {
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,29 @@ const Admin = () => {
   }, []);
 
   const checkAuth = async () => {
+    // 离线模式：检查 localStorage 中的管理员信息
+    if (isOfflineMode()) {
+      const storedAdmin = localStorage.getItem('adminUser');
+      if (!storedAdmin) {
+        navigate("/admin/login");
+        return;
+      }
+      try {
+        const adminUser = JSON.parse(storedAdmin);
+        // 验证管理员权限
+        if (adminUser && adminUser.role === 'admin') {
+          setIsAdmin(true);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        localStorage.removeItem('adminUser');
+      }
+      navigate("/admin/login");
+      return;
+    }
+
+    // 在线模式：使用 Supabase Auth
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -55,7 +79,11 @@ const Admin = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    if (isOfflineMode()) {
+      localStorage.removeItem('adminUser');
+    } else {
+      await supabase.auth.signOut();
+    }
     toast.success("已退出登录");
     navigate("/admin/login");
   };
