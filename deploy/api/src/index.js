@@ -505,6 +505,18 @@ app.get('/api/absence-records', async (req, res) => {
   }
 });
 
+// 日期格式转换辅助函数：ISO 8601 转 MySQL DATETIME
+function formatDateForMySQL(isoDateString) {
+  if (!isoDateString) return null;
+  try {
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) return isoDateString; // 无法解析则原样返回
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+  } catch {
+    return isoDateString;
+  }
+}
+
 app.post('/api/absence-records', async (req, res) => {
   try {
     const id = uuidv4();
@@ -515,6 +527,9 @@ app.post('/api/absence-records', async (req, res) => {
       handover_notes, contact_phone, out_type, out_location, notes, status
     } = req.body;
     
+    // 日志记录请求体，便于调试
+    console.log('Creating absence record:', { contact_id, type, reason, start_time, end_time, leave_type });
+    
     // 构建动态SQL
     const fieldValues = { id };
     
@@ -522,28 +537,30 @@ app.post('/api/absence-records', async (req, res) => {
     if (contact_id) fieldValues.contact_id = contact_id;
     if (type) fieldValues.type = type;
     if (reason) fieldValues.reason = reason;
-    if (start_time) fieldValues.start_time = start_time;
+    if (start_time) fieldValues.start_time = formatDateForMySQL(start_time);
     
-    // 可选字段
-    if (end_time !== undefined) fieldValues.end_time = end_time;
-    if (leave_type !== undefined) fieldValues.leave_type = leave_type;
-    if (duration_hours !== undefined) fieldValues.duration_hours = duration_hours;
-    if (duration_days !== undefined) fieldValues.duration_days = duration_days;
-    if (destination !== undefined) fieldValues.destination = destination;
-    if (transport_type !== undefined) fieldValues.transport_type = transport_type;
-    if (estimated_cost !== undefined) fieldValues.estimated_cost = estimated_cost;
-    if (companions !== undefined) fieldValues.companions = JSON.stringify(companions);
-    if (handover_person_id !== undefined) fieldValues.handover_person_id = handover_person_id;
-    if (handover_notes !== undefined) fieldValues.handover_notes = handover_notes;
-    if (contact_phone !== undefined) fieldValues.contact_phone = contact_phone;
-    if (out_type !== undefined) fieldValues.out_type = out_type;
-    if (out_location !== undefined) fieldValues.out_location = out_location;
-    if (notes !== undefined) fieldValues.notes = notes;
-    if (status !== undefined) fieldValues.status = status;
+    // 可选字段 - 日期字段需要格式转换
+    if (end_time !== undefined && end_time !== null) fieldValues.end_time = formatDateForMySQL(end_time);
+    if (leave_type !== undefined && leave_type !== null) fieldValues.leave_type = leave_type;
+    if (duration_hours !== undefined && duration_hours !== null) fieldValues.duration_hours = duration_hours;
+    if (duration_days !== undefined && duration_days !== null) fieldValues.duration_days = duration_days;
+    if (destination !== undefined && destination !== null) fieldValues.destination = destination;
+    if (transport_type !== undefined && transport_type !== null) fieldValues.transport_type = transport_type;
+    if (estimated_cost !== undefined && estimated_cost !== null) fieldValues.estimated_cost = estimated_cost;
+    if (companions !== undefined && companions !== null) fieldValues.companions = JSON.stringify(companions);
+    if (handover_person_id !== undefined && handover_person_id !== null && handover_person_id !== '') fieldValues.handover_person_id = handover_person_id;
+    if (handover_notes !== undefined && handover_notes !== null) fieldValues.handover_notes = handover_notes;
+    if (contact_phone !== undefined && contact_phone !== null) fieldValues.contact_phone = contact_phone;
+    if (out_type !== undefined && out_type !== null) fieldValues.out_type = out_type;
+    if (out_location !== undefined && out_location !== null) fieldValues.out_location = out_location;
+    if (notes !== undefined && notes !== null) fieldValues.notes = notes;
+    if (status !== undefined && status !== null) fieldValues.status = status;
     
     const fields = Object.keys(fieldValues);
     const values = Object.values(fieldValues);
     const placeholders = fields.map(() => '?').join(', ');
+    
+    console.log('Insert SQL fields:', fields);
     
     await pool.execute(
       `INSERT INTO absence_records (${fields.join(', ')}) VALUES (${placeholders})`,

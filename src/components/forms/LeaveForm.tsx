@@ -180,7 +180,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
+      <DialogContent className="max-w-lg max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0" aria-describedby={undefined}>
         <DialogHeader className="px-6 py-4 border-b bg-background">
           <DialogTitle>请假申请</DialogTitle>
         </DialogHeader>
