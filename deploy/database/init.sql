@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   `sort_order` INT NOT NULL DEFAULT 0,
   `office_location` VARCHAR(255) DEFAULT NULL,
   `first_work_date` DATE DEFAULT NULL,
-  `security_level` VARCHAR(20) NOT NULL DEFAULT '一般',
+  `security_level` VARCHAR(20) NOT NULL DEFAULT '公开',
   `status` VARCHAR(20) NOT NULL DEFAULT 'on_duty',
   `status_note` VARCHAR(255) DEFAULT NULL,
   `password_hash` VARCHAR(255) NOT NULL DEFAULT '123456',
