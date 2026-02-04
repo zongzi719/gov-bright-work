@@ -808,4 +808,50 @@ tail -100 /opt/gov-platform/logs/api.log | grep "Record"
 
 ---
 
+## 十一、审批状态 UUID 匹配问题修复（2025-02-05 v4更新）
+
+### 问题描述
+审批流程完成后，列表状态仍显示"待审批"，即使审批详情显示所有节点均已通过
+
+### 根因分析
+MariaDB 返回的 UUID 可能存在以下问题：
+1. 大小写不一致（同一个 UUID 可能为大写或小写）
+2. 返回类型不一致（可能是 Buffer 或字符串）
+3. JavaScript Map 使用严格相等比较，导致匹配失败
+
+### 解决方案
+在应用层**标准化所有 UUID 为小写字符串**后再进行匹配：
+
+```javascript
+// 标准化所有 ID
+const normalizedRowId = String(row.id).toLowerCase();
+const normalizedBusinessId = String(ai.business_id).toLowerCase();
+
+// 使用标准化后的 ID 作为 Map 的 key 和查询条件
+approvalStatusMap[normalizedBusinessId] = { status, form_data };
+const approvalInfo = approvalStatusMap[normalizedRowId];
+```
+
+### 部署步骤
+```bash
+# 1. 更新后端文件
+cp deploy/api/src/index.js /opt/gov-platform/api/src/
+
+# 2. 重启API服务
+pm2 restart gov-api
+
+# 3. 验证日志输出（注意日志格式变化）
+tail -100 /opt/gov-platform/logs/api.log | grep "\[DEBUG\]"
+# 应看到:
+# [DEBUG] Mapping approval instance: business_id=xxx, status=approved
+# [DEBUG] Record xxx: matched approval_status=approved
+```
+
+### 验证检查点
+1. 日志显示 `[DEBUG] Approval status map keys: ['id1', 'id2', ...]`
+2. 日志显示 `[DEBUG] Record xxx: matched approval_status=approved`
+3. 列表状态正确显示"已通过"
+
+---
+
 **部署完成后，请按验证清单逐项测试功能。如有问题，查看 `/opt/gov-platform/logs/api.log` 和浏览器控制台错误信息。**
