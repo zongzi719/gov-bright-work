@@ -2097,7 +2097,7 @@ app.put('/api/approval-records/:id', async (req, res) => {
     
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
     if (comment !== undefined) { updates.push('comment = ?'); params.push(comment); }
-    if (processed_at !== undefined) { updates.push('processed_at = ?'); params.push(processed_at); }
+    if (processed_at !== undefined) { updates.push('processed_at = ?'); params.push(formatDateForMySQL(processed_at)); }
     updates.push('updated_at = NOW()');
     
     params.push(id);

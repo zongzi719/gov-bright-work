@@ -622,7 +622,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       const currentNode = flatNodes[currentNodeIndex];
       const currentNodeName = currentNode?.node_name || "";
 
-      // 更新待办状态 (审批记录更新通过 advanceToNextNode 处理)
+      // 更新待办状态
       const { error: todoError } = await dataAdapter.updateTodoItem(todoItem.id, {
         status: "approved",
         process_result: "approved",
@@ -631,6 +631,22 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       });
 
       if (todoError) throw todoError;
+
+      // 重要：同时更新审批记录状态为已通过
+      // 找到当前用户在当前节点的待处理审批记录并更新
+      const currentApprovalRecord = records.find(
+        r => r.node_name === currentNodeName && 
+             r.approver_id === currentUser.id && 
+             r.status === "pending"
+      );
+      
+      if (currentApprovalRecord) {
+        await dataAdapter.updateApprovalRecord(currentApprovalRecord.id, {
+          status: "approved",
+          comment: comment.trim() || null,
+          processed_at: new Date().toISOString(),
+        });
+      }
 
       // 获取发起人信息
       const initiatorInfo = await getInitiatorInfo(instance.initiator_id || "");
