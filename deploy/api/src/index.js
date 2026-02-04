@@ -1689,16 +1689,32 @@ app.post('/api/todo-items', async (req, res) => {
       initiator_id, assignee_id, approval_instance_id, approval_version_number
     } = req.body;
     
+    // 验证必填字段
+    if (!business_type || !title || !assignee_id) {
+      console.error('Missing required fields:', { business_type, title, assignee_id });
+      return res.status(400).json({ error: '缺少必填字段' });
+    }
+    
+    // 处理 undefined 值为 null
+    const safeDescription = description || null;
+    const safeProcessResult = process_result || null;
+    const safeInitiatorId = initiator_id || null;
+    const safeApprovalInstanceId = approval_instance_id || null;
+    const safeApprovalVersionNumber = approval_version_number !== undefined ? approval_version_number : null;
+    
+    console.log('Creating todo item:', { id, business_type, business_id, title, assignee_id });
+    
     await pool.execute(
       `INSERT INTO todo_items (id, source, business_type, business_id, title, description, priority, status, process_result, initiator_id, assignee_id, approval_instance_id, approval_version_number)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, source, business_type, business_id, title, description, priority, status, process_result, initiator_id, assignee_id, approval_instance_id, approval_version_number]
+      [id, source, business_type, business_id || null, title, safeDescription, priority, status, safeProcessResult, safeInitiatorId, assignee_id, safeApprovalInstanceId, safeApprovalVersionNumber]
     );
     
+    console.log('Todo item created successfully:', id);
     res.json({ id });
   } catch (error) {
-    console.error('Create todo item error:', error);
-    res.status(500).json({ error: '创建待办失败' });
+    console.error('Create todo item error:', error.message, error.code);
+    res.status(500).json({ error: '创建待办失败: ' + error.message });
   }
 });
 
@@ -1740,16 +1756,25 @@ app.post('/api/approval-instances', async (req, res) => {
       initiator_id, status = 'pending', current_node_index = 0, form_data = {}
     } = req.body;
     
+    // 验证必填字段
+    if (!template_id || !version_id || !business_type || !business_id || !initiator_id) {
+      console.error('Missing required fields for approval instance:', { template_id, version_id, business_type, business_id, initiator_id });
+      return res.status(400).json({ error: '缺少必填字段' });
+    }
+    
+    console.log('Creating approval instance:', { id, template_id, business_type, business_id, initiator_id });
+    
     await pool.execute(
       `INSERT INTO approval_instances (id, template_id, version_id, version_number, business_type, business_id, initiator_id, status, current_node_index, form_data)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, template_id, version_id, version_number, business_type, business_id, initiator_id, status, current_node_index, JSON.stringify(form_data)]
+      [id, template_id, version_id, version_number || 1, business_type, business_id, initiator_id, status, current_node_index, JSON.stringify(form_data)]
     );
     
+    console.log('Approval instance created successfully:', id);
     res.json({ id });
   } catch (error) {
-    console.error('Create approval instance error:', error);
-    res.status(500).json({ error: '创建审批实例失败' });
+    console.error('Create approval instance error:', error.message, error.code);
+    res.status(500).json({ error: '创建审批实例失败: ' + error.message });
   }
 });
 
