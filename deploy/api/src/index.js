@@ -2114,21 +2114,32 @@ app.put('/api/approval-instances/:id', async (req, res) => {
     const { id } = req.params;
     const { status, current_node_index, completed_at, form_data } = req.body;
     
+    console.log('[INSTANCE-UPDATE] Updating approval instance:', {
+      id,
+      status,
+      current_node_index,
+      completed_at: completed_at ? 'set' : 'not set',
+      has_form_data: !!form_data
+    });
+    
     const updates = [];
     const params = [];
     
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
     if (current_node_index !== undefined) { updates.push('current_node_index = ?'); params.push(current_node_index); }
-    if (completed_at !== undefined) { updates.push('completed_at = ?'); params.push(completed_at); }
+    if (completed_at !== undefined) { updates.push('completed_at = ?'); params.push(formatDateForMySQL(completed_at)); }
     if (form_data !== undefined) { updates.push('form_data = ?'); params.push(JSON.stringify(form_data)); }
     updates.push('updated_at = NOW()');
     
     params.push(id);
     
-    await pool.execute(
-      `UPDATE approval_instances SET ${updates.join(', ')} WHERE id = ?`,
-      params
-    );
+    const sql = `UPDATE approval_instances SET ${updates.join(', ')} WHERE id = ?`;
+    console.log('[INSTANCE-UPDATE] SQL:', sql);
+    console.log('[INSTANCE-UPDATE] Params:', params);
+    
+    const [result] = await pool.execute(sql, params);
+    
+    console.log('[INSTANCE-UPDATE] Result:', { affectedRows: result.affectedRows, changedRows: result.changedRows });
     
     res.json({ success: true });
   } catch (error) {
