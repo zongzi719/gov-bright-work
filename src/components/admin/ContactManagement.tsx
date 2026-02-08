@@ -197,6 +197,7 @@ const ContactManagement = () => {
     const { data, error } = await dataAdapter.getAllContacts();
 
     if (error) {
+      console.error("获取联系人列表失败:", error);
       toast.error("获取联系人列表失败");
       return;
     }
