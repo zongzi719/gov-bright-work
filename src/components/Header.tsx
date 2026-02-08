@@ -141,7 +141,13 @@ const Header = () => {
             )}
 
             {/* 消息通知 */}
-            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 w-7 h-7 md:w-8 md:h-8">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative text-white hover:bg-white/10 w-7 h-7 md:w-8 md:h-8"
+              onClick={() => navigate("/todo?tab=pending")}
+              title="待办事项"
+            >
               <Bell className="w-4 h-4" />
               {todoCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-3.5 h-3.5 px-1 bg-accent text-[10px] text-white rounded-full flex items-center justify-center font-medium">
