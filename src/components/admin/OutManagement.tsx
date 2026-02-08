@@ -156,7 +156,7 @@ const OutManagement = () => {
           name,
           department,
           position,
-          organization:organizations (name)
+          organization:organizations!contacts_organization_id_fkey (name)
         )
       `)
       .eq("type", "out")
