@@ -145,7 +145,7 @@ export async function getAllSchedules() {
   
   const { data, error } = await supabase
     .from("schedules")
-    .select("*, contact:contacts(id, name, department, organization:organizations(name))")
+    .select("*, contact:contacts(id, name, department, organization:organizations!contacts_organization_id_fkey(name))")
     .order("schedule_date", { ascending: false })
     .order("start_time");
   return { data, error };
@@ -624,7 +624,7 @@ export async function getContactsWithOrg() {
     .from("contacts")
     .select(`
       id, name, department, position, mobile, phone, email, office_location, status, is_leader, organization_id, security_level,
-      organization:organizations (name)
+      organization:organizations!contacts_organization_id_fkey (name)
     `)
     .eq("is_active", true)
     .order("sort_order");
@@ -732,7 +732,7 @@ export async function getAllContacts() {
   
   const { data, error } = await supabase
     .from("contacts")
-    .select("*, organization:organizations(*)")
+    .select("*, organization:organizations!contacts_organization_id_fkey(*)")
     .order("sort_order");
   return { data, error };
 }
@@ -1206,7 +1206,7 @@ export async function getContactsWithOrgForAdmin() {
   
   const { data, error } = await supabase
     .from("contacts")
-    .select("id, name, department, organization:organizations(name)")
+    .select("id, name, department, organization:organizations!contacts_organization_id_fkey(name)")
     .eq("is_active", true)
     .order("sort_order");
   return { data, error };
