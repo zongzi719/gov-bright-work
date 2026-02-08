@@ -1849,6 +1849,86 @@ app.get('/api/leave-balances/:contactId', async (req, res) => {
   }
 });
 
+// 扣减假期余额
+app.post('/api/leave-balances/deduct', async (req, res) => {
+  try {
+    const { contactId, leaveType, durationHours, durationDays } = req.body;
+    const currentYear = new Date().getFullYear();
+    
+    // 根据假期类型确定扣减字段和值
+    let fieldUsed = '';
+    let deductValue = 0;
+    
+    switch (leaveType) {
+      case 'sick':
+        fieldUsed = 'sick_leave_used';
+        deductValue = durationHours || (durationDays * 8);
+        break;
+      case 'annual':
+        fieldUsed = 'annual_leave_used';
+        deductValue = durationHours || (durationDays * 8);
+        break;
+      case 'personal':
+        fieldUsed = 'personal_leave_used';
+        deductValue = durationDays || (durationHours / 8);
+        break;
+      case 'paternity':
+        fieldUsed = 'paternity_leave_used';
+        deductValue = durationDays || (durationHours / 8);
+        break;
+      case 'bereavement':
+        fieldUsed = 'bereavement_leave_used';
+        deductValue = durationDays || (durationHours / 8);
+        break;
+      case 'maternity':
+        fieldUsed = 'maternity_leave_used';
+        deductValue = durationDays || (durationHours / 8);
+        break;
+      case 'nursing':
+        fieldUsed = 'nursing_leave_used';
+        deductValue = durationHours || (durationDays * 8);
+        break;
+      case 'marriage':
+        fieldUsed = 'marriage_leave_used';
+        deductValue = durationDays || (durationHours / 8);
+        break;
+      case 'compensatory':
+        fieldUsed = 'compensatory_leave_used';
+        deductValue = durationHours || (durationDays * 8);
+        break;
+      default:
+        return res.status(400).json({ error: '无效的假期类型' });
+    }
+    
+    // 确保有假期余额记录
+    const [existing] = await pool.execute(
+      'SELECT id FROM leave_balances WHERE contact_id = ? AND year = ?',
+      [contactId, currentYear]
+    );
+    
+    if (existing.length === 0) {
+      // 创建新记录
+      const id = uuidv4();
+      await pool.execute(
+        `INSERT INTO leave_balances (id, contact_id, year, ${fieldUsed}) VALUES (?, ?, ?, ?)`,
+        [id, contactId, currentYear, deductValue]
+      );
+    } else {
+      // 更新已用假期
+      await pool.execute(
+        `UPDATE leave_balances SET ${fieldUsed} = ${fieldUsed} + ?, updated_at = NOW() WHERE contact_id = ? AND year = ?`,
+        [deductValue, contactId, currentYear]
+      );
+    }
+    
+    console.log(`[LEAVE-DEDUCT] ${leaveType} deducted: ${deductValue} for contact ${contactId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Deduct leave balance error:', error);
+    res.status(500).json({ error: '扣减假期余额失败' });
+  }
+});
+
 // ==================== 领导日程 ====================
 
 app.get('/api/leader-schedules', async (req, res) => {

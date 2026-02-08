@@ -1040,6 +1040,53 @@ export async function getLeaveBalance(contactId: string, year: number) {
   return { data, error };
 }
 
+/**
+ * 扣减假期余额（请假审批通过后调用）
+ * @param contactId 联系人ID
+ * @param leaveType 假期类型
+ * @param durationHours 时长（小时）
+ * @param durationDays 时长（天）
+ */
+export async function deductLeaveBalance(
+  contactId: string,
+  leaveType: string,
+  durationHours: number | null,
+  durationDays: number | null
+) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>('/api/leave-balances/deduct', {
+      method: 'POST',
+      body: JSON.stringify({ contactId, leaveType, durationHours, durationDays }),
+    });
+  }
+  
+  // 调用数据库函数扣减假期
+  const { data, error } = await supabase.rpc('deduct_leave_balance', {
+    p_contact_id: contactId,
+    p_leave_type: leaveType,
+    p_duration_hours: durationHours || 0,
+    p_duration_days: durationDays || 0,
+  });
+  
+  return { data, error };
+}
+
+/**
+ * 获取请假记录详情（用于扣减假期时获取请假类型和时长）
+ */
+export async function getAbsenceRecordForLeaveDeduction(businessId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/absence-records/${businessId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("absence_records")
+    .select("contact_id, leave_type, duration_hours, duration_days, type")
+    .eq("id", businessId)
+    .maybeSingle();
+  return { data, error };
+}
+
 // ==================== Leader Schedules (领导日程) ====================
 
 export async function getLeaderSchedules(params: {

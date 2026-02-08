@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
+import MyLeaveBalance from "@/components/MyLeaveBalance";
 import { getAbsenceRecords } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import LeaveForm from "@/components/forms/LeaveForm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AbsenceRecord {
   id: string;
@@ -33,6 +35,12 @@ const leaveTypeLabels: Record<string, string> = {
   annual: "年假",
   sick: "病假",
   personal: "事假",
+  paternity: "陪产假",
+  bereavement: "丧假",
+  maternity: "产假",
+  nursing: "哺乳假",
+  marriage: "婚假",
+  compensatory: "调休",
 };
 
 const Leave = () => {
@@ -122,17 +130,30 @@ const Leave = () => {
 
   return (
     <PageLayout>
-      <ApplicationList
-        title="请假申请"
-        items={listItems}
-        loading={loading}
-        search={search}
-        onSearchChange={setSearch}
-        onAddClick={() => setFormOpen(true)}
-        onItemClick={handleItemClick}
-        searchPlaceholder="搜索请假类型或事由..."
-        emptyText="暂无请假记录"
-      />
+      <Tabs defaultValue="apply" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="apply">我要请假</TabsTrigger>
+          <TabsTrigger value="balance">余额明细</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="apply">
+          <ApplicationList
+            title="请假申请"
+            items={listItems}
+            loading={loading}
+            search={search}
+            onSearchChange={setSearch}
+            onAddClick={() => setFormOpen(true)}
+            onItemClick={handleItemClick}
+            searchPlaceholder="搜索请假类型或事由..."
+            emptyText="暂无请假记录"
+          />
+        </TabsContent>
+
+        <TabsContent value="balance">
+          {currentUser?.id && <MyLeaveBalance contactId={currentUser.id} />}
+        </TabsContent>
+      </Tabs>
 
       <LeaveForm
         open={formOpen}

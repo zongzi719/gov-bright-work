@@ -142,6 +142,39 @@ const handleStockUpdate = async (
 };
 
 /**
+ * 处理请假审批通过后的假期余额扣减
+ */
+const handleLeaveBalanceDeduction = async (
+  businessType: string,
+  businessId: string
+) => {
+  if (businessType !== "leave") return;
+  
+  try {
+    // 获取请假记录详情
+    const { data: record } = await dataAdapter.getAbsenceRecordForLeaveDeduction(businessId);
+    
+    if (record && record.leave_type && record.contact_id) {
+      // 调用扣减假期函数
+      const { error } = await dataAdapter.deductLeaveBalance(
+        record.contact_id,
+        record.leave_type,
+        record.duration_hours,
+        record.duration_days
+      );
+      
+      if (error) {
+        console.error("Failed to deduct leave balance:", error);
+      } else {
+        console.log(`Leave balance deducted for ${record.leave_type}: ${record.duration_days} days / ${record.duration_hours} hours`);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to handle leave balance deduction:", error);
+  }
+};
+
+/**
  * 更新业务表状态和联系人状态
  */
 const updateBusinessAndContactStatus = async (
@@ -469,6 +502,7 @@ export const useApprovalProgression = () => {
         
         await updateBusinessAndContactStatus(businessType, businessId, "approved");
         await handleStockUpdate(businessType, businessId, initiatorName);
+        await handleLeaveBalanceDeduction(businessType, businessId);
         
         return { success: true, completed: true };
       }

@@ -798,9 +798,21 @@ export type Database = {
         Row: {
           annual_leave_total: number
           annual_leave_used: number
+          bereavement_leave_total: number | null
+          bereavement_leave_used: number | null
+          compensatory_leave_total: number | null
+          compensatory_leave_used: number | null
           contact_id: string
           created_at: string
           id: string
+          marriage_leave_total: number | null
+          marriage_leave_used: number | null
+          maternity_leave_total: number | null
+          maternity_leave_used: number | null
+          nursing_leave_total: number | null
+          nursing_leave_used: number | null
+          paternity_leave_total: number | null
+          paternity_leave_used: number | null
           personal_leave_total: number
           personal_leave_used: number
           sick_leave_total: number
@@ -811,9 +823,21 @@ export type Database = {
         Insert: {
           annual_leave_total?: number
           annual_leave_used?: number
+          bereavement_leave_total?: number | null
+          bereavement_leave_used?: number | null
+          compensatory_leave_total?: number | null
+          compensatory_leave_used?: number | null
           contact_id: string
           created_at?: string
           id?: string
+          marriage_leave_total?: number | null
+          marriage_leave_used?: number | null
+          maternity_leave_total?: number | null
+          maternity_leave_used?: number | null
+          nursing_leave_total?: number | null
+          nursing_leave_used?: number | null
+          paternity_leave_total?: number | null
+          paternity_leave_used?: number | null
           personal_leave_total?: number
           personal_leave_used?: number
           sick_leave_total?: number
@@ -824,9 +848,21 @@ export type Database = {
         Update: {
           annual_leave_total?: number
           annual_leave_used?: number
+          bereavement_leave_total?: number | null
+          bereavement_leave_used?: number | null
+          compensatory_leave_total?: number | null
+          compensatory_leave_used?: number | null
           contact_id?: string
           created_at?: string
           id?: string
+          marriage_leave_total?: number | null
+          marriage_leave_used?: number | null
+          maternity_leave_total?: number | null
+          maternity_leave_used?: number | null
+          nursing_leave_total?: number | null
+          nursing_leave_used?: number | null
+          paternity_leave_total?: number | null
+          paternity_leave_used?: number | null
           personal_leave_total?: number
           personal_leave_used?: number
           sick_leave_total?: number
@@ -1669,6 +1705,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deduct_leave_balance: {
+        Args: {
+          p_contact_id: string
+          p_duration_days: number
+          p_duration_hours: number
+          p_leave_type: string
+        }
+        Returns: boolean
+      }
       has_role:
         | {
             Args: {
@@ -1721,7 +1766,16 @@ export type Database = {
         | "transferred"
       contact_status: "on_duty" | "out" | "leave" | "business_trip" | "meeting"
       data_scope: "self" | "department" | "organization" | "all"
-      leave_type: "annual" | "sick" | "personal"
+      leave_type:
+        | "annual"
+        | "sick"
+        | "personal"
+        | "paternity"
+        | "bereavement"
+        | "maternity"
+        | "nursing"
+        | "marriage"
+        | "compensatory"
       purchase_status: "pending" | "approved" | "rejected" | "completed"
       requisition_status: "pending" | "approved" | "rejected" | "completed"
       todo_business_type:
@@ -1891,7 +1945,17 @@ export const Constants = {
       ],
       contact_status: ["on_duty", "out", "leave", "business_trip", "meeting"],
       data_scope: ["self", "department", "organization", "all"],
-      leave_type: ["annual", "sick", "personal"],
+      leave_type: [
+        "annual",
+        "sick",
+        "personal",
+        "paternity",
+        "bereavement",
+        "maternity",
+        "nursing",
+        "marriage",
+        "compensatory",
+      ],
       purchase_status: ["pending", "approved", "rejected", "completed"],
       requisition_status: ["pending", "approved", "rejected", "completed"],
       todo_business_type: [
