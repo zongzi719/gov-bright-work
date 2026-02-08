@@ -57,6 +57,8 @@ interface Organization {
   sort_order: number;
   address: string | null;
   phone: string | null;
+  direct_supervisor_id: string | null;
+  department_head_id: string | null;
 }
 
 // 获取单位的完整层级路径
@@ -142,6 +144,8 @@ const ContactManagement = () => {
     sort_order: 0,
     address: "",
     phone: "",
+    direct_supervisor_id: "",
+    department_head_id: "",
   });
 
   // 联系人表单
@@ -211,6 +215,8 @@ const ContactManagement = () => {
       sort_order: orgFormData.sort_order,
       address: orgFormData.address || null,
       phone: orgFormData.phone || null,
+      direct_supervisor_id: orgFormData.direct_supervisor_id || null,
+      department_head_id: orgFormData.department_head_id || null,
     };
 
     if (editingOrg) {
@@ -245,6 +251,8 @@ const ContactManagement = () => {
       sort_order: org.sort_order,
       address: org.address || "",
       phone: org.phone || "",
+      direct_supervisor_id: org.direct_supervisor_id || "",
+      department_head_id: org.department_head_id || "",
     });
     setOrgDialogOpen(true);
   };
@@ -272,6 +280,8 @@ const ContactManagement = () => {
       sort_order: 0,
       address: "",
       phone: "",
+      direct_supervisor_id: "",
+      department_head_id: "",
     });
     setOrgDialogOpen(false);
   };
@@ -954,6 +964,54 @@ const ContactManagement = () => {
                           setOrgFormData({ ...orgFormData, phone: e.target.value })
                         }
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>直接主管</Label>
+                      <Select
+                        value={orgFormData.direct_supervisor_id || "none"}
+                        onValueChange={(value) =>
+                          setOrgFormData({ ...orgFormData, direct_supervisor_id: value === "none" ? "" : value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择直接主管" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">无</SelectItem>
+                          {contacts
+                            .filter(c => c.is_active)
+                            .map(contact => (
+                              <SelectItem key={contact.id} value={contact.id}>
+                                {contact.name}{contact.position ? ` - ${contact.position}` : ''}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">审批流程中"直接主管"类型节点将自动使用此人</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>部门负责人</Label>
+                      <Select
+                        value={orgFormData.department_head_id || "none"}
+                        onValueChange={(value) =>
+                          setOrgFormData({ ...orgFormData, department_head_id: value === "none" ? "" : value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择部门负责人" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">无</SelectItem>
+                          {contacts
+                            .filter(c => c.is_active)
+                            .map(contact => (
+                              <SelectItem key={contact.id} value={contact.id}>
+                                {contact.name}{contact.position ? ` - ${contact.position}` : ''}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">审批流程中"部门负责人"类型节点将自动使用此人</p>
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" onClick={resetOrgForm}>

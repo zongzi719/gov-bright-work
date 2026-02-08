@@ -57,6 +57,36 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
 export const useApprovalWorkflow = () => {
 
   /**
+   * 根据发起人获取动态审批人（直接主管、部门负责人）
+   */
+  const resolveDynamicApprovers = async (approverType: string, initiatorId: string): Promise<string[]> => {
+    if (approverType !== 'direct_supervisor' && approverType !== 'department_head') {
+      return [];
+    }
+    
+    try {
+      const { data, error } = await dataAdapter.getOrganizationApprovers(initiatorId);
+      if (error || !data) {
+        console.warn(`Failed to get organization approvers for ${initiatorId}:`, error);
+        return [];
+      }
+      
+      if (approverType === 'direct_supervisor' && data.direct_supervisor_id) {
+        return [data.direct_supervisor_id];
+      }
+      
+      if (approverType === 'department_head' && data.department_head_id) {
+        return [data.department_head_id];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error resolving dynamic approvers:', error);
+      return [];
+    }
+  };
+
+  /**
    * 根据业务类型查找对应的审批模版
    */
   const findTemplateByBusinessType = async (businessType: string): Promise<ApprovalTemplate | null> => {
@@ -178,7 +208,7 @@ export const useApprovalWorkflow = () => {
   };
 
   /**
-   * 找到第一个审批节点（跳过CC节点）
+   * 找到第一个审批节点（跳过CC节点）- 同步版本，只检查节点配置
    */
   const findFirstApproverNode = (nodes: ApprovalNode[], formData: Record<string, unknown>): { node: ApprovalNode; index: number } | null => {
     const flatNodes = flattenNodesForExecution(nodes, formData);
@@ -186,11 +216,35 @@ export const useApprovalWorkflow = () => {
     for (let i = 0; i < flatNodes.length; i++) {
       const node = flatNodes[i];
       // 跳过CC节点，只找审批节点
-      if (node.node_type === "approver" && node.approver_ids && node.approver_ids.length > 0) {
-        return { node, index: i };
+      // 支持指定审批人或动态类型（直接主管、部门负责人）
+      if (node.node_type === "approver") {
+        const hasStaticApprovers = node.approver_ids && node.approver_ids.length > 0;
+        const isDynamicType = node.approver_type === 'direct_supervisor' || node.approver_type === 'department_head';
+        
+        if (hasStaticApprovers || isDynamicType) {
+          return { node, index: i };
+        }
       }
     }
     return null;
+  };
+
+  /**
+   * 解析审批节点的实际审批人ID列表
+   */
+  const resolveNodeApproverIds = async (node: ApprovalNode, initiatorId: string): Promise<string[]> => {
+    // 如果是动态审批人类型，先尝试解析
+    if (node.approver_type === 'direct_supervisor' || node.approver_type === 'department_head') {
+      const dynamicApprovers = await resolveDynamicApprovers(node.approver_type, initiatorId);
+      if (dynamicApprovers.length > 0) {
+        console.log(`Resolved ${node.approver_type} for initiator ${initiatorId}:`, dynamicApprovers);
+        return dynamicApprovers;
+      }
+      console.warn(`Could not resolve ${node.approver_type} for initiator ${initiatorId}, falling back to static approvers`);
+    }
+    
+    // 回退到静态配置的审批人
+    return node.approver_ids || [];
   };
 
   /**
@@ -318,14 +372,15 @@ export const useApprovalWorkflow = () => {
       }
 
       // 6. 为第一个审批节点的所有审批人创建审批记录和待办
-      const approverIds = firstNode.approver_ids || [];
+      // 使用动态解析审批人（支持直接主管、部门负责人等）
+      const approverIds = await resolveNodeApproverIds(firstNode, initiatorId);
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
       
-      console.log("First approver node:", firstNode.node_name, "approver_ids:", approverIds);
+      console.log("First approver node:", firstNode.node_name, "approver_type:", firstNode.approver_type, "resolved approver_ids:", approverIds);
       
       // 如果没有配置审批人，流程也应该能启动成功（后续可手动分配或跳过）
       if (approverIds.length === 0) {
-        console.warn("No approvers configured for first node, approval may need manual assignment");
+        console.warn("No approvers configured/resolved for first node, approval may need manual assignment");
         return { success: true, instanceId: instance.id };
       }
       

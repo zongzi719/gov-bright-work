@@ -215,6 +215,54 @@ const updateBusinessAndContactStatus = async (
 export const useApprovalProgression = () => {
 
   /**
+   * 根据发起人获取动态审批人（直接主管、部门负责人）
+   */
+  const resolveDynamicApprovers = async (approverType: string, initiatorId: string): Promise<string[]> => {
+    if (approverType !== 'direct_supervisor' && approverType !== 'department_head') {
+      return [];
+    }
+    
+    try {
+      const { data, error } = await dataAdapter.getOrganizationApprovers(initiatorId);
+      if (error || !data) {
+        console.warn(`Failed to get organization approvers for ${initiatorId}:`, error);
+        return [];
+      }
+      
+      if (approverType === 'direct_supervisor' && data.direct_supervisor_id) {
+        return [data.direct_supervisor_id];
+      }
+      
+      if (approverType === 'department_head' && data.department_head_id) {
+        return [data.department_head_id];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error resolving dynamic approvers:', error);
+      return [];
+    }
+  };
+
+  /**
+   * 解析审批节点的实际审批人ID列表
+   */
+  const resolveNodeApproverIds = async (node: ApprovalNode, initiatorId: string): Promise<string[]> => {
+    // 如果是动态审批人类型，先尝试解析
+    if (node.approver_type === 'direct_supervisor' || node.approver_type === 'department_head') {
+      const dynamicApprovers = await resolveDynamicApprovers(node.approver_type, initiatorId);
+      if (dynamicApprovers.length > 0) {
+        console.log(`Resolved ${node.approver_type} for initiator ${initiatorId}:`, dynamicApprovers);
+        return dynamicApprovers;
+      }
+      console.warn(`Could not resolve ${node.approver_type} for initiator ${initiatorId}, falling back to static approvers`);
+    }
+    
+    // 回退到静态配置的审批人
+    return node.approver_ids || [];
+  };
+
+  /**
    * 评估条件表达式（适配新结构）
    */
   const evaluateCondition = (conditionExpression: any, formData: Record<string, any>): boolean => {
@@ -513,10 +561,28 @@ export const useApprovalProgression = () => {
       
       await dataAdapter.updateApprovalInstance(instanceId, { current_node_index: nextIndex });
 
-      const approverIds = nextNode.approver_ids || [];
+      // 使用动态解析审批人（支持直接主管、部门负责人等）
+      const approverIds = await resolveNodeApproverIds(nextNode, initiatorId);
       const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
 
-      console.log("Creating todos for approvers:", approverIds);
+      console.log("Creating todos for approvers:", approverIds, "approver_type:", nextNode.approver_type);
+
+      if (approverIds.length === 0) {
+        console.warn("No approvers resolved for node, skipping to next node");
+        // 如果没有审批人，递归推进到下一个节点
+        return advanceToNextNode(
+          instanceId,
+          businessId,
+          businessType,
+          initiatorId,
+          initiatorName,
+          title,
+          nodesSnapshot,
+          formData,
+          versionNumber,
+          nextNode.node_name
+        );
+      }
 
       for (const approverId of approverIds) {
         const { error: recordError } = await dataAdapter.createApprovalRecord({

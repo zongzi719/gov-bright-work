@@ -16,11 +16,15 @@ CREATE TABLE IF NOT EXISTS `organizations` (
   `sort_order` INT NOT NULL DEFAULT 0,
   `phone` VARCHAR(50) DEFAULT NULL,
   `address` VARCHAR(500) DEFAULT NULL,
+  `direct_supervisor_id` CHAR(36) DEFAULT NULL COMMENT '直接主管ID',
+  `department_head_id` CHAR(36) DEFAULT NULL COMMENT '部门负责人ID',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_parent_id` (`parent_id`),
-  KEY `idx_sort_order` (`sort_order`)
+  KEY `idx_sort_order` (`sort_order`),
+  KEY `idx_direct_supervisor` (`direct_supervisor_id`),
+  KEY `idx_department_head` (`department_head_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==================== 通讯录表 ====================
