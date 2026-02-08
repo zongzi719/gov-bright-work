@@ -665,6 +665,8 @@ export async function createOrganization(org: {
   sort_order?: number;
   address?: string | null;
   phone?: string | null;
+  direct_supervisor_id?: string | null;
+  department_head_id?: string | null;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ id: string }>('/api/organizations', {
@@ -690,6 +692,8 @@ export async function updateOrganization(id: string, updates: {
   sort_order?: number;
   address?: string | null;
   phone?: string | null;
+  direct_supervisor_id?: string | null;
+  department_head_id?: string | null;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ success: boolean }>(`/api/organizations/${id}`, {
@@ -2193,6 +2197,33 @@ export async function getContactById(id: string) {
   return { data, error };
 }
 
+// 根据联系人ID获取其组织的主管信息
+export async function getOrganizationApprovers(contactId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/contacts/${contactId}/organization-approvers`);
+  }
+  
+  // 先获取联系人的组织ID
+  const { data: contact, error: contactError } = await supabase
+    .from("contacts")
+    .select("organization_id")
+    .eq("id", contactId)
+    .maybeSingle();
+  
+  if (contactError || !contact) {
+    return { data: null, error: contactError };
+  }
+  
+  // 获取组织的主管信息
+  const { data: org, error: orgError } = await supabase
+    .from("organizations")
+    .select("direct_supervisor_id, department_head_id")
+    .eq("id", contact.organization_id)
+    .maybeSingle();
+  
+  return { data: org, error: orgError };
+}
+
 // 按ID获取采购申请明细
 export async function getSupplyPurchaseItemsById(purchaseId: string) {
   if (isOfflineMode()) {
@@ -2351,6 +2382,7 @@ export const dataAdapter = {
   getSupplyRequisitionItemsById,
   getOfficeSupplyById,
   getContactById,
+  getOrganizationApprovers,
   // Utilities
   isOfflineMode,
 };

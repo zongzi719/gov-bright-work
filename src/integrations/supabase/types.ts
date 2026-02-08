@@ -992,6 +992,8 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string
+          department_head_id: string | null
+          direct_supervisor_id: string | null
           id: string
           level: number
           name: string
@@ -1004,6 +1006,8 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string
+          department_head_id?: string | null
+          direct_supervisor_id?: string | null
           id?: string
           level?: number
           name: string
@@ -1016,6 +1020,8 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string
+          department_head_id?: string | null
+          direct_supervisor_id?: string | null
           id?: string
           level?: number
           name?: string
@@ -1026,6 +1032,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "organizations_department_head_id_fkey"
+            columns: ["department_head_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizations_direct_supervisor_id_fkey"
+            columns: ["direct_supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "organizations_parent_id_fkey"
             columns: ["parent_id"]

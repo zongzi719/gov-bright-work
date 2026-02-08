@@ -163,13 +163,13 @@ app.get('/api/organizations', async (req, res) => {
 
 app.post('/api/organizations', async (req, res) => {
   try {
-    const { name, short_name, parent_id, level, sort_order, address, phone } = req.body;
+    const { name, short_name, parent_id, level, sort_order, address, phone, direct_supervisor_id, department_head_id } = req.body;
     const id = uuidv4();
     
     await pool.execute(
-      `INSERT INTO organizations (id, name, short_name, parent_id, level, sort_order, address, phone, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [id, name, short_name || null, parent_id || null, level || 1, sort_order || 0, address || null, phone || null]
+      `INSERT INTO organizations (id, name, short_name, parent_id, level, sort_order, address, phone, direct_supervisor_id, department_head_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, name, short_name || null, parent_id || null, level || 1, sort_order || 0, address || null, phone || null, direct_supervisor_id || null, department_head_id || null]
     );
     
     res.json({ id });
@@ -194,6 +194,8 @@ app.put('/api/organizations/:id', async (req, res) => {
     if (updates.sort_order !== undefined) { fields.push('sort_order = ?'); values.push(updates.sort_order); }
     if (updates.address !== undefined) { fields.push('address = ?'); values.push(updates.address); }
     if (updates.phone !== undefined) { fields.push('phone = ?'); values.push(updates.phone); }
+    if (updates.direct_supervisor_id !== undefined) { fields.push('direct_supervisor_id = ?'); values.push(updates.direct_supervisor_id || null); }
+    if (updates.department_head_id !== undefined) { fields.push('department_head_id = ?'); values.push(updates.department_head_id || null); }
     
     if (fields.length === 0) {
       return res.json({ success: true });
@@ -292,6 +294,26 @@ app.get('/api/contacts/:id', async (req, res) => {
   } catch (error) {
     console.error('Get contact error:', error);
     res.status(500).json({ error: '获取联系人失败' });
+  }
+});
+
+// 获取联系人所属组织的主管信息
+app.get('/api/contacts/:id/organization-approvers', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT o.direct_supervisor_id, o.department_head_id
+       FROM contacts c
+       LEFT JOIN organizations o ON c.organization_id = o.id
+       WHERE c.id = ?`,
+      [req.params.id]
+    );
+    if (rows.length === 0) {
+      return res.json({ direct_supervisor_id: null, department_head_id: null });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Get organization approvers error:', error);
+    res.status(500).json({ error: '获取主管信息失败' });
   }
 });
 
