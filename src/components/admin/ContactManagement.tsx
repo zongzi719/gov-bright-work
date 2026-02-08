@@ -194,14 +194,24 @@ const ContactManagement = () => {
   };
 
   const fetchContacts = async () => {
-    const { data, error } = await dataAdapter.getAllContacts();
-
-    if (error) {
-      console.error("获取联系人列表失败:", error);
+    try {
+      console.log("正在获取联系人列表...");
+      const result = await dataAdapter.getAllContacts();
+      console.log("getAllContacts 返回结果:", result);
+      
+      if (result.error) {
+        console.error("获取联系人列表失败 - 错误对象:", result.error);
+        console.error("错误消息:", result.error.message || JSON.stringify(result.error));
+        toast.error("获取联系人列表失败");
+        return;
+      }
+      
+      console.log("联系人数据:", result.data?.length, "条记录");
+      setContacts((result.data || []) as Contact[]);
+    } catch (err) {
+      console.error("获取联系人列表异常:", err);
       toast.error("获取联系人列表失败");
-      return;
     }
-    setContacts((data || []) as Contact[]);
   };
 
   // 单位管理
