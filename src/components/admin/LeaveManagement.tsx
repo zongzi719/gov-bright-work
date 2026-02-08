@@ -157,7 +157,7 @@ const LeaveManagement = () => {
           name,
           department,
           position,
-          organization:organizations (name)
+          organization:organizations!contacts_organization_id_fkey (name)
         ),
         handover_person:contacts!absence_records_handover_person_id_fkey (
           name
