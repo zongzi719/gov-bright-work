@@ -28,6 +28,18 @@ interface LeaveBalance {
   sick_leave_used: number;
   personal_leave_total: number;
   personal_leave_used: number;
+  paternity_leave_total: number;
+  paternity_leave_used: number;
+  bereavement_leave_total: number;
+  bereavement_leave_used: number;
+  maternity_leave_total: number;
+  maternity_leave_used: number;
+  nursing_leave_total: number;
+  nursing_leave_used: number;
+  marriage_leave_total: number;
+  marriage_leave_used: number;
+  compensatory_leave_total: number;
+  compensatory_leave_used: number;
 }
 
 interface LeaveFormProps {
@@ -36,10 +48,17 @@ interface LeaveFormProps {
   currentUser: { id: string; name: string } | null;
 }
 
+// 假期类型配置，按照用户上传图片的顺序
 const leaveTypes = [
-  { value: "annual", label: "年假" },
-  { value: "sick", label: "病假" },
-  { value: "personal", label: "事假" },
+  { value: "sick", label: "病假", unit: "小时", description: "按小时请假" },
+  { value: "paternity", label: "陪产假", unit: "天", description: "手动发放" },
+  { value: "annual", label: "年假", unit: "小时", description: "每年1月1日自动发放，按工龄配额" },
+  { value: "bereavement", label: "丧假", unit: "天", description: "手动发放" },
+  { value: "maternity", label: "产假", unit: "天", description: "手动发放" },
+  { value: "nursing", label: "哺乳假", unit: "小时", description: "手动发放" },
+  { value: "marriage", label: "婚假", unit: "天", description: "手动发放" },
+  { value: "compensatory", label: "调休", unit: "小时", description: "加班时长自动计入调休余额" },
+  { value: "personal", label: "事假", unit: "天", description: "个人事务" },
 ];
 
 const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
@@ -94,9 +113,26 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         return leaveBalance.sick_leave_total - leaveBalance.sick_leave_used;
       case "personal":
         return leaveBalance.personal_leave_total - leaveBalance.personal_leave_used;
+      case "paternity":
+        return (leaveBalance.paternity_leave_total || 0) - (leaveBalance.paternity_leave_used || 0);
+      case "bereavement":
+        return (leaveBalance.bereavement_leave_total || 0) - (leaveBalance.bereavement_leave_used || 0);
+      case "maternity":
+        return (leaveBalance.maternity_leave_total || 0) - (leaveBalance.maternity_leave_used || 0);
+      case "nursing":
+        return (leaveBalance.nursing_leave_total || 0) - (leaveBalance.nursing_leave_used || 0);
+      case "marriage":
+        return (leaveBalance.marriage_leave_total || 0) - (leaveBalance.marriage_leave_used || 0);
+      case "compensatory":
+        return (leaveBalance.compensatory_leave_total || 0) - (leaveBalance.compensatory_leave_used || 0);
       default:
         return null;
     }
+  };
+
+  const getLeaveUnit = (type: string) => {
+    const config = leaveTypes.find(t => t.value === type);
+    return config?.unit || "天";
   };
 
   const handleSubmit = async () => {
@@ -199,21 +235,28 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                 <SelectValue placeholder="请选择请假类型" />
               </SelectTrigger>
               <SelectContent>
-                {leaveTypes.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                    {leaveBalance && (
-                      <span className="text-muted-foreground ml-2">
-                        (剩余 {getLeaveRemaining(t.value)} 天)
-                      </span>
-                    )}
-                  </SelectItem>
-                ))}
+                {leaveTypes.map((t) => {
+                  const remaining = getLeaveRemaining(t.value);
+                  const hasBalance = remaining !== null && remaining > 0;
+                  return (
+                    <SelectItem key={t.value} value={t.value}>
+                      <div className="flex items-center justify-between w-full gap-4">
+                        <span>{t.label}</span>
+                        {remaining !== null && (
+                          <span className={`text-xs ${hasBalance ? 'text-muted-foreground' : 'text-destructive'}`}>
+                            剩余{remaining}{t.unit}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             {form.leave_type && leaveBalance && (
-              <div className="text-sm text-muted-foreground">
-                可用余额：{getLeaveRemaining(form.leave_type)} 天
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>可用余额：{getLeaveRemaining(form.leave_type)} {getLeaveUnit(form.leave_type)}</span>
+                <span className="text-xs">({leaveTypes.find(t => t.value === form.leave_type)?.description})</span>
               </div>
             )}
           </div>
