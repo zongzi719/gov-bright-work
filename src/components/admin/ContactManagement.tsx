@@ -639,7 +639,7 @@ const ContactManagement = () => {
                       添加联系人
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
                         {editingContact ? "编辑联系人" : "添加联系人"}
@@ -886,7 +886,7 @@ const ContactManagement = () => {
                     添加单位
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{editingOrg ? "编辑单位" : "添加单位"}</DialogTitle>
                   </DialogHeader>
