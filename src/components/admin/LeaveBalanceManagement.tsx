@@ -163,14 +163,14 @@ const LeaveBalanceManagement = () => {
       .from("leave_balances")
       .select(`
         *,
-        contacts (
+        contacts:contacts!leave_balances_contact_id_fkey (
           id,
           name,
           department,
           position,
           first_work_date,
           created_at,
-          organization:organizations (id, name)
+          organization:organizations!contacts_organization_id_fkey (id, name)
         )
       `)
       .eq("year", yearFilter)
@@ -193,7 +193,7 @@ const LeaveBalanceManagement = () => {
         position,
         first_work_date,
         created_at,
-        organization:organizations (id, name)
+        organization:organizations!contacts_organization_id_fkey (id, name)
       `)
       .eq("is_active", true)
       .order("name");
