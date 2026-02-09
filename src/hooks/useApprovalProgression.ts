@@ -148,13 +148,17 @@ const handleLeaveBalanceDeduction = async (
   businessType: string,
   businessId: string
 ) => {
-  if (businessType !== "leave") return;
+  // 只有请假类型才需要扣减 - 支持 "leave" 和 "absence" (通用外出类型)
+  if (businessType !== "leave" && businessType !== "absence") return;
   
   try {
     // 获取请假记录详情
     const { data: record } = await dataAdapter.getAbsenceRecordForLeaveDeduction(businessId);
     
-    if (record && record.leave_type && record.contact_id) {
+    // 只有当是真正的请假类型（type = 'leave'）时才扣减
+    if (record && record.type === 'leave' && record.leave_type && record.contact_id) {
+      console.log(`Processing leave balance deduction for ${record.leave_type}: ${record.duration_days} days / ${record.duration_hours} hours`);
+      
       // 调用扣减假期函数
       const { error } = await dataAdapter.deductLeaveBalance(
         record.contact_id,
@@ -166,8 +170,10 @@ const handleLeaveBalanceDeduction = async (
       if (error) {
         console.error("Failed to deduct leave balance:", error);
       } else {
-        console.log(`Leave balance deducted for ${record.leave_type}: ${record.duration_days} days / ${record.duration_hours} hours`);
+        console.log(`Leave balance deducted successfully for ${record.leave_type}`);
       }
+    } else if (record) {
+      console.log(`Skipping leave balance deduction - not a leave record (type: ${record.type})`);
     }
   } catch (error) {
     console.error("Failed to handle leave balance deduction:", error);
@@ -183,21 +189,35 @@ const updateBusinessAndContactStatus = async (
   newStatus: "approved" | "rejected" | "completed"
 ) => {
   try {
-    // 只有外出、请假、出差需要联动联系人状态
-    if (["business_trip", "leave", "out"].includes(businessType)) {
-      // 获取业务记录
+    // 对于 absence 类型（外出、请假、出差），需要获取实际的 type
+    let actualType = businessType;
+    
+    if (businessType === "absence" || ["business_trip", "leave", "out"].includes(businessType)) {
+      // 获取业务记录确定实际类型
       const { data: record } = await dataAdapter.getAbsenceRecordContactId(businessId);
       
       if (record?.contact_id) {
         // 更新业务记录状态
-        await dataAdapter.updateAbsenceRecord(businessId, { 
+        const { error: updateError } = await dataAdapter.updateAbsenceRecord(businessId, { 
           status: newStatus, 
           approved_at: new Date().toISOString() 
         });
         
+        if (updateError) {
+          console.error("Failed to update absence record status:", updateError);
+        } else {
+          console.log(`Updated absence record ${businessId} status to ${newStatus}`);
+        }
+        
         // 审批通过时更新联系人状态
         if (newStatus === "approved") {
-          const contactStatus = businessTypeToContactStatus[businessType] || "on_duty";
+          // 需要获取 absence_records.type 来确定联系人状态
+          const { data: absenceRecord } = await dataAdapter.getAbsenceRecordForLeaveDeduction(businessId);
+          if (absenceRecord) {
+            actualType = absenceRecord.type || businessType;
+          }
+          
+          const contactStatus = businessTypeToContactStatus[actualType] || "on_duty";
           await dataAdapter.updateContact(record.contact_id, { status: contactStatus });
           console.log(`Updated contact ${record.contact_id} status to ${contactStatus}`);
         }

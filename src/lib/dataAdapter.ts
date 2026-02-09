@@ -594,7 +594,8 @@ export async function getAbsenceRecords(params: {
     return offlineRequest<any[]>(`/api/absence-records?${searchParams.toString()}`);
   }
   
-  const { data, error } = await supabase
+  // 先获取缺勤记录
+  const { data: absenceRecords, error } = await supabase
     .from("absence_records")
     .select(`
       *,
@@ -609,7 +610,40 @@ export async function getAbsenceRecords(params: {
     .eq("type", params.type)
     .eq("contact_id", params.contact_id)
     .order("created_at", { ascending: false });
-  return { data, error };
+  
+  if (error || !absenceRecords) {
+    return { data: absenceRecords, error };
+  }
+  
+  // 获取对应的审批实例状态
+  const businessType = params.type === 'leave' ? 'leave' : params.type;
+  const businessIds = absenceRecords.map(r => r.id);
+  
+  if (businessIds.length === 0) {
+    return { data: absenceRecords, error: null };
+  }
+  
+  const { data: instances } = await supabase
+    .from("approval_instances")
+    .select("business_id, status")
+    .eq("business_type", businessType)
+    .in("business_id", businessIds);
+  
+  // 合并审批实例状态到记录中
+  const instanceMap = new Map<string, string>();
+  instances?.forEach(inst => {
+    instanceMap.set(inst.business_id, inst.status);
+  });
+  
+  const mergedData = absenceRecords.map(record => ({
+    ...record,
+    // 使用审批实例的状态覆盖原始状态
+    status: instanceMap.get(record.id) || record.status,
+    // 保留原始业务状态
+    _original_status: record.status,
+  }));
+  
+  return { data: mergedData, error: null };
 }
 
 // 管理后台 - 获取所有某类型的缺勤记录（带联系人信息）
