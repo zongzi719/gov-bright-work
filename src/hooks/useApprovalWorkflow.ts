@@ -59,8 +59,22 @@ export const useApprovalWorkflow = () => {
   /**
    * 根据发起人获取动态审批人（直接主管、部门负责人）
    */
+  /**
+   * 判断是否为直属主管类型（支持多种别名）
+   */
+  const isDirectSupervisorType = (approverType: string): boolean => {
+    return approverType === 'direct_supervisor' || approverType === 'supervisor';
+  };
+
+  /**
+   * 根据发起人获取动态审批人（直接主管、部门负责人）
+   */
   const resolveDynamicApprovers = async (approverType: string, initiatorId: string): Promise<string[]> => {
-    if (approverType !== 'direct_supervisor' && approverType !== 'department_head') {
+    // 支持 supervisor 作为 direct_supervisor 的别名
+    const isSupervisor = isDirectSupervisorType(approverType);
+    const isDeptHead = approverType === 'department_head';
+    
+    if (!isSupervisor && !isDeptHead) {
       return [];
     }
     
@@ -71,11 +85,13 @@ export const useApprovalWorkflow = () => {
         return [];
       }
       
-      if (approverType === 'direct_supervisor' && data.direct_supervisor_id) {
+      if (isSupervisor && data.direct_supervisor_id) {
+        console.log(`Resolved supervisor (type: ${approverType}) for initiator ${initiatorId}: ${data.direct_supervisor_id}`);
         return [data.direct_supervisor_id];
       }
       
-      if (approverType === 'department_head' && data.department_head_id) {
+      if (isDeptHead && data.department_head_id) {
+        console.log(`Resolved department_head for initiator ${initiatorId}: ${data.department_head_id}`);
         return [data.department_head_id];
       }
       
@@ -216,12 +232,13 @@ export const useApprovalWorkflow = () => {
     for (let i = 0; i < flatNodes.length; i++) {
       const node = flatNodes[i];
       // 跳过CC节点，只找审批节点
-      // 支持指定审批人或动态类型（直接主管、部门负责人）
+      // 支持指定审批人或动态类型（直接主管/supervisor、部门负责人）
       if (node.node_type === "approver") {
         const hasStaticApprovers = node.approver_ids && node.approver_ids.length > 0;
-        const isDynamicType = node.approver_type === 'direct_supervisor' || node.approver_type === 'department_head';
+        const isDynamicType = isDirectSupervisorType(node.approver_type) || node.approver_type === 'department_head';
         
         if (hasStaticApprovers || isDynamicType) {
+          console.log(`findFirstApproverNode: Found approver node "${node.node_name}" at index ${i}, type=${node.approver_type}, hasStatic=${hasStaticApprovers}, isDynamic=${isDynamicType}`);
           return { node, index: i };
         }
       }
@@ -233,8 +250,10 @@ export const useApprovalWorkflow = () => {
    * 解析审批节点的实际审批人ID列表
    */
   const resolveNodeApproverIds = async (node: ApprovalNode, initiatorId: string): Promise<string[]> => {
-    // 如果是动态审批人类型，先尝试解析
-    if (node.approver_type === 'direct_supervisor' || node.approver_type === 'department_head') {
+    // 如果是动态审批人类型，先尝试解析（支持 supervisor 作为 direct_supervisor 的别名）
+    const isDynamicType = isDirectSupervisorType(node.approver_type) || node.approver_type === 'department_head';
+    
+    if (isDynamicType) {
       const dynamicApprovers = await resolveDynamicApprovers(node.approver_type, initiatorId);
       if (dynamicApprovers.length > 0) {
         console.log(`Resolved ${node.approver_type} for initiator ${initiatorId}:`, dynamicApprovers);
