@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import * as dataAdapter from "@/lib/dataAdapter";
 
 interface DayMenu {
   day: string;
@@ -7,7 +8,7 @@ interface DayMenu {
   dinner: string[];
 }
 
-const weekMenu: DayMenu[] = [
+const defaultWeekMenu: DayMenu[] = [
   {
     day: "周一",
     breakfast: ["豆浆", "油条", "包子", "鸡蛋", "小米粥"],
@@ -40,10 +41,52 @@ const weekMenu: DayMenu[] = [
   },
 ];
 
-const CanteenMenu = () => {
-  const [activeDay, setActiveDay] = useState(2); // 默认周三
+const dayLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
-  const currentMenu = weekMenu[activeDay];
+const CanteenMenu = () => {
+  const [weekMenu, setWeekMenu] = useState<DayMenu[]>(defaultWeekMenu);
+  const [activeDay, setActiveDay] = useState(2); // 默认周三
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMenus = async () => {
+      try {
+        const { data, error } = await dataAdapter.getCanteenMenus();
+        
+        if (!error && data && data.length > 0) {
+          // 将数据库数据转换为组件格式
+          const formattedMenu = data.map((item: any) => ({
+            day: dayLabels[item.day_of_week - 1] || `周${item.day_of_week}`,
+            breakfast: item.breakfast || [],
+            lunch: item.lunch || [],
+            dinner: item.dinner || [],
+          }));
+          setWeekMenu(formattedMenu);
+        }
+      } catch (err) {
+        console.error('Fetch canteen menus error:', err);
+        // 使用默认菜谱
+      }
+      setLoading(false);
+    };
+    
+    fetchMenus();
+  }, []);
+
+  const currentMenu = weekMenu[activeDay] || weekMenu[0];
+
+  if (loading) {
+    return (
+      <div className="gov-card h-full flex flex-col">
+        <div className="px-3 md:px-4 py-2 md:py-3 border-b border-border">
+          <h2 className="gov-card-title text-sm md:text-base">食堂每周菜谱</h2>
+        </div>
+        <div className="p-3 md:p-4 flex-1 flex items-center justify-center text-muted-foreground">
+          加载中...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="gov-card h-full flex flex-col">
@@ -73,19 +116,19 @@ const CanteenMenu = () => {
           <div>
             <h4 className="text-xs md:text-sm font-bold text-accent mb-1 md:mb-1.5">早餐</h4>
             <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
-              {currentMenu.breakfast.join("、")}
+              {currentMenu.breakfast.length > 0 ? currentMenu.breakfast.join("、") : "暂无数据"}
             </p>
           </div>
           <div>
             <h4 className="text-xs md:text-sm font-bold text-accent mb-1 md:mb-1.5">午餐</h4>
             <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
-              {currentMenu.lunch.join("、")}
+              {currentMenu.lunch.length > 0 ? currentMenu.lunch.join("、") : "暂无数据"}
             </p>
           </div>
           <div>
             <h4 className="text-xs md:text-sm font-bold text-accent mb-1 md:mb-1.5">晚餐</h4>
             <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
-              {currentMenu.dinner.join("、")}
+              {currentMenu.dinner.length > 0 ? currentMenu.dinner.join("、") : "暂无数据"}
             </p>
           </div>
         </div>

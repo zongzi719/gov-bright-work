@@ -3,9 +3,9 @@ import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import * as dataAdapter from "@/lib/dataAdapter";
 
 interface Leader {
   id: string;
@@ -34,7 +34,7 @@ const scheduleTypeColors: Record<string, { bg: string; text: string; label: stri
 
 const weekDayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
-const LeaderSchedule = () => {
+const LeaderSchedulePage = () => {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [leaderSchedules, setLeaderSchedules] = useState<LeaderSchedule[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
@@ -72,21 +72,25 @@ const LeaderSchedule = () => {
     }
 
     // 查询该用户的权限记录
-    const { data: permData } = await supabase
-      .from("leader_schedule_permissions")
-      .select("leader_id, can_view_all")
-      .eq("user_id", userId);
+    const { data: permData, error } = await dataAdapter.getLeaderSchedulePermissions(userId);
+
+    if (error) {
+      console.error("查询权限失败:", error);
+      setAllowedLeaderIds([]);
+      setPermissionsLoaded(true);
+      return;
+    }
 
     if (permData && permData.length > 0) {
       // 检查是否有can_view_all权限
-      const hasViewAll = permData.some(p => p.can_view_all);
+      const hasViewAll = permData.some((p: any) => p.can_view_all);
       if (hasViewAll) {
         setAllowedLeaderIds(null);
       } else {
         // 收集所有被授权的leader_id
         const leaderIds = permData
-          .filter(p => p.leader_id)
-          .map(p => p.leader_id as string);
+          .filter((p: any) => p.leader_id)
+          .map((p: any) => p.leader_id as string);
         setAllowedLeaderIds(leaderIds);
       }
     } else {
@@ -97,26 +101,27 @@ const LeaderSchedule = () => {
 
   // 只获取领导状态为"是"的人员，并根据权限过滤（服务端过滤）
   const fetchLeaders = async (leaderIds: string[] | null) => {
-    let query = supabase
-      .from("contacts")
-      .select("id, name, position")
-      .eq("is_active", true)
-      .eq("is_leader", true);
-
-    // 服务端过滤：只获取有权限查看的领导
-    if (leaderIds !== null && leaderIds.length > 0) {
-      query = query.in("id", leaderIds);
-    } else if (leaderIds !== null && leaderIds.length === 0) {
-      // 无权限时不获取任何领导
+    // 无权限时不获取任何领导
+    if (leaderIds !== null && leaderIds.length === 0) {
       setLeaders([]);
       return;
     }
-    // leaderIds === null 表示可查看全部，不加过滤条件
 
-    const { data } = await query.order("sort_order");
+    const { data, error } = await dataAdapter.getLeaders();
+    
+    if (error) {
+      console.error("获取领导列表失败:", error);
+      setLeaders([]);
+      return;
+    }
 
     if (data) {
-      setLeaders(data);
+      // 客户端过滤权限
+      let filtered = data;
+      if (leaderIds !== null && leaderIds.length > 0) {
+        filtered = data.filter((l: Leader) => leaderIds.includes(l.id));
+      }
+      setLeaders(filtered);
     }
   };
 
@@ -124,27 +129,32 @@ const LeaderSchedule = () => {
     setLoading(true);
     const weekEnd = addDays(currentWeekStart, 6);
     
-    let query = supabase
-      .from("leader_schedules")
-      .select("*, leader:contacts(id, name, position)")
-      .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(weekEnd, "yyyy-MM-dd"));
-
-    // 服务端过滤：只获取有权限查看的领导日程
-    if (leaderIds !== null && leaderIds.length > 0) {
-      query = query.in("leader_id", leaderIds);
-    } else if (leaderIds !== null && leaderIds.length === 0) {
-      // 无权限时不获取任何数据
+    // 无权限时不获取任何数据
+    if (leaderIds !== null && leaderIds.length === 0) {
       setLeaderSchedules([]);
       setLoading(false);
       return;
     }
-    // leaderIds === null 表示可查看全部，不加过滤条件
 
-    const { data } = await query.order("schedule_date").order("start_time");
+    const { data, error } = await dataAdapter.getLeaderSchedulesByWeek(
+      format(currentWeekStart, "yyyy-MM-dd"),
+      format(weekEnd, "yyyy-MM-dd")
+    );
+
+    if (error) {
+      console.error("获取领导日程失败:", error);
+      setLeaderSchedules([]);
+      setLoading(false);
+      return;
+    }
 
     if (data) {
-      setLeaderSchedules(data as LeaderSchedule[]);
+      // 客户端过滤权限
+      let filtered = data as LeaderSchedule[];
+      if (leaderIds !== null && leaderIds.length > 0) {
+        filtered = data.filter((s: LeaderSchedule) => leaderIds.includes(s.leader_id));
+      }
+      setLeaderSchedules(filtered);
     }
     setLoading(false);
   };
@@ -289,4 +299,4 @@ const LeaderSchedule = () => {
   );
 };
 
-export default LeaderSchedule;
+export default LeaderSchedulePage;

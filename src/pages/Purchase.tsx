@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { toast } from "sonner";
@@ -134,11 +134,7 @@ const Purchase = () => {
     if (!currentUser?.name) return;
     
     setLoading(true);
-    const { data, error } = await supabase
-      .from("purchase_requests")
-      .select("id, requested_by, department, purchase_date, procurement_method, funding_source, funding_detail, budget_amount, expected_completion_date, purpose, total_amount, reason, status, created_at")
-      .eq("requested_by", currentUser.name)
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getPurchaseRequests({ requested_by: currentUser.name });
 
     if (!error && data) {
       setRecords(data as PurchaseRequest[]);
@@ -172,10 +168,7 @@ const Purchase = () => {
     const record = records.find(r => r.id === item.id);
     if (record) {
       setSelectedRecord(record);
-      const { data } = await supabase
-        .from("purchase_request_items")
-        .select("id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks")
-        .eq("request_id", record.id);
+      const { data } = await dataAdapter.getPurchaseRequestItems(record.id);
       
       if (data) {
         setSelectedItems(data as PurchaseItem[]);
@@ -249,25 +242,17 @@ const Purchase = () => {
 
     setSubmitting(true);
 
-    const { data: record, error } = await supabase
-      .from("purchase_requests")
-      .insert({
-        requested_by: currentUser?.name || "",
-        department: department.trim() || null,
-        purchase_date: format(purchaseDate, "yyyy-MM-dd"),
-        procurement_method: procurementMethod,
-        funding_source: fundingSource,
-        funding_detail: fundingDetail.trim() || null,
-        budget_amount: budgetAmount || null,
-        expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null,
-        purpose: purpose.trim() || null,
-        total_amount: Number(totalAmount.toFixed(2)),
-        supply_id: null,
-        quantity: null,
-        unit_price: null,
-      } as any)
-      .select("id")
-      .single();
+    const { data: record, error } = await dataAdapter.createPurchaseRequest({
+      requested_by: currentUser?.name || "",
+      purchase_date: format(purchaseDate, "yyyy-MM-dd"),
+      purpose: purpose.trim() || null,
+      department: department.trim() || null,
+      funding_source: fundingSource || null,
+      funding_detail: fundingDetail.trim() || null,
+      budget_amount: budgetAmount || null,
+      procurement_method: procurementMethod || null,
+      expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null,
+    });
 
     if (error || !record) {
       toast.error("提交采购申请失败");
@@ -287,9 +272,7 @@ const Purchase = () => {
       remarks: item.remarks.trim() || null,
     }));
 
-    const { error: itemsError } = await supabase
-      .from("purchase_request_items")
-      .insert(itemsToInsert);
+    const { error: itemsError } = await dataAdapter.createPurchaseRequestItems(itemsToInsert);
 
     if (itemsError) {
       toast.error("保存采购明细失败");

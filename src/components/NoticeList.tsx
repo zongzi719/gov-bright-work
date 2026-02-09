@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
+import * as dataAdapter from "@/lib/dataAdapter";
 interface NoticeItem {
   id: string;
   title: string;
@@ -66,24 +64,7 @@ const NoticeList = () => {
 
   const fetchImages = async () => {
     try {
-      let data: NoticeImage[] | null = null;
-      let error: any = null;
-
-      if (isOfflineMode()) {
-        // 离线模式
-        const result = await offlineApi.getNoticeImages();
-        data = result.data;
-        error = result.error;
-      } else {
-        // 在线模式
-        const result = await supabase
-          .from("notice_images")
-          .select("id, image_url, title")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true });
-        data = result.data;
-        error = result.error;
-      }
+      const { data, error } = await dataAdapter.getNoticeImages();
       
       if (!error && data) {
         setImages(data);
@@ -111,30 +92,10 @@ const NoticeList = () => {
 
     const userRank = securityLevelRank[userSecurityLevel] || 1;
 
-    let data: NoticeItem[] | null = null;
-    let error: any = null;
-
-    if (isOfflineMode()) {
-      // 离线模式
-      const result = await offlineApi.getNotices({ is_published: true });
-      data = result.data;
-      error = result.error;
-    } else {
-      // 在线模式
-      const result = await supabase
-        .from("notices")
-        .select("id, title, department, content, created_at, is_pinned, security_level, publish_scope, publish_scope_ids")
-        .eq("is_published", true)
-        .order("is_pinned", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(20);
-      
-      data = result.data;
-      error = result.error;
-    }
+    const { data, error } = await dataAdapter.getNotices({ is_published: true });
 
     if (!error && data) {
-      const filteredNotices = data.filter(notice => {
+      const filteredNotices = data.filter((notice: NoticeItem) => {
         const noticeRank = securityLevelRank[notice.security_level] || 1;
         if (noticeRank > userRank) return false;
         
