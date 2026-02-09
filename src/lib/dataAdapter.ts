@@ -542,7 +542,8 @@ export async function updateCanteenMenu(id: string, updates: {
   dinner?: string[];
 }) {
   if (isOfflineMode()) {
-    return offlineRequest<{ success: boolean }>(`/api/canteen-menus/${id}`, {
+    // 离线模式使用 /api/canteen-menus/id/:id 路径
+    return offlineRequest<{ success: boolean }>(`/api/canteen-menus/id/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
