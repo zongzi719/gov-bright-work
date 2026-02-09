@@ -950,6 +950,48 @@ app.post('/api/absence-records', async (req, res) => {
   }
 });
 
+// 批量获取缺勤记录（用于待办列表丰富显示）
+app.get('/api/absence-records/batch', async (req, res) => {
+  try {
+    const { ids } = req.query;
+    
+    if (!ids) {
+      return res.json([]);
+    }
+    
+    const idList = ids.split(',').filter(id => id.trim());
+    if (idList.length === 0) {
+      return res.json([]);
+    }
+    
+    const placeholders = idList.map(() => '?').join(',');
+    const [rows] = await pool.execute(
+      `SELECT ar.id, ar.reason, ar.leave_type, ar.type,
+              c.name as contact_name
+       FROM absence_records ar
+       LEFT JOIN contacts c ON ar.contact_id = c.id
+       WHERE ar.id IN (${placeholders})`,
+      idList
+    );
+    
+    // 格式化为前端期望的结构（模拟 Supabase）
+    const result = rows.map(row => ({
+      id: row.id,
+      reason: row.reason,
+      leave_type: row.leave_type,
+      type: row.type,
+      contacts: row.contact_name ? {
+        name: row.contact_name
+      } : null
+    }));
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Batch get absence records error:', error);
+    res.status(500).json({ error: '批量获取缺勤记录失败' });
+  }
+});
+
 // 获取单条缺勤记录详情（含联系人信息）
 app.get('/api/absence-records/:id', async (req, res) => {
   try {
@@ -2247,19 +2289,21 @@ app.get('/api/leader-schedules', async (req, res) => {
   try {
     const { leader_ids, start_date, end_date } = req.query;
     
-    if (!leader_ids) {
-      return res.json([]);
-    }
-    
-    const ids = leader_ids.split(',');
-    const placeholders = ids.map(() => '?').join(',');
-    
     let sql = `SELECT ls.*, c.id as leader_id, c.name as leader_name, c.department as leader_department, c.position as leader_position
                FROM leader_schedules ls
                LEFT JOIN contacts c ON ls.leader_id = c.id
-               WHERE ls.leader_id IN (${placeholders})`;
-    const params = [...ids];
+               WHERE 1=1`;
+    const params = [];
     
+    // 如果传了 leader_ids，则按领导筛选
+    if (leader_ids) {
+      const ids = leader_ids.split(',');
+      const placeholders = ids.map(() => '?').join(',');
+      sql += ` AND ls.leader_id IN (${placeholders})`;
+      params.push(...ids);
+    }
+    
+    // 日期范围筛选
     if (start_date) {
       sql += ' AND ls.schedule_date >= ?';
       params.push(start_date);
@@ -2461,7 +2505,8 @@ app.post('/api/todo-items', async (req, res) => {
     const { 
       source = 'internal', business_type, business_id, title, description,
       priority = 'normal', status = 'pending', process_result,
-      initiator_id, assignee_id, approval_instance_id, approval_version_number
+      initiator_id, assignee_id, approval_instance_id, approval_version_number,
+      source_department, source_system
     } = req.body;
     
     // 验证必填字段
@@ -2477,12 +2522,31 @@ app.post('/api/todo-items', async (req, res) => {
     const safeApprovalInstanceId = approval_instance_id || null;
     const safeApprovalVersionNumber = approval_version_number !== undefined ? approval_version_number : null;
     
-    console.log('Creating todo item:', { id, business_type, business_id, title, assignee_id });
+    // 如果没有传入 source_department，尝试从 initiator_id 获取
+    let finalSourceDepartment = source_department || null;
+    if (!finalSourceDepartment && safeInitiatorId) {
+      try {
+        const [initiatorRows] = await pool.execute(
+          `SELECT COALESCE(o.name, c.department) as department 
+           FROM contacts c 
+           LEFT JOIN organizations o ON c.organization_id = o.id 
+           WHERE c.id = ?`,
+          [safeInitiatorId]
+        );
+        if (initiatorRows.length > 0) {
+          finalSourceDepartment = initiatorRows[0].department || null;
+        }
+      } catch (e) {
+        console.error('Failed to fetch initiator department:', e.message);
+      }
+    }
+    
+    console.log('Creating todo item:', { id, business_type, business_id, title, assignee_id, source_department: finalSourceDepartment });
     
     await pool.execute(
-      `INSERT INTO todo_items (id, source, business_type, business_id, title, description, priority, status, process_result, initiator_id, assignee_id, approval_instance_id, approval_version_number)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, source, business_type, business_id || null, title, safeDescription, priority, status, safeProcessResult, safeInitiatorId, assignee_id, safeApprovalInstanceId, safeApprovalVersionNumber]
+      `INSERT INTO todo_items (id, source, business_type, business_id, title, description, priority, status, process_result, initiator_id, assignee_id, approval_instance_id, approval_version_number, source_department, source_system)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, source, business_type, business_id || null, title, safeDescription, priority, status, safeProcessResult, safeInitiatorId, assignee_id, safeApprovalInstanceId, safeApprovalVersionNumber, finalSourceDepartment, source_system || null]
     );
     
     console.log('Todo item created successfully:', id);
