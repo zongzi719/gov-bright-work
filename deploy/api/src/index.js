@@ -1513,6 +1513,58 @@ app.put('/api/canteen-menus/:dayOfWeek', async (req, res) => {
   }
 });
 
+// 按 ID 更新菜谱
+app.put('/api/canteen-menus/id/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { breakfast, lunch, dinner } = req.body;
+    
+    await pool.execute(
+      `UPDATE canteen_menus SET breakfast = ?, lunch = ?, dinner = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [JSON.stringify(breakfast || []), JSON.stringify(lunch || []), JSON.stringify(dinner || []), id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update canteen menu by id error:', error);
+    res.status(500).json({ error: '更新菜单失败' });
+  }
+});
+
+// 创建菜谱
+app.post('/api/canteen-menus', async (req, res) => {
+  try {
+    const { day_of_week, breakfast, lunch, dinner } = req.body;
+    const id = uuidv4();
+    
+    await pool.execute(
+      `INSERT INTO canteen_menus (id, day_of_week, breakfast, lunch, dinner, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, day_of_week, JSON.stringify(breakfast || []), JSON.stringify(lunch || []), JSON.stringify(dinner || [])]
+    );
+    
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Create canteen menu error:', error);
+    res.status(500).json({ error: '创建菜单失败' });
+  }
+});
+
+// 删除菜谱
+app.delete('/api/canteen-menus/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    await pool.execute('DELETE FROM canteen_menus WHERE id = ?', [id]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete canteen menu error:', error);
+    res.status(500).json({ error: '删除菜单失败' });
+  }
+});
+
 // ==================== 审批模板 ====================
 
 // 获取审批模板列表

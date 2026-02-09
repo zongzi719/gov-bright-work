@@ -1,6 +1,6 @@
 # 党政办公平台 - 完整部署指南
 
-> **版本**: 2025-02-04  
+> **版本**: 2025-02-09 (最新)  
 > **适用环境**: 麒麟 V10 SP1 (aarch64/ARM64) + 鲲鹏 920
 
 ---
@@ -16,8 +16,9 @@
 7. [第六步：启动服务](#第六步启动服务)
 8. [第七步：验证部署](#第七步验证部署)
 9. [系统账户](#系统账户)
-10. [常见问题](#常见问题)
-11. [日常运维](#日常运维)
+10. [数据库升级（增量更新）](#数据库升级增量更新)
+11. [常见问题](#常见问题)
+12. [日常运维](#日常运维)
 
 ---
 
@@ -172,6 +173,7 @@ EXIT;
 - 1 个管理员账户（手机号 13800000001，账号 admin@gov.cn）
 - 6 个默认审批模板
 - 10 个办公用品
+- 7 个食堂菜谱（周一至周日）
 
 ### 2.4 升级现有数据库（可选）
 
@@ -185,6 +187,8 @@ CREATE INDEX idx_contacts_account ON contacts(account);
 -- 为管理员设置账号
 UPDATE contacts SET account = 'admin@gov.cn' WHERE mobile = '13800000001';
 ```
+
+> **注意**：更多增量更新请参考 [数据库升级（增量更新）](#数据库升级增量更新) 章节。
 
 ---
 
@@ -491,6 +495,80 @@ curl http://localhost:3001/api/approval-templates
 
 ---
 
+## 数据库升级（增量更新）
+
+当系统有新功能需要更新数据库时，请按以下步骤执行增量更新。
+
+### 最新更新：2025-02-08 ~ 2025-02-09
+
+本次更新包含以下内容：
+
+#### 1. leave_balances 表扩展
+新增 6 种假期类型字段：
+- `paternity_leave_total/used` - 陪产假（天）
+- `bereavement_leave_total/used` - 丧假（天）
+- `maternity_leave_total/used` - 产假（天）
+- `nursing_leave_total/used` - 哺乳假（小时）
+- `marriage_leave_total/used` - 婚假（天）
+- `compensatory_leave_total/used` - 调休（小时）
+
+#### 2. organizations 表扩展
+新增动态审批人相关字段：
+- `direct_supervisor_id` - 直接主管 ID
+- `department_head_id` - 部门负责人 ID
+
+#### 3. 假期扣减存储过程
+新增 `deduct_leave_balance` 存储过程，支持自动扣减各类假期余额。
+
+### 执行增量更新
+
+```bash
+# 1. 备份现有数据库
+mysqldump -u root -p gov_platform > backup_before_update_$(date +%Y%m%d).sql
+
+# 2. 执行增量更新脚本
+mysql -u root -p --default-character-set=utf8mb4 gov_platform < deploy/database/recent-updates-2025-02-08-09.sql
+
+# 3. 验证更新结果
+mysql -u root -p gov_platform -e "SHOW COLUMNS FROM leave_balances LIKE '%leave%';"
+mysql -u root -p gov_platform -e "SHOW COLUMNS FROM organizations LIKE '%supervisor%';"
+mysql -u root -p gov_platform -e "SHOW PROCEDURE STATUS WHERE Db = 'gov_platform';"
+```
+
+### 后端 API 同步更新
+
+数据库更新后，需同步更新后端 API 以支持新功能：
+
+```bash
+# 1. 备份现有 API
+cp /opt/gov-platform/api/src/index.js /opt/gov-platform/api/src/index.js.bak
+
+# 2. 上传新版本
+scp deploy/api/src/index.js root@服务器IP:/opt/gov-platform/api/src/
+
+# 3. 重启 API 服务
+sudo systemctl restart gov-api
+
+# 4. 验证
+curl http://localhost:3001/api/health
+```
+
+### 前端同步更新
+
+```bash
+# 1. 在开发机构建最新版本
+npm run build
+
+# 2. 上传到服务器
+scp -r dist/* root@服务器IP:/opt/gov-platform/web/
+
+# 3. 确保 config.js 配置正确
+cat /opt/gov-platform/web/config.js
+# 应包含 OFFLINE_MODE: true
+```
+
+---
+
 ## 常见问题
 
 ### Q1: 页面显示 supabase.co 错误
@@ -624,4 +702,15 @@ curl http://localhost:3001/api/health
 
 ---
 
-*文档更新时间: 2025-02-04*
+## 更新历史
+
+| 日期 | 版本 | 更新内容 |
+|------|------|----------|
+| 2025-02-09 | v1.3 | 新增食堂菜谱删除功能、修复周0显示bug、新增增量更新章节 |
+| 2025-02-08 | v1.2 | 扩展假期类型、添加组织主管字段、假期扣减存储过程 |
+| 2025-02-04 | v1.1 | 新增账号登录、审批流版本管理 |
+| 2025-01-21 | v1.0 | 初始版本 |
+
+---
+
+*文档更新时间: 2025-02-09*
