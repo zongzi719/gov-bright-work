@@ -569,6 +569,17 @@ export async function createCanteenMenu(menu: {
   return { data: null, error };
 }
 
+export async function deleteCanteenMenu(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/canteen-menus/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase.from("canteen_menus").delete().eq("id", id);
+  return { data: null, error };
+}
+
 // ==================== Absence Records (请假/外出/出差) ====================
 
 export async function getAbsenceRecords(params: {
@@ -2607,6 +2618,7 @@ export const dataAdapter = {
   getCanteenMenus,
   updateCanteenMenu,
   createCanteenMenu,
+  deleteCanteenMenu,
   // Absence Records
   getAbsenceRecords,
   getAbsenceRecordById,

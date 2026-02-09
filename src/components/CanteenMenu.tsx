@@ -55,8 +55,9 @@ const CanteenMenu = () => {
         
         if (!error && data && data.length > 0) {
           // 将数据库数据转换为组件格式
+          // day_of_week: 0=周一, 1=周二, ..., 6=周日
           const formattedMenu = data.map((item: any) => ({
-            day: dayLabels[item.day_of_week - 1] || `周${item.day_of_week}`,
+            day: dayLabels[item.day_of_week] || `周${item.day_of_week + 1}`,
             breakfast: item.breakfast || [],
             lunch: item.lunch || [],
             dinner: item.dinner || [],

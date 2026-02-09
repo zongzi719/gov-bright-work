@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -18,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface CanteenMenu {
@@ -35,7 +36,9 @@ const MenuManagement = () => {
   const [menus, setMenus] = useState<CanteenMenu[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<CanteenMenu | null>(null);
+  const [deletingMenu, setDeletingMenu] = useState<CanteenMenu | null>(null);
   const [formData, setFormData] = useState({
     breakfast: "",
     lunch: "",
@@ -108,6 +111,27 @@ const MenuManagement = () => {
     fetchMenus();
   };
 
+  const handleDeleteClick = (menu: CanteenMenu) => {
+    setDeletingMenu(menu);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingMenu) return;
+
+    const { error } = await dataAdapter.deleteCanteenMenu(deletingMenu.id);
+
+    if (error) {
+      toast.error("删除失败");
+      return;
+    }
+
+    toast.success("删除成功");
+    setDeleteDialogOpen(false);
+    setDeletingMenu(null);
+    fetchMenus();
+  };
+
   // 获取缺失的日期
   const existingDays = menus.map((m) => m.day_of_week);
   const missingDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => !existingDays.includes(d));
@@ -162,9 +186,14 @@ const MenuManagement = () => {
                     {menu.dinner.join("、") || "-"}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(menu)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(menu)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(menu)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -215,6 +244,26 @@ const MenuManagement = () => {
               <Button type="submit">保存</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认对话框 */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              确定要删除{deletingMenu ? dayNames[deletingMenu.day_of_week] : ""}的菜谱吗？此操作无法撤销。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              删除
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
