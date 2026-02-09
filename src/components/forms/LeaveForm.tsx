@@ -61,8 +61,8 @@ const leaveTypes = [
   { value: "personal", label: "事假", unit: "天", description: "个人事务" },
 ];
 
-// 可选的小时选项（每天最多8小时）
-const hourOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+// 工作时间选项（8:00-17:00，每小时一个选项）
+const workHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 
 const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const { startApproval } = useApprovalWorkflow();
@@ -72,8 +72,9 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     leave_type: "",
     reason: "",
     start_date: undefined as Date | undefined,
+    start_hour: "8", // 开始小时，默认8点
     end_date: undefined as Date | undefined,
-    daily_hours: "8", // 每天请假小时数，默认8小时=1天
+    end_hour: "17", // 结束小时，默认17点
     handover_person_id: "",
     handover_notes: "",
     notes: "",
@@ -105,15 +106,41 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const calculateDuration = () => {
     if (!form.start_date || !form.end_date) return null;
     
+    const startHour = parseInt(form.start_hour) || 8;
+    const endHour = parseInt(form.end_hour) || 17;
+    
     // 计算请假天数（包含首尾两天）
-    const days = differenceInCalendarDays(form.end_date, form.start_date) + 1;
-    if (days <= 0) return null;
+    const calendarDays = differenceInCalendarDays(form.end_date, form.start_date) + 1;
+    if (calendarDays <= 0) return null;
     
-    // 每天请假的小时数
-    const dailyHours = parseInt(form.daily_hours) || 8;
+    let totalHours = 0;
     
-    // 总小时数
-    const totalHours = days * dailyHours;
+    if (calendarDays === 1) {
+      // 同一天：结束小时 - 开始小时（去掉午休1小时：12-13点）
+      let hours = endHour - startHour;
+      // 如果跨越午休时间，减去1小时
+      if (startHour < 13 && endHour > 12) {
+        hours -= 1;
+      }
+      totalHours = Math.max(0, Math.min(hours, 8));
+    } else {
+      // 跨天计算
+      // 第一天：从开始小时到17点
+      let firstDayHours = 17 - startHour;
+      if (startHour < 13) firstDayHours -= 1; // 减去午休
+      firstDayHours = Math.max(0, Math.min(firstDayHours, 8));
+      
+      // 最后一天：从8点到结束小时
+      let lastDayHours = endHour - 8;
+      if (endHour > 12) lastDayHours -= 1; // 减去午休
+      lastDayHours = Math.max(0, Math.min(lastDayHours, 8));
+      
+      // 中间天数：每天8小时
+      const middleDays = calendarDays - 2;
+      const middleHours = middleDays > 0 ? middleDays * 8 : 0;
+      
+      totalHours = firstDayHours + middleHours + lastDayHours;
+    }
     
     // 等效天数（8小时=1天）
     const equivalentDays = totalHours / 8;
@@ -121,8 +148,9 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     return { 
       hours: totalHours, 
       days: equivalentDays, 
-      calendarDays: days,
-      dailyHours 
+      calendarDays,
+      startHour,
+      endHour
     };
   };
 
@@ -197,12 +225,12 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     setSubmitting(true);
 
     try {
-      // 构造开始和结束的时间戳（保留日期，时间设为工作时间）
+      // 构造开始和结束的时间戳
       const startTime = new Date(form.start_date);
-      startTime.setHours(8, 0, 0, 0); // 假设从早上8点开始
+      startTime.setHours(parseInt(form.start_hour), 0, 0, 0);
       
       const endTime = new Date(form.end_date);
-      endTime.setHours(8 + parseInt(form.daily_hours), 0, 0, 0); // 结束时间
+      endTime.setHours(parseInt(form.end_hour), 0, 0, 0);
       
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
@@ -252,8 +280,9 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           leave_type: "",
           reason: "",
           start_date: undefined,
+          start_hour: "8",
           end_date: undefined,
-          daily_hours: "8",
+          end_hour: "17",
           handover_person_id: "",
           handover_notes: "",
           notes: "",
@@ -324,10 +353,10 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
             />
           </div>
 
-          {/* 时间选择 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>开始日期 *</Label>
+          {/* 开始时间 */}
+          <div className="space-y-2">
+            <Label>开始时间 *</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -356,10 +385,25 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                   />
                 </PopoverContent>
               </Popover>
+              <Select value={form.start_hour} onValueChange={(v) => setForm({ ...form, start_hour: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="开始时间" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workHours.map((h) => (
+                    <SelectItem key={h} value={String(h)}>
+                      {h}:00
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label>结束日期 *</Label>
+          {/* 结束时间 */}
+          <div className="space-y-2">
+            <Label>结束时间 *</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -388,26 +432,18 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                   />
                 </PopoverContent>
               </Popover>
-            </div>
-          </div>
-
-          {/* 每天请假小时数 */}
-          <div className="space-y-2">
-            <Label>每天请假小时数 *</Label>
-            <Select value={form.daily_hours} onValueChange={(v) => setForm({ ...form, daily_hours: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="选择每天请假小时数" />
-              </SelectTrigger>
-              <SelectContent>
-                {hourOptions.map((h) => (
-                  <SelectItem key={h} value={String(h)}>
-                    {h} 小时 {h === 8 && "(全天)"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="text-xs text-muted-foreground">
-              说明：每天工作8小时，1天 = 8小时
+              <Select value={form.end_hour} onValueChange={(v) => setForm({ ...form, end_hour: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="结束时间" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workHours.map((h) => (
+                    <SelectItem key={h} value={String(h)}>
+                      {h}:00
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -415,12 +451,17 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           {duration && (
             <div className="text-sm bg-muted/50 px-3 py-2 rounded-md space-y-1">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">请假天数：</span>
-                <span className="font-medium text-foreground">{duration.calendarDays} 天 × {duration.dailyHours} 小时/天</span>
+                <span className="text-muted-foreground">请假时段：</span>
+                <span className="font-medium text-foreground">
+                  {form.start_date && format(form.start_date, "MM-dd")} {duration.startHour}:00 ~ {form.end_date && format(form.end_date, "MM-dd")} {duration.endHour}:00
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">合计时长：</span>
                 <span className="font-medium text-foreground text-primary">{duration.hours} 小时（{duration.days} 天）</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                工作时间 8:00-17:00，午休 12:00-13:00，每天最多8小时
               </div>
               {!checkBalanceSufficient() && (
                 <div className="text-destructive text-xs mt-1">
