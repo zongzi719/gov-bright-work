@@ -2530,7 +2530,7 @@ export async function getContactById(id: string) {
   return { data, error };
 }
 
-// 根据联系人ID获取其组织的主管信息
+// 根据联系人ID获取其组织的主管信息（支持向上查找父级组织）
 export async function getOrganizationApprovers(contactId: string) {
   if (isOfflineMode()) {
     return offlineRequest<any>(`/api/contacts/${contactId}/organization-approvers`);
@@ -2544,17 +2544,56 @@ export async function getOrganizationApprovers(contactId: string) {
     .maybeSingle();
   
   if (contactError || !contact) {
+    console.warn(`getOrganizationApprovers: Failed to get contact ${contactId}:`, contactError);
     return { data: null, error: contactError };
   }
   
-  // 获取组织的主管信息
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .select("direct_supervisor_id, department_head_id")
-    .eq("id", contact.organization_id)
-    .maybeSingle();
+  // 递归向上查找有主管设置的组织
+  let currentOrgId = contact.organization_id;
+  let maxDepth = 10; // 防止无限循环
   
-  return { data: org, error: orgError };
+  while (currentOrgId && maxDepth > 0) {
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
+      .select("id, name, parent_id, direct_supervisor_id, department_head_id")
+      .eq("id", currentOrgId)
+      .maybeSingle();
+    
+    if (orgError || !org) {
+      console.warn(`getOrganizationApprovers: Failed to get organization ${currentOrgId}:`, orgError);
+      return { data: null, error: orgError };
+    }
+    
+    console.log(`getOrganizationApprovers: Checking org "${org.name}" (${org.id}), supervisor=${org.direct_supervisor_id}, head=${org.department_head_id}`);
+    
+    // 如果当前组织有设置主管，返回
+    if (org.direct_supervisor_id || org.department_head_id) {
+      console.log(`getOrganizationApprovers: Found approvers in org "${org.name}": supervisor=${org.direct_supervisor_id}, head=${org.department_head_id}`);
+      return { 
+        data: { 
+          direct_supervisor_id: org.direct_supervisor_id, 
+          department_head_id: org.department_head_id 
+        }, 
+        error: null 
+      };
+    }
+    
+    // 向上查找父级组织
+    if (org.parent_id) {
+      console.log(`getOrganizationApprovers: No approvers in "${org.name}", checking parent org ${org.parent_id}`);
+      currentOrgId = org.parent_id;
+    } else {
+      // 没有父级组织了，停止查找
+      console.log(`getOrganizationApprovers: No approvers found and no parent org for "${org.name}"`);
+      break;
+    }
+    
+    maxDepth--;
+  }
+  
+  // 没有找到任何主管
+  console.warn(`getOrganizationApprovers: No approvers found for contact ${contactId} after traversing org hierarchy`);
+  return { data: { direct_supervisor_id: null, department_head_id: null }, error: null };
 }
 
 // ==================== Leader Schedule Management (领导日程管理 - Admin) ====================
