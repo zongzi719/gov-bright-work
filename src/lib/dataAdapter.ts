@@ -1091,6 +1091,117 @@ export async function getAbsenceRecordForLeaveDeduction(businessId: string) {
   return { data, error };
 }
 
+// ==================== Leave Balance Management (假期余额管理) ====================
+
+export async function checkLeaveBalanceExists(contactId: string, year: number) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/leave-balances/check?contact_id=${contactId}&year=${year}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("leave_balances")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("year", year)
+    .maybeSingle();
+  return { data, error };
+}
+
+export async function createLeaveBalance(balance: {
+  contact_id: string;
+  year: number;
+  annual_leave_total: number;
+  annual_leave_used?: number;
+  sick_leave_total: number;
+  sick_leave_used?: number;
+  personal_leave_total: number;
+  personal_leave_used?: number;
+  paternity_leave_total?: number;
+  paternity_leave_used?: number;
+  bereavement_leave_total?: number;
+  bereavement_leave_used?: number;
+  maternity_leave_total?: number;
+  maternity_leave_used?: number;
+  nursing_leave_total?: number;
+  nursing_leave_used?: number;
+  marriage_leave_total?: number;
+  marriage_leave_used?: number;
+  compensatory_leave_total?: number;
+  compensatory_leave_used?: number;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/leave-balances', {
+      method: 'POST',
+      body: JSON.stringify(balance),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("leave_balances")
+    .insert(balance)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateLeaveBalance(id: string, updates: {
+  annual_leave_total?: number;
+  sick_leave_total?: number;
+  personal_leave_total?: number;
+  paternity_leave_total?: number;
+  bereavement_leave_total?: number;
+  maternity_leave_total?: number;
+  nursing_leave_total?: number;
+  marriage_leave_total?: number;
+  compensatory_leave_total?: number;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/leave-balances/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("leave_balances")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function createLeaveBalances(balances: Array<{
+  contact_id: string;
+  year: number;
+  annual_leave_total: number;
+  annual_leave_used: number;
+  sick_leave_total: number;
+  sick_leave_used: number;
+  personal_leave_total: number;
+  personal_leave_used: number;
+  paternity_leave_total?: number;
+  paternity_leave_used?: number;
+  bereavement_leave_total?: number;
+  bereavement_leave_used?: number;
+  maternity_leave_total?: number;
+  maternity_leave_used?: number;
+  nursing_leave_total?: number;
+  nursing_leave_used?: number;
+  marriage_leave_total?: number;
+  marriage_leave_used?: number;
+  compensatory_leave_total?: number;
+  compensatory_leave_used?: number;
+}>) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>('/api/leave-balances/batch', {
+      method: 'POST',
+      body: JSON.stringify(balances),
+    });
+  }
+  
+  const { error } = await supabase.from("leave_balances").insert(balances);
+  return { data: null, error };
+}
+
 // ==================== Leader Schedules (领导日程) ====================
 
 export async function getLeaderSchedules(params: {
@@ -2224,6 +2335,209 @@ export async function getOrganizationApprovers(contactId: string) {
   return { data: org, error: orgError };
 }
 
+// ==================== Leader Schedule Management (领导日程管理 - Admin) ====================
+
+export async function getAllLeaderSchedules() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/leader-schedules?all=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedules")
+    .select(`
+      *,
+      leader:contacts!leader_id(id, name, position)
+    `)
+    .order("schedule_date", { ascending: false })
+    .order("start_time");
+  return { data, error };
+}
+
+export async function getLeaderSchedulesByWeek(startDate: string, endDate: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/leader-schedules?start_date=${startDate}&end_date=${endDate}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedules")
+    .select(`
+      *,
+      leader:contacts!leader_id(id, name, position)
+    `)
+    .gte("schedule_date", startDate)
+    .lte("schedule_date", endDate)
+    .order("schedule_date")
+    .order("start_time");
+  return { data, error };
+}
+
+export async function createLeaderSchedule(schedule: {
+  leader_id: string;
+  title: string;
+  location?: string | null;
+  schedule_date: string;
+  start_time: string;
+  end_time: string;
+  schedule_type: string;
+  notes?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/leader-schedules', {
+      method: 'POST',
+      body: JSON.stringify(schedule),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedules")
+    .insert(schedule)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateLeaderSchedule(id: string, updates: {
+  leader_id?: string;
+  title?: string;
+  location?: string | null;
+  schedule_date?: string;
+  start_time?: string;
+  end_time?: string;
+  schedule_type?: string;
+  notes?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/leader-schedules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("leader_schedules")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function deleteLeaderSchedule(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/leader-schedules/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("leader_schedules")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// ==================== File Transfers (文件收发) ====================
+
+export async function getFileTransfers(params?: { status?: string }) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    const query = searchParams.toString();
+    return offlineRequest<any[]>(`/api/file-transfers${query ? `?${query}` : ''}`);
+  }
+  
+  let query = supabase.from("file_transfers").select("*");
+  if (params?.status) query = query.eq("status", params.status);
+  const { data, error } = await query.order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function createFileTransfer(transfer: {
+  title: string;
+  send_unit: string;
+  send_unit_id?: string | null;
+  doc_number: string;
+  security_level: string;
+  urgency: string;
+  source_unit?: string | null;
+  send_type?: string | null;
+  contact_person?: string | null;
+  contact_phone?: string | null;
+  document_date?: string | null;
+  copies?: number | null;
+  confidential_period?: string | null;
+  main_unit?: string | null;
+  sign_leader?: string | null;
+  sign_date?: string | null;
+  file_type?: string | null;
+  notify_type?: string | null;
+  copy_unit?: string | null;
+  description?: string | null;
+  status?: string;
+  attachments?: any;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/file-transfers', {
+      method: 'POST',
+      body: JSON.stringify(transfer),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("file_transfers")
+    .insert(transfer)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateFileTransfer(id: string, updates: {
+  status?: string;
+  sign_leader?: string | null;
+  sign_date?: string | null;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/file-transfers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("file_transfers")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function deleteFileTransfer(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/file-transfers/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("file_transfers")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
+// ==================== Check Leader Schedule Permission ====================
+
+export async function checkLeaderSchedulePermission(userId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ has_permission: boolean }>(`/api/leader-schedule-permissions/check?user_id=${userId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("leader_schedule_permissions")
+    .select("id")
+    .eq("user_id", userId)
+    .limit(1);
+  
+  return { data: { has_permission: data && data.length > 0 }, error };
+}
+
 // 按ID获取采购申请明细
 export async function getSupplyPurchaseItemsById(purchaseId: string) {
   if (isOfflineMode()) {
@@ -2346,10 +2660,25 @@ export const dataAdapter = {
   setVersionsNotCurrent,
   // Leave Balances
   getLeaveBalance,
+  checkLeaveBalanceExists,
+  createLeaveBalance,
+  updateLeaveBalance,
+  createLeaveBalances,
   // Leader Schedules
   getLeaderSchedules,
+  getAllLeaderSchedules,
+  getLeaderSchedulesByWeek,
+  createLeaderSchedule,
+  updateLeaderSchedule,
+  deleteLeaderSchedule,
   getLeaders,
   getLeaderSchedulePermissions,
+  checkLeaderSchedulePermission,
+  // File Transfers
+  getFileTransfers,
+  createFileTransfer,
+  updateFileTransfer,
+  deleteFileTransfer,
   // Todo Items
   getTodoItems,
   createTodoItem,

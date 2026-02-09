@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, ShoppingCart, BookUser } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 
 const QuickLinks = () => {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ const QuickLinks = () => {
       }
 
       const user = JSON.parse(storedUser);
-      const userId = user.id; // localStorage stores 'id' not 'contact_id'
+      const userId = user.id;
 
       if (!userId) {
         setHasLeaderSchedulePermission(false);
@@ -36,11 +36,7 @@ const QuickLinks = () => {
       }
 
       // 检查是否有领导日程查看权限
-      const { data: permData, error } = await supabase
-        .from("leader_schedule_permissions")
-        .select("id")
-        .eq("user_id", userId)
-        .limit(1);
+      const { data, error } = await dataAdapter.checkLeaderSchedulePermission(userId);
 
       if (error) {
         console.error("查询权限失败:", error);
@@ -48,7 +44,7 @@ const QuickLinks = () => {
         return;
       }
 
-      if (permData && permData.length > 0) {
+      if (data?.has_permission) {
         setHasLeaderSchedulePermission(true);
         return;
       }

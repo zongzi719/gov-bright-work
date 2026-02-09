@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -237,10 +239,7 @@ const LeaveBalanceManagement = () => {
     };
 
     if (isEditing && editingId) {
-      const { error } = await supabase
-        .from("leave_balances")
-        .update(insertData)
-        .eq("id", editingId);
+      const { error } = await dataAdapter.updateLeaveBalance(editingId, insertData);
 
       if (error) {
         toast.error("更新失败");
@@ -252,19 +251,14 @@ const LeaveBalanceManagement = () => {
       }
     } else {
       // Check if already exists
-      const { data: existing } = await supabase
-        .from("leave_balances")
-        .select("id")
-        .eq("contact_id", formData.contact_id)
-        .eq("year", formData.year)
-        .single();
+      const { data: existing } = await dataAdapter.checkLeaveBalanceExists(formData.contact_id, formData.year);
 
       if (existing) {
         toast.error("该人员当年的假期记录已存在");
         return;
       }
 
-      const { error } = await supabase.from("leave_balances").insert({
+      const { error } = await dataAdapter.createLeaveBalance({
         contact_id: formData.contact_id,
         year: formData.year,
         ...insertData,
@@ -350,7 +344,7 @@ const LeaveBalanceManagement = () => {
       compensatory_leave_used: 0,
     }));
 
-    const { error } = await supabase.from("leave_balances").insert(newBalances);
+    const { error } = await dataAdapter.createLeaveBalances(newBalances);
 
     if (error) {
       toast.error("批量初始化失败");
