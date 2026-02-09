@@ -153,13 +153,18 @@ const LeaderScheduleManagement = () => {
       return;
     }
 
-    toast.success(editingSchedule ? "日程已更新" : "日程已添加");
+    // 关闭对话框并重置表单
     setDialogOpen(false);
     resetForm();
-    fetchSchedules();
+    
+    // 立即刷新数据 - 确保UI同步更新
+    await fetchSchedules();
     if (viewMode === "list") {
-      fetchAllSchedules();
+      await fetchAllSchedules();
     }
+    
+    // 在数据刷新后显示成功提示
+    toast.success(editingSchedule ? "日程已更新" : "日程已添加");
   };
 
   const handleDelete = async (id: string) => {
