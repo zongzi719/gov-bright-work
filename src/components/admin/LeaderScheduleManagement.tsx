@@ -53,6 +53,7 @@ const LeaderScheduleManagement = () => {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [activeTab, setActiveTab] = useState("schedule");
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [refreshKey, setRefreshKey] = useState(0); // 强制刷新key
   
   const [searchTerm, setSearchTerm] = useState("");
   const [leaderFilter, setLeaderFilter] = useState("all");
@@ -71,13 +72,13 @@ const LeaderScheduleManagement = () => {
 
   useEffect(() => {
     fetchData();
-  }, [currentWeekStart]);
+  }, [currentWeekStart, refreshKey]); // 添加refreshKey依赖以支持强制刷新
 
   useEffect(() => {
     if (viewMode === "list") {
       fetchAllSchedules();
     }
-  }, [viewMode]);
+  }, [viewMode, refreshKey]); // 添加refreshKey依赖
 
   const fetchData = async () => {
     setLoading(true);
@@ -157,13 +158,10 @@ const LeaderScheduleManagement = () => {
     setDialogOpen(false);
     resetForm();
     
-    // 立即刷新数据 - 确保UI同步更新
-    await fetchSchedules();
-    if (viewMode === "list") {
-      await fetchAllSchedules();
-    }
+    // 强制触发数据刷新 - 通过更新refreshKey触发useEffect重新获取数据
+    setRefreshKey(prev => prev + 1);
     
-    // 在数据刷新后显示成功提示
+    // 显示成功提示
     toast.success(editingSchedule ? "日程已更新" : "日程已添加");
   };
 
@@ -178,10 +176,8 @@ const LeaderScheduleManagement = () => {
     }
 
     toast.success("日程已删除");
-    fetchSchedules();
-    if (viewMode === "list") {
-      fetchAllSchedules();
-    }
+    // 强制触发数据刷新
+    setRefreshKey(prev => prev + 1);
   };
 
   const resetForm = () => {
