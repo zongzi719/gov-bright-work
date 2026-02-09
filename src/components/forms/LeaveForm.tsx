@@ -61,26 +61,71 @@ const leaveTypes = [
   { value: "personal", label: "事假", unit: "天", description: "个人事务" },
 ];
 
-// 工作时间选项（每半小时一个选项）
-const workHourOptions = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-  "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
-  "20:00", "20:30", "21:00", "21:30", "22:00"
-];
+// 季节配置
+type SeasonType = "winter" | "summer";
+
+const seasonConfig = {
+  winter: {
+    label: "冬季",
+    description: "10月1日 - 次年4月30日",
+    morning: { start: "10:00", end: "14:00" },
+    afternoon: { start: "15:30", end: "19:30" },
+  },
+  summer: {
+    label: "夏季",
+    description: "5月1日 - 9月30日",
+    morning: { start: "10:00", end: "14:00" },
+    afternoon: { start: "16:00", end: "20:00" },
+  },
+};
+
+// 根据日期自动判断季节
+const getSeasonByDate = (date: Date): SeasonType => {
+  const month = date.getMonth() + 1; // 0-11 -> 1-12
+  // 夏季：5月1日 - 9月30日
+  if (month >= 5 && month <= 9) {
+    return "summer";
+  }
+  // 冬季：10月1日 - 次年4月30日
+  return "winter";
+};
+
+// 生成时间选项（每半小时一个选项）
+const generateTimeOptions = (start: string, end: string): string[] => {
+  const options: string[] = [];
+  const [startH, startM] = start.split(":").map(Number);
+  const [endH, endM] = end.split(":").map(Number);
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  
+  for (let m = startMinutes; m <= endMinutes; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    options.push(`${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`);
+  }
+  return options;
+};
+
+// 获取指定季节的所有可选时间
+const getSeasonTimeOptions = (season: SeasonType): string[] => {
+  const config = seasonConfig[season];
+  const morningOptions = generateTimeOptions(config.morning.start, config.morning.end);
+  const afternoonOptions = generateTimeOptions(config.afternoon.start, config.afternoon.end);
+  return [...morningOptions, ...afternoonOptions];
+};
 
 const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const { startApproval } = useApprovalWorkflow();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
+  const [season, setSeason] = useState<SeasonType>(() => getSeasonByDate(new Date()));
   const [form, setForm] = useState({
     leave_type: "",
     reason: "",
     start_date: undefined as Date | undefined,
-    start_hour: "08:00", // 开始时间，默认8点
+    start_hour: "10:00", // 开始时间，默认10点
     end_date: undefined as Date | undefined,
-    end_hour: "17:00", // 结束时间，默认17点
+    end_hour: "19:30", // 结束时间，默认冬季下班时间
     handover_person_id: "",
     handover_notes: "",
     notes: "",
@@ -88,6 +133,16 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+
+  // 季节变化时更新默认结束时间
+  useEffect(() => {
+    const defaultEndHour = season === "winter" ? "19:30" : "20:00";
+    setForm(prev => ({ ...prev, end_hour: defaultEndHour }));
+  }, [season]);
+
+  // 获取当前季节的时间选项
+  const timeOptions = getSeasonTimeOptions(season);
+  const currentSeasonConfig = seasonConfig[season];
 
   useEffect(() => {
     if (open && currentUser?.id) {
@@ -114,6 +169,50 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     return { hours, minutes, totalMinutes: hours * 60 + minutes };
   };
 
+  // 判断时间是否在上午时段
+  const isInMorningPeriod = (totalMinutes: number): boolean => {
+    const morningStart = parseTimeString(currentSeasonConfig.morning.start).totalMinutes;
+    const morningEnd = parseTimeString(currentSeasonConfig.morning.end).totalMinutes;
+    return totalMinutes >= morningStart && totalMinutes <= morningEnd;
+  };
+
+  // 判断时间是否在下午时段
+  const isInAfternoonPeriod = (totalMinutes: number): boolean => {
+    const afternoonStart = parseTimeString(currentSeasonConfig.afternoon.start).totalMinutes;
+    const afternoonEnd = parseTimeString(currentSeasonConfig.afternoon.end).totalMinutes;
+    return totalMinutes >= afternoonStart && totalMinutes <= afternoonEnd;
+  };
+
+  // 计算单天的工作时长（考虑上午和下午时段）
+  const calculateSingleDayHours = (startMinutes: number, endMinutes: number): number => {
+    const morningStart = parseTimeString(currentSeasonConfig.morning.start).totalMinutes;
+    const morningEnd = parseTimeString(currentSeasonConfig.morning.end).totalMinutes;
+    const afternoonStart = parseTimeString(currentSeasonConfig.afternoon.start).totalMinutes;
+    const afternoonEnd = parseTimeString(currentSeasonConfig.afternoon.end).totalMinutes;
+    
+    let totalMinutes = 0;
+    
+    // 计算上午时段的时长
+    if (startMinutes <= morningEnd && endMinutes >= morningStart) {
+      const effectiveStart = Math.max(startMinutes, morningStart);
+      const effectiveEnd = Math.min(endMinutes, morningEnd);
+      if (effectiveEnd > effectiveStart) {
+        totalMinutes += effectiveEnd - effectiveStart;
+      }
+    }
+    
+    // 计算下午时段的时长
+    if (startMinutes <= afternoonEnd && endMinutes >= afternoonStart) {
+      const effectiveStart = Math.max(startMinutes, afternoonStart);
+      const effectiveEnd = Math.min(endMinutes, afternoonEnd);
+      if (effectiveEnd > effectiveStart) {
+        totalMinutes += effectiveEnd - effectiveStart;
+      }
+    }
+    
+    return totalMinutes / 60;
+  };
+
   // 计算请假时长：总小时数和等效天数（1天=8小时）
   const calculateDuration = () => {
     if (!form.start_date || !form.end_date) return null;
@@ -125,17 +224,30 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     const calendarDays = differenceInCalendarDays(form.end_date, form.start_date) + 1;
     if (calendarDays <= 0) return null;
     
-    // 每天按8小时计算
+    // 每天最多8小时
     const hoursPerDay = 8;
     let totalHours = 0;
     
     if (calendarDays === 1) {
-      // 同一天：按分钟计算差值，再转换为小时
-      const minutesDiff = endTime.totalMinutes - startTime.totalMinutes;
-      totalHours = Math.max(0, Math.min(minutesDiff / 60, hoursPerDay));
+      // 同一天：按实际工作时段计算
+      totalHours = calculateSingleDayHours(startTime.totalMinutes, endTime.totalMinutes);
+      totalHours = Math.min(totalHours, hoursPerDay);
     } else {
-      // 跨天计算：每天最多8小时
-      totalHours = calendarDays * hoursPerDay;
+      // 跨天计算：
+      // 第一天：从开始时间到当天结束
+      const morningEnd = parseTimeString(currentSeasonConfig.morning.end).totalMinutes;
+      const afternoonEnd = parseTimeString(currentSeasonConfig.afternoon.end).totalMinutes;
+      const firstDayHours = calculateSingleDayHours(startTime.totalMinutes, afternoonEnd);
+      
+      // 最后一天：从当天开始到结束时间
+      const morningStart = parseTimeString(currentSeasonConfig.morning.start).totalMinutes;
+      const lastDayHours = calculateSingleDayHours(morningStart, endTime.totalMinutes);
+      
+      // 中间天数：每天8小时
+      const middleDays = calendarDays - 2;
+      const middleHours = middleDays > 0 ? middleDays * hoursPerDay : 0;
+      
+      totalHours = Math.min(firstDayHours, hoursPerDay) + middleHours + Math.min(lastDayHours, hoursPerDay);
     }
     
     // 四舍五入到0.5小时
@@ -344,6 +456,30 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
             )}
           </div>
 
+          {/* 季节选择 */}
+          <div className="space-y-2">
+            <Label>工作时间制度</Label>
+            <Select value={season} onValueChange={(v: SeasonType) => setSeason(v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="winter">
+                  <div className="flex flex-col">
+                    <span>冬季（10月1日 - 次年4月30日）</span>
+                    <span className="text-xs text-muted-foreground">上午 10:00-14:00，下午 15:30-19:30</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="summer">
+                  <div className="flex flex-col">
+                    <span>夏季（5月1日 - 9月30日）</span>
+                    <span className="text-xs text-muted-foreground">上午 10:00-14:00，下午 16:00-20:00</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* 请假事由 */}
           <div className="space-y-2">
             <Label>请假事由 *</Label>
@@ -392,7 +528,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                   <SelectValue placeholder="选择时间" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workHourOptions.map((h) => (
+                  {timeOptions.map((h) => (
                     <SelectItem key={h} value={h}>
                       {h}
                     </SelectItem>
@@ -439,7 +575,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                   <SelectValue placeholder="选择时间" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workHourOptions.map((h) => (
+                  {timeOptions.map((h) => (
                     <SelectItem key={h} value={h}>
                       {h}
                     </SelectItem>
@@ -451,14 +587,19 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
           {/* 时长显示 */}
           {duration && (
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">时长(小时)</Label>
-              <div className="text-2xl font-semibold text-foreground">{duration.hours}</div>
+            <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-primary">{duration.hours}</span>
+                <span className="text-sm text-muted-foreground">小时</span>
+                {duration.days > 0 && (
+                  <span className="text-sm text-muted-foreground">（约 {duration.days.toFixed(1)} 天）</span>
+                )}
+              </div>
               <div className="text-xs text-muted-foreground">
-                根据排班自动计算时长，每天最多8小时
+                根据{seasonConfig[season].label}作息时间自动计算，每天最多8小时
               </div>
               {!checkBalanceSufficient() && (
-                <div className="text-destructive text-xs">
+                <div className="text-destructive text-xs font-medium">
                   ⚠️ 超出可用余额
                 </div>
               )}
