@@ -535,6 +535,25 @@ export const useApprovalProgression = () => {
         return { success: true, completed: false };
       }
 
+      // 或签模式下，节点完成后清除同节点其他审批人的待办和审批记录
+      if (approvalMode === "or_sign" && complete) {
+        console.log("Or-sign node complete, clearing other pending records for node:", currentNodeName);
+        
+        // 批量更新同节点其他待处理的审批记录为"已跳过"
+        await dataAdapter.updateApprovalRecordsByNodeName(instanceId, currentNodeName, "pending", {
+          status: "approved",
+          comment: "或签节点已由其他审批人完成",
+          processed_at: new Date().toISOString(),
+        });
+        
+        // 批量更新同节点其他待处理的待办为"已完成"
+        await dataAdapter.updateTodosByNodeName(instanceId, currentNodeName, "pending", {
+          status: "completed",
+          process_result: "or_sign_skipped",
+          processed_at: new Date().toISOString(),
+        });
+      }
+
       if (!allApproved) {
         console.log("Node rejected, terminating workflow");
         await dataAdapter.updateApprovalInstance(instanceId, { 

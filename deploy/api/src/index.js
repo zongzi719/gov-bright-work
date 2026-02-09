@@ -1954,6 +1954,75 @@ app.put('/api/todo-items/by-instance/:instanceId', async (req, res) => {
   }
 });
 
+// 批量更新审批记录（按实例ID、节点名称和状态）- 或签专用
+app.put('/api/approval-records/by-node/:instanceId/:nodeName', async (req, res) => {
+  try {
+    const { instanceId, nodeName } = req.params;
+    const { current_status, updates } = req.body;
+    
+    const setClauses = [];
+    const params = [];
+    
+    if (updates.status !== undefined) { setClauses.push('status = ?'); params.push(updates.status); }
+    if (updates.comment !== undefined) { setClauses.push('comment = ?'); params.push(updates.comment); }
+    if (updates.processed_at !== undefined) { setClauses.push('processed_at = ?'); params.push(formatDateForMySQL(updates.processed_at)); }
+    setClauses.push('updated_at = NOW()');
+    
+    params.push(instanceId, decodeURIComponent(nodeName), current_status);
+    
+    await pool.execute(
+      `UPDATE approval_records SET ${setClauses.join(', ')} WHERE instance_id = ? AND node_name = ? AND status = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Batch update approval records by node error:', error);
+    res.status(500).json({ error: '批量更新审批记录失败' });
+  }
+});
+
+// 批量更新待办事项（按实例ID、节点名称和状态）- 或签专用
+app.put('/api/todo-items/by-node/:instanceId/:nodeName', async (req, res) => {
+  try {
+    const { instanceId, nodeName } = req.params;
+    const { current_status, updates } = req.body;
+    
+    // 先获取该节点对应的审批人ID列表
+    const [records] = await pool.execute(
+      `SELECT approver_id FROM approval_records WHERE instance_id = ? AND node_name = ? AND status = ?`,
+      [instanceId, decodeURIComponent(nodeName), current_status]
+    );
+    
+    if (records.length === 0) {
+      return res.json({ success: true, message: 'No matching records' });
+    }
+    
+    const approverIds = records.map(r => r.approver_id);
+    const placeholders = approverIds.map(() => '?').join(',');
+    
+    const setClauses = [];
+    const params = [];
+    
+    if (updates.status !== undefined) { setClauses.push('status = ?'); params.push(updates.status); }
+    if (updates.process_result !== undefined) { setClauses.push('process_result = ?'); params.push(updates.process_result); }
+    if (updates.processed_at !== undefined) { setClauses.push('processed_at = ?'); params.push(formatDateForMySQL(updates.processed_at)); }
+    setClauses.push('updated_at = NOW()');
+    
+    params.push(instanceId, current_status, ...approverIds);
+    
+    await pool.execute(
+      `UPDATE todo_items SET ${setClauses.join(', ')} WHERE approval_instance_id = ? AND status = ? AND assignee_id IN (${placeholders})`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Batch update todo items by node error:', error);
+    res.status(500).json({ error: '批量更新待办事项失败' });
+  }
+});
+
 // 获取缺勤记录的联系人ID
 app.get('/api/absence-records/:id/contact', async (req, res) => {
   try {

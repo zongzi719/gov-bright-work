@@ -143,13 +143,24 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
       const endTime = new Date(form.end_date);
       endTime.setHours(endHour, 0, 0, 0);
       
+      // 使用本地时间格式化，避免 toISOString() 转换为 UTC 导致时间偏差
+      const formatLocalDateTime = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = "00";
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      };
+      
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "business_trip",
         reason: form.reason,
         destination: form.destination,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
+        start_time: formatLocalDateTime(startTime),
+        end_time: formatLocalDateTime(endTime),
         transport_type: form.transport_type || null,
         companions: form.companions.length > 0 ? form.companions : null,
         estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
@@ -174,8 +185,8 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
         formData: {
           reason: form.reason,
           destination: form.destination,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
+          start_time: formatLocalDateTime(startTime),
+          end_time: formatLocalDateTime(endTime),
           start_time_of_day: form.start_time_of_day,
           end_time_of_day: form.end_time_of_day,
           transport_type: form.transport_type,

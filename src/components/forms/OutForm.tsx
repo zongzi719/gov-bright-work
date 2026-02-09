@@ -86,14 +86,26 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
       const endDateTime = getFullDateTime(form.end_date || form.start_date, form.end_time);
       const durationData = calculateDuration();
       
+      // 使用本地时间格式化，避免 toISOString() 转换为 UTC 导致时间偏差
+      const formatLocalDateTime = (date: Date | null) => {
+        if (!date) return null;
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = "00";
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      };
+      
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "out",
         out_type: form.out_type,
         out_location: form.out_location,
         reason: form.reason,
-        start_time: startDateTime?.toISOString() || "",
-        end_time: endDateTime?.toISOString() || null,
+        start_time: formatLocalDateTime(startDateTime) || "",
+        end_time: formatLocalDateTime(endDateTime),
         contact_phone: form.contact_phone || null,
         duration_hours: durationData?.hours || null,
         notes: form.notes || null,
@@ -117,8 +129,8 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
           out_type: form.out_type,
           out_location: form.out_location,
           reason: form.reason,
-          start_time: startDateTime?.toISOString(),
-          end_time: endDateTime?.toISOString(),
+          start_time: formatLocalDateTime(startDateTime),
+          end_time: formatLocalDateTime(endDateTime),
           contact_phone: form.contact_phone,
           notes: form.notes,
         },

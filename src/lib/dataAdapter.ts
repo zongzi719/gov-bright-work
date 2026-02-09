@@ -2488,6 +2488,66 @@ export async function updateApprovalRecordsByInstanceId(instanceId: string, stat
   return { data: null, error };
 }
 
+// 批量更新审批记录（按实例ID和节点名称和状态）- 用于或签清除
+export async function updateApprovalRecordsByNodeName(instanceId: string, nodeName: string, status: string, updates: {
+  status?: string;
+  comment?: string;
+  processed_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/approval-records/by-node/${instanceId}/${encodeURIComponent(nodeName)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ current_status: status, updates }),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("approval_records")
+    .update(updates as any)
+    .eq("instance_id", instanceId)
+    .eq("node_name", nodeName)
+    .eq("status", status as any);
+  return { data: null, error };
+}
+
+// 批量更新待办事项（按实例ID和节点名称和状态）- 用于或签清除
+export async function updateTodosByNodeName(instanceId: string, nodeName: string, status: string, updates: {
+  status?: string;
+  process_result?: string;
+  processed_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/todo-items/by-node/${instanceId}/${encodeURIComponent(nodeName)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ current_status: status, updates }),
+    });
+  }
+  
+  // 对于 Supabase，需要先查询 todo_items 的 approval_instance_id 对应的业务，再通过审批记录关联节点名
+  // 简化处理：直接通过 approval_instance_id 和当前状态更新
+  // 注意：由于 todo_items 没有 node_name 字段，需要通过关联的 approval_records 来判断
+  // 这里采用两步方式：先查审批记录获取审批人列表，再更新对应的待办
+  const { data: records } = await supabase
+    .from("approval_records")
+    .select("approver_id")
+    .eq("instance_id", instanceId)
+    .eq("node_name", nodeName)
+    .eq("status", status as any);
+  
+  if (records && records.length > 0) {
+    const approverIds = records.map(r => r.approver_id);
+    const { error } = await supabase
+      .from("todo_items")
+      .update(updates as any)
+      .eq("approval_instance_id", instanceId)
+      .eq("status", status as any)
+      .in("assignee_id", approverIds);
+    return { data: null, error };
+  }
+  
+  return { data: null, error: null };
+}
+
 // 获取缺勤记录的联系人ID
 export async function getAbsenceRecordContactId(id: string) {
   if (isOfflineMode()) {
