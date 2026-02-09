@@ -2286,6 +2286,56 @@ app.get('/api/leader-schedules', async (req, res) => {
   }
 });
 
+// 新增领导日程
+app.post('/api/leader-schedules', async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { leader_id, title, schedule_date, start_time, end_time, schedule_type, location, notes } = req.body;
+    
+    await pool.execute(
+      `INSERT INTO leader_schedules (id, leader_id, title, schedule_date, start_time, end_time, schedule_type, location, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, leader_id, title, schedule_date, start_time, end_time, schedule_type || 'meeting', location || null, notes || null]
+    );
+    
+    res.json({ id, success: true });
+  } catch (error) {
+    console.error('Create leader schedule error:', error);
+    res.status(500).json({ error: '创建领导日程失败' });
+  }
+});
+
+// 更新领导日程
+app.put('/api/leader-schedules/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, schedule_date, start_time, end_time, schedule_type, location, notes } = req.body;
+    
+    await pool.execute(
+      `UPDATE leader_schedules SET title = ?, schedule_date = ?, start_time = ?, end_time = ?, schedule_type = ?, location = ?, notes = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [title, schedule_date, start_time, end_time, schedule_type, location, notes, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update leader schedule error:', error);
+    res.status(500).json({ error: '更新领导日程失败' });
+  }
+});
+
+// 删除领导日程
+app.delete('/api/leader-schedules/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM leader_schedules WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete leader schedule error:', error);
+    res.status(500).json({ error: '删除领导日程失败' });
+  }
+});
+
 // ==================== 领导日程权限 ====================
 
 app.get('/api/leader-schedule-permissions', async (req, res) => {
