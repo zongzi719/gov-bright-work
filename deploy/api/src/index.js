@@ -3288,6 +3288,132 @@ app.post('/api/approval-form-fields/batch', async (req, res) => {
   }
 });
 
+// ==================== 管理后台 API ====================
+
+// 获取管理后台缺勤记录（带联系人信息）
+app.get('/api/admin/absence-records', async (req, res) => {
+  try {
+    const { type } = req.query;
+    const sql = `
+      SELECT ar.*,
+             c.id as contact_id_ref, c.name as contact_name, c.department as contact_department,
+             c.position as contact_position,
+             o.name as org_name
+      FROM absence_records ar
+      LEFT JOIN contacts c ON ar.contact_id = c.id
+      LEFT JOIN organizations o ON c.organization_id = o.id
+      WHERE ar.type = ?
+      ORDER BY ar.created_at DESC
+    `;
+    const [rows] = await pool.execute(sql, [type]);
+    
+    // 格式化为前端期望的嵌套结构
+    const formatted = rows.map(row => ({
+      ...row,
+      contacts: row.contact_id_ref ? {
+        id: row.contact_id_ref,
+        name: row.contact_name,
+        department: row.contact_department,
+        position: row.contact_position,
+        organization: row.org_name ? { name: row.org_name } : null
+      } : null
+    }));
+    res.json(formatted);
+  } catch (error) {
+    console.error('Get admin absence records error:', error);
+    res.status(500).json({ error: '获取记录失败' });
+  }
+});
+
+// 获取审批实例状态（批量）
+app.get('/api/admin/approval-instances', async (req, res) => {
+  try {
+    const { business_type, business_ids } = req.query;
+    if (!business_ids) {
+      return res.json([]);
+    }
+    
+    const ids = business_ids.split(',');
+    const placeholders = ids.map(() => '?').join(',');
+    
+    const [rows] = await pool.execute(
+      `SELECT business_id, status, form_data FROM approval_instances 
+       WHERE business_type = ? AND business_id IN (${placeholders})`,
+      [business_type, ...ids]
+    );
+    
+    // 解析 JSON 字段
+    const formatted = rows.map(row => ({
+      ...row,
+      form_data: typeof row.form_data === 'string' ? JSON.parse(row.form_data) : row.form_data
+    }));
+    res.json(formatted);
+  } catch (error) {
+    console.error('Get admin approval instances error:', error);
+    res.status(500).json({ error: '获取审批状态失败' });
+  }
+});
+
+// 获取单个审批实例详情
+app.get('/api/admin/approval-instance', async (req, res) => {
+  try {
+    const { business_id, business_type } = req.query;
+    const [rows] = await pool.execute(
+      `SELECT status, form_data FROM approval_instances 
+       WHERE business_id = ? AND business_type = ?`,
+      [business_id, business_type]
+    );
+    
+    if (rows.length === 0) {
+      return res.json(null);
+    }
+    
+    const row = rows[0];
+    res.json({
+      status: row.status,
+      form_data: typeof row.form_data === 'string' ? JSON.parse(row.form_data) : row.form_data
+    });
+  } catch (error) {
+    console.error('Get admin approval instance error:', error);
+    res.status(500).json({ error: '获取审批实例失败' });
+  }
+});
+
+// 删除缺勤记录及相关审批数据
+app.delete('/api/admin/absence-records/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { business_type } = req.query;
+    
+    // 1. 获取审批实例ID
+    const [instances] = await pool.execute(
+      'SELECT id FROM approval_instances WHERE business_id = ? AND business_type = ?',
+      [id, business_type]
+    );
+    
+    if (instances.length > 0) {
+      const instanceId = instances[0].id;
+      
+      // 2. 删除待办事项
+      await pool.execute('DELETE FROM todo_items WHERE approval_instance_id = ?', [instanceId]);
+      
+      // 3. 删除审批记录
+      await pool.execute('DELETE FROM approval_records WHERE instance_id = ?', [instanceId]);
+      
+      // 4. 删除审批实例
+      await pool.execute('DELETE FROM approval_instances WHERE id = ?', [instanceId]);
+    }
+    
+    // 5. 删除业务记录
+    await pool.execute('DELETE FROM absence_records WHERE id = ?', [id]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete admin absence record error:', error);
+    res.status(500).json({ error: '删除失败' });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {

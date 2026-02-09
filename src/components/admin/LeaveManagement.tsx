@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import ApprovalTimeline from "./ApprovalTimeline";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,23 +148,7 @@ const LeaveManagement = () => {
 
   const fetchRecords = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("absence_records")
-      .select(`
-        *,
-        contacts:contacts!absence_records_contact_id_fkey (
-          id,
-          name,
-          department,
-          position,
-          organization:organizations!contacts_organization_id_fkey (name)
-        ),
-        handover_person:contacts!absence_records_handover_person_id_fkey (
-          name
-        )
-      `)
-      .eq("type", "leave")
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getAdminAbsenceRecords("leave");
 
     if (error) {
       toast.error("获取记录失败");
@@ -175,15 +159,11 @@ const LeaveManagement = () => {
       // 批量获取审批实例状态
       if (recordsData.length > 0) {
         const recordIds = recordsData.map(r => r.id);
-        const { data: instancesData } = await supabase
-          .from("approval_instances")
-          .select("business_id, status, form_data")
-          .eq("business_type", "leave")
-          .in("business_id", recordIds);
+        const { data: instancesData } = await dataAdapter.getApprovalInstancesForAdmin("leave", recordIds);
         
         // 创建映射 - 判断是否有退回信息，使用前台一致的状态
         const statusMap = new Map<string, string>();
-        instancesData?.forEach(inst => {
+        instancesData?.forEach((inst: any) => {
           let displayStatus: string = inst.status;
           // 如果状态是 pending 但有退回信息，根据退回类型显示不同状态
           if (inst.status === "pending" && inst.form_data) {
@@ -221,12 +201,7 @@ const LeaveManagement = () => {
     setIsDetailDialogOpen(true);
     
     // 获取审批实例的真实状态
-    const { data: instanceData } = await supabase
-      .from("approval_instances")
-      .select("status, form_data")
-      .eq("business_id", record.id)
-      .eq("business_type", "leave")
-      .single();
+    const { data: instanceData } = await dataAdapter.getApprovalInstanceForDetail(record.id, "leave");
     
     if (instanceData) {
       // 根据退回类型显示不同状态，与前台保持一致
@@ -256,39 +231,7 @@ const LeaveManagement = () => {
     
     setIsDeleting(true);
     try {
-      // 1. 先获取审批实例ID
-      const { data: instanceData } = await supabase
-        .from("approval_instances")
-        .select("id")
-        .eq("business_id", deleteRecordId)
-        .eq("business_type", "leave")
-        .maybeSingle();
-      
-      if (instanceData) {
-        // 2. 删除待办事项
-        await supabase
-          .from("todo_items")
-          .delete()
-          .eq("approval_instance_id", instanceData.id);
-        
-        // 3. 删除审批记录
-        await supabase
-          .from("approval_records")
-          .delete()
-          .eq("instance_id", instanceData.id);
-        
-        // 4. 删除审批实例
-        await supabase
-          .from("approval_instances")
-          .delete()
-          .eq("id", instanceData.id);
-      }
-      
-      // 5. 删除业务记录
-      const { error } = await supabase
-        .from("absence_records")
-        .delete()
-        .eq("id", deleteRecordId);
+      const { error } = await dataAdapter.deleteAbsenceRecordWithApproval(deleteRecordId, "leave");
       
       if (error) throw error;
       
