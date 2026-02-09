@@ -218,7 +218,10 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
                   <Calendar
                     mode="single"
                     selected={form.start_date}
-                    onSelect={(date) => setForm({ ...form, start_date: date, end_date: date })}
+                    onSelect={(date) => {
+                      setForm({ ...form, start_date: date, end_date: date });
+                      document.body.click();
+                    }}
                     locale={zhCN}
                     className="pointer-events-auto"
                   />
@@ -267,7 +270,10 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
                   <Calendar
                     mode="single"
                     selected={form.end_date}
-                    onSelect={(date) => setForm({ ...form, end_date: date })}
+                    onSelect={(date) => {
+                      setForm({ ...form, end_date: date });
+                      document.body.click();
+                    }}
                     locale={zhCN}
                     className="pointer-events-auto"
                     disabled={(date) => form.start_date ? date < form.start_date : false}

@@ -295,7 +295,11 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                   <Calendar
                     mode="single"
                     selected={form.start_time}
-                    onSelect={(date) => setForm({ ...form, start_time: date })}
+                    onSelect={(date) => {
+                      setForm({ ...form, start_time: date });
+                      // 点击日期自动关闭 - 通过 focus 方式触发关闭
+                      document.body.click();
+                    }}
                     locale={zhCN}
                     className="pointer-events-auto"
                   />
@@ -324,7 +328,10 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                   <Calendar
                     mode="single"
                     selected={form.end_time}
-                    onSelect={(date) => setForm({ ...form, end_time: date })}
+                    onSelect={(date) => {
+                      setForm({ ...form, end_time: date });
+                      document.body.click();
+                    }}
                     locale={zhCN}
                     className="pointer-events-auto"
                   />
