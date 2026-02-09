@@ -161,23 +161,7 @@ const LeaveBalanceManagement = () => {
   };
 
   const fetchBalances = async () => {
-    const { data, error } = await supabase
-      .from("leave_balances")
-      .select(`
-        *,
-        contacts:contacts!leave_balances_contact_id_fkey (
-          id,
-          name,
-          department,
-          position,
-          first_work_date,
-          created_at,
-          organization:organizations!contacts_organization_id_fkey (id, name)
-        )
-      `)
-      .eq("year", yearFilter)
-      .order("created_at", { ascending: false });
-
+    const { data, error } = await dataAdapter.getLeaveBalancesWithContacts(yearFilter);
     if (error) {
       console.error(error);
     } else {
@@ -186,20 +170,7 @@ const LeaveBalanceManagement = () => {
   };
 
   const fetchContacts = async () => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select(`
-        id,
-        name,
-        department,
-        position,
-        first_work_date,
-        created_at,
-        organization:organizations!contacts_organization_id_fkey (id, name)
-      `)
-      .eq("is_active", true)
-      .order("name");
-
+    const { data, error } = await dataAdapter.getContactsForLeaveBalance();
     if (error) {
       console.error(error);
     } else {
@@ -208,11 +179,7 @@ const LeaveBalanceManagement = () => {
   };
 
   const fetchOrganizations = async () => {
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("id, name")
-      .order("sort_order");
-
+    const { data, error } = await dataAdapter.getOrganizations();
     if (error) {
       console.error(error);
     } else {

@@ -236,7 +236,31 @@ app.delete('/api/organizations/:id', async (req, res) => {
 
 app.get('/api/contacts', async (req, res) => {
   try {
-    const { organization_id, is_active, all, with_org, is_leader, ids } = req.query;
+    const { organization_id, is_active, all, with_org, is_leader, ids, for_leave_balance } = req.query;
+    
+    // 假期余额专用查询 - 返回特定字段和关联的组织信息
+    if (for_leave_balance === 'true') {
+      const sql = `
+        SELECT c.id, c.name, c.department, c.position, c.first_work_date, c.created_at,
+               o.id as org_id, o.name as org_name
+        FROM contacts c
+        LEFT JOIN organizations o ON c.organization_id = o.id
+        WHERE c.is_active = 1
+        ORDER BY c.name
+      `;
+      const [rows] = await pool.execute(sql);
+      const formatted = rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        department: row.department,
+        position: row.position,
+        first_work_date: row.first_work_date,
+        created_at: row.created_at,
+        organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
+      }));
+      return res.json(formatted);
+    }
+    
     let sql = 'SELECT c.*, o.name as organization_name FROM contacts c LEFT JOIN organizations o ON c.organization_id = o.id WHERE 1=1';
     const params = [];
     
@@ -1905,6 +1929,77 @@ app.get('/api/absence-records/:id/contact', async (req, res) => {
 
 // ==================== 假期余额 ====================
 
+// 获取假期余额列表（带联系人信息）
+app.get('/api/leave-balances', async (req, res) => {
+  try {
+    const { year, with_contacts } = req.query;
+    const currentYear = year || new Date().getFullYear();
+    
+    if (with_contacts === 'true') {
+      const sql = `
+        SELECT lb.*,
+               c.id as contact_id_ref, c.name as contact_name, c.department as contact_department,
+               c.position as contact_position, c.first_work_date, c.created_at as contact_created_at,
+               o.id as org_id, o.name as org_name
+        FROM leave_balances lb
+        LEFT JOIN contacts c ON lb.contact_id = c.id
+        LEFT JOIN organizations o ON c.organization_id = o.id
+        WHERE lb.year = ?
+        ORDER BY lb.created_at DESC
+      `;
+      const [rows] = await pool.execute(sql, [currentYear]);
+      
+      // 格式化为前端期望的嵌套结构
+      const formatted = rows.map(row => ({
+        id: row.id,
+        contact_id: row.contact_id,
+        year: row.year,
+        annual_leave_total: row.annual_leave_total,
+        annual_leave_used: row.annual_leave_used,
+        sick_leave_total: row.sick_leave_total,
+        sick_leave_used: row.sick_leave_used,
+        personal_leave_total: row.personal_leave_total,
+        personal_leave_used: row.personal_leave_used,
+        paternity_leave_total: row.paternity_leave_total,
+        paternity_leave_used: row.paternity_leave_used,
+        bereavement_leave_total: row.bereavement_leave_total,
+        bereavement_leave_used: row.bereavement_leave_used,
+        maternity_leave_total: row.maternity_leave_total,
+        maternity_leave_used: row.maternity_leave_used,
+        nursing_leave_total: row.nursing_leave_total,
+        nursing_leave_used: row.nursing_leave_used,
+        marriage_leave_total: row.marriage_leave_total,
+        marriage_leave_used: row.marriage_leave_used,
+        compensatory_leave_total: row.compensatory_leave_total,
+        compensatory_leave_used: row.compensatory_leave_used,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        contacts: row.contact_id_ref ? {
+          id: row.contact_id_ref,
+          name: row.contact_name,
+          department: row.contact_department,
+          position: row.contact_position,
+          first_work_date: row.first_work_date,
+          created_at: row.contact_created_at,
+          organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
+        } : null
+      }));
+      return res.json(formatted);
+    }
+    
+    // 简单列表
+    const [rows] = await pool.execute(
+      'SELECT * FROM leave_balances WHERE year = ? ORDER BY created_at DESC',
+      [currentYear]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Get leave balances error:', error);
+    res.status(500).json({ error: '获取假期余额列表失败' });
+  }
+});
+
+// 获取单个联系人假期余额
 app.get('/api/leave-balances/:contactId', async (req, res) => {
   try {
     const { contactId } = req.params;
@@ -1920,6 +2015,144 @@ app.get('/api/leave-balances/:contactId', async (req, res) => {
   } catch (error) {
     console.error('Get leave balance error:', error);
     res.status(500).json({ error: '获取假期余额失败' });
+  }
+});
+
+// 检查假期余额是否存在
+app.get('/api/leave-balances/check', async (req, res) => {
+  try {
+    const { contact_id, year } = req.query;
+    const [rows] = await pool.execute(
+      'SELECT id FROM leave_balances WHERE contact_id = ? AND year = ?',
+      [contact_id, year]
+    );
+    res.json(rows.length > 0 ? rows[0] : null);
+  } catch (error) {
+    console.error('Check leave balance error:', error);
+    res.status(500).json({ error: '检查失败' });
+  }
+});
+
+// 创建假期余额
+app.post('/api/leave-balances', async (req, res) => {
+  try {
+    const balance = req.body;
+    const id = uuidv4();
+    
+    await pool.execute(
+      `INSERT INTO leave_balances (
+        id, contact_id, year,
+        annual_leave_total, annual_leave_used,
+        sick_leave_total, sick_leave_used,
+        personal_leave_total, personal_leave_used,
+        paternity_leave_total, paternity_leave_used,
+        bereavement_leave_total, bereavement_leave_used,
+        maternity_leave_total, maternity_leave_used,
+        nursing_leave_total, nursing_leave_used,
+        marriage_leave_total, marriage_leave_used,
+        compensatory_leave_total, compensatory_leave_used
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, balance.contact_id, balance.year,
+        balance.annual_leave_total || 0, balance.annual_leave_used || 0,
+        balance.sick_leave_total || 0, balance.sick_leave_used || 0,
+        balance.personal_leave_total || 0, balance.personal_leave_used || 0,
+        balance.paternity_leave_total || 0, balance.paternity_leave_used || 0,
+        balance.bereavement_leave_total || 0, balance.bereavement_leave_used || 0,
+        balance.maternity_leave_total || 0, balance.maternity_leave_used || 0,
+        balance.nursing_leave_total || 0, balance.nursing_leave_used || 0,
+        balance.marriage_leave_total || 0, balance.marriage_leave_used || 0,
+        balance.compensatory_leave_total || 0, balance.compensatory_leave_used || 0
+      ]
+    );
+    
+    res.json({ id });
+  } catch (error) {
+    console.error('Create leave balance error:', error);
+    res.status(500).json({ error: '创建失败' });
+  }
+});
+
+// 更新假期余额
+app.put('/api/leave-balances/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const fields = [];
+    const params = [];
+    
+    const allowedFields = [
+      'annual_leave_total', 'sick_leave_total', 'personal_leave_total',
+      'paternity_leave_total', 'bereavement_leave_total', 'maternity_leave_total',
+      'nursing_leave_total', 'marriage_leave_total', 'compensatory_leave_total'
+    ];
+    
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        fields.push(`${field} = ?`);
+        params.push(updates[field]);
+      }
+    }
+    
+    if (fields.length === 0) {
+      return res.status(400).json({ error: '没有要更新的字段' });
+    }
+    
+    fields.push('updated_at = NOW()');
+    params.push(id);
+    
+    await pool.execute(
+      `UPDATE leave_balances SET ${fields.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update leave balance error:', error);
+    res.status(500).json({ error: '更新失败' });
+  }
+});
+
+// 批量创建假期余额
+app.post('/api/leave-balances/batch', async (req, res) => {
+  try {
+    const balances = req.body;
+    
+    for (const balance of balances) {
+      const id = uuidv4();
+      await pool.execute(
+        `INSERT INTO leave_balances (
+          id, contact_id, year,
+          annual_leave_total, annual_leave_used,
+          sick_leave_total, sick_leave_used,
+          personal_leave_total, personal_leave_used,
+          paternity_leave_total, paternity_leave_used,
+          bereavement_leave_total, bereavement_leave_used,
+          maternity_leave_total, maternity_leave_used,
+          nursing_leave_total, nursing_leave_used,
+          marriage_leave_total, marriage_leave_used,
+          compensatory_leave_total, compensatory_leave_used
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id, balance.contact_id, balance.year,
+          balance.annual_leave_total || 0, balance.annual_leave_used || 0,
+          balance.sick_leave_total || 0, balance.sick_leave_used || 0,
+          balance.personal_leave_total || 0, balance.personal_leave_used || 0,
+          balance.paternity_leave_total || 0, balance.paternity_leave_used || 0,
+          balance.bereavement_leave_total || 0, balance.bereavement_leave_used || 0,
+          balance.maternity_leave_total || 0, balance.maternity_leave_used || 0,
+          balance.nursing_leave_total || 0, balance.nursing_leave_used || 0,
+          balance.marriage_leave_total || 0, balance.marriage_leave_used || 0,
+          balance.compensatory_leave_total || 0, balance.compensatory_leave_used || 0
+        ]
+      );
+    }
+    
+    res.json({ success: true, count: balances.length });
+  } catch (error) {
+    console.error('Batch create leave balances error:', error);
+    res.status(500).json({ error: '批量创建失败' });
   }
 });
 

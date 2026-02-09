@@ -1105,6 +1105,51 @@ export async function getAbsenceRecordForLeaveDeduction(businessId: string) {
 
 // ==================== Leave Balance Management (假期余额管理) ====================
 
+export async function getLeaveBalancesWithContacts(year: number) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/leave-balances?year=${year}&with_contacts=true`);
+  }
+  
+  const { data, error } = await supabase
+    .from("leave_balances")
+    .select(`
+      *,
+      contacts:contacts!leave_balances_contact_id_fkey (
+        id,
+        name,
+        department,
+        position,
+        first_work_date,
+        created_at,
+        organization:organizations!contacts_organization_id_fkey (id, name)
+      )
+    `)
+    .eq("year", year)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function getContactsForLeaveBalance() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/contacts?for_leave_balance=true');
+  }
+  
+  const { data, error } = await supabase
+    .from("contacts")
+    .select(`
+      id,
+      name,
+      department,
+      position,
+      first_work_date,
+      created_at,
+      organization:organizations!contacts_organization_id_fkey (id, name)
+    `)
+    .eq("is_active", true)
+    .order("name");
+  return { data, error };
+}
+
 export async function checkLeaveBalanceExists(contactId: string, year: number) {
   if (isOfflineMode()) {
     return offlineRequest<any>(`/api/leave-balances/check?contact_id=${contactId}&year=${year}`);
@@ -2713,6 +2758,9 @@ export const dataAdapter = {
   createLeaderSchedulePermission,
   createLeaderSchedulePermissions,
   deleteLeaderSchedulePermissionsByUser,
+  // Leave Balances (新增)
+  getLeaveBalancesWithContacts,
+  getContactsForLeaveBalance,
   // Stock
   createStockMovement,
   // Approval Progression 专用
