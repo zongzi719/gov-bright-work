@@ -253,7 +253,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
           {data.leave_type && data.duration_hours && renderField("请假时长", `${data.duration_hours} 小时（${data.duration_days || (data.duration_hours / 8)} 天）`)}
           
           {/* 外出相关字段 */}
-          {data.out_type && renderField("外出类型", data.out_type)}
+          {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
           {data.out_location && renderField("外出地点", data.out_location)}
           {data.contact_phone && renderField("联系电话", data.contact_phone)}
         </div>
@@ -313,6 +313,18 @@ const getLeaveTypeLabel = (type: string | null | undefined) => {
     nursing: "哺乳假",
     marriage: "婚假",
     compensatory: "调休",
+  };
+  return labels[type] || type;
+};
+
+// 辅助函数 - 外出类型标签
+const getOutTypeLabel = (type: string | null | undefined) => {
+  if (!type) return "-";
+  const labels: Record<string, string> = {
+    meeting: "外出开会",
+    client: "拜访客户",
+    errand: "外出办事",
+    other: "其他",
   };
   return labels[type] || type;
 };

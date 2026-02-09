@@ -346,13 +346,24 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
       const endTime = new Date(form.end_date);
       endTime.setHours(endHours, endMinutes, 0, 0);
       
+      // 使用本地时间格式化，避免 toISOString() 转换为 UTC 导致时间偏差
+      const formatLocalDateTime = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = "00";
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      };
+      
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "leave",
         leave_type: form.leave_type,
         reason: form.reason,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
+        start_time: formatLocalDateTime(startTime),
+        end_time: formatLocalDateTime(endTime),
         handover_person_id: form.handover_person_id || null,
         handover_notes: form.handover_notes || null,
         duration_hours: duration.hours,
@@ -377,8 +388,8 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         formData: {
           leave_type: form.leave_type,
           reason: form.reason,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
+          start_time: formatLocalDateTime(startTime),
+          end_time: formatLocalDateTime(endTime),
           handover_person_id: form.handover_person_id,
           handover_notes: form.handover_notes,
           notes: form.notes,
