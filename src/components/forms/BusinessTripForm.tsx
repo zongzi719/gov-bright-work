@@ -286,7 +286,10 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
                   <Calendar
                     mode="single"
                     selected={form.start_date}
-                    onSelect={(date) => setForm({ ...form, start_date: date })}
+                    onSelect={(date) => {
+                      setForm({ ...form, start_date: date });
+                      document.body.click();
+                    }}
                     locale={zhCN}
                     className="pointer-events-auto"
                   />
@@ -353,7 +356,10 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
                   <Calendar
                     mode="single"
                     selected={form.end_date}
-                    onSelect={(date) => setForm({ ...form, end_date: date })}
+                    onSelect={(date) => {
+                      setForm({ ...form, end_date: date });
+                      document.body.click();
+                    }}
                     disabled={(date) => form.start_date ? isBefore(date, startOfDay(form.start_date)) : false}
                     locale={zhCN}
                     className="pointer-events-auto"
