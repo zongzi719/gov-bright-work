@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
-import { format, differenceInHours, differenceInDays } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
@@ -48,7 +48,7 @@ interface LeaveFormProps {
   currentUser: { id: string; name: string } | null;
 }
 
-// 假期类型配置，按照用户上传图片的顺序
+// 假期类型配置：unit 表示扣除单位（小时或天），1天 = 8小时
 const leaveTypes = [
   { value: "sick", label: "病假", unit: "小时", description: "按小时请假" },
   { value: "paternity", label: "陪产假", unit: "天", description: "手动发放" },
@@ -61,6 +61,9 @@ const leaveTypes = [
   { value: "personal", label: "事假", unit: "天", description: "个人事务" },
 ];
 
+// 可选的小时选项（每天最多8小时）
+const hourOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+
 const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const { startApproval } = useApprovalWorkflow();
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -68,8 +71,9 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const [form, setForm] = useState({
     leave_type: "",
     reason: "",
-    start_time: undefined as Date | undefined,
-    end_time: undefined as Date | undefined,
+    start_date: undefined as Date | undefined,
+    end_date: undefined as Date | undefined,
+    daily_hours: "8", // 每天请假小时数，默认8小时=1天
     handover_person_id: "",
     handover_notes: "",
     notes: "",
@@ -97,17 +101,36 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     if (data) setLeaveBalance(data);
   };
 
+  // 计算请假时长：总小时数和等效天数（1天=8小时）
   const calculateDuration = () => {
-    if (!form.start_time || !form.end_time) return null;
-    const hours = differenceInHours(form.end_time, form.start_time);
-    const days = differenceInDays(form.end_time, form.start_time);
-    return { hours, days: days > 0 ? days : (hours > 0 ? 1 : 0) };
+    if (!form.start_date || !form.end_date) return null;
+    
+    // 计算请假天数（包含首尾两天）
+    const days = differenceInCalendarDays(form.end_date, form.start_date) + 1;
+    if (days <= 0) return null;
+    
+    // 每天请假的小时数
+    const dailyHours = parseInt(form.daily_hours) || 8;
+    
+    // 总小时数
+    const totalHours = days * dailyHours;
+    
+    // 等效天数（8小时=1天）
+    const equivalentDays = totalHours / 8;
+    
+    return { 
+      hours: totalHours, 
+      days: equivalentDays, 
+      calendarDays: days,
+      dailyHours 
+    };
   };
 
   const duration = calculateDuration();
 
   const getLeaveRemaining = (type: string) => {
     if (!leaveBalance) return null;
+    // 获取剩余额度（以小时计算的假种直接返回小时，以天计算的假种返回天）
     switch (type) {
       case "annual":
         return leaveBalance.annual_leave_total - leaveBalance.annual_leave_used;
@@ -137,36 +160,61 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     return config?.unit || "天";
   };
 
+  // 检查假期余额是否足够
+  const checkBalanceSufficient = () => {
+    if (!form.leave_type || !duration) return true;
+    
+    const remaining = getLeaveRemaining(form.leave_type);
+    if (remaining === null) return true;
+    
+    const unit = getLeaveUnit(form.leave_type);
+    const requested = unit === "小时" ? duration.hours : duration.days;
+    
+    return requested <= remaining;
+  };
+
   const handleSubmit = async () => {
-    if (!currentUser?.id || !form.leave_type || !form.reason || !form.start_time || !form.end_time) {
+    if (!currentUser?.id || !form.leave_type || !form.reason || !form.start_date || !form.end_date) {
       toast.error("请填写必填项");
+      return;
+    }
+
+    if (!duration) {
+      toast.error("请假时间无效");
       return;
     }
 
     // 检查假期余额
     const remaining = getLeaveRemaining(form.leave_type);
-    const requestedDays = duration?.days || 0;
-    if (remaining !== null && requestedDays > remaining) {
-      toast.error(`${leaveTypes.find(t => t.value === form.leave_type)?.label}剩余 ${remaining} 天，不足 ${requestedDays} 天`);
+    const unit = getLeaveUnit(form.leave_type);
+    const requested = unit === "小时" ? duration.hours : duration.days;
+    
+    if (remaining !== null && requested > remaining) {
+      toast.error(`${leaveTypes.find(t => t.value === form.leave_type)?.label}剩余 ${remaining} ${unit}，不足 ${requested} ${unit}`);
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const durationData = calculateDuration();
+      // 构造开始和结束的时间戳（保留日期，时间设为工作时间）
+      const startTime = new Date(form.start_date);
+      startTime.setHours(8, 0, 0, 0); // 假设从早上8点开始
+      
+      const endTime = new Date(form.end_date);
+      endTime.setHours(8 + parseInt(form.daily_hours), 0, 0, 0); // 结束时间
       
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "leave",
         leave_type: form.leave_type,
         reason: form.reason,
-        start_time: form.start_time.toISOString(),
-        end_time: form.end_time.toISOString(),
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
         handover_person_id: form.handover_person_id || null,
         handover_notes: form.handover_notes || null,
-        duration_hours: durationData?.hours || null,
-        duration_days: durationData?.days || null,
+        duration_hours: duration.hours,
+        duration_days: duration.days,
         notes: form.notes || null,
         status: "pending",
       });
@@ -183,16 +231,17 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         businessId: record.id,
         initiatorId: currentUser.id,
         initiatorName: currentUser.name || "未知用户",
-        title: `${leaveTypeLabel}申请 - ${durationData?.days || 1}天`,
+        title: `${leaveTypeLabel}申请 - ${duration.hours}小时`,
         formData: {
           leave_type: form.leave_type,
           reason: form.reason,
-          start_time: form.start_time.toISOString(),
-          end_time: form.end_time.toISOString(),
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
           handover_person_id: form.handover_person_id,
           handover_notes: form.handover_notes,
           notes: form.notes,
-          duration_days: durationData?.days,
+          duration_hours: duration.hours,
+          duration_days: duration.days,
         },
       });
 
@@ -202,8 +251,9 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         setForm({
           leave_type: "",
           reason: "",
-          start_time: undefined,
-          end_time: undefined,
+          start_date: undefined,
+          end_date: undefined,
+          daily_hours: "8",
           handover_person_id: "",
           handover_notes: "",
           notes: "",
@@ -277,28 +327,28 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           {/* 时间选择 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>开始时间 *</Label>
+              <Label>开始日期 *</Label>
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !form.start_time && "text-muted-foreground"
+                      !form.start_date && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.start_time
-                      ? format(form.start_time, "yyyy-MM-dd", { locale: zhCN })
+                    {form.start_date
+                      ? format(form.start_date, "yyyy-MM-dd", { locale: zhCN })
                       : "选择日期"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={form.start_time}
+                    selected={form.start_date}
                     onSelect={(date) => {
-                      setForm({ ...form, start_time: date });
+                      setForm({ ...form, start_date: date });
                       setStartDateOpen(false);
                     }}
                     locale={zhCN}
@@ -309,28 +359,28 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label>结束时间 *</Label>
+              <Label>结束日期 *</Label>
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !form.end_time && "text-muted-foreground"
+                      !form.end_date && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.end_time
-                      ? format(form.end_time, "yyyy-MM-dd", { locale: zhCN })
+                    {form.end_date
+                      ? format(form.end_date, "yyyy-MM-dd", { locale: zhCN })
                       : "选择日期"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={form.end_time}
+                    selected={form.end_date}
                     onSelect={(date) => {
-                      setForm({ ...form, end_time: date });
+                      setForm({ ...form, end_date: date });
                       setEndDateOpen(false);
                     }}
                     locale={zhCN}
@@ -341,10 +391,42 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
             </div>
           </div>
 
+          {/* 每天请假小时数 */}
+          <div className="space-y-2">
+            <Label>每天请假小时数 *</Label>
+            <Select value={form.daily_hours} onValueChange={(v) => setForm({ ...form, daily_hours: v })}>
+              <SelectTrigger>
+                <SelectValue placeholder="选择每天请假小时数" />
+              </SelectTrigger>
+              <SelectContent>
+                {hourOptions.map((h) => (
+                  <SelectItem key={h} value={String(h)}>
+                    {h} 小时 {h === 8 && "(全天)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-xs text-muted-foreground">
+              说明：每天工作8小时，1天 = 8小时
+            </div>
+          </div>
+
           {/* 时长显示 */}
           {duration && (
-            <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
-              请假时长：<span className="font-medium text-foreground">{duration.days} 天</span>
+            <div className="text-sm bg-muted/50 px-3 py-2 rounded-md space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">请假天数：</span>
+                <span className="font-medium text-foreground">{duration.calendarDays} 天 × {duration.dailyHours} 小时/天</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">合计时长：</span>
+                <span className="font-medium text-foreground text-primary">{duration.hours} 小时（{duration.days} 天）</span>
+              </div>
+              {!checkBalanceSufficient() && (
+                <div className="text-destructive text-xs mt-1">
+                  ⚠️ 超出可用余额
+                </div>
+              )}
             </div>
           )}
 
@@ -393,7 +475,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             取消
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
+          <Button onClick={handleSubmit} disabled={submitting || !checkBalanceSufficient()}>
             {submitting ? "提交中..." : "提交申请"}
           </Button>
         </div>

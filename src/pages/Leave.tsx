@@ -95,7 +95,7 @@ const Leave = () => {
     time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
-      { label: "天数", value: `${record.duration_days || "-"}天` },
+      { label: "时长", value: record.duration_hours ? `${record.duration_hours}小时` : `${record.duration_days || "-"}天` },
       { label: "时间", value: `${format(new Date(record.start_time), "MM/dd")} - ${record.end_time ? format(new Date(record.end_time), "MM/dd") : ""}` },
     ],
   }));
@@ -118,9 +118,11 @@ const Leave = () => {
   // 详情字段
   const detailFields = selectedRecord ? [
     { label: "请假类型", value: selectedRecord.leave_type ? leaveTypeLabels[selectedRecord.leave_type] || selectedRecord.leave_type : null },
-    { label: "请假天数", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
-    { label: "开始时间", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "结束时间", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "请假时长", value: selectedRecord.duration_hours 
+      ? `${selectedRecord.duration_hours} 小时（${selectedRecord.duration_days || (selectedRecord.duration_hours / 8)} 天）` 
+      : (selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null) },
+    { label: "开始日期", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd", { locale: zhCN }) },
+    { label: "结束日期", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd", { locale: zhCN }) : null },
     { label: "工作交接人", value: selectedRecord.handover_person?.name },
     { label: "交接事项", value: selectedRecord.handover_notes },
     { label: "请假事由", value: selectedRecord.reason, fullWidth: true },
