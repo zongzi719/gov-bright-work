@@ -646,6 +646,31 @@ export async function getAbsenceRecords(params: {
   return { data: mergedData, error: null };
 }
 
+// 批量获取 absence_records（用于待办列表丰富显示）
+export async function getAbsenceRecordsByIds(ids: string[]) {
+  if (ids.length === 0) {
+    return { data: [], error: null };
+  }
+  
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/absence-records/batch?ids=${ids.join(',')}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("absence_records")
+    .select(`
+      id,
+      reason,
+      leave_type,
+      type,
+      contacts:contacts!absence_records_contact_id_fkey (
+        name
+      )
+    `)
+    .in("id", ids);
+  return { data, error };
+}
+
 // 管理后台 - 获取所有某类型的缺勤记录（带联系人信息）
 export async function getAdminAbsenceRecords(type: 'out' | 'leave' | 'business_trip') {
   if (isOfflineMode()) {
