@@ -28,7 +28,12 @@ interface TodoItem {
     name: string;
     department: string | null;
   } | null;
-  _outReason?: string; // 外出/请假/出差申请的事由
+  // 丰富的请假信息
+  _absenceInfo?: {
+    leaveType: string | null;
+    reason: string;
+    applicantName: string;
+  };
 }
 
 const priorityToStatus = (priority: string, status: string): "urgent" | "normal" | "done" => {
@@ -57,10 +62,23 @@ const statusToDisplay = (status: string, processResult: string | null): { label:
 const businessTypeLabels: Record<string, string> = {
   business_trip: "出差申请",
   absence: "请假申请",
+  leave: "请假申请",
   supply_requisition: "领用申请",
   purchase_request: "采购申请",
   supply_purchase: "办公用品采购",
   external_approval: "外部审批",
+};
+
+const leaveTypeLabels: Record<string, string> = {
+  annual: "年假",
+  sick: "病假",
+  personal: "事假",
+  paternity: "陪产假",
+  bereavement: "丧假",
+  maternity: "产假",
+  nursing: "哺乳假",
+  marriage: "婚假",
+  compensatory: "调休",
 };
 
 // 根据业务类型和标题智能判断具体申请类型
@@ -100,34 +118,39 @@ const WorkPanel = () => {
 
   const currentUser = getCurrentUser();
 
-  // 获取请假/外出/出差申请的事由
-  const fetchAbsenceReasons = async (businessIds: string[]): Promise<Record<string, string>> => {
-    if (businessIds.length === 0) return {};
-    
-    // 暂时简化处理，直接返回空映射 - 事由信息可从标题中提取
-    // 完整实现需要扩展 dataAdapter
-    return {};
-  };
-
-  // 为待办项添加申请事由（出差、请假、外出）
-  const enrichWithAbsenceReasons = async (items: TodoItem[]): Promise<TodoItem[]> => {
-    // 找出所有请假/外出/出差申请的 business_id
+  // 为待办项添加请假详细信息（类型、申请人、事由）
+  const enrichWithAbsenceInfo = async (items: TodoItem[]): Promise<TodoItem[]> => {
+    // 找出所有请假/外出申请的 business_id
     const absenceBusinessIds = items
       .filter((item) => 
-        (item.business_type === "absence" || item.business_type === "business_trip") && 
+        (item.business_type === "absence" || item.business_type === "leave") && 
         item.business_id
       )
       .map((item) => item.business_id as string);
     
     if (absenceBusinessIds.length === 0) return items;
     
-    const reasonMap = await fetchAbsenceReasons(absenceBusinessIds);
+    // 批量获取 absence_records 信息
+    const { data: absenceRecords } = await dataAdapter.getAbsenceRecordsByIds(absenceBusinessIds);
+    
+    if (!absenceRecords || absenceRecords.length === 0) return items;
+    
+    // 构建映射
+    const absenceMap = new Map<string, { leaveType: string | null; reason: string; applicantName: string; type: string }>();
+    absenceRecords.forEach((record: any) => {
+      absenceMap.set(record.id, {
+        leaveType: record.leave_type,
+        reason: record.reason,
+        applicantName: record.contacts?.name || "未知",
+        type: record.type,
+      });
+    });
     
     return items.map((item) => {
-      if ((item.business_type === "absence" || item.business_type === "business_trip") && item.business_id) {
-        const reason = reasonMap[item.business_id];
-        if (reason) {
-          return { ...item, _outReason: reason };
+      if ((item.business_type === "absence" || item.business_type === "leave") && item.business_id) {
+        const info = absenceMap.get(item.business_id);
+        if (info && info.type === "leave") {
+          return { ...item, _absenceInfo: { leaveType: info.leaveType, reason: info.reason, applicantName: info.applicantName } };
         }
       }
       return item;
@@ -166,17 +189,17 @@ const WorkPanel = () => {
     const filteredPending = pendingData.filter(
       (item: any) => !item.process_result || item.process_result !== "cc_notified"
     );
-    const enrichedPending = await enrichWithAbsenceReasons(filteredPending as unknown as TodoItem[]);
+    const enrichedPending = await enrichWithAbsenceInfo(filteredPending as unknown as TodoItem[]);
     setPendingItems(enrichedPending);
 
     const completedData = completedRes.data || [];
-    const enrichedCompleted = await enrichWithAbsenceReasons(completedData as unknown as TodoItem[]);
+    const enrichedCompleted = await enrichWithAbsenceInfo(completedData as unknown as TodoItem[]);
     setCompletedItems(enrichedCompleted);
 
     // Filter CC items from the full list
     const allData = ccRes.data || [];
     const ccData = allData.filter((item: any) => item.process_result === "cc_notified");
-    const enrichedCC = await enrichWithAbsenceReasons(ccData as unknown as TodoItem[]);
+    const enrichedCC = await enrichWithAbsenceInfo(ccData as unknown as TodoItem[]);
     setCCItems(enrichedCC);
 
     setLoading(false);
@@ -213,12 +236,16 @@ const WorkPanel = () => {
     return { system, department };
   };
 
-  // 从标题中提取事由（去掉"xxx申请 - "前缀），外出申请优先使用 _outReason
-  const extractReason = (item: TodoItem): string => {
-    // 如果是外出申请且有事由，直接使用事由
-    if (item._outReason) {
-      return item._outReason;
+  // 获取待办项的显示标题
+  const getDisplayTitle = (item: TodoItem): string => {
+    // 请假申请：显示"请假类型 + 申请人 + 事由"
+    if (item._absenceInfo) {
+      const leaveTypeName = item._absenceInfo.leaveType 
+        ? leaveTypeLabels[item._absenceInfo.leaveType] || item._absenceInfo.leaveType
+        : "请假";
+      return `${leaveTypeName} ${item._absenceInfo.applicantName} ${item._absenceInfo.reason}`;
     }
+    // 其他类型：从标题提取事由
     const match = item.title.match(/^[^-]+\s*-\s*(.+)$/);
     return match ? match[1] : item.title;
   };
@@ -254,7 +281,7 @@ const WorkPanel = () => {
 
   const renderPendingItem = (item: TodoItem) => {
     const displayStatus = priorityToStatus(item.priority, item.status);
-    const reason = extractReason(item);
+    const displayTitle = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
     const isRead = isItemRead(item.id);
     const initiatorDept = item.initiator?.department || "未知部门";
@@ -276,7 +303,7 @@ const WorkPanel = () => {
           <h3 className={`text-sm leading-tight mb-1.5 line-clamp-1 ${
             isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
           }`}>
-            {reason}
+            {displayTitle}
           </h3>
           <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
             <span className="text-primary/80">{sourceLabel}</span>
@@ -292,7 +319,7 @@ const WorkPanel = () => {
 
   const renderCompletedItem = (item: TodoItem) => {
     const { label, color } = statusToDisplay(item.status, item.process_result);
-    const reason = extractReason(item);
+    const displayTitle = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
     const initiatorDept = item.initiator?.department || "未知部门";
 
@@ -309,7 +336,7 @@ const WorkPanel = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <h3 className="text-sm font-normal leading-tight text-muted-foreground line-clamp-1 flex-1">
-              {reason}
+              {displayTitle}
             </h3>
             <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
           </div>
@@ -331,9 +358,9 @@ const WorkPanel = () => {
 
   const renderCCItem = (item: TodoItem) => {
     const isRead = item.status !== "pending";
-    // 抄送项：先处理标题去掉抄送前缀，再提取事由
+    // 抄送项：先处理标题去掉抄送前缀
     const ccItem = { ...item, title: item.title.replace(/^\[抄送\]\s*/, "") };
-    const reason = extractReason(ccItem);
+    const displayTitle = getDisplayTitle(ccItem);
     const sourceLabel = getSourceLabel(item);
     const initiatorDept = item.initiator?.department || "未知部门";
 
@@ -350,7 +377,7 @@ const WorkPanel = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <h3 className={`text-sm leading-tight line-clamp-1 flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
-              {reason}
+              {displayTitle}
             </h3>
             <span
               className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
