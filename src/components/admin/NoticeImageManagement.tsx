@@ -62,6 +62,14 @@ const NoticeImageManagement = () => {
     setLoading(false);
   };
 
+  // 获取 API 基础地址
+  const getApiBaseUrl = (): string => {
+    if (typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL) {
+      return (window as any).GOV_CONFIG.API_BASE_URL;
+    }
+    return 'http://localhost:3001';
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,33 +89,48 @@ const NoticeImageManagement = () => {
     setUploading(true);
 
     try {
-      // 离线模式下使用本地路径
+      let publicUrl = '';
+
       if (isOfflineMode()) {
-        // 离线模式暂不支持文件上传，提示用户输入URL
-        toast.info("离线模式请直接输入图片URL");
-        setUploading(false);
-        return;
+        // 离线模式：上传到本地 API
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/upload/notice-images`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('上传失败');
+        }
+        
+        const result = await response.json();
+        // 拼接完整URL
+        publicUrl = result.url.startsWith('/') ? `${baseUrl}${result.url}` : result.url;
+      } else {
+        // 在线模式：上传到 Supabase
+        const fileExt = file.name.split(".").pop();
+        const fileName = `notice-${Date.now()}.${fileExt}`;
+        const filePath = `notice-images/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("banners")
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: { publicUrl: url } } = supabase.storage
+          .from("banners")
+          .getPublicUrl(filePath);
+        
+        publicUrl = url;
       }
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `notice-${Date.now()}.${fileExt}`;
-      const filePath = `notice-images/${fileName}`;
-
-      // 上传到 banners 存储桶
-      const { error: uploadError } = await supabase.storage
-        .from("banners")
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // 获取公开 URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("banners")
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, image_url: publicUrl });
+      setFormData(prev => ({ ...prev, image_url: publicUrl }));
       toast.success("图片上传成功");
     } catch (error) {
       console.error("Upload error:", error);
@@ -243,13 +266,6 @@ const NoticeImageManagement = () => {
                         disabled={uploading}
                       />
                     </label>
-                  )}
-                  {isOfflineMode() && !formData.image_url && (
-                    <Input
-                      placeholder="离线模式：请输入图片URL，如 /uploads/image.jpg"
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    />
                   )}
                 </div>
               </div>

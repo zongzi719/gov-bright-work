@@ -1,6 +1,7 @@
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { toast } from "sonner";
 import { 
   Bold, 
@@ -23,6 +24,14 @@ interface RichTextEditorProps {
   minHeight?: string;
 }
 
+// 获取 API 基础地址
+const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL) {
+    return (window as any).GOV_CONFIG.API_BASE_URL;
+  }
+  return 'http://localhost:3001';
+};
+
 const RichTextEditor = ({ 
   value, 
   onChange, 
@@ -32,9 +41,28 @@ const RichTextEditor = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
+  const isInitializedRef = useRef(false);
 
-  const execCommand = useCallback((command: string, value?: string) => {
-    document.execCommand(command, false, value);
+  // 初始化时设置内容
+  useEffect(() => {
+    if (editorRef.current && !isInitializedRef.current) {
+      editorRef.current.innerHTML = value;
+      isInitializedRef.current = true;
+    }
+  }, []);
+
+  // 当外部 value 变化且编辑器没有焦点时同步
+  useEffect(() => {
+    if (editorRef.current && document.activeElement !== editorRef.current) {
+      if (editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value;
+      }
+    }
+  }, [value]);
+
+  const execCommand = useCallback((command: string, cmdValue?: string) => {
+    document.execCommand(command, false, cmdValue);
     editorRef.current?.focus();
     // Trigger onChange after command
     if (editorRef.current) {
@@ -43,6 +71,20 @@ const RichTextEditor = ({
   }, [onChange]);
 
   const handleInput = useCallback(() => {
+    // 在 IME 组合输入过程中不触发 onChange，避免打断中文输入
+    if (isComposing) return;
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  }, [onChange, isComposing]);
+
+  const handleCompositionStart = useCallback(() => {
+    setIsComposing(true);
+  }, []);
+
+  const handleCompositionEnd = useCallback(() => {
+    setIsComposing(false);
+    // 组合输入结束后触发更新
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
@@ -61,18 +103,43 @@ const RichTextEditor = ({
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `notices/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      let publicUrl = '';
 
-      const { error: uploadError } = await supabase.storage
-        .from('banners')
-        .upload(fileName, file);
+      if (isOfflineMode()) {
+        // 离线模式：上传到本地 API
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/upload/notices`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('上传失败');
+        }
+        
+        const result = await response.json();
+        // 拼接完整URL
+        publicUrl = result.url.startsWith('/') ? `${baseUrl}${result.url}` : result.url;
+      } else {
+        // 在线模式：上传到 Supabase
+        const fileExt = file.name.split('.').pop();
+        const fileName = `notices/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('banners')
+          .upload(fileName, file);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('banners')
-        .getPublicUrl(fileName);
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl: url } } = supabase.storage
+          .from('banners')
+          .getPublicUrl(fileName);
+        
+        publicUrl = url;
+      }
 
       // Insert image at cursor position
       document.execCommand('insertImage', false, publicUrl);
@@ -260,17 +327,18 @@ const RichTextEditor = ({
         />
       </div>
       
-      {/* Editor */}
+      {/* Editor - 使用受控方式避免中文输入问题 */}
       <div
         ref={editorRef}
         contentEditable
         className="p-3 outline-none prose prose-sm max-w-none flex-1 overflow-y-auto"
         style={{ minHeight, maxHeight: '200px' }}
         onInput={handleInput}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         onPaste={handlePaste}
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        dangerouslySetInnerHTML={{ __html: value }}
         data-placeholder={placeholder}
         suppressContentEditableWarning
       />
