@@ -300,13 +300,19 @@ const getFundingSourceLabel = (source: string | null | undefined, detail: string
   return detail ? `${label}（${detail}）` : label;
 };
 
-// 辅助函数 - 请假类型标签
+// 辅助函数 - 请假类型标签（完整9种假种）
 const getLeaveTypeLabel = (type: string | null | undefined) => {
   if (!type) return "-";
   const labels: Record<string, string> = {
     annual: "年假",
     sick: "病假",
     personal: "事假",
+    paternity: "陪产假",
+    bereavement: "丧假",
+    maternity: "产假",
+    nursing: "哺乳假",
+    marriage: "婚假",
+    compensatory: "调休",
   };
   return labels[type] || type;
 };
