@@ -627,9 +627,10 @@ app.get('/api/todo-items/list', async (req, res) => {
                t.created_at, t.priority, t.status, t.business_type, t.business_id,
                t.action_url, t.approval_instance_id, t.assignee_id, 
                t.process_result, t.processed_at,
-               i.name as initiator_name, i.department as initiator_department
+               i.name as initiator_name, COALESCE(o.name, i.department) as initiator_department
                FROM todo_items t
                LEFT JOIN contacts i ON t.initiator_id = i.id
+               LEFT JOIN organizations o ON i.organization_id = o.id
                WHERE t.assignee_id = ?`;
     const params = [assignee_id];
     
@@ -955,10 +956,12 @@ app.get('/api/absence-records/:id', async (req, res) => {
     const { id } = req.params;
     const [rows] = await pool.execute(
       `SELECT ar.*, 
-              c.id as contact_id, c.name as contact_name, c.department as contact_department,
+              c.id as contact_id, c.name as contact_name, 
+              COALESCE(o.name, c.department) as contact_department,
               hp.name as handover_person_name
        FROM absence_records ar
        LEFT JOIN contacts c ON ar.contact_id = c.id
+       LEFT JOIN organizations o ON c.organization_id = o.id
        LEFT JOIN contacts hp ON ar.handover_person_id = hp.id
        WHERE ar.id = ?`,
       [id]
@@ -1710,9 +1713,10 @@ app.get('/api/approval-instances', async (req, res) => {
   try {
     const { business_id, business_type } = req.query;
     // 联合查询获取 initiator 信息
-    let sql = `SELECT ai.*, c.name as initiator_name, c.department as initiator_department
+    let sql = `SELECT ai.*, c.name as initiator_name, COALESCE(o.name, c.department) as initiator_department
                FROM approval_instances ai
                LEFT JOIN contacts c ON ai.initiator_id = c.id
+               LEFT JOIN organizations o ON c.organization_id = o.id
                WHERE 1=1`;
     const params = [];
     
@@ -1756,9 +1760,10 @@ app.get('/api/approval-instances/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await pool.execute(
-      `SELECT ai.*, c.name as initiator_name, c.department as initiator_department
+      `SELECT ai.*, c.name as initiator_name, COALESCE(o.name, c.department) as initiator_department
        FROM approval_instances ai
        LEFT JOIN contacts c ON ai.initiator_id = c.id
+       LEFT JOIN organizations o ON c.organization_id = o.id
        WHERE ai.id = ?`,
       [id]
     );
@@ -2409,9 +2414,11 @@ app.get('/api/todo-items', async (req, res) => {
     
     let sql = `
       SELECT t.*, 
-             c.name as initiator_name, c.department as initiator_department
+             c.name as initiator_name, 
+             COALESCE(o.name, c.department) as initiator_department
       FROM todo_items t
       LEFT JOIN contacts c ON t.initiator_id = c.id
+      LEFT JOIN organizations o ON c.organization_id = o.id
       WHERE t.assignee_id = ?
     `;
     const params = [assignee_id];
