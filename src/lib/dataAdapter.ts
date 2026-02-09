@@ -612,6 +612,103 @@ export async function getAbsenceRecords(params: {
   return { data, error };
 }
 
+// 管理后台 - 获取所有某类型的缺勤记录（带联系人信息）
+export async function getAdminAbsenceRecords(type: 'out' | 'leave' | 'business_trip') {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/admin/absence-records?type=${type}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("absence_records")
+    .select(`
+      *,
+      contacts:contacts!absence_records_contact_id_fkey (
+        id,
+        name,
+        department,
+        position,
+        organization:organizations!contacts_organization_id_fkey (name)
+      )
+    `)
+    .eq("type", type)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+// 管理后台 - 获取审批实例状态（批量）
+export async function getApprovalInstancesForAdmin(businessType: string, businessIds: string[]) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/admin/approval-instances?business_type=${businessType}&business_ids=${businessIds.join(',')}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_instances")
+    .select("business_id, status, form_data")
+    .eq("business_type", businessType)
+    .in("business_id", businessIds);
+  return { data, error };
+}
+
+// 管理后台 - 获取单个审批实例
+export async function getApprovalInstanceForDetail(businessId: string, businessType: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/admin/approval-instance?business_id=${businessId}&business_type=${businessType}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_instances")
+    .select("status, form_data")
+    .eq("business_id", businessId)
+    .eq("business_type", businessType)
+    .maybeSingle();
+  return { data, error };
+}
+
+// 管理后台 - 删除缺勤记录及相关审批数据
+export async function deleteAbsenceRecordWithApproval(recordId: string, businessType: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/admin/absence-records/${recordId}?business_type=${businessType}`, {
+      method: 'DELETE'
+    });
+  }
+  
+  // 1. 先获取审批实例ID
+  const { data: instanceData } = await supabase
+    .from("approval_instances")
+    .select("id")
+    .eq("business_id", recordId)
+    .eq("business_type", businessType)
+    .maybeSingle();
+  
+  if (instanceData) {
+    // 2. 删除待办事项
+    await supabase
+      .from("todo_items")
+      .delete()
+      .eq("approval_instance_id", instanceData.id);
+    
+    // 3. 删除审批记录
+    await supabase
+      .from("approval_records")
+      .delete()
+      .eq("instance_id", instanceData.id);
+    
+    // 4. 删除审批实例
+    await supabase
+      .from("approval_instances")
+      .delete()
+      .eq("id", instanceData.id);
+  }
+  
+  // 5. 删除业务记录
+  const { error } = await supabase
+    .from("absence_records")
+    .delete()
+    .eq("id", recordId);
+  
+  return { data: { success: !error }, error };
+}
+
 export async function getAbsenceRecordById(id: string) {
   if (isOfflineMode()) {
     return offlineRequest<any>(`/api/absence-records/${id}`);
@@ -2670,6 +2767,11 @@ export const dataAdapter = {
   getAbsenceRecordById,
   createAbsenceRecord,
   updateAbsenceRecord,
+  // Admin Absence Records
+  getAdminAbsenceRecords,
+  getApprovalInstancesForAdmin,
+  getApprovalInstanceForDetail,
+  deleteAbsenceRecordWithApproval,
   // Contacts
   getContactsWithOrg,
   getContactsWithOrgForAdmin,
