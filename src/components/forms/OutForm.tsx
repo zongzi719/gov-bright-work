@@ -50,6 +50,8 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const calculateDuration = () => {
     if (!form.start_date || !form.end_date) return null;
@@ -199,7 +201,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>开始日期 *</Label>
-              <Popover>
+              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -220,7 +222,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
                     selected={form.start_date}
                     onSelect={(date) => {
                       setForm({ ...form, start_date: date, end_date: date });
-                      document.body.click();
+                      setStartDateOpen(false);
                     }}
                     locale={zhCN}
                     className="pointer-events-auto"
@@ -251,7 +253,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>结束日期</Label>
-              <Popover>
+              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -272,7 +274,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
                     selected={form.end_date}
                     onSelect={(date) => {
                       setForm({ ...form, end_date: date });
-                      document.body.click();
+                      setEndDateOpen(false);
                     }}
                     locale={zhCN}
                     className="pointer-events-auto"
