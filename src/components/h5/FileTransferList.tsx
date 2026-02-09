@@ -3,6 +3,8 @@ import { Tag, Empty, FloatingBubble, Popup, Form, Input, Picker, TextArea, Butto
 import { AddOutline, AddCircleOutline, CloseCircleFill, DeleteOutline } from "antd-mobile-icons";
 import { format } from "date-fns";
 import FileTransferDetail from "./FileTransferDetail";
+import * as dataAdapter from "@/lib/dataAdapter";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FileTransferListProps {
@@ -116,10 +118,7 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
   // 加载文件收发数据
   const fetchFileTransfers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("file_transfers")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await dataAdapter.getFileTransfers();
     
     if (!error && data) {
       const mappedData: FileTransferData[] = data.map((item: any) => ({
@@ -151,10 +150,7 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
   // 加载组织架构
   useEffect(() => {
     const fetchOrganizations = async () => {
-      const { data, error } = await supabase
-        .from("organizations")
-        .select("*")
-        .order("sort_order", { ascending: true });
+      const { data, error } = await dataAdapter.getAllOrganizations();
       
       if (!error && data) {
         setOrganizations(data);
@@ -290,36 +286,37 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     setSubmitting(true);
     
     try {
-      // 上传附件
-      const attachments = await uploadFilesToStorage();
+      // 上传附件 - 离线模式下暂不支持上传
+      let attachments: { name: string; url: string }[] = [];
+      if (!isOfflineMode()) {
+        attachments = await uploadFilesToStorage();
+      }
       
       // 插入数据库
-      const { error } = await supabase
-        .from("file_transfers")
-        .insert({
-          title: formData.title,
-          send_unit: formData.sendUnit,
-          send_unit_id: formData.sendUnitId || null,
-          doc_number: formData.docNumber,
-          security_level: formData.securityLevel[0],
-          urgency: formData.urgency[0],
-          source_unit: formData.sourceUnit || null,
-          send_type: formData.sendType[0],
-          contact_person: formData.contactPerson || null,
-          contact_phone: formData.contactPhone || null,
-          document_date: format(formData.documentDate, "yyyy-MM-dd"),
-          copies: parseInt(formData.copies) || 1,
-          confidential_period: formData.confidentialPeriod || null,
-          main_unit: formData.mainUnit || null,
-          sign_leader: formData.signLeader || null,
-          sign_date: format(formData.signDate, "yyyy-MM-dd"),
-          file_type: formData.fileType[0],
-          notify_type: formData.notifyType,
-          copy_unit: formData.copyUnit || null,
-          description: formData.description || null,
-          status: "待签收",
-          attachments: attachments,
-        });
+      const { error } = await dataAdapter.createFileTransfer({
+        title: formData.title,
+        send_unit: formData.sendUnit,
+        send_unit_id: formData.sendUnitId || null,
+        doc_number: formData.docNumber,
+        security_level: formData.securityLevel[0],
+        urgency: formData.urgency[0],
+        source_unit: formData.sourceUnit || null,
+        send_type: formData.sendType[0],
+        contact_person: formData.contactPerson || null,
+        contact_phone: formData.contactPhone || null,
+        document_date: format(formData.documentDate, "yyyy-MM-dd"),
+        copies: parseInt(formData.copies) || 1,
+        confidential_period: formData.confidentialPeriod || null,
+        main_unit: formData.mainUnit || null,
+        sign_leader: formData.signLeader || null,
+        sign_date: format(formData.signDate, "yyyy-MM-dd"),
+        file_type: formData.fileType[0],
+        notify_type: formData.notifyType,
+        copy_unit: formData.copyUnit || null,
+        description: formData.description || null,
+        status: "待签收",
+        attachments: attachments,
+      });
 
       if (error) {
         Toast.show({ icon: "fail", content: "保存失败：" + error.message });
@@ -349,10 +346,7 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     });
     
     if (result) {
-      const { error } = await supabase
-        .from("file_transfers")
-        .delete()
-        .eq("id", id);
+      const { error } = await dataAdapter.deleteFileTransfer(id);
       
       if (error) {
         Toast.show({ icon: "fail", content: "删除失败" });

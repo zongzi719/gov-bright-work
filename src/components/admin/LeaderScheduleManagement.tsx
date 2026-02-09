@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import * as dataAdapter from "@/lib/dataAdapter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,12 +87,7 @@ const LeaderScheduleManagement = () => {
 
   // 只获取领导状态为"是"的人员
   const fetchLeaders = async () => {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, name, position")
-      .eq("is_active", true)
-      .eq("is_leader", true)  // 只获取领导
-      .order("sort_order");
+    const { data, error } = await dataAdapter.getLeaders();
 
     if (error) {
       console.error("获取领导列表失败:", error);
@@ -104,16 +99,10 @@ const LeaderScheduleManagement = () => {
   const fetchSchedules = async () => {
     const weekEnd = addDays(currentWeekStart, 6);
     
-    const { data, error } = await supabase
-      .from("leader_schedules")
-      .select(`
-        *,
-        leader:contacts!leader_id(id, name, position)
-      `)
-      .gte("schedule_date", format(currentWeekStart, "yyyy-MM-dd"))
-      .lte("schedule_date", format(weekEnd, "yyyy-MM-dd"))
-      .order("schedule_date")
-      .order("start_time");
+    const { data, error } = await dataAdapter.getLeaderSchedulesByWeek(
+      format(currentWeekStart, "yyyy-MM-dd"),
+      format(weekEnd, "yyyy-MM-dd")
+    );
 
     if (error) {
       console.error("获取日程失败:", error);
@@ -123,14 +112,7 @@ const LeaderScheduleManagement = () => {
   };
 
   const fetchAllSchedules = async () => {
-    const { data, error } = await supabase
-      .from("leader_schedules")
-      .select(`
-        *,
-        leader:contacts!leader_id(id, name, position)
-      `)
-      .order("schedule_date", { ascending: false })
-      .order("start_time");
+    const { data, error } = await dataAdapter.getAllLeaderSchedules();
 
     if (error) {
       console.error("获取日程失败:", error);
@@ -158,15 +140,10 @@ const LeaderScheduleManagement = () => {
 
     let error;
     if (editingSchedule) {
-      const result = await supabase
-        .from("leader_schedules")
-        .update(scheduleData)
-        .eq("id", editingSchedule.id);
+      const result = await dataAdapter.updateLeaderSchedule(editingSchedule.id, scheduleData);
       error = result.error;
     } else {
-      const result = await supabase
-        .from("leader_schedules")
-        .insert(scheduleData);
+      const result = await dataAdapter.createLeaderSchedule(scheduleData);
       error = result.error;
     }
 
@@ -188,10 +165,7 @@ const LeaderScheduleManagement = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除这条日程吗？")) return;
 
-    const { error } = await supabase
-      .from("leader_schedules")
-      .delete()
-      .eq("id", id);
+    const { error } = await dataAdapter.deleteLeaderSchedule(id);
 
     if (error) {
       toast.error("删除失败");
