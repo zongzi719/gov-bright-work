@@ -246,11 +246,11 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
           {/* 出差相关字段 */}
           {data.destination && renderField("出差目的地", data.destination)}
           {data.transport_type && renderField("交通方式", data.transport_type)}
-          {data.duration_days && renderField("出差天数", `${data.duration_days} 天`)}
+          {data.duration_days != null && !data.leave_type && renderField("出差天数", `${data.duration_days} 天`)}
           {data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
           
-          {/* 请假相关字段 */}
-          {data.duration_hours && renderField("请假时长", `${data.duration_hours} 小时`)}
+          {/* 请假相关字段 - 显示小时和换算天数 */}
+          {data.leave_type && data.duration_hours && renderField("请假时长", `${data.duration_hours} 小时（${data.duration_days || (data.duration_hours / 8)} 天）`)}
           
           {/* 外出相关字段 */}
           {data.out_type && renderField("外出类型", data.out_type)}
