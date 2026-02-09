@@ -140,7 +140,7 @@ const SuppliesPurchase = () => {
     status: record.status,
     meta: [
       { label: "申请日期", value: record.purchase_date },
-      { label: "合计金额", value: `¥${record.total_amount.toFixed(2)}` },
+      { label: "合计金额", value: `¥${(record.total_amount || 0).toFixed(2)}` },
     ],
   }));
 
@@ -418,7 +418,7 @@ const SuppliesPurchase = () => {
                           />
                         </TableCell>
                         <TableCell className="p-2 text-right font-medium">
-                          ¥{item.amount.toFixed(2)}
+                          ¥{(item.amount || 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="p-2">
                           <Input
@@ -442,7 +442,7 @@ const SuppliesPurchase = () => {
                     ))}
                     <TableRow className="bg-muted/30">
                       <TableCell colSpan={3} className="text-right font-medium">合计金额：</TableCell>
-                      <TableCell className="font-bold text-primary">¥{totalAmount.toFixed(2)}</TableCell>
+                      <TableCell className="font-bold text-primary">¥{(totalAmount || 0).toFixed(2)}</TableCell>
                       <TableCell colSpan={2}></TableCell>
                     </TableRow>
                   </TableBody>
@@ -517,7 +517,7 @@ const SuppliesPurchase = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">合计金额</Label>
-                        <div className="text-sm font-medium text-primary">¥{selectedRecord.total_amount.toFixed(2)}</div>
+                        <div className="text-sm font-medium text-primary">¥{(selectedRecord.total_amount || 0).toFixed(2)}</div>
                       </div>
                     </div>
                     
@@ -550,8 +550,8 @@ const SuppliesPurchase = () => {
                                 <TableRow key={item.id}>
                                   <TableCell>{item.item_name}</TableCell>
                                   <TableCell>{item.quantity} {item.unit || ""}</TableCell>
-                                  <TableCell>¥{item.unit_price.toFixed(2)}</TableCell>
-                                  <TableCell>¥{item.amount.toFixed(2)}</TableCell>
+                                  <TableCell>¥{(item.unit_price || 0).toFixed(2)}</TableCell>
+                                  <TableCell>¥{(item.amount || 0).toFixed(2)}</TableCell>
                                 </TableRow>
                               ))
                             )}
