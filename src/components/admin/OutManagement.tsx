@@ -444,14 +444,14 @@ const OutManagement = () => {
                 <div>
                   <Label className="text-sm text-muted-foreground">开始时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    {(() => { const t = selectedRecord.start_time; const d = t && !t.endsWith('Z') && !t.match(/[+-]\d{2}:\d{2}$/) ? (() => { const p = t.replace('T',' ').split(/[- :]/); return new Date(+p[0],+p[1]-1,+p[2],+p[3]||0,+p[4]||0); })() : new Date(t); return format(d, "yyyy-MM-dd HH:mm", { locale: zhCN }); })()}
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">预计返回时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {selectedRecord.end_time 
-                      ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN })
+                      ? (() => { const t = selectedRecord.end_time; const d = t && !t.endsWith('Z') && !t.match(/[+-]\d{2}:\d{2}$/) ? (() => { const p = t.replace('T',' ').split(/[- :]/); return new Date(+p[0],+p[1]-1,+p[2],+p[3]||0,+p[4]||0); })() : new Date(t); return format(d, "yyyy-MM-dd HH:mm", { locale: zhCN }); })()
                       : "-"}
                   </div>
                 </div>
