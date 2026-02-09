@@ -18,10 +18,23 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
   const data = { ...businessData, ...formData };
 
   // 格式化日期时间
+  const parseLocalTime = (value: string): Date => {
+    if (value && !value.endsWith('Z') && !value.match(/[+-]\d{2}:\d{2}$/)) {
+      const parts = value.replace('T', ' ').split(/[- :]/);
+      if (parts.length >= 5) {
+        return new Date(
+          parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
+          parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
+        );
+      }
+    }
+    return new Date(value);
+  };
+
   const formatDateTime = (value: string | null | undefined) => {
     if (!value) return "-";
     try {
-      return format(new Date(value), "yyyy-MM-dd HH:mm", { locale: zhCN });
+      return format(parseLocalTime(value), "yyyy-MM-dd HH:mm", { locale: zhCN });
     } catch {
       return value;
     }
