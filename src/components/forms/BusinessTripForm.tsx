@@ -54,6 +54,8 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -267,7 +269,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
           <div className="space-y-2">
             <Label>开始时间 *</Label>
             <div className="flex gap-2">
-              <Popover>
+              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -288,7 +290,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
                     selected={form.start_date}
                     onSelect={(date) => {
                       setForm({ ...form, start_date: date });
-                      document.body.click();
+                      setStartDateOpen(false);
                     }}
                     locale={zhCN}
                     className="pointer-events-auto"
@@ -336,7 +338,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
           <div className="space-y-2">
             <Label>结束时间 *</Label>
             <div className="flex gap-2">
-              <Popover>
+              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -358,7 +360,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
                     selected={form.end_date}
                     onSelect={(date) => {
                       setForm({ ...form, end_date: date });
-                      document.body.click();
+                      setEndDateOpen(false);
                     }}
                     disabled={(date) => form.start_date ? isBefore(date, startOfDay(form.start_date)) : false}
                     locale={zhCN}

@@ -75,6 +75,8 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   useEffect(() => {
     if (open && currentUser?.id) {
@@ -276,7 +278,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>开始时间 *</Label>
-              <Popover>
+              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -297,8 +299,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                     selected={form.start_time}
                     onSelect={(date) => {
                       setForm({ ...form, start_time: date });
-                      // 点击日期自动关闭 - 通过 focus 方式触发关闭
-                      document.body.click();
+                      setStartDateOpen(false);
                     }}
                     locale={zhCN}
                     className="pointer-events-auto"
@@ -309,7 +310,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
             <div className="space-y-2">
               <Label>结束时间 *</Label>
-              <Popover>
+              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -330,7 +331,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
                     selected={form.end_time}
                     onSelect={(date) => {
                       setForm({ ...form, end_time: date });
-                      document.body.click();
+                      setEndDateOpen(false);
                     }}
                     locale={zhCN}
                     className="pointer-events-auto"
