@@ -148,19 +148,27 @@ const handleLeaveBalanceDeduction = async (
   businessType: string,
   businessId: string
 ) => {
-  // 只有请假类型才需要扣减 - 支持 "leave" 和 "absence" (通用外出类型)
-  if (businessType !== "leave" && businessType !== "absence") return;
+  // 支持 "leave", "absence", 以及 "business_trip" 等可能包含请假的外出类型
+  // 但实际扣减只针对 absence_records.type = 'leave' 的记录
+  console.log(`handleLeaveBalanceDeduction called: businessType=${businessType}, businessId=${businessId}`);
   
   try {
     // 获取请假记录详情
-    const { data: record } = await dataAdapter.getAbsenceRecordForLeaveDeduction(businessId);
+    const { data: record, error: fetchError } = await dataAdapter.getAbsenceRecordForLeaveDeduction(businessId);
+    
+    if (fetchError) {
+      console.error("Failed to fetch absence record:", fetchError);
+      return;
+    }
+    
+    console.log(`Fetched absence record:`, record);
     
     // 只有当是真正的请假类型（type = 'leave'）时才扣减
     if (record && record.type === 'leave' && record.leave_type && record.contact_id) {
       console.log(`Processing leave balance deduction for ${record.leave_type}: ${record.duration_days} days / ${record.duration_hours} hours`);
       
       // 调用扣减假期函数
-      const { error } = await dataAdapter.deductLeaveBalance(
+      const { data, error } = await dataAdapter.deductLeaveBalance(
         record.contact_id,
         record.leave_type,
         record.duration_hours,
@@ -170,10 +178,12 @@ const handleLeaveBalanceDeduction = async (
       if (error) {
         console.error("Failed to deduct leave balance:", error);
       } else {
-        console.log(`Leave balance deducted successfully for ${record.leave_type}`);
+        console.log(`Leave balance deducted successfully for ${record.leave_type}, result:`, data);
       }
     } else if (record) {
-      console.log(`Skipping leave balance deduction - not a leave record (type: ${record.type})`);
+      console.log(`Skipping leave balance deduction - not a leave record (type: ${record.type}, leave_type: ${record.leave_type})`);
+    } else {
+      console.log(`No absence record found for businessId: ${businessId}`);
     }
   } catch (error) {
     console.error("Failed to handle leave balance deduction:", error);

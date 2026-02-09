@@ -1232,13 +1232,22 @@ export async function deductLeaveBalance(
     });
   }
   
-  // 调用数据库函数扣减假期
+  console.log(`Calling deduct_leave_balance: contact=${contactId}, type=${leaveType}, hours=${durationHours}, days=${durationDays}`);
+  
+  // 调用数据库函数扣减假期 - 参数顺序必须与函数定义一致
+  // p_contact_id, p_duration_days, p_duration_hours, p_leave_type
   const { data, error } = await supabase.rpc('deduct_leave_balance', {
     p_contact_id: contactId,
-    p_leave_type: leaveType,
-    p_duration_hours: durationHours || 0,
     p_duration_days: durationDays || 0,
+    p_duration_hours: durationHours || 0,
+    p_leave_type: leaveType,
   });
+  
+  if (error) {
+    console.error('deduct_leave_balance error:', error);
+  } else {
+    console.log('deduct_leave_balance success:', data);
+  }
   
   return { data, error };
 }
