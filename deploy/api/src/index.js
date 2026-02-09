@@ -131,8 +131,8 @@ app.post('/api/upload/:type', upload.single('file'), (req, res) => {
       return res.status(400).json({ error: '没有上传文件' });
     }
     
-    const baseUrl = process.env.API_BASE_URL || `http://localhost:${PORT}`;
-    const fileUrl = `${baseUrl}/uploads/${req.params.type}/${req.file.filename}`;
+    // 返回相对路径，让前端根据 API_BASE_URL 构建完整地址
+    const fileUrl = `/uploads/${req.params.type}/${req.file.filename}`;
     
     res.json({
       success: true,
