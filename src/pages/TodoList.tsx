@@ -273,8 +273,8 @@ const TodoList = () => {
           <span>·</span>
           <span>
             {item.processed_at
-              ? format(new Date(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
-              : format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+              ? format(parseTime(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
+              : format(parseTime(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
           </span>
         </div>
       </div>
