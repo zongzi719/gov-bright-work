@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime, formatLocalNow } from "@/lib/utils";
 import { Search, Eye, Trash2 } from "lucide-react";
 
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
