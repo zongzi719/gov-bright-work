@@ -15,13 +15,30 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
-// 日期格式转换 - ISO 8601 转 MySQL DATETIME
+// 日期格式转换 - ISO 8601 转 MySQL DATETIME（保持本地时间，不转UTC）
 function formatDateForMySQL(isoString) {
   if (!isoString) return null;
   try {
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) return isoString;
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    // 如果已经是 MySQL 格式 (YYYY-MM-DD HH:mm:ss)，直接返回
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(isoString)) return isoString;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) return isoString;
+    
+    // 手动解析本地时间字符串，避免 UTC 转换
+    // 支持格式: 2026-02-11T10:00:00, 2026-02-11T10:00:00.000Z, 2026-02-11 10:00:00
+    const cleaned = isoString.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+    const parts = cleaned.split(/[- :]/);
+    if (parts.length >= 5) {
+      const year = parts[0];
+      const month = parts[1].padStart(2, '0');
+      const day = parts[2].padStart(2, '0');
+      const hour = parts[3].padStart(2, '0');
+      const minute = parts[4].padStart(2, '0');
+      const second = (parts[5] || '00').padStart(2, '0');
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    }
+    
+    // 回退：直接替换T
+    return isoString.replace('T', ' ').slice(0, 19);
   } catch {
     return isoString;
   }
@@ -568,12 +585,14 @@ app.get('/api/canteen-menus', async (req, res) => {
 
 app.get('/api/todo-items', async (req, res) => {
   try {
-    const { assignee_id, status } = req.query;
+    const { assignee_id, status, process_result_ne, limit = 50 } = req.query;
     let sql = `SELECT t.*, 
                i.name as initiator_name,
+               COALESCE(o.name, i.department) as initiator_department,
                a.name as assignee_name
                FROM todo_items t
                LEFT JOIN contacts i ON t.initiator_id = i.id
+               LEFT JOIN organizations o ON i.organization_id = o.id
                LEFT JOIN contacts a ON t.assignee_id = a.id
                WHERE 1=1`;
     const params = [];
@@ -587,11 +606,26 @@ app.get('/api/todo-items', async (req, res) => {
       sql += ` AND t.status IN (${statuses.map(() => '?').join(',')})`;
       params.push(...statuses);
     }
+    if (process_result_ne) {
+      sql += ` AND (t.process_result IS NULL OR t.process_result != ?)`;
+      params.push(process_result_ne);
+    }
     
-    sql += ' ORDER BY t.created_at DESC';
+    sql += ` ORDER BY t.created_at DESC LIMIT ?`;
+    params.push(parseInt(limit));
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    
+    // 格式化为前端期望的结构
+    const items = rows.map(row => ({
+      ...row,
+      initiator: {
+        name: row.initiator_name,
+        department: row.initiator_department || row.source_department
+      }
+    }));
+    
+    res.json(items);
   } catch (error) {
     console.error('Get todo items error:', error);
     res.status(500).json({ error: '获取待办失败' });
@@ -881,17 +915,7 @@ app.get('/api/absence-records', async (req, res) => {
   }
 });
 
-// 日期格式转换辅助函数：ISO 8601 转 MySQL DATETIME
-function formatDateForMySQL(isoDateString) {
-  if (!isoDateString) return null;
-  try {
-    const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) return isoDateString; // 无法解析则原样返回
-    return date.toISOString().slice(0, 19).replace('T', ' ');
-  } catch {
-    return isoDateString;
-  }
-}
+// 注意：formatDateForMySQL 已在文件开头定义，此处不再重复
 
 app.post('/api/absence-records', async (req, res) => {
   try {
@@ -2519,54 +2543,7 @@ app.delete('/api/schedules/:id', async (req, res) => {
   }
 });
 
-// ==================== 待办事项扩展 ====================
-
-app.get('/api/todo-items', async (req, res) => {
-  try {
-    const { assignee_id, status, process_result_ne, limit = 20 } = req.query;
-    
-    let sql = `
-      SELECT t.*, 
-             c.name as initiator_name, 
-             COALESCE(o.name, c.department) as initiator_department
-      FROM todo_items t
-      LEFT JOIN contacts c ON t.initiator_id = c.id
-      LEFT JOIN organizations o ON c.organization_id = o.id
-      WHERE t.assignee_id = ?
-    `;
-    const params = [assignee_id];
-    
-    if (status) {
-      const statusList = status.split(',');
-      sql += ` AND t.status IN (${statusList.map(() => '?').join(',')})`;
-      params.push(...statusList);
-    }
-    
-    if (process_result_ne) {
-      sql += ` AND (t.process_result IS NULL OR t.process_result != ?)`;
-      params.push(process_result_ne);
-    }
-    
-    sql += ` ORDER BY t.created_at DESC LIMIT ?`;
-    params.push(parseInt(limit));
-    
-    const [rows] = await pool.execute(sql, params);
-    
-    // 格式化为前端期望的结构
-    const items = rows.map(row => ({
-      ...row,
-      initiator: {
-        name: row.initiator_name,
-        department: row.initiator_department
-      }
-    }));
-    
-    res.json(items);
-  } catch (error) {
-    console.error('Get todo items error:', error);
-    res.status(500).json({ error: '获取待办失败' });
-  }
-});
+// 注意：GET /api/todo-items 已在文件前部定义（含完整的JOIN和部门解析），此处不再重复
 
 app.post('/api/todo-items', async (req, res) => {
   try {

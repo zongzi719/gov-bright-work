@@ -2,6 +2,31 @@ import { useState, useEffect, useMemo } from "react";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+
+// 解析本地时间字符串，避免UTC偏移
+const parseLocalTime = (value: string): Date => {
+  if (!value) return new Date();
+  // 如果不含Z和时区偏移，按本地时间解析
+  if (!value.endsWith('Z') && !value.match(/[+-]\d{2}:\d{2}$/)) {
+    const parts = value.replace('T', ' ').split(/[- :]/);
+    if (parts.length >= 5) {
+      return new Date(
+        parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
+        parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
+      );
+    }
+  }
+  // 含Z或时区，也按字面值解析（离线环境中数据库存的就是本地时间）
+  const cleaned = value.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+  const parts = cleaned.split(/[- :]/);
+  if (parts.length >= 5) {
+    return new Date(
+      parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
+      parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
+    );
+  }
+  return new Date(value);
+};
 import {
   User,
   UserCheck,
@@ -683,7 +708,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
               </span>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {format(new Date(instance.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+              {format(parseLocalTime(instance.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
             </div>
           </div>
         </div>
@@ -778,7 +803,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
                         </span>
                         {item.record.processed_at && (
                           <span className="text-muted-foreground">
-                            {format(new Date(item.record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
+                            {format(parseLocalTime(item.record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
                           </span>
                         )}
                       </div>
