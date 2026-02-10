@@ -767,7 +767,7 @@ export const useApprovalProgression = () => {
         _return_info: {
           type: "return_restart",
           comment,
-          returned_at: new Date().toISOString(),
+          returned_at: formatLocalNow(),
         }
       };
 
