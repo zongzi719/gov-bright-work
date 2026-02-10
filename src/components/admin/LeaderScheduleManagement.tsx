@@ -569,19 +569,65 @@ const LeaderScheduleManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>开始时间</Label>
-                  <Input
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  />
+                  <div className="flex gap-2">
+                    <Select 
+                      value={formData.start_time.split(':')[0]} 
+                      onValueChange={(v) => setFormData({ ...formData, start_time: `${v}:${formData.start_time.split(':')[1] || '00'}` })}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => (
+                          <SelectItem key={h} value={h}>{h}时</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select 
+                      value={formData.start_time.split(':')[1] || '00'} 
+                      onValueChange={(v) => setFormData({ ...formData, start_time: `${formData.start_time.split(':')[0]}:${v}` })}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['00', '15', '30', '45'].map(m => (
+                          <SelectItem key={m} value={m}>{m}分</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>结束时间</Label>
-                  <Input
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                  />
+                  <div className="flex gap-2">
+                    <Select 
+                      value={formData.end_time.split(':')[0]} 
+                      onValueChange={(v) => setFormData({ ...formData, end_time: `${v}:${formData.end_time.split(':')[1] || '00'}` })}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => (
+                          <SelectItem key={h} value={h}>{h}时</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select 
+                      value={formData.end_time.split(':')[1] || '00'} 
+                      onValueChange={(v) => setFormData({ ...formData, end_time: `${formData.end_time.split(':')[0]}:${v}` })}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['00', '15', '30', '45'].map(m => (
+                          <SelectItem key={m} value={m}>{m}分</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">
