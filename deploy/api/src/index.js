@@ -585,12 +585,14 @@ app.get('/api/canteen-menus', async (req, res) => {
 
 app.get('/api/todo-items', async (req, res) => {
   try {
-    const { assignee_id, status } = req.query;
+    const { assignee_id, status, process_result_ne, limit = 50 } = req.query;
     let sql = `SELECT t.*, 
                i.name as initiator_name,
+               COALESCE(o.name, i.department) as initiator_department,
                a.name as assignee_name
                FROM todo_items t
                LEFT JOIN contacts i ON t.initiator_id = i.id
+               LEFT JOIN organizations o ON i.organization_id = o.id
                LEFT JOIN contacts a ON t.assignee_id = a.id
                WHERE 1=1`;
     const params = [];
@@ -604,11 +606,26 @@ app.get('/api/todo-items', async (req, res) => {
       sql += ` AND t.status IN (${statuses.map(() => '?').join(',')})`;
       params.push(...statuses);
     }
+    if (process_result_ne) {
+      sql += ` AND (t.process_result IS NULL OR t.process_result != ?)`;
+      params.push(process_result_ne);
+    }
     
-    sql += ' ORDER BY t.created_at DESC';
+    sql += ` ORDER BY t.created_at DESC LIMIT ?`;
+    params.push(parseInt(limit));
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    
+    // 格式化为前端期望的结构
+    const items = rows.map(row => ({
+      ...row,
+      initiator: {
+        name: row.initiator_name,
+        department: row.initiator_department || row.source_department
+      }
+    }));
+    
+    res.json(items);
   } catch (error) {
     console.error('Get todo items error:', error);
     res.status(500).json({ error: '获取待办失败' });
