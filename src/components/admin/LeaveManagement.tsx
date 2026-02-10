@@ -454,7 +454,7 @@ const LeaveManagement = () => {
                 <div>
                   <Label className="text-sm text-muted-foreground">开始时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {format(parseLocalTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    {format(parseTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                   </div>
                 </div>
                 <div>
