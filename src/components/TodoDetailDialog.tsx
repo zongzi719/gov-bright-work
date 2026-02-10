@@ -656,7 +656,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         await dataAdapter.updateApprovalRecord(currentApprovalRecord.id, {
           status: "approved",
           comment: comment.trim() || null,
-          processed_at: new Date().toISOString(),
+          processed_at: formatLocalNow(),
         });
       }
 
