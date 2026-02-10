@@ -898,17 +898,7 @@ app.get('/api/absence-records', async (req, res) => {
   }
 });
 
-// 日期格式转换辅助函数：ISO 8601 转 MySQL DATETIME
-function formatDateForMySQL(isoDateString) {
-  if (!isoDateString) return null;
-  try {
-    const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) return isoDateString; // 无法解析则原样返回
-    return date.toISOString().slice(0, 19).replace('T', ' ');
-  } catch {
-    return isoDateString;
-  }
-}
+// 注意：formatDateForMySQL 已在文件开头定义，此处不再重复
 
 app.post('/api/absence-records', async (req, res) => {
   try {
