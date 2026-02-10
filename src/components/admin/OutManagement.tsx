@@ -490,7 +490,7 @@ const OutManagement = () => {
                   <div>
                     <Label className="text-sm text-muted-foreground">审批时间</Label>
                     <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                      {format(new Date(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                      {format(parseTime(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                     </div>
                   </div>
                 )}
