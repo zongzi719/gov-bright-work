@@ -138,20 +138,7 @@ const leaveTypeLabels: Record<string, string> = {
   compensatory: "调休",
 };
 
-// 解析本地时间字符串，避免UTC偏移
-const parseLocalTime = (timeStr: string): Date => {
-  // 如果是 YYYY-MM-DDTHH:mm:ss 格式（无时区标识），直接按本地时间解析
-  if (timeStr && !timeStr.endsWith('Z') && !timeStr.match(/[+-]\d{2}:\d{2}$/)) {
-    const parts = timeStr.replace('T', ' ').split(/[- :]/);
-    if (parts.length >= 5) {
-      return new Date(
-        parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
-        parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
-      );
-    }
-  }
-  return new Date(timeStr);
-};
+// 使用共享的 parseTime 替代本地 parseLocalTime
 
 const LeaveManagement = () => {
   const [records, setRecords] = useState<AbsenceRecord[]>([]);
