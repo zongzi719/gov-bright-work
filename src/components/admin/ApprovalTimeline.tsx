@@ -3,21 +3,15 @@ import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
-// 解析本地时间字符串，避免UTC偏移
+// 智能解析时间：带时区标记的(UTC)用new Date转换，无时区的当作本地时间
 const parseLocalTime = (value: string): Date => {
   if (!value) return new Date();
-  // 如果不含Z和时区偏移，按本地时间解析
-  if (!value.endsWith('Z') && !value.match(/[+-]\d{2}:\d{2}$/)) {
-    const parts = value.replace('T', ' ').split(/[- :]/);
-    if (parts.length >= 5) {
-      return new Date(
-        parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
-        parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
-      );
-    }
+  // 如果有Z后缀或时区偏移(+00:00)，说明是UTC时间，直接用new Date转换为本地
+  if (/Z$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value)) {
+    return new Date(value);
   }
-  // 含Z或时区，也按字面值解析（离线环境中数据库存的就是本地时间）
-  const cleaned = value.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+  // 无时区标记，当作本地时间解析
+  const cleaned = value.replace('T', ' ').replace(/\.\d+$/, '');
   const parts = cleaned.split(/[- :]/);
   if (parts.length >= 5) {
     return new Date(
