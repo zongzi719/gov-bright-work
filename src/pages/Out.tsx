@@ -83,11 +83,11 @@ const Out = () => {
     id: record.id,
     title: record.out_type ? outTypeLabels[record.out_type] || record.out_type : "外出申请",
     subtitle: record.out_location ? `${record.out_location} - ${record.reason}` : record.reason,
-    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
       { label: "时长", value: `${record.duration_hours || "-"}小时` },
-      { label: "时间", value: format(new Date(record.start_time), "MM/dd HH:mm") },
+      { label: "时间", value: format(parseTime(record.start_time), "MM/dd HH:mm") },
     ],
   }));
 
