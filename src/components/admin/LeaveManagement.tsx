@@ -492,7 +492,7 @@ const LeaveManagement = () => {
                 <div>
                   <Label className="text-sm text-muted-foreground">申请时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    {format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                   </div>
                 </div>
                 {selectedRecord.approved_at && (
