@@ -6,9 +6,15 @@ import { isOfflineMode } from "@/lib/offlineApi";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
-// 解析本地时间字符串，避免UTC偏移
-const parseLocalTime = (value: string): Date => {
-  const cleaned = value.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+// 智能解析时间：带时区标记的(UTC)用new Date转换，无时区的当作本地时间
+const parseTime = (value: string): Date => {
+  if (!value) return new Date();
+  // 如果有Z后缀或时区偏移(+00:00)，说明是UTC时间，直接用new Date转换为本地
+  if (/Z$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value)) {
+    return new Date(value);
+  }
+  // 无时区标记，当作本地时间解析
+  const cleaned = value.replace('T', ' ').replace(/\.\d+$/, '');
   const parts = cleaned.split(/[- :]/);
   if (parts.length >= 5) {
     return new Date(
@@ -323,7 +329,7 @@ const WorkPanel = () => {
             <span>·</span>
             <span>{initiatorDept}</span>
             <span>·</span>
-            <span>{format(parseLocalTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
+            <span>{format(parseTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
           </div>
         </div>
       </div>
@@ -360,8 +366,8 @@ const WorkPanel = () => {
             <span>·</span>
             <span>
               {item.processed_at
-                ? format(parseLocalTime(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
-                : format(parseLocalTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
+                ? format(parseTime(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
+                : format(parseTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
             </span>
           </div>
         </div>
@@ -405,7 +411,7 @@ const WorkPanel = () => {
             <span>·</span>
             <span>{initiatorDept}</span>
             <span>·</span>
-            <span>{format(parseLocalTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
+            <span>{format(parseTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
           </div>
         </div>
       </div>
