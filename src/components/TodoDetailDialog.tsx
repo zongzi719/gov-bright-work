@@ -212,7 +212,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       // 更新待办状态为已完成
       await dataAdapter.updateTodoItem(todoItem.id, {
         status: "completed",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
         processed_by: currentUser.id,
       });
       
