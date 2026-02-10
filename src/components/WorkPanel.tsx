@@ -366,8 +366,8 @@ const WorkPanel = () => {
             <span>·</span>
             <span>
               {item.processed_at
-                ? format(parseLocalTime(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
-                : format(parseLocalTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
+                ? format(parseTime(item.processed_at), "MM-dd HH:mm", { locale: zhCN })
+                : format(parseTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}
             </span>
           </div>
         </div>
