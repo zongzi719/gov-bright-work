@@ -1040,7 +1040,7 @@ export const useApprovalProgression = () => {
       await dataAdapter.updateTodoItem(todoItemId, {
         status: "completed",
         process_result: "resubmitted",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
       });
 
       const approverIds = startNode.approver_ids || [];
