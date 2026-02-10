@@ -253,13 +253,13 @@ const AbsenceApplication = () => {
   const outDetailFields = selectedOut ? [
     { label: "外出类型", value: selectedOut.out_type ? outTypeLabels[selectedOut.out_type] || selectedOut.out_type : null },
     { label: "外出时长", value: selectedOut.duration_hours ? `${selectedOut.duration_hours} 小时` : null },
-    { label: "开始时间", value: format(new Date(selectedOut.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "预计返回", value: selectedOut.end_time ? format(new Date(selectedOut.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedOut.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "预计返回", value: selectedOut.end_time ? format(parseTime(selectedOut.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "外出地点", value: selectedOut.out_location },
     { label: "联系电话", value: selectedOut.contact_phone },
     { label: "外出事由", value: selectedOut.reason, fullWidth: true },
     { label: "备注", value: selectedOut.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedOut.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedOut.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   return (
