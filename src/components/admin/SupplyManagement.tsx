@@ -61,6 +61,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
+import { parseTime } from "@/lib/utils";
 import StockMovementHistory from "./StockMovementHistory";
 
 type PurchaseStatus = "pending" | "approved" | "rejected" | "completed";

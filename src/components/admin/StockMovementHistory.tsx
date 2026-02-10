@@ -22,6 +22,7 @@ import {
 import { Search, ArrowUpCircle, ArrowDownCircle, Settings } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 
 interface StockMovement {
   id: string;
