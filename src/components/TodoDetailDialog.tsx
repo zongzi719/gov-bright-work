@@ -418,7 +418,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       displayValue = getApplicantName(field.field_name, value);
     } else if (field.field_type === "datetime" && value) {
       try {
-        displayValue = format(new Date(value), "yyyy-MM-dd HH:mm", { locale: zhCN });
+        displayValue = format(parseTime(value), "yyyy-MM-dd HH:mm", { locale: zhCN });
       } catch (e) {
         displayValue = value;
       }
