@@ -201,7 +201,7 @@ const BusinessTripManagement = () => {
   const handleApprove = async (id: string) => {
     const { error } = await dataAdapter.updateAbsenceRecord(id, {
       status: "approved",
-      approved_at: new Date().toISOString(),
+      approved_at: formatLocalNow(),
     });
 
     if (error) {
