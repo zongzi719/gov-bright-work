@@ -307,7 +307,7 @@ const TodoList = () => {
         <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
           <span className="text-primary/80">{sourceLabel}</span>
           <span>·</span>
-          <span>{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</span>
+          <span>{format(parseTime(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</span>
         </div>
       </div>
     );

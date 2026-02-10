@@ -110,13 +110,13 @@ const Out = () => {
   const detailFields = selectedRecord ? [
     { label: "外出类型", value: selectedRecord.out_type ? outTypeLabels[selectedRecord.out_type] || selectedRecord.out_type : null },
     { label: "外出时长", value: selectedRecord.duration_hours ? `${selectedRecord.duration_hours} 小时` : null },
-    { label: "开始时间", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "预计返回", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "预计返回", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "往返地点", value: selectedRecord.out_location },
     { label: "联系电话", value: selectedRecord.contact_phone },
     { label: "外出事由", value: selectedRecord.reason, fullWidth: true },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   return (
