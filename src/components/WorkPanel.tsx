@@ -323,7 +323,7 @@ const WorkPanel = () => {
             <span>·</span>
             <span>{initiatorDept}</span>
             <span>·</span>
-            <span>{format(new Date(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
+            <span>{format(parseLocalTime(item.created_at), "MM-dd HH:mm", { locale: zhCN })}</span>
           </div>
         </div>
       </div>
