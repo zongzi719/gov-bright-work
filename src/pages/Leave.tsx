@@ -6,6 +6,7 @@ import MyLeaveBalance from "@/components/MyLeaveBalance";
 import { getAbsenceRecords } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import LeaveForm from "@/components/forms/LeaveForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
