@@ -93,11 +93,11 @@ const Leave = () => {
     id: record.id,
     title: record.leave_type ? leaveTypeLabels[record.leave_type] || record.leave_type : "请假申请",
     subtitle: record.reason,
-    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
       { label: "时长", value: record.duration_hours ? `${record.duration_hours}小时` : `${record.duration_days || "-"}天` },
-      { label: "时间", value: `${format(new Date(record.start_time), "MM/dd")} - ${record.end_time ? format(new Date(record.end_time), "MM/dd") : ""}` },
+      { label: "时间", value: `${format(parseTime(record.start_time), "MM/dd")} - ${record.end_time ? format(parseTime(record.end_time), "MM/dd") : ""}` },
     ],
   }));
 
