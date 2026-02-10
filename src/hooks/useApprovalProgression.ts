@@ -938,7 +938,7 @@ export const useApprovalProgression = () => {
       await dataAdapter.updateApprovalRecordsByInstanceId(instanceId, "pending", { 
         status: "approved",
         comment: "发起人已撤回申请",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
       });
 
       return { success: true, canWithdraw: true };
