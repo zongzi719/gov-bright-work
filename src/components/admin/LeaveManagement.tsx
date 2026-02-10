@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import { Search, Eye, Trash2 } from "lucide-react";
 
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
@@ -137,20 +138,7 @@ const leaveTypeLabels: Record<string, string> = {
   compensatory: "调休",
 };
 
-// 解析本地时间字符串，避免UTC偏移
-const parseLocalTime = (timeStr: string): Date => {
-  // 如果是 YYYY-MM-DDTHH:mm:ss 格式（无时区标识），直接按本地时间解析
-  if (timeStr && !timeStr.endsWith('Z') && !timeStr.match(/[+-]\d{2}:\d{2}$/)) {
-    const parts = timeStr.replace('T', ' ').split(/[- :]/);
-    if (parts.length >= 5) {
-      return new Date(
-        parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
-        parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
-      );
-    }
-  }
-  return new Date(timeStr);
-};
+// 使用共享的 parseTime 替代本地 parseLocalTime
 
 const LeaveManagement = () => {
   const [records, setRecords] = useState<AbsenceRecord[]>([]);
@@ -346,11 +334,11 @@ const LeaveManagement = () => {
                       {record.reason}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(record.start_time), "MM-dd HH:mm", { locale: zhCN })}
+                      {format(parseTime(record.start_time), "MM-dd HH:mm", { locale: zhCN })}
                     </TableCell>
                     <TableCell>
                       {record.end_time
-                        ? format(new Date(record.end_time), "MM-dd HH:mm", { locale: zhCN })
+                        ? format(parseTime(record.end_time), "MM-dd HH:mm", { locale: zhCN })
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -466,14 +454,14 @@ const LeaveManagement = () => {
                 <div>
                   <Label className="text-sm text-muted-foreground">开始时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {format(parseLocalTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    {format(parseTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">结束时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {selectedRecord.end_time 
-                      ? format(parseLocalTime(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN })
+                      ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN })
                       : "-"}
                   </div>
                 </div>
@@ -504,14 +492,14 @@ const LeaveManagement = () => {
                 <div>
                   <Label className="text-sm text-muted-foreground">申请时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    {format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                   </div>
                 </div>
                 {selectedRecord.approved_at && (
                   <div>
                     <Label className="text-sm text-muted-foreground">审批时间</Label>
                     <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                      {format(new Date(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                      {format(parseTime(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                     </div>
                   </div>
                 )}

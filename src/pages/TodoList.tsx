@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -244,7 +245,7 @@ const TodoList = () => {
         <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
           <span className="text-primary/80">{sourceLabel}</span>
           <span>·</span>
-          <span>{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</span>
+          <span>{format(parseTime(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</span>
         </div>
       </div>
     );
@@ -272,8 +273,8 @@ const TodoList = () => {
           <span>·</span>
           <span>
             {item.processed_at
-              ? format(new Date(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
-              : format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+              ? format(parseTime(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
+              : format(parseTime(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
           </span>
         </div>
       </div>
@@ -306,7 +307,7 @@ const TodoList = () => {
         <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
           <span className="text-primary/80">{sourceLabel}</span>
           <span>·</span>
-          <span>{format(new Date(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</span>
+          <span>{format(parseTime(item.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</span>
         </div>
       </div>
     );

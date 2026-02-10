@@ -5,6 +5,7 @@ import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import { getAbsenceRecords } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import OutForm from "@/components/forms/OutForm";
 
 interface AbsenceRecord {
@@ -82,11 +83,11 @@ const Out = () => {
     id: record.id,
     title: record.out_type ? outTypeLabels[record.out_type] || record.out_type : "外出申请",
     subtitle: record.out_location ? `${record.out_location} - ${record.reason}` : record.reason,
-    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
       { label: "时长", value: `${record.duration_hours || "-"}小时` },
-      { label: "时间", value: format(new Date(record.start_time), "MM/dd HH:mm") },
+      { label: "时间", value: format(parseTime(record.start_time), "MM/dd HH:mm") },
     ],
   }));
 
@@ -109,13 +110,13 @@ const Out = () => {
   const detailFields = selectedRecord ? [
     { label: "外出类型", value: selectedRecord.out_type ? outTypeLabels[selectedRecord.out_type] || selectedRecord.out_type : null },
     { label: "外出时长", value: selectedRecord.duration_hours ? `${selectedRecord.duration_hours} 小时` : null },
-    { label: "开始时间", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "预计返回", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "预计返回", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "往返地点", value: selectedRecord.out_location },
     { label: "联系电话", value: selectedRecord.contact_phone },
     { label: "外出事由", value: selectedRecord.reason, fullWidth: true },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   return (

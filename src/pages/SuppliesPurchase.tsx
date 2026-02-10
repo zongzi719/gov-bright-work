@@ -17,6 +17,7 @@ import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
@@ -136,7 +137,7 @@ const SuppliesPurchase = () => {
     id: record.id,
     title: `办公用品采购申请`,
     subtitle: `${record.department} - ${record.applicant_name}`,
-    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
       { label: "申请日期", value: record.purchase_date },

@@ -61,6 +61,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
+import { parseTime } from "@/lib/utils";
 import StockMovementHistory from "./StockMovementHistory";
 
 type PurchaseStatus = "pending" | "approved" | "rejected" | "completed";
@@ -802,7 +803,7 @@ const SupplyManagement = () => {
                           {request.reason || "-"}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(request.created_at), "MM-dd HH:mm")}
+                          {format(parseTime(request.created_at), "MM-dd HH:mm")}
                         </TableCell>
                         <TableCell>
                           <Badge className={purchaseStatusColors[request.status]}>
@@ -968,7 +969,7 @@ const SupplyManagement = () => {
                         </TableCell>
                         <TableCell>{requisition.requisition_by}</TableCell>
                         <TableCell>
-                          {format(new Date(requisition.created_at), "MM-dd HH:mm")}
+                          {format(parseTime(requisition.created_at), "MM-dd HH:mm")}
                         </TableCell>
                         <TableCell>
                           <Badge

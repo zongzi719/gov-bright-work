@@ -8,6 +8,7 @@ import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import BusinessTripForm from "@/components/forms/BusinessTripForm";
 import LeaveForm from "@/components/forms/LeaveForm";
 import OutForm from "@/components/forms/OutForm";
@@ -186,11 +187,11 @@ const AbsenceApplication = () => {
       id: record.id,
       title: record.destination || "出差申请",
       subtitle: record.reason,
-      time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+      time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
       status: record.status,
       meta: [
         { label: "天数", value: `${record.duration_days || "-"}天` },
-        { label: "时间", value: `${format(new Date(record.start_time), "MM/dd")} - ${record.end_time ? format(new Date(record.end_time), "MM/dd") : ""}` },
+        { label: "时间", value: `${format(parseTime(record.start_time), "MM/dd")} - ${record.end_time ? format(parseTime(record.end_time), "MM/dd") : ""}` },
       ],
     }));
 
@@ -201,11 +202,11 @@ const AbsenceApplication = () => {
       id: record.id,
       title: record.leave_type ? leaveTypeLabels[record.leave_type] || record.leave_type : "请假申请",
       subtitle: record.reason,
-      time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+      time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
       status: record.status,
       meta: [
         { label: "天数", value: `${record.duration_days || "-"}天` },
-        { label: "时间", value: `${format(new Date(record.start_time), "MM/dd")} - ${record.end_time ? format(new Date(record.end_time), "MM/dd") : ""}` },
+        { label: "时间", value: `${format(parseTime(record.start_time), "MM/dd")} - ${record.end_time ? format(parseTime(record.end_time), "MM/dd") : ""}` },
       ],
     }));
 
@@ -216,11 +217,11 @@ const AbsenceApplication = () => {
       id: record.id,
       title: record.out_type ? outTypeLabels[record.out_type] || record.out_type : "外出申请",
       subtitle: record.out_location ? `${record.out_location} - ${record.reason}` : record.reason,
-      time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+      time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
       status: record.status,
       meta: [
         { label: "时长", value: `${record.duration_hours || "-"}小时` },
-        { label: "时间", value: format(new Date(record.start_time), "MM/dd HH:mm") },
+        { label: "时间", value: format(parseTime(record.start_time), "MM/dd HH:mm") },
       ],
     }));
 
@@ -228,37 +229,37 @@ const AbsenceApplication = () => {
   const tripDetailFields = selectedTrip ? [
     { label: "目的地", value: selectedTrip.destination },
     { label: "出差天数", value: selectedTrip.duration_days ? `${selectedTrip.duration_days} 天` : null },
-    { label: "开始时间", value: format(new Date(selectedTrip.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "结束时间", value: selectedTrip.end_time ? format(new Date(selectedTrip.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedTrip.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "结束时间", value: selectedTrip.end_time ? format(parseTime(selectedTrip.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "交通方式", value: selectedTrip.transport_type ? transportTypeLabels[selectedTrip.transport_type] || selectedTrip.transport_type : null },
     { label: "预计费用", value: selectedTrip.estimated_cost ? `¥${selectedTrip.estimated_cost}` : null },
     { label: "出差事由", value: selectedTrip.reason, fullWidth: true },
     { label: "备注", value: selectedTrip.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedTrip.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedTrip.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   const leaveDetailFields = selectedLeave ? [
     { label: "请假类型", value: selectedLeave.leave_type ? leaveTypeLabels[selectedLeave.leave_type] || selectedLeave.leave_type : null },
     { label: "请假天数", value: selectedLeave.duration_days ? `${selectedLeave.duration_days} 天` : null },
-    { label: "开始时间", value: format(new Date(selectedLeave.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "结束时间", value: selectedLeave.end_time ? format(new Date(selectedLeave.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedLeave.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "结束时间", value: selectedLeave.end_time ? format(parseTime(selectedLeave.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "工作交接人", value: selectedLeave.handover_person?.name },
     { label: "交接事项", value: selectedLeave.handover_notes },
     { label: "请假事由", value: selectedLeave.reason, fullWidth: true },
     { label: "备注", value: selectedLeave.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedLeave.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedLeave.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   const outDetailFields = selectedOut ? [
     { label: "外出类型", value: selectedOut.out_type ? outTypeLabels[selectedOut.out_type] || selectedOut.out_type : null },
     { label: "外出时长", value: selectedOut.duration_hours ? `${selectedOut.duration_hours} 小时` : null },
-    { label: "开始时间", value: format(new Date(selectedOut.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "预计返回", value: selectedOut.end_time ? format(new Date(selectedOut.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedOut.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "预计返回", value: selectedOut.end_time ? format(parseTime(selectedOut.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "外出地点", value: selectedOut.out_location },
     { label: "联系电话", value: selectedOut.contact_phone },
     { label: "外出事由", value: selectedOut.reason, fullWidth: true },
     { label: "备注", value: selectedOut.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedOut.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedOut.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   return (

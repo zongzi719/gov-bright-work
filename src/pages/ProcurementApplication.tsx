@@ -96,6 +96,7 @@ import { supabase } from "@/integrations/supabase/client";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
@@ -182,7 +183,7 @@ const RequisitionContent = () => {
     id: record.id,
     title: `领用申请`,
     subtitle: `${record.requisition_by} - ${record.requisition_date}`,
-    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [{ label: "领用日期", value: record.requisition_date }],
   }));
@@ -282,7 +283,7 @@ const RequisitionContent = () => {
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请人</Label><div className="text-sm">{selectedRecord.requisition_by}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">领用日期</Label><div className="text-sm">{selectedRecord.requisition_date}</div></div>
-                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请时间</Label><div className="text-sm">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div></div>
+                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请时间</Label><div className="text-sm">{format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div></div>
                     </div>
                     <div className="space-y-2 pt-2">
                       <Label className="text-xs text-muted-foreground font-normal">物品明细</Label>
@@ -398,7 +399,7 @@ const PurchaseContent = () => {
 
   const filteredRecords = records.filter(r => r.requested_by.includes(search) || r.department?.includes(search) || r.purpose?.includes(search));
 
-  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `采购申请`, subtitle: record.purpose || `${record.requested_by} - ${record.department || ""}`, time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "金额", value: `¥${(record.total_amount || 0).toFixed(2)}` }, { label: "日期", value: record.purchase_date }] }));
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `采购申请`, subtitle: record.purpose || `${record.requested_by} - ${record.department || ""}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "金额", value: `¥${(record.total_amount || 0).toFixed(2)}` }, { label: "日期", value: record.purchase_date }] }));
 
   const handleItemClick = async (item: ApplicationItem) => {
     const record = records.find(r => r.id === item.id);
@@ -617,7 +618,7 @@ const SuppliesPurchaseContent = () => {
   const filteredRecords = records.filter(r => r.department.includes(search) || r.applicant_name.includes(search) || r.purchase_date.includes(search));
   const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
 
-  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `办公用品采购申请`, subtitle: `${record.department} - ${record.applicant_name}`, time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "申请日期", value: record.purchase_date }, { label: "合计金额", value: `¥${record.total_amount.toFixed(2)}` }] }));
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `办公用品采购申请`, subtitle: `${record.department} - ${record.applicant_name}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "申请日期", value: record.purchase_date }, { label: "合计金额", value: `¥${record.total_amount.toFixed(2)}` }] }));
 
   const handleItemClick = async (item: ApplicationItem) => {
     const record = records.find(r => r.id === item.id);

@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime, formatLocalNow } from "@/lib/utils";
 import { Search, Eye, Trash2 } from "lucide-react";
 
 type AbsenceStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
@@ -324,11 +325,11 @@ const OutManagement = () => {
                       {record.reason}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(record.start_time), "MM-dd HH:mm", { locale: zhCN })}
+                      {format(parseTime(record.start_time), "MM-dd HH:mm", { locale: zhCN })}
                     </TableCell>
                     <TableCell>
                       {record.end_time
-                        ? format(new Date(record.end_time), "MM-dd HH:mm", { locale: zhCN })
+                        ? format(parseTime(record.end_time), "MM-dd HH:mm", { locale: zhCN })
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -482,14 +483,14 @@ const OutManagement = () => {
                 <div>
                   <Label className="text-sm text-muted-foreground">申请时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                    {format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                   </div>
                 </div>
                 {selectedRecord.approved_at && (
                   <div>
                     <Label className="text-sm text-muted-foreground">审批时间</Label>
                     <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                      {format(new Date(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                      {format(parseTime(selectedRecord.approved_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                     </div>
                   </div>
                 )}

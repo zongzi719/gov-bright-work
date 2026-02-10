@@ -32,6 +32,7 @@ const formatLocalNow = (): string => {
 };
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   User,
@@ -417,7 +418,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       displayValue = getApplicantName(field.field_name, value);
     } else if (field.field_type === "datetime" && value) {
       try {
-        displayValue = format(new Date(value), "yyyy-MM-dd HH:mm", { locale: zhCN });
+        displayValue = format(parseTime(value), "yyyy-MM-dd HH:mm", { locale: zhCN });
       } catch (e) {
         displayValue = value;
       }
@@ -1233,7 +1234,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   <div className="mt-1 text-sm text-muted-foreground">
                     {item.initiator.name} - {item.initiator.department}
                     <span className="ml-2 text-xs">
-                      {instance?.created_at && format(new Date(instance.created_at), "MM-dd HH:mm", { locale: zhCN })}
+                      {instance?.created_at && format(parseTime(instance.created_at), "MM-dd HH:mm", { locale: zhCN })}
                     </span>
                   </div>
                 )}
@@ -1244,7 +1245,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                     {item.initiator.name} 修改后重新提交
                     {item.resubmitTime && (
                       <span className="ml-2 text-xs">
-                        {format(new Date(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
+                        {format(parseTime(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
                       </span>
                     )}
                   </div>
@@ -1262,7 +1263,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                       )}
                       {item.record.processed_at && (
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(item.record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
+                          {format(parseTime(item.record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
                         </span>
                       )}
                     </div>

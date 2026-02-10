@@ -5,6 +5,7 @@ import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import { getAbsenceRecords } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import BusinessTripForm from "@/components/forms/BusinessTripForm";
 
 interface AbsenceRecord {
@@ -82,11 +83,11 @@ const BusinessTrip = () => {
     id: record.id,
     title: record.destination || "出差申请",
     subtitle: record.reason,
-    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
       { label: "天数", value: `${record.duration_days || "-"}天` },
-      { label: "时间", value: `${format(new Date(record.start_time), "MM/dd")} - ${record.end_time ? format(new Date(record.end_time), "MM/dd") : ""}` },
+      { label: "时间", value: `${format(parseTime(record.start_time), "MM/dd")} - ${record.end_time ? format(parseTime(record.end_time), "MM/dd") : ""}` },
     ],
   }));
 
@@ -109,13 +110,13 @@ const BusinessTrip = () => {
   const detailFields = selectedRecord ? [
     { label: "目的地", value: selectedRecord.destination },
     { label: "出差天数", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
-    { label: "开始时间", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "结束时间", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "结束时间", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "交通方式", value: selectedRecord.transport_type ? transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type : null },
     { label: "预计费用", value: selectedRecord.estimated_cost ? `¥${selectedRecord.estimated_cost}` : null },
     { label: "出差事由", value: selectedRecord.reason, fullWidth: true },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   return (

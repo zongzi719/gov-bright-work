@@ -11,6 +11,7 @@ import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import TablePagination from "./TablePagination";
 import { usePagination } from "@/hooks/use-pagination";
 
@@ -354,7 +355,7 @@ const ScheduleManagement = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(schedule.schedule_date), "yyyy-MM-dd", { locale: zhCN })}
+                    {format(parseTime(schedule.schedule_date), "yyyy-MM-dd", { locale: zhCN })}
                   </TableCell>
                   <TableCell>
                     {schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}

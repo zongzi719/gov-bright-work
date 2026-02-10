@@ -14,6 +14,7 @@ import { Plus, RefreshCw, ChevronLeft, ChevronRight, Trash2, Edit, Shield, Searc
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import LeaderSchedulePermissions from "./LeaderSchedulePermissions";
 import TablePagination from "./TablePagination";
 import { usePagination } from "@/hooks/use-pagination";
@@ -455,7 +456,7 @@ const LeaderScheduleManagement = () => {
                             <TableRow key={schedule.id}>
                               <TableCell className="font-medium">{schedule.leader?.name || "-"}</TableCell>
                               <TableCell>{schedule.title}</TableCell>
-                              <TableCell>{format(new Date(schedule.schedule_date), "yyyy-MM-dd")}</TableCell>
+                              <TableCell>{format(parseTime(schedule.schedule_date), "yyyy-MM-dd")}</TableCell>
                               <TableCell>{schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}</TableCell>
                               <TableCell>
                                 <Badge className={`${typeInfo.bg} ${typeInfo.text}`}>

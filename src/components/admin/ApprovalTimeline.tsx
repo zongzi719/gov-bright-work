@@ -779,7 +779,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
                       {instance.initiator?.name || "发起人"} 修改后重新提交
                       {item.resubmitTime && (
                         <span className="ml-1">
-                          {format(new Date(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
+                          {format(parseLocalTime(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
                         </span>
                       )}
                     </span>

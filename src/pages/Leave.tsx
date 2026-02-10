@@ -6,6 +6,7 @@ import MyLeaveBalance from "@/components/MyLeaveBalance";
 import { getAbsenceRecords } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import LeaveForm from "@/components/forms/LeaveForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -92,11 +93,11 @@ const Leave = () => {
     id: record.id,
     title: record.leave_type ? leaveTypeLabels[record.leave_type] || record.leave_type : "请假申请",
     subtitle: record.reason,
-    time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
+    time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
       { label: "时长", value: record.duration_hours ? `${record.duration_hours}小时` : `${record.duration_days || "-"}天` },
-      { label: "时间", value: `${format(new Date(record.start_time), "MM/dd")} - ${record.end_time ? format(new Date(record.end_time), "MM/dd") : ""}` },
+      { label: "时间", value: `${format(parseTime(record.start_time), "MM/dd")} - ${record.end_time ? format(parseTime(record.end_time), "MM/dd") : ""}` },
     ],
   }));
 
@@ -121,13 +122,13 @@ const Leave = () => {
     { label: "请假时长", value: selectedRecord.duration_hours 
       ? `${selectedRecord.duration_hours} 小时（${selectedRecord.duration_days || (selectedRecord.duration_hours / 8)} 天）` 
       : (selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null) },
-    { label: "开始日期", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd", { locale: zhCN }) },
-    { label: "结束日期", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd", { locale: zhCN }) : null },
+    { label: "开始日期", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd", { locale: zhCN }) },
+    { label: "结束日期", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd", { locale: zhCN }) : null },
     { label: "工作交接人", value: selectedRecord.handover_person?.name },
     { label: "交接事项", value: selectedRecord.handover_notes },
     { label: "请假事由", value: selectedRecord.reason, fullWidth: true },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   return (
