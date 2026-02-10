@@ -376,7 +376,7 @@ const BusinessTripManagement = () => {
                     </TableCell>
                     <TableCell>
                       {record.end_time
-                        ? format(new Date(record.end_time), "MM-dd HH:mm", { locale: zhCN })
+                        ? format(parseTime(record.end_time), "MM-dd HH:mm", { locale: zhCN })
                         : "-"}
                     </TableCell>
                     <TableCell>
