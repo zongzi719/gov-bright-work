@@ -765,7 +765,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       await dataAdapter.updateTodoItem(todoItem.id, {
         status: "rejected",
         process_result: returnType,
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
         processed_by: currentUser.id,
       });
 
