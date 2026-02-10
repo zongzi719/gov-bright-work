@@ -19,14 +19,14 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
 
   // 格式化日期时间
   const parseLocalTime = (value: string): Date => {
-    if (value && !value.endsWith('Z') && !value.match(/[+-]\d{2}:\d{2}$/)) {
-      const parts = value.replace('T', ' ').split(/[- :]/);
-      if (parts.length >= 5) {
-        return new Date(
-          parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
-          parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
-        );
-      }
+    // 始终按字面值解析，避免UTC偏移（离线环境数据库存的是本地时间）
+    const cleaned = value.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+    const parts = cleaned.split(/[- :]/);
+    if (parts.length >= 5) {
+      return new Date(
+        parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]),
+        parseInt(parts[3]), parseInt(parts[4]), parseInt(parts[5] || '0')
+      );
     }
     return new Date(value);
   };

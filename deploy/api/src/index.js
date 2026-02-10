@@ -2543,54 +2543,7 @@ app.delete('/api/schedules/:id', async (req, res) => {
   }
 });
 
-// ==================== 待办事项扩展 ====================
-
-app.get('/api/todo-items', async (req, res) => {
-  try {
-    const { assignee_id, status, process_result_ne, limit = 20 } = req.query;
-    
-    let sql = `
-      SELECT t.*, 
-             c.name as initiator_name, 
-             COALESCE(o.name, c.department) as initiator_department
-      FROM todo_items t
-      LEFT JOIN contacts c ON t.initiator_id = c.id
-      LEFT JOIN organizations o ON c.organization_id = o.id
-      WHERE t.assignee_id = ?
-    `;
-    const params = [assignee_id];
-    
-    if (status) {
-      const statusList = status.split(',');
-      sql += ` AND t.status IN (${statusList.map(() => '?').join(',')})`;
-      params.push(...statusList);
-    }
-    
-    if (process_result_ne) {
-      sql += ` AND (t.process_result IS NULL OR t.process_result != ?)`;
-      params.push(process_result_ne);
-    }
-    
-    sql += ` ORDER BY t.created_at DESC LIMIT ?`;
-    params.push(parseInt(limit));
-    
-    const [rows] = await pool.execute(sql, params);
-    
-    // 格式化为前端期望的结构
-    const items = rows.map(row => ({
-      ...row,
-      initiator: {
-        name: row.initiator_name,
-        department: row.initiator_department
-      }
-    }));
-    
-    res.json(items);
-  } catch (error) {
-    console.error('Get todo items error:', error);
-    res.status(500).json({ error: '获取待办失败' });
-  }
-});
+// 注意：GET /api/todo-items 已在文件前部定义（含完整的JOIN和部门解析），此处不再重复
 
 app.post('/api/todo-items', async (req, res) => {
   try {
