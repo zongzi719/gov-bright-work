@@ -18,6 +18,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import * as dataAdapter from "@/lib/dataAdapter";
+
+// 生成本地时间 ISO 字符串，避免 toISOString() 转换为 UTC 导致 8 小时偏差
+const formatLocalNow = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hour = String(d.getHours()).padStart(2, '0');
+  const minute = String(d.getMinutes()).padStart(2, '0');
+  const second = String(d.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+};
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { toast } from "sonner";
@@ -200,7 +212,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       // 更新待办状态为已完成
       await dataAdapter.updateTodoItem(todoItem.id, {
         status: "completed",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
         processed_by: currentUser.id,
       });
       
@@ -626,7 +638,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       const { error: todoError } = await dataAdapter.updateTodoItem(todoItem.id, {
         status: "approved",
         process_result: "approved",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
         processed_by: currentUser.id,
       });
 
@@ -644,7 +656,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         await dataAdapter.updateApprovalRecord(currentApprovalRecord.id, {
           status: "approved",
           comment: comment.trim() || null,
-          processed_at: new Date().toISOString(),
+          processed_at: formatLocalNow(),
         });
       }
 
@@ -753,7 +765,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       await dataAdapter.updateTodoItem(todoItem.id, {
         status: "rejected",
         process_result: returnType,
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
         processed_by: currentUser.id,
       });
 

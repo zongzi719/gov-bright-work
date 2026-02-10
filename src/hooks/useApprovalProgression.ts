@@ -1,6 +1,18 @@
 import * as dataAdapter from "@/lib/dataAdapter";
 import type { Database } from "@/integrations/supabase/types";
 
+// 生成本地时间 ISO 字符串，避免 toISOString() 转换为 UTC 导致 8 小时偏差
+const formatLocalNow = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hour = String(d.getHours()).padStart(2, '0');
+  const minute = String(d.getMinutes()).padStart(2, '0');
+  const second = String(d.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+};
+
 type TodoBusinessType = Database["public"]["Enums"]["todo_business_type"];
 
 interface ApprovalNode {
@@ -210,7 +222,7 @@ const updateBusinessAndContactStatus = async (
         // 更新业务记录状态
         const { error: updateError } = await dataAdapter.updateAbsenceRecord(businessId, { 
           status: newStatus, 
-          approved_at: new Date().toISOString() 
+          approved_at: formatLocalNow() 
         });
         
         if (updateError) {
@@ -543,14 +555,14 @@ export const useApprovalProgression = () => {
         await dataAdapter.updateApprovalRecordsByNodeName(instanceId, currentNodeName, "pending", {
           status: "approved",
           comment: "或签节点已由其他审批人完成",
-          processed_at: new Date().toISOString(),
+          processed_at: formatLocalNow(),
         });
         
         // 批量更新同节点其他待处理的待办为"已完成"
         await dataAdapter.updateTodosByNodeName(instanceId, currentNodeName, "pending", {
           status: "completed",
           process_result: "or_sign_skipped",
-          processed_at: new Date().toISOString(),
+          processed_at: formatLocalNow(),
         });
       }
 
@@ -558,7 +570,7 @@ export const useApprovalProgression = () => {
         console.log("Node rejected, terminating workflow");
         await dataAdapter.updateApprovalInstance(instanceId, { 
           status: "rejected", 
-          completed_at: new Date().toISOString() 
+          completed_at: formatLocalNow()
         });
         
         return { success: true, completed: true };
@@ -593,7 +605,7 @@ export const useApprovalProgression = () => {
         console.log("No more nodes, workflow completed");
         await dataAdapter.updateApprovalInstance(instanceId, { 
           status: "approved", 
-          completed_at: new Date().toISOString(),
+          completed_at: formatLocalNow(),
           current_node_index: flatNodes.length - 1,
         });
         
@@ -698,7 +710,7 @@ export const useApprovalProgression = () => {
           type: "return_to_initiator_current",
           return_node_index: currentNodeIndex,
           comment,
-          returned_at: new Date().toISOString(),
+          returned_at: formatLocalNow(),
         }
       };
 
@@ -755,7 +767,7 @@ export const useApprovalProgression = () => {
         _return_info: {
           type: "return_restart",
           comment,
-          returned_at: new Date().toISOString(),
+          returned_at: formatLocalNow(),
         }
       };
 
@@ -913,20 +925,20 @@ export const useApprovalProgression = () => {
 
       await dataAdapter.updateApprovalInstance(instanceId, { 
         status: "cancelled",
-        completed_at: new Date().toISOString(),
+        completed_at: formatLocalNow(),
       });
 
       await dataAdapter.updateTodosByInstanceId(instanceId, "pending", { 
         status: "completed",
         process_result: "withdrawn",
         process_notes: "发起人已撤回申请",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
       });
 
       await dataAdapter.updateApprovalRecordsByInstanceId(instanceId, "pending", { 
         status: "approved",
         comment: "发起人已撤回申请",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
       });
 
       return { success: true, canWithdraw: true };
@@ -1028,7 +1040,7 @@ export const useApprovalProgression = () => {
       await dataAdapter.updateTodoItem(todoItemId, {
         status: "completed",
         process_result: "resubmitted",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
       });
 
       const approverIds = startNode.approver_ids || [];
