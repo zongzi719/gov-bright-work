@@ -415,7 +415,7 @@ const Requisition = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">申请时间</Label>
-                        <div className="text-sm">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
+                        <div className="text-sm">{format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div>
                       </div>
                     </div>
                     
