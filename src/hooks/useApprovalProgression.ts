@@ -1,6 +1,18 @@
 import * as dataAdapter from "@/lib/dataAdapter";
 import type { Database } from "@/integrations/supabase/types";
 
+// 生成本地时间 ISO 字符串，避免 toISOString() 转换为 UTC 导致 8 小时偏差
+const formatLocalNow = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hour = String(d.getHours()).padStart(2, '0');
+  const minute = String(d.getMinutes()).padStart(2, '0');
+  const second = String(d.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+};
+
 type TodoBusinessType = Database["public"]["Enums"]["todo_business_type"];
 
 interface ApprovalNode {
