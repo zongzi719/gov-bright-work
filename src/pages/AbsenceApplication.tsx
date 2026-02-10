@@ -229,13 +229,13 @@ const AbsenceApplication = () => {
   const tripDetailFields = selectedTrip ? [
     { label: "目的地", value: selectedTrip.destination },
     { label: "出差天数", value: selectedTrip.duration_days ? `${selectedTrip.duration_days} 天` : null },
-    { label: "开始时间", value: format(new Date(selectedTrip.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "结束时间", value: selectedTrip.end_time ? format(new Date(selectedTrip.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedTrip.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "结束时间", value: selectedTrip.end_time ? format(parseTime(selectedTrip.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "交通方式", value: selectedTrip.transport_type ? transportTypeLabels[selectedTrip.transport_type] || selectedTrip.transport_type : null },
     { label: "预计费用", value: selectedTrip.estimated_cost ? `¥${selectedTrip.estimated_cost}` : null },
     { label: "出差事由", value: selectedTrip.reason, fullWidth: true },
     { label: "备注", value: selectedTrip.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedTrip.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedTrip.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   const leaveDetailFields = selectedLeave ? [
