@@ -8,6 +8,7 @@ import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import BusinessTripForm from "@/components/forms/BusinessTripForm";
 import LeaveForm from "@/components/forms/LeaveForm";
 import OutForm from "@/components/forms/OutForm";

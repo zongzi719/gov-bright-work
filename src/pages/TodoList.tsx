@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { parseTime } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
