@@ -932,7 +932,7 @@ export const useApprovalProgression = () => {
         status: "completed",
         process_result: "withdrawn",
         process_notes: "发起人已撤回申请",
-        processed_at: new Date().toISOString(),
+        processed_at: formatLocalNow(),
       });
 
       await dataAdapter.updateApprovalRecordsByInstanceId(instanceId, "pending", { 
