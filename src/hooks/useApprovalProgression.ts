@@ -570,7 +570,7 @@ export const useApprovalProgression = () => {
         console.log("Node rejected, terminating workflow");
         await dataAdapter.updateApprovalInstance(instanceId, { 
           status: "rejected", 
-          completed_at: new Date().toISOString() 
+          completed_at: formatLocalNow()
         });
         
         return { success: true, completed: true };
