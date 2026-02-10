@@ -15,13 +15,30 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
-// 日期格式转换 - ISO 8601 转 MySQL DATETIME
+// 日期格式转换 - ISO 8601 转 MySQL DATETIME（保持本地时间，不转UTC）
 function formatDateForMySQL(isoString) {
   if (!isoString) return null;
   try {
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) return isoString;
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    // 如果已经是 MySQL 格式 (YYYY-MM-DD HH:mm:ss)，直接返回
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(isoString)) return isoString;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) return isoString;
+    
+    // 手动解析本地时间字符串，避免 UTC 转换
+    // 支持格式: 2026-02-11T10:00:00, 2026-02-11T10:00:00.000Z, 2026-02-11 10:00:00
+    const cleaned = isoString.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+    const parts = cleaned.split(/[- :]/);
+    if (parts.length >= 5) {
+      const year = parts[0];
+      const month = parts[1].padStart(2, '0');
+      const day = parts[2].padStart(2, '0');
+      const hour = parts[3].padStart(2, '0');
+      const minute = parts[4].padStart(2, '0');
+      const second = (parts[5] || '00').padStart(2, '0');
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    }
+    
+    // 回退：直接替换T
+    return isoString.replace('T', ' ').slice(0, 19);
   } catch {
     return isoString;
   }
