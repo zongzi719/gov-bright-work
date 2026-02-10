@@ -555,7 +555,7 @@ export const useApprovalProgression = () => {
         await dataAdapter.updateApprovalRecordsByNodeName(instanceId, currentNodeName, "pending", {
           status: "approved",
           comment: "或签节点已由其他审批人完成",
-          processed_at: new Date().toISOString(),
+          processed_at: formatLocalNow(),
         });
         
         // 批量更新同节点其他待处理的待办为"已完成"
