@@ -456,7 +456,7 @@ const LeaderScheduleManagement = () => {
                             <TableRow key={schedule.id}>
                               <TableCell className="font-medium">{schedule.leader?.name || "-"}</TableCell>
                               <TableCell>{schedule.title}</TableCell>
-                              <TableCell>{format(new Date(schedule.schedule_date), "yyyy-MM-dd")}</TableCell>
+                              <TableCell>{format(parseTime(schedule.schedule_date), "yyyy-MM-dd")}</TableCell>
                               <TableCell>{schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}</TableCell>
                               <TableCell>
                                 <Badge className={`${typeInfo.bg} ${typeInfo.text}`}>

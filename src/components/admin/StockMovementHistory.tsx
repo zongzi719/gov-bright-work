@@ -168,7 +168,7 @@ const StockMovementHistory = () => {
             paginatedMovements.map((movement) => (
               <TableRow key={movement.id}>
                 <TableCell className="text-sm text-muted-foreground">
-                  {format(new Date(movement.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+                  {format(parseTime(movement.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
                 </TableCell>
                 <TableCell className="font-medium">
                   {movement.office_supplies?.name || "-"}

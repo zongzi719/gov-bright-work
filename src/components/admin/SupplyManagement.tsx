@@ -969,7 +969,7 @@ const SupplyManagement = () => {
                         </TableCell>
                         <TableCell>{requisition.requisition_by}</TableCell>
                         <TableCell>
-                          {format(new Date(requisition.created_at), "MM-dd HH:mm")}
+                          {format(parseTime(requisition.created_at), "MM-dd HH:mm")}
                         </TableCell>
                         <TableCell>
                           <Badge

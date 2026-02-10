@@ -355,7 +355,7 @@ const ScheduleManagement = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(schedule.schedule_date), "yyyy-MM-dd", { locale: zhCN })}
+                    {format(parseTime(schedule.schedule_date), "yyyy-MM-dd", { locale: zhCN })}
                   </TableCell>
                   <TableCell>
                     {schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}

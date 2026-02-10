@@ -1263,7 +1263,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                       )}
                       {item.record.processed_at && (
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(item.record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
+                          {format(parseTime(item.record.processed_at), "MM-dd HH:mm", { locale: zhCN })}
                         </span>
                       )}
                     </div>
