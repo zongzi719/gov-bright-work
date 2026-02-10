@@ -407,7 +407,7 @@ const SupplyManagement = () => {
   const handleApprovePurchase = async (id: string) => {
     const { error } = await dataAdapter.updatePurchaseRequest(id, {
       status: "approved",
-      approved_at: new Date().toISOString(),
+      approved_at: formatLocalNow(),
     });
 
     if (error) {
