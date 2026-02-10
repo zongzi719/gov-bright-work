@@ -241,13 +241,13 @@ const AbsenceApplication = () => {
   const leaveDetailFields = selectedLeave ? [
     { label: "请假类型", value: selectedLeave.leave_type ? leaveTypeLabels[selectedLeave.leave_type] || selectedLeave.leave_type : null },
     { label: "请假天数", value: selectedLeave.duration_days ? `${selectedLeave.duration_days} 天` : null },
-    { label: "开始时间", value: format(new Date(selectedLeave.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "结束时间", value: selectedLeave.end_time ? format(new Date(selectedLeave.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: format(parseTime(selectedLeave.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "结束时间", value: selectedLeave.end_time ? format(parseTime(selectedLeave.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
     { label: "工作交接人", value: selectedLeave.handover_person?.name },
     { label: "交接事项", value: selectedLeave.handover_notes },
     { label: "请假事由", value: selectedLeave.reason, fullWidth: true },
     { label: "备注", value: selectedLeave.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedLeave.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedLeave.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   const outDetailFields = selectedOut ? [
