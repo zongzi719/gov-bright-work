@@ -325,7 +325,7 @@ const OutManagement = () => {
                       {record.reason}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(record.start_time), "MM-dd HH:mm", { locale: zhCN })}
+                      {format(parseTime(record.start_time), "MM-dd HH:mm", { locale: zhCN })}
                     </TableCell>
                     <TableCell>
                       {record.end_time
