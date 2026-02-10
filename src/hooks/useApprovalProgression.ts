@@ -222,7 +222,7 @@ const updateBusinessAndContactStatus = async (
         // 更新业务记录状态
         const { error: updateError } = await dataAdapter.updateAbsenceRecord(businessId, { 
           status: newStatus, 
-          approved_at: new Date().toISOString() 
+          approved_at: formatLocalNow() 
         });
         
         if (updateError) {
