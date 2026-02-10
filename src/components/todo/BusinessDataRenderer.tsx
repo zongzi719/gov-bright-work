@@ -33,7 +33,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
   const formatDate = (value: string | null | undefined) => {
     if (!value) return "-";
     try {
-      return format(new Date(value), "yyyy-MM-dd", { locale: zhCN });
+      return format(parseTime(value), "yyyy-MM-dd", { locale: zhCN });
     } catch {
       return value;
     }
