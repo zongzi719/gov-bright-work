@@ -283,7 +283,7 @@ const RequisitionContent = () => {
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请人</Label><div className="text-sm">{selectedRecord.requisition_by}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">领用日期</Label><div className="text-sm">{selectedRecord.requisition_date}</div></div>
-                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请时间</Label><div className="text-sm">{format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div></div>
+                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请时间</Label><div className="text-sm">{format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div></div>
                     </div>
                     <div className="space-y-2 pt-2">
                       <Label className="text-xs text-muted-foreground font-normal">物品明细</Label>
