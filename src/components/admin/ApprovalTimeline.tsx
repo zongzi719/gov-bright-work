@@ -683,7 +683,7 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
               </span>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {format(new Date(instance.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
+              {format(parseLocalTime(instance.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}
             </div>
           </div>
         </div>
