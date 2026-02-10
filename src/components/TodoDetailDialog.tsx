@@ -1234,7 +1234,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   <div className="mt-1 text-sm text-muted-foreground">
                     {item.initiator.name} - {item.initiator.department}
                     <span className="ml-2 text-xs">
-                      {instance?.created_at && format(new Date(instance.created_at), "MM-dd HH:mm", { locale: zhCN })}
+                      {instance?.created_at && format(parseTime(instance.created_at), "MM-dd HH:mm", { locale: zhCN })}
                     </span>
                   </div>
                 )}
