@@ -710,7 +710,7 @@ export const useApprovalProgression = () => {
           type: "return_to_initiator_current",
           return_node_index: currentNodeIndex,
           comment,
-          returned_at: new Date().toISOString(),
+          returned_at: formatLocalNow(),
         }
       };
 
