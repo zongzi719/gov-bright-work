@@ -925,7 +925,7 @@ export const useApprovalProgression = () => {
 
       await dataAdapter.updateApprovalInstance(instanceId, { 
         status: "cancelled",
-        completed_at: new Date().toISOString(),
+        completed_at: formatLocalNow(),
       });
 
       await dataAdapter.updateTodosByInstanceId(instanceId, "pending", { 
