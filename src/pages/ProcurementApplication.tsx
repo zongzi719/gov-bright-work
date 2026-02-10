@@ -618,7 +618,7 @@ const SuppliesPurchaseContent = () => {
   const filteredRecords = records.filter(r => r.department.includes(search) || r.applicant_name.includes(search) || r.purchase_date.includes(search));
   const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
 
-  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `办公用品采购申请`, subtitle: `${record.department} - ${record.applicant_name}`, time: format(new Date(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "申请日期", value: record.purchase_date }, { label: "合计金额", value: `¥${record.total_amount.toFixed(2)}` }] }));
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `办公用品采购申请`, subtitle: `${record.department} - ${record.applicant_name}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "申请日期", value: record.purchase_date }, { label: "合计金额", value: `¥${record.total_amount.toFixed(2)}` }] }));
 
   const handleItemClick = async (item: ApplicationItem) => {
     const record = records.find(r => r.id === item.id);

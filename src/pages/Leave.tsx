@@ -122,13 +122,13 @@ const Leave = () => {
     { label: "请假时长", value: selectedRecord.duration_hours 
       ? `${selectedRecord.duration_hours} 小时（${selectedRecord.duration_days || (selectedRecord.duration_hours / 8)} 天）` 
       : (selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null) },
-    { label: "开始日期", value: format(new Date(selectedRecord.start_time), "yyyy-MM-dd", { locale: zhCN }) },
-    { label: "结束日期", value: selectedRecord.end_time ? format(new Date(selectedRecord.end_time), "yyyy-MM-dd", { locale: zhCN }) : null },
+    { label: "开始日期", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd", { locale: zhCN }) },
+    { label: "结束日期", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd", { locale: zhCN }) : null },
     { label: "工作交接人", value: selectedRecord.handover_person?.name },
     { label: "交接事项", value: selectedRecord.handover_notes },
     { label: "请假事由", value: selectedRecord.reason, fullWidth: true },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
-    { label: "申请时间", value: format(new Date(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
+    { label: "申请时间", value: format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
 
   return (
