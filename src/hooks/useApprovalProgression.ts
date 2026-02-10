@@ -562,7 +562,7 @@ export const useApprovalProgression = () => {
         await dataAdapter.updateTodosByNodeName(instanceId, currentNodeName, "pending", {
           status: "completed",
           process_result: "or_sign_skipped",
-          processed_at: new Date().toISOString(),
+          processed_at: formatLocalNow(),
         });
       }
 
