@@ -435,7 +435,7 @@ const SupplyManagement = () => {
     // 更新采购状态为已完成
     const { error: updateError } = await dataAdapter.updatePurchaseRequest(request.id, {
       status: "completed",
-      completed_at: new Date().toISOString(),
+      completed_at: formatLocalNow(),
     });
 
     if (updateError) {
