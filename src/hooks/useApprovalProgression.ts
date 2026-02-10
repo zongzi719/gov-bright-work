@@ -605,7 +605,7 @@ export const useApprovalProgression = () => {
         console.log("No more nodes, workflow completed");
         await dataAdapter.updateApprovalInstance(instanceId, { 
           status: "approved", 
-          completed_at: new Date().toISOString(),
+          completed_at: formatLocalNow(),
           current_node_index: flatNodes.length - 1,
         });
         
