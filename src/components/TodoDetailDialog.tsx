@@ -1245,7 +1245,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                     {item.initiator.name} 修改后重新提交
                     {item.resubmitTime && (
                       <span className="ml-2 text-xs">
-                        {format(new Date(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
+                        {format(parseTime(item.resubmitTime), "MM-dd HH:mm", { locale: zhCN })}
                       </span>
                     )}
                   </div>
