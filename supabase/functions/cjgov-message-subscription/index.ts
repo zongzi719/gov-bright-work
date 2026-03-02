@@ -118,7 +118,7 @@ function parseEnvelope(envelopeXml: string): ParsedResource[] {
   // step2: BASE64 解码 signatureContent
   let signatureContentXml: string;
   try {
-    signatureContentXml = atob(signatureContentB64);
+    signatureContentXml = fromBase64(signatureContentB64);
   } catch {
     throw new Error("signatureContent BASE64 解码失败");
   }
