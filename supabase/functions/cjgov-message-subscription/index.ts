@@ -199,17 +199,16 @@ Deno.serve(async (req) => {
 
     if (contentType.includes("application/x-www-form-urlencoded")) {
       const body = await req.text();
-      const params = new URLSearchParams(body);
-      rawXml = params.get("request") || "";
+      // 不能使用 URLSearchParams，因为它会将 base64 中的 + 号转换为空格，
+      // 导致 signatureContent 的 base64 解码结果被破坏
+      rawXml = extractFormValue(body, "request");
     } else if (contentType.includes("xml")) {
       rawXml = await req.text();
     } else {
       // 尝试作为文本解析
       const body = await req.text();
-      // 先尝试 form-urlencoded
       if (body.includes("request=")) {
-        const params = new URLSearchParams(body);
-        rawXml = params.get("request") || "";
+        rawXml = extractFormValue(body, "request");
       } else {
         rawXml = body;
       }
