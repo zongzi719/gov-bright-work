@@ -1,1 +1,4 @@
 project_id = "cwhdztfkfsrtbjmwfzhb"
+
+[functions.cjgov-message-subscription]
+verify_jwt = false

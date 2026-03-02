@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// 政务服务平台 - 消息订阅接口（无需鉴权，供信任体系直接调用）
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
