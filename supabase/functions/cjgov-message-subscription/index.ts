@@ -182,6 +182,24 @@ function parseEnvelope(envelopeXml: string): ParsedResource[] {
   return result;
 }
 
+/**
+ * 手动提取 form-urlencoded 中的字段值，避免 URLSearchParams 将 + 转为空格
+ * （base64 中的 + 号会被 URLSearchParams 错误地转换为空格，导致解码失败）
+ */
+function extractFormValue(body: string, key: string): string {
+  const prefix = key + "=";
+  const startIndex = body.indexOf(prefix);
+  if (startIndex === -1) return "";
+  let value = body.substring(startIndex + prefix.length);
+  const ampIndex = value.indexOf("&");
+  if (ampIndex !== -1) value = value.substring(0, ampIndex);
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 // ============ 主处理逻辑 ============
 
 Deno.serve(async (req) => {
