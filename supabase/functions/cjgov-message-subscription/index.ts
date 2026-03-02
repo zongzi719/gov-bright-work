@@ -25,6 +25,24 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
+// Deno 环境下的 Base64 编解码（支持 UTF-8）
+function toBase64(str: string): string {
+  return btoa(
+    new TextEncoder()
+      .encode(str)
+      .reduce((acc, byte) => acc + String.fromCharCode(byte), "")
+  );
+}
+
+function fromBase64(b64: string): string {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 /** 构建响应 envelope XML */
 function buildResponseEnvelope(code: string, message: string): string {
   const status = code === "0" ? "0" : "1";
@@ -41,7 +59,7 @@ function buildResponseEnvelope(code: string, message: string): string {
     </content>
 </signatureContent>`;
 
-  const signatureContentB64 = btoa(signatureContentXml);
+  const signatureContentB64 = toBase64(signatureContentXml);
 
   return `<envelope version="1.0">
     <type>0</type>
