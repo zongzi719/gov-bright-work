@@ -559,6 +559,7 @@ export type Database = {
           password_hash: string
           phone: string | null
           position: string | null
+          rmsid: string | null
           security_level: string
           sort_order: number
           status: Database["public"]["Enums"]["contact_status"]
@@ -580,6 +581,7 @@ export type Database = {
           password_hash?: string
           phone?: string | null
           position?: string | null
+          rmsid?: string | null
           security_level?: string
           sort_order?: number
           status?: Database["public"]["Enums"]["contact_status"]
@@ -601,6 +603,7 @@ export type Database = {
           password_hash?: string
           phone?: string | null
           position?: string | null
+          rmsid?: string | null
           security_level?: string
           sort_order?: number
           status?: Database["public"]["Enums"]["contact_status"]
