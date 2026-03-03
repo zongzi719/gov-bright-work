@@ -547,6 +547,89 @@ window.GOV_CONFIG = {
 EOF
 ```
 
+## 第九步：信任体系接口对接
+
+消息订阅接口已集成在后端 API 中，信任体系测试工具可直接通过 HTTP 访问。
+
+### 接口信息
+
+| 项目 | 值 |
+|------|-----|
+| 请求地址 | `http://服务器IP/api/cjgov/message-subscription` |
+| 请求方法 | `POST` |
+| Content-Type | `application/x-www-form-urlencoded` 或 `application/xml` |
+| 认证 | 无需认证（信任体系直接调用） |
+| 响应格式 | XML envelope |
+
+### 请求格式说明
+
+**格式一：表单编码（标准信任体系格式）**
+```
+POST /api/cjgov/message-subscription
+Content-Type: application/x-www-form-urlencoded
+
+request=<envelope>...</envelope>  （URL编码后的XML）
+```
+
+**格式二：直接发送 XML**
+```
+POST /api/cjgov/message-subscription
+Content-Type: application/xml
+
+<envelope version="1.0">...</envelope>
+```
+
+### 接口功能
+
+- 接收信任体系推送的 **用户变更**（User 类型资源）→ 自动同步到 `contacts` 表
+- 接收信任体系推送的 **组织变更**（Organization 类型资源）→ 自动同步到 `organizations` 表
+- 支持 3 层 XML envelope 解析（envelope → signatureContent(Base64) → resources）
+- 返回标准 XML envelope 响应报文
+
+### 测试验证
+
+```bash
+# 简单测试接口是否可达
+curl -X POST http://localhost:3001/api/cjgov/message-subscription \
+  -H "Content-Type: application/xml" \
+  -d '<envelope version="1.0"><type>0</type><signAlgOid></signAlgOid><signature></signature><signatureContent></signatureContent></envelope>'
+
+# 通过 Nginx 代理测试
+curl -X POST http://服务器IP/api/cjgov/message-subscription \
+  -H "Content-Type: application/xml" \
+  -d '<envelope version="1.0"><type>0</type><signAlgOid></signAlgOid><signature></signature><signatureContent></signatureContent></envelope>'
+
+# 应返回 XML 格式的响应（即使报错也是 XML 格式，status=1）
+```
+
+### 信任体系测试工具配置
+
+在信任体系测试工具中，将消息订阅地址配置为：
+```
+http://服务器IP/api/cjgov/message-subscription
+```
+
+> ⚠️ 注意：此接口走 HTTP（非 HTTPS），无需配置证书，适合内网环境直接调用。
+
+---
+
+## 📌 重要注意事项
+
+### config.js 维护
+
+每次通过 `npm run build` 重新构建前端并替换 `/opt/gov-platform/web/` 后，**必须重新创建 `config.js`**：
+
+```bash
+cat > /opt/gov-platform/web/config.js << 'EOF'
+window.GOV_CONFIG = {
+  API_BASE_URL: "http://服务器实际IP:3001",
+  APP_NAME: "昌吉州党政办公平台",
+  VERSION: "1.0.0",
+  OFFLINE_MODE: true
+};
+EOF
+```
+
 ### 防火墙配置
 
 ```bash
