@@ -3720,45 +3720,82 @@ app.post('/api/cjgov/message-subscription', express.text({ type: '*/*', limit: '
       // ===== 第一轮：处理所有组织（先创建/更新，不处理父子关系） =====
       if (resource.type === 'Organization') {
         console.log('[handleOrganization]', JSON.stringify(resource));
-        // 用 external_no 作为唯一标识查找
-        const [existing] = await pool.execute(
-          'SELECT id, name FROM organizations WHERE external_no = ?', [resource.no]
+
+        if (!resource.no) {
+          console.log('[handleOrganization] 跳过：缺少组织编号 no, name=', resource.name);
+          continue;
+        }
+
+        // 1) 优先按 external_no 精确匹配
+        const [existingByNo] = await pool.execute(
+          'SELECT id, name, external_no FROM organizations WHERE external_no = ? LIMIT 1',
+          [resource.no]
         );
-        if (existing.length > 0) {
-          // 更新名称
+
+        if (existingByNo.length > 0) {
           await pool.execute(
             'UPDATE organizations SET name = ?, updated_at = NOW() WHERE external_no = ?',
             [resource.name, resource.no]
           );
-          console.log('[handleOrganization] 更新组织:', resource.name);
+          console.log('[handleOrganization] 更新组织(按external_no):', resource.name, 'external_no=', resource.no);
         } else {
-          const newId = uuidv4();
-          await pool.execute(
-            `INSERT INTO organizations (id, name, external_no, parent_id, level, sort_order, created_at, updated_at)
-             VALUES (?, ?, ?, NULL, 1, 0, NOW(), NOW())`,
-            [newId, resource.name, resource.no]
+          // 2) 兼容历史脏数据：若已有同名组织但 external_no 为空，则回填 external_no
+          const [legacyByName] = await pool.execute(
+            `SELECT id, name, external_no
+             FROM organizations
+             WHERE name = ? AND (external_no IS NULL OR external_no = '')
+             LIMIT 1`,
+            [resource.name]
           );
-          console.log('[handleOrganization] 新建组织:', resource.name);
+
+          if (legacyByName.length > 0) {
+            await pool.execute(
+              'UPDATE organizations SET external_no = ?, updated_at = NOW() WHERE id = ?',
+              [resource.no, legacyByName[0].id]
+            );
+            console.log('[handleOrganization] 回填external_no(历史数据):', resource.name, 'external_no=', resource.no);
+          } else {
+            // 3) 新建
+            const newId = uuidv4();
+            await pool.execute(
+              `INSERT INTO organizations (id, name, external_no, parent_id, level, sort_order, created_at, updated_at)
+               VALUES (?, ?, ?, NULL, 1, 0, NOW(), NOW())`,
+              [newId, resource.name, resource.no]
+            );
+            console.log('[handleOrganization] 新建组织:', resource.name, 'external_no=', resource.no);
+          }
         }
       }
     }
 
     // ===== 第二轮：回填组织的 parent_id =====
     for (const resource of resources) {
-      if (resource.type === 'Organization' && resource.parent_org) {
-        // 通过 parent_org (即父组织的 external_no) 查找父组织 ID
-        const [parents] = await pool.execute(
-          'SELECT id FROM organizations WHERE external_no = ? LIMIT 1',
-          [resource.parent_org]
-        );
-        if (parents.length > 0) {
-          await pool.execute(
-            'UPDATE organizations SET parent_id = ?, updated_at = NOW() WHERE external_no = ?',
-            [parents[0].id, resource.no]
+      if (resource.type === 'Organization') {
+        if (!resource.no) continue;
+
+        if (resource.parent_org) {
+          // 通过 parent_org (即父组织的 external_no) 查找父组织 ID
+          const [parents] = await pool.execute(
+            'SELECT id FROM organizations WHERE external_no = ? LIMIT 1',
+            [resource.parent_org]
           );
-          console.log('[handleOrganization] 设置父组织:', resource.name, '→ parent:', resource.parent_org);
+
+          if (parents.length > 0) {
+            await pool.execute(
+              'UPDATE organizations SET parent_id = ?, updated_at = NOW() WHERE external_no = ?',
+              [parents[0].id, resource.no]
+            );
+            console.log('[handleOrganization] 设置父组织:', resource.name, '→ parent:', resource.parent_org);
+          } else {
+            console.log('[handleOrganization] 未找到父组织:', resource.parent_org, '(子组织:', resource.name, ')');
+          }
         } else {
-          console.log('[handleOrganization] 未找到父组织:', resource.parent_org, '(子组织:', resource.name, ')');
+          // 根组织：确保 parent_id 为空
+          await pool.execute(
+            'UPDATE organizations SET parent_id = NULL, updated_at = NOW() WHERE external_no = ?',
+            [resource.no]
+          );
+          console.log('[handleOrganization] 根组织置空parent_id:', resource.name);
         }
       }
     }
