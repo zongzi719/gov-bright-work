@@ -567,6 +567,35 @@ CREATE TABLE IF NOT EXISTS `approval_process_versions` (
   KEY `idx_is_current` (`is_current`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ==================== 角色权限表 ====================
+CREATE TABLE IF NOT EXISTS `role_permissions` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `role` VARCHAR(50) NOT NULL,
+  `module_name` VARCHAR(100) NOT NULL,
+  `module_label` VARCHAR(100) NOT NULL,
+  `can_create` TINYINT(1) DEFAULT 0,
+  `can_read` TINYINT(1) DEFAULT 0,
+  `can_update` TINYINT(1) DEFAULT 0,
+  `can_delete` TINYINT(1) DEFAULT 0,
+  `data_scope` VARCHAR(20) DEFAULT 'all',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_role` (`role`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================== 用户配置表(profiles) ====================
+CREATE TABLE IF NOT EXISTS `profiles` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `user_id` CHAR(36) NOT NULL,
+  `email` VARCHAR(255) DEFAULT NULL,
+  `display_name` VARCHAR(100) DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ==================== 领导日程查看权限表 ====================
 CREATE TABLE IF NOT EXISTS `leader_schedule_permissions` (
   `id` CHAR(36) NOT NULL DEFAULT (UUID()),
