@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   `status` VARCHAR(20) NOT NULL DEFAULT 'on_duty',
   `status_note` VARCHAR(255) DEFAULT NULL,
   `password_hash` VARCHAR(255) NOT NULL DEFAULT '123456',
+  `rmsid` VARCHAR(255) DEFAULT NULL COMMENT '信任体系用户标识(SSO)',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -54,7 +55,8 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   KEY `idx_mobile` (`mobile`),
   KEY `idx_account` (`account`),
   KEY `idx_is_active` (`is_active`),
-  KEY `idx_status` (`status`)
+  KEY `idx_status` (`status`),
+  UNIQUE KEY `uk_rmsid` (`rmsid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==================== 角色表 ====================
