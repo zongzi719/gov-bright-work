@@ -100,21 +100,33 @@ rpm -ivh *.rpm --nodeps --force
 dnf localinstall *.rpm -y
 ```
 
-### 方式三：使用 MariaDB 官方仓库源（如果服务器能联网）
+### 方式三：使用麒麟V10安装光盘/ISO离线安装（推荐无网络环境）
+
+麒麟V10系统ISO镜像通常自带 MariaDB 的 RPM 包，无需联网：
 
 ```bash
-# 创建 MariaDB 仓库配置
-tee /etc/yum.repos.d/mariadb.repo << 'EOF'
-[mariadb]
-name=MariaDB
-baseurl=https://mirrors.aliyun.com/mariadb/yum/10.11/centos/$releasever/$basearch
-gpgkey=https://mirrors.aliyun.com/mariadb/yum/RPM-GPG-KEY-MariaDB
-gpgcheck=1
+# 1. 挂载麒麟V10安装ISO（U盘或光盘）
+mkdir -p /mnt/cdrom
+mount -o loop /path/to/KylinV10.iso /mnt/cdrom
+# 如果是光驱：mount /dev/cdrom /mnt/cdrom
+
+# 2. 配置本地yum源
+tee /etc/yum.repos.d/local.repo << 'EOF'
+[local]
+name=Kylin V10 Local Repo
+baseurl=file:///mnt/cdrom
 enabled=1
+gpgcheck=0
 EOF
 
-dnf install MariaDB-server MariaDB-client -y
+# 3. 安装 MariaDB
+dnf --disablerepo="*" --enablerepo="local" install mariadb-server mariadb -y
+
+# 4. 安装完成后可卸载ISO
+umount /mnt/cdrom
 ```
+
+> ⚠️ 如果ISO中没有 MariaDB 包，则必须使用**方式二**，在一台能联网的 ARM64 机器上下载 RPM 包后通过U盘传输。
 
 ### 启动 MariaDB
 
