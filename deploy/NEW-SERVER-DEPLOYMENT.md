@@ -1,8 +1,41 @@
-# 新服务器完整部署指南
+# 党政办公平台 - 前后端一体部署指南（完整版）
 
+> **部署架构**：前后端一体部署（单台服务器，Nginx 统一代理）  
 > **目标服务器**：鲲鹏920 CPU / 128GB 内存 / 麒麟 V10 操作系统  
-> **数据库**：MariaDB（从零安装）  
-> **本指南覆盖**：MariaDB 安装 → 数据库初始化 → 后端 API 部署 → 前端部署 → Nginx 配置 → 服务启动
+> **数据库**：MariaDB  
+> **本指南覆盖**：MariaDB 安装 → 数据库初始化 → 后端 API 部署 → 前端部署 → Nginx 配置 → 信任体系接口 → 增量更新
+
+---
+
+## 🏗️ 架构总览
+
+```
+                    ┌─────────────────────────────────────────┐
+                    │          鲲鹏 920 服务器                  │
+                    │                                         │
+  浏览器访问         │  ┌──────────┐     ┌──────────────────┐  │
+  http://IP ───────►│  │  Nginx   │────►│  前端静态文件      │  │
+                    │  │  :80     │     │  /opt/.../web/    │  │
+                    │  │          │     └──────────────────┘  │
+  信任体系测试工具    │  │          │     ┌──────────────────┐  │
+  http://IP/api/ ──►│  │  /api/* ─┼────►│  Node.js API     │  │
+                    │  └──────────┘     │  :3001            │  │
+                    │                   │  ┌──────────────┐ │  │
+                    │                   │  │  MariaDB     │ │  │
+                    │                   │  │  :3306       │ │  │
+                    │                   │  └──────────────┘ │  │
+                    │                   └──────────────────┘  │
+                    └─────────────────────────────────────────┘
+```
+
+**访问地址汇总：**
+
+| 功能 | 地址 |
+|------|------|
+| 前端网页 | `http://服务器IP/` |
+| 管理后台 | `http://服务器IP/admin-login` |
+| API 健康检查 | `http://服务器IP/api/health` |
+| 信任体系消息订阅 | `http://服务器IP/api/cjgov/message-subscription` |
 
 ---
 
@@ -514,6 +547,89 @@ window.GOV_CONFIG = {
 EOF
 ```
 
+## 第九步：信任体系接口对接
+
+消息订阅接口已集成在后端 API 中，信任体系测试工具可直接通过 HTTP 访问。
+
+### 接口信息
+
+| 项目 | 值 |
+|------|-----|
+| 请求地址 | `http://服务器IP/api/cjgov/message-subscription` |
+| 请求方法 | `POST` |
+| Content-Type | `application/x-www-form-urlencoded` 或 `application/xml` |
+| 认证 | 无需认证（信任体系直接调用） |
+| 响应格式 | XML envelope |
+
+### 请求格式说明
+
+**格式一：表单编码（标准信任体系格式）**
+```
+POST /api/cjgov/message-subscription
+Content-Type: application/x-www-form-urlencoded
+
+request=<envelope>...</envelope>  （URL编码后的XML）
+```
+
+**格式二：直接发送 XML**
+```
+POST /api/cjgov/message-subscription
+Content-Type: application/xml
+
+<envelope version="1.0">...</envelope>
+```
+
+### 接口功能
+
+- 接收信任体系推送的 **用户变更**（User 类型资源）→ 自动同步到 `contacts` 表
+- 接收信任体系推送的 **组织变更**（Organization 类型资源）→ 自动同步到 `organizations` 表
+- 支持 3 层 XML envelope 解析（envelope → signatureContent(Base64) → resources）
+- 返回标准 XML envelope 响应报文
+
+### 测试验证
+
+```bash
+# 简单测试接口是否可达
+curl -X POST http://localhost:3001/api/cjgov/message-subscription \
+  -H "Content-Type: application/xml" \
+  -d '<envelope version="1.0"><type>0</type><signAlgOid></signAlgOid><signature></signature><signatureContent></signatureContent></envelope>'
+
+# 通过 Nginx 代理测试
+curl -X POST http://服务器IP/api/cjgov/message-subscription \
+  -H "Content-Type: application/xml" \
+  -d '<envelope version="1.0"><type>0</type><signAlgOid></signAlgOid><signature></signature><signatureContent></signatureContent></envelope>'
+
+# 应返回 XML 格式的响应（即使报错也是 XML 格式，status=1）
+```
+
+### 信任体系测试工具配置
+
+在信任体系测试工具中，将消息订阅地址配置为：
+```
+http://服务器IP/api/cjgov/message-subscription
+```
+
+> ⚠️ 注意：此接口走 HTTP（非 HTTPS），无需配置证书，适合内网环境直接调用。
+
+---
+
+## 📌 重要注意事项
+
+### config.js 维护
+
+每次通过 `npm run build` 重新构建前端并替换 `/opt/gov-platform/web/` 后，**必须重新创建 `config.js`**：
+
+```bash
+cat > /opt/gov-platform/web/config.js << 'EOF'
+window.GOV_CONFIG = {
+  API_BASE_URL: "http://服务器实际IP:3001",
+  APP_NAME: "昌吉州党政办公平台",
+  VERSION: "1.0.0",
+  OFFLINE_MODE: true
+};
+EOF
+```
+
 ### 防火墙配置
 
 ```bash
@@ -661,5 +777,102 @@ systemctl restart mariadb
 | 后端部署 | 5-10 分钟 |
 | 前端部署 | 5 分钟 |
 | Nginx 配置 | 10-15 分钟 |
+| 信任体系接口验证 | 5 分钟 |
 | 验证测试 | 10 分钟 |
-| **总计** | **约 50-70 分钟** |
+| **总计** | **约 55-75 分钟** |
+
+---
+
+## 🔄 增量更新流程
+
+首次部署完成后，后续代码更新只需以下步骤（无需重装 Node.js/MariaDB/Nginx）：
+
+### 仅更新后端 API
+
+当后端接口有修改（如新增信任体系接口等）时：
+
+```bash
+# 1. 上传新的 index.js 到服务器
+scp deploy/api/src/index.js root@服务器IP:/opt/gov-platform/api/src/
+
+# 2. 重启后端服务
+systemctl restart gov-api
+
+# 3. 验证
+curl http://localhost:3001/api/health
+```
+
+### 仅更新前端
+
+当页面或 UI 有修改时：
+
+```bash
+# 1. 在开发机构建
+npm run build
+
+# 2. 上传到服务器（覆盖旧文件）
+scp -r dist/* root@服务器IP:/opt/gov-platform/web/
+
+# 3. ⚠️ 必须恢复 config.js（构建会覆盖它）
+ssh root@服务器IP "cat > /opt/gov-platform/web/config.js << 'EOF'
+window.GOV_CONFIG = {
+  API_BASE_URL: \"http://服务器实际IP:3001\",
+  APP_NAME: \"昌吉州党政办公平台\",
+  VERSION: \"1.0.0\",
+  OFFLINE_MODE: true
+};
+EOF"
+
+# 4. 清除浏览器缓存或强刷（Ctrl+Shift+R）
+```
+
+### 前后端同时更新
+
+```bash
+# 1. 构建前端
+npm run build
+
+# 2. 打包上传
+tar -czvf update-package.tar.gz dist/ deploy/api/src/index.js
+scp update-package.tar.gz root@服务器IP:/tmp/
+
+# 3. 在服务器上执行
+ssh root@服务器IP << 'REMOTE'
+cd /tmp
+tar -xzvf update-package.tar.gz
+
+# 更新前端
+cp -r dist/* /opt/gov-platform/web/
+
+# 恢复 config.js
+cat > /opt/gov-platform/web/config.js << 'EOF'
+window.GOV_CONFIG = {
+  API_BASE_URL: "http://服务器实际IP:3001",
+  APP_NAME: "昌吉州党政办公平台",
+  VERSION: "1.0.0",
+  OFFLINE_MODE: true
+};
+EOF
+
+# 更新后端
+cp deploy/api/src/index.js /opt/gov-platform/api/src/
+
+# 重启后端
+systemctl restart gov-api
+
+# 清理
+rm -rf /tmp/update-package.tar.gz /tmp/dist /tmp/deploy
+
+echo "✅ 更新完成"
+REMOTE
+```
+
+### 数据库增量更新
+
+如有新增表或字段，将增量 SQL 文件上传后执行：
+
+```bash
+mysql -u root -p --default-character-set=utf8mb4 gov_platform < /path/to/deploy/database/incremental-update.sql
+```
+
+> ⚠️ 增量 SQL 应使用幂等语法（`IF NOT EXISTS`、`INSERT ... WHERE NOT EXISTS`），确保可重复执行。
