@@ -3,7 +3,7 @@
 > **部署架构**：前后端一体部署（单台服务器，Nginx 统一代理）  
 > **目标服务器**：鲲鹏920 CPU / 128GB 内存 / 麒麟 V10 操作系统  
 > **数据库**：MariaDB  
-> **本指南覆盖**：MariaDB 安装 → 数据库初始化 → 后端 API 部署 → 前端部署 → Nginx 配置 → 信任体系接口 → 增量更新
+> **本指南覆盖**：环境准备 → 打包构建 → 基础软件安装 → 数据库初始化 → 应用部署 → Nginx 配置 → 信任体系接口 → 验证测试 → 增量更新
 
 ---
 
@@ -28,6 +28,14 @@
                     └─────────────────────────────────────────┘
 ```
 
+**端口分工：**
+
+| 组件 | 端口 | 说明 |
+|------|------|------|
+| Nginx | 80 | 统一入口，代理前端和 API |
+| Node.js API | 3001 | 后端业务接口（仅内部访问） |
+| MariaDB | 3306 | 数据库（仅内部访问） |
+
 **访问地址汇总：**
 
 | 功能 | 地址 |
@@ -39,34 +47,53 @@
 
 ---
 
-## 📋 部署前准备
+## 📁 最终目录结构
 
-### 需要准备的文件（在有网络的机器上下载）
+```
+/opt/gov-platform/
+├── api/                          # 后端 API 服务
+│   ├── src/index.js              # 主程序（3600+ 行，覆盖全部业务接口）
+│   ├── node_modules/             # 依赖包
+│   ├── .env                      # 环境配置（数据库密码等）
+│   └── package.json
+├── web/                          # 前端静态文件
+│   ├── index.html                # 入口 HTML
+│   ├── config.js                 # ⚠️ 运行时配置（每次构建后需恢复）
+│   ├── polyfills.js              # 旧浏览器兼容
+│   └── assets/                   # JS/CSS/图片资源
+├── uploads/                      # 文件上传存储
+│   ├── banners/                  # 轮播图
+│   ├── file-transfers/           # 文件收发附件
+│   └── misc/                     # 其他文件
+└── logs/                         # 日志
+    └── api.log
+```
 
-| 文件 | 用途 | 下载地址 |
-|------|------|----------|
+---
+
+## 第一步：准备部署包（在有网络的开发机上执行）
+
+### 需要准备的文件
+
+| 文件 | 用途 | 来源 |
+|------|------|------|
 | `node-v18.20.4-linux-arm64.tar.xz` | Node.js 运行时 | https://nodejs.org/dist/v18.20.4/ |
 | MariaDB RPM 包 | 数据库 | 麒麟软件源或离线 RPM |
 | Nginx RPM 包或源码 | Web 服务器 | 麒麟软件源或 https://nginx.org/download/ |
-| 本项目 `deploy/` 目录 | 应用程序 | 项目源码 |
+| 本项目 `deploy/` 目录 | 后端代码、数据库脚本、Nginx 配置 | 项目源码 |
 | 前端构建产物 `dist/` | 前端静态文件 | `npm run build` 生成 |
 
-### 打包部署包（在有网络的开发机上执行）
+### 构建与打包
 
 ```bash
 # 1. 克隆或拉取最新代码
 cd /path/to/project
 
-# 2. 构建前端
+# 2. 安装前端依赖并构建
 npm install
 npm run build
 
-# 3. 准备后端依赖（需在 ARM64 机器上执行，或交叉编译）
-cd deploy/api
-npm install --production
-cd ../..
-
-# 4. 打包整个部署包
+# 3. 打包整个部署包（后端依赖将在服务器上安装）
 tar -czvf gov-platform-deploy.tar.gz \
   deploy/ \
   dist/ \
@@ -74,11 +101,11 @@ tar -czvf gov-platform-deploy.tar.gz \
   public/polyfills.js
 ```
 
-> ⚠️ **重要**：`node_modules` 必须在 ARM64 架构的机器上安装，以确保原生模块兼容。如果开发机是 x86，需要在鲲鹏服务器上执行 `npm install`。
+> ⚠️ **重要**：后端的 `node_modules` 必须在 ARM64 架构的机器上安装，以确保原生模块兼容。因此**不要**在 x86 开发机上打包 `node_modules`，而是在服务器上执行 `npm install`。
 
 ---
 
-## 第一步：安装 Node.js
+## 第二步：安装 Node.js（在服务器上执行）
 
 ```bash
 # 以 root 用户操作
@@ -104,14 +131,12 @@ npm -v     # 应显示 10.x
 
 ---
 
-## 第二步：安装 MariaDB
+## 第三步：安装 MariaDB
 
 ### 方式一：使用麒麟系统包管理器
 
 ```bash
-# 如果已配置本地软件源（光盘/ISO 源）
 dnf install mariadb-server mariadb -y
-
 # 或
 yum install mariadb-server mariadb -y
 ```
@@ -134,8 +159,6 @@ dnf localinstall *.rpm -y
 ```
 
 ### 方式三：使用麒麟V10安装光盘/ISO离线安装（推荐无网络环境）
-
-麒麟V10系统ISO镜像通常自带 MariaDB 的 RPM 包，无需联网：
 
 ```bash
 # 1. 挂载麒麟V10安装ISO（U盘或光盘）
@@ -161,26 +184,19 @@ umount /mnt/cdrom
 
 > ⚠️ 如果ISO中没有 MariaDB 包，则必须使用**方式二**，在一台能联网的 ARM64 机器上下载 RPM 包后通过U盘传输。
 
-### 启动 MariaDB
+### 启动并初始化 MariaDB
 
 ```bash
-# 启动服务
+# 启动服务并设置开机自启
 systemctl start mariadb
-
-# 设置开机自启
 systemctl enable mariadb
-
-# 检查状态
 systemctl status mariadb
-```
 
-### 安全初始化
-
-```bash
+# 安全初始化
 mysql_secure_installation
 ```
 
-按提示操作：
+安全初始化按提示操作：
 1. 输入当前 root 密码（首次直接回车）
 2. **设置新的 root 密码** → 记录此密码，后续配置需要
 3. 移除匿名用户 → Y
@@ -188,16 +204,15 @@ mysql_secure_installation
 5. 移除测试数据库 → Y
 6. 重新加载权限表 → Y
 
-### 验证 MariaDB
-
 ```bash
+# 验证
 mysql -u root -p -e "SELECT VERSION();"
 # 应显示 MariaDB 版本号
 ```
 
 ---
 
-## 第三步：初始化数据库
+## 第四步：初始化数据库
 
 ```bash
 # 1. 创建数据库
@@ -243,35 +258,40 @@ mysql -u root -p gov_platform -e "
 
 ---
 
-## 第四步：部署后端 API
+## 第五步：部署应用（前端 + 后端）
+
+### 5.1 创建目录结构
 
 ```bash
-# 1. 创建应用目录
 mkdir -p /opt/gov-platform/{api,web,uploads,logs}
 mkdir -p /opt/gov-platform/uploads/{banners,file-transfers,misc}
+```
 
-# 2. 复制后端代码
+### 5.2 部署后端 API
+
+```bash
+# 1. 复制后端代码
 cp -r /path/to/deploy/api/* /opt/gov-platform/api/
 
-# 3. 安装依赖（必须在服务器上执行以确保 ARM64 兼容）
+# 2. 安装依赖（必须在服务器上执行以确保 ARM64 兼容）
 cd /opt/gov-platform/api
 npm install --production
 
-# 4. 创建环境配置
+# 3. 创建环境配置
 cp .env.example .env
 
-# 5. 编辑配置文件
+# 4. 编辑配置文件
 vi .env
 ```
 
-### 编辑 .env 文件
+`.env` 文件内容：
 
 ```bash
 # 数据库配置
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
-DB_PASSWORD=你在第二步设置的MariaDB密码
+DB_PASSWORD=你在第三步设置的MariaDB密码
 DB_NAME=gov_platform
 
 # API配置
@@ -280,35 +300,13 @@ API_PORT=3001
 API_BASE_URL=http://服务器IP:3001
 ```
 
-### 验证后端启动
-
-```bash
-cd /opt/gov-platform/api
-node src/index.js &
-
-# 测试健康检查
-curl http://localhost:3001/api/health
-# 应返回 {"status":"ok"}
-
-# 测试登录
-curl -X POST http://localhost:3001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"mobile":"admin@gov.cn","password":"123456"}'
-# 应返回用户信息
-
-# 先停止测试进程
-kill %1
-```
-
----
-
-## 第五步：部署前端
+### 5.3 部署前端
 
 ```bash
 # 1. 复制前端构建产物
 cp -r /path/to/dist/* /opt/gov-platform/web/
 
-# 2. 创建/修改前端运行时配置（⚠️ 关键步骤！）
+# 2. 创建前端运行时配置（⚠️ 关键步骤！）
 cat > /opt/gov-platform/web/config.js << 'EOF'
 window.GOV_CONFIG = {
   // ⚠️ 修改为服务器实际IP地址
@@ -327,6 +325,26 @@ cp /path/to/public/polyfills.js /opt/gov-platform/web/
 
 > ⚠️ **每次重新构建前端（`npm run build`）后**，都必须重新创建 `config.js` 文件！构建过程会覆盖它。
 
+### 5.4 验证后端启动
+
+```bash
+cd /opt/gov-platform/api
+node src/index.js &
+
+# 测试健康检查
+curl http://localhost:3001/api/health
+# 应返回 {"status":"ok"}
+
+# 测试登录
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"mobile":"admin@gov.cn","password":"123456"}'
+# 应返回用户信息
+
+# 停止测试进程
+kill %1
+```
+
 ---
 
 ## 第六步：安装并配置 Nginx
@@ -342,14 +360,14 @@ cp /path/to/public/polyfills.js /opt/gov-platform/web/
 # RPM 安装: /etc/nginx/conf.d/
 # 源码编译: /usr/local/nginx/conf/conf.d/  (需要在 nginx.conf 中 include)
 
-# 1. 复制配置文件
+# 复制配置文件
 cp /path/to/deploy/nginx/gov-platform.conf /etc/nginx/conf.d/
 # 或（源码编译安装时）
 mkdir -p /usr/local/nginx/conf/conf.d/
 cp /path/to/deploy/nginx/gov-platform.conf /usr/local/nginx/conf/conf.d/
 ```
 
-### 检查/修改 Nginx 配置
+### Nginx 配置内容
 
 ```bash
 vi /etc/nginx/conf.d/gov-platform.conf
@@ -366,7 +384,7 @@ server {
     root /opt/gov-platform/web;
     index index.html;
 
-    # config.js 显式映射
+    # config.js 显式映射（禁止缓存，确保配置实时生效）
     location = /config.js {
         alias /opt/gov-platform/web/config.js;
         add_header Cache-Control "no-cache";
@@ -377,7 +395,7 @@ server {
         alias /opt/gov-platform/web/polyfills.js;
     }
 
-    # API 代理
+    # API 反向代理 → Node.js 3001 端口
     location /api/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_set_header Host $host;
@@ -390,7 +408,7 @@ server {
         alias /opt/gov-platform/uploads/;
     }
 
-    # SPA 路由支持
+    # SPA 路由支持（所有前端路由都返回 index.html）
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -419,7 +437,7 @@ nginx -t
 # 或
 /usr/local/nginx/sbin/nginx -t
 
-# 启动
+# 启动并设置开机自启
 systemctl start nginx
 systemctl enable nginx
 
@@ -457,10 +475,8 @@ EOF
 # 重载 systemd
 systemctl daemon-reload
 
-# 启动服务
+# 启动服务并设置开机自启
 systemctl start gov-api
-
-# 设置开机自启
 systemctl enable gov-api
 
 # 查看状态
@@ -470,10 +486,7 @@ systemctl status gov-api
 ### 方式二：使用 PM2
 
 ```bash
-# 安装 PM2（如果网络可用）
 npm install -g pm2
-
-# 启动
 cd /opt/gov-platform/api
 pm2 start src/index.js --name gov-api
 pm2 save
@@ -490,23 +503,33 @@ echo $!  # 记录 PID
 
 ---
 
-## 第八步：验证部署
+## 第八步：防火墙配置
+
+```bash
+# 开放 80 端口（HTTP）
+firewall-cmd --permanent --add-port=80/tcp
+
+# 如果需要从外部直接访问 API（通常不需要，Nginx 已代理）
+# firewall-cmd --permanent --add-port=3001/tcp
+
+firewall-cmd --reload
+```
+
+---
+
+## 第九步：验证部署
 
 ### 1. 检查服务状态
 
 ```bash
-# API 服务
-systemctl status gov-api
-# 或
+# 三个服务全部检查
+systemctl status gov-api     # API 服务
+systemctl status nginx       # Nginx
+systemctl status mariadb     # MariaDB
+
+# API 健康检查
 curl http://localhost:3001/api/health
-
-# Nginx
-systemctl status nginx
-# 或
-curl -I http://localhost
-
-# MariaDB
-systemctl status mariadb
+# 应返回 {"status":"ok"}
 ```
 
 ### 2. 浏览器访问测试
@@ -530,24 +553,7 @@ systemctl status mariadb
 
 ---
 
-## 📌 重要注意事项
-
-### config.js 维护
-
-每次通过 `npm run build` 重新构建前端并替换 `/opt/gov-platform/web/` 后，**必须重新创建 `config.js`**：
-
-```bash
-cat > /opt/gov-platform/web/config.js << 'EOF'
-window.GOV_CONFIG = {
-  API_BASE_URL: "http://服务器实际IP:3001",
-  APP_NAME: "昌吉州党政办公平台",
-  VERSION: "1.0.0",
-  OFFLINE_MODE: true
-};
-EOF
-```
-
-## 第九步：信任体系接口对接
+## 第十步：信任体系接口对接
 
 消息订阅接口已集成在后端 API 中，信任体系测试工具可直接通过 HTTP 访问。
 
@@ -589,12 +595,12 @@ Content-Type: application/xml
 ### 测试验证
 
 ```bash
-# 简单测试接口是否可达
+# 直接测试后端接口
 curl -X POST http://localhost:3001/api/cjgov/message-subscription \
   -H "Content-Type: application/xml" \
   -d '<envelope version="1.0"><type>0</type><signAlgOid></signAlgOid><signature></signature><signatureContent></signatureContent></envelope>'
 
-# 通过 Nginx 代理测试
+# 通过 Nginx 代理测试（生产地址）
 curl -X POST http://服务器IP/api/cjgov/message-subscription \
   -H "Content-Type: application/xml" \
   -d '<envelope version="1.0"><type>0</type><signAlgOid></signAlgOid><signature></signature><signatureContent></signatureContent></envelope>'
@@ -613,13 +619,79 @@ http://服务器IP/api/cjgov/message-subscription
 
 ---
 
-## 📌 重要注意事项
+## ⏱ 预计部署时间
 
-### config.js 维护
+| 步骤 | 预计时间 |
+|------|----------|
+| 准备部署包 | 5-10 分钟 |
+| Node.js 安装 | 5 分钟 |
+| MariaDB 安装与初始化 | 15-25 分钟 |
+| 应用部署（前端+后端） | 10-15 分钟 |
+| Nginx 配置 | 10-15 分钟 |
+| 信任体系接口验证 | 5 分钟 |
+| 整体验证测试 | 10 分钟 |
+| **总计** | **约 60-85 分钟** |
 
-每次通过 `npm run build` 重新构建前端并替换 `/opt/gov-platform/web/` 后，**必须重新创建 `config.js`**：
+---
+
+## 🔄 增量更新流程
+
+首次部署完成后，后续代码更新只需以下步骤（无需重装 Node.js/MariaDB/Nginx）：
+
+### 仅更新后端 API
 
 ```bash
+# 1. 上传新的 index.js 到服务器
+scp deploy/api/src/index.js root@服务器IP:/opt/gov-platform/api/src/
+
+# 2. 重启后端服务
+systemctl restart gov-api
+
+# 3. 验证
+curl http://localhost:3001/api/health
+```
+
+### 仅更新前端
+
+```bash
+# 1. 在开发机构建
+npm run build
+
+# 2. 上传到服务器（覆盖旧文件）
+scp -r dist/* root@服务器IP:/opt/gov-platform/web/
+
+# 3. ⚠️ 必须恢复 config.js（构建会覆盖它）
+ssh root@服务器IP "cat > /opt/gov-platform/web/config.js << 'EOF'
+window.GOV_CONFIG = {
+  API_BASE_URL: \"http://服务器实际IP:3001\",
+  APP_NAME: \"昌吉州党政办公平台\",
+  VERSION: \"1.0.0\",
+  OFFLINE_MODE: true
+};
+EOF"
+
+# 4. 清除浏览器缓存或强刷（Ctrl+Shift+R）
+```
+
+### 前后端同时更新
+
+```bash
+# 1. 构建前端
+npm run build
+
+# 2. 打包上传
+tar -czvf update-package.tar.gz dist/ deploy/api/src/index.js
+scp update-package.tar.gz root@服务器IP:/tmp/
+
+# 3. 在服务器上执行
+ssh root@服务器IP << 'REMOTE'
+cd /tmp
+tar -xzvf update-package.tar.gz
+
+# 更新前端
+cp -r dist/* /opt/gov-platform/web/
+
+# 恢复 config.js
 cat > /opt/gov-platform/web/config.js << 'EOF'
 window.GOV_CONFIG = {
   API_BASE_URL: "http://服务器实际IP:3001",
@@ -628,49 +700,29 @@ window.GOV_CONFIG = {
   OFFLINE_MODE: true
 };
 EOF
-```
 
-### 防火墙配置
+# 更新后端
+cp deploy/api/src/index.js /opt/gov-platform/api/src/
 
-```bash
-# 开放 80 端口（HTTP）
-firewall-cmd --permanent --add-port=80/tcp
-
-# 如果需要从外部直接访问 API（通常不需要，Nginx 已代理）
-# firewall-cmd --permanent --add-port=3001/tcp
-
-firewall-cmd --reload
-```
-
-### 日志查看
-
-```bash
-# API 日志
-journalctl -u gov-api -f
-# 或
-tail -f /opt/gov-platform/logs/api.log
-
-# Nginx 日志
-tail -f /var/log/nginx/access.log
-tail -f /var/log/nginx/error.log
-# 或（源码安装）
-tail -f /usr/local/nginx/logs/error.log
-```
-
-### 服务管理速查
-
-```bash
-# 重启 API
+# 重启后端
 systemctl restart gov-api
 
-# 重启 Nginx
-systemctl restart nginx
-# 或
-/usr/local/nginx/sbin/nginx -s reload
+# 清理
+rm -rf /tmp/update-package.tar.gz /tmp/dist /tmp/deploy
 
-# 重启 MariaDB
-systemctl restart mariadb
+echo "✅ 更新完成"
+REMOTE
 ```
+
+### 数据库增量更新
+
+如有新增表或字段，将增量 SQL 文件上传后执行：
+
+```bash
+mysql -u root -p --default-character-set=utf8mb4 gov_platform < /path/to/deploy/database/incremental-update.sql
+```
+
+> ⚠️ 增量 SQL 应使用幂等语法（`IF NOT EXISTS`、`INSERT ... WHERE NOT EXISTS`），确保可重复执行。
 
 ---
 
@@ -743,136 +795,35 @@ systemctl restart mariadb
 
 ---
 
-## 📁 最终目录结构
-
-```
-/opt/gov-platform/
-├── api/                          # 后端 API 服务
-│   ├── src/index.js              # 主程序（3600+ 行，覆盖全部业务接口）
-│   ├── node_modules/             # 依赖包
-│   ├── .env                      # 环境配置（数据库密码等）
-│   └── package.json
-├── web/                          # 前端静态文件
-│   ├── index.html                # 入口 HTML
-│   ├── config.js                 # ⚠️ 运行时配置（每次构建后需恢复）
-│   ├── polyfills.js              # 旧浏览器兼容
-│   └── assets/                   # JS/CSS/图片资源
-├── uploads/                      # 文件上传存储
-│   ├── banners/                  # 轮播图
-│   ├── file-transfers/           # 文件收发附件
-│   └── misc/                     # 其他文件
-└── logs/                         # 日志
-    └── api.log
-```
-
----
-
-## ⏱ 预计部署时间
-
-| 步骤 | 预计时间 |
-|------|----------|
-| Node.js 安装 | 5 分钟 |
-| MariaDB 安装 | 10-20 分钟 |
-| 数据库初始化 | 2 分钟 |
-| 后端部署 | 5-10 分钟 |
-| 前端部署 | 5 分钟 |
-| Nginx 配置 | 10-15 分钟 |
-| 信任体系接口验证 | 5 分钟 |
-| 验证测试 | 10 分钟 |
-| **总计** | **约 55-75 分钟** |
-
----
-
-## 🔄 增量更新流程
-
-首次部署完成后，后续代码更新只需以下步骤（无需重装 Node.js/MariaDB/Nginx）：
-
-### 仅更新后端 API
-
-当后端接口有修改（如新增信任体系接口等）时：
+## 📌 服务管理速查
 
 ```bash
-# 1. 上传新的 index.js 到服务器
-scp deploy/api/src/index.js root@服务器IP:/opt/gov-platform/api/src/
+# 查看所有服务状态
+systemctl status gov-api mariadb nginx
 
-# 2. 重启后端服务
+# 重启 API
 systemctl restart gov-api
 
-# 3. 验证
-curl http://localhost:3001/api/health
+# 重启 Nginx
+systemctl restart nginx
+# 或（源码安装）
+/usr/local/nginx/sbin/nginx -s reload
+
+# 重启 MariaDB
+systemctl restart mariadb
 ```
 
-### 仅更新前端
-
-当页面或 UI 有修改时：
+### 日志查看
 
 ```bash
-# 1. 在开发机构建
-npm run build
+# API 日志
+journalctl -u gov-api -f
+# 或
+tail -f /opt/gov-platform/logs/api.log
 
-# 2. 上传到服务器（覆盖旧文件）
-scp -r dist/* root@服务器IP:/opt/gov-platform/web/
-
-# 3. ⚠️ 必须恢复 config.js（构建会覆盖它）
-ssh root@服务器IP "cat > /opt/gov-platform/web/config.js << 'EOF'
-window.GOV_CONFIG = {
-  API_BASE_URL: \"http://服务器实际IP:3001\",
-  APP_NAME: \"昌吉州党政办公平台\",
-  VERSION: \"1.0.0\",
-  OFFLINE_MODE: true
-};
-EOF"
-
-# 4. 清除浏览器缓存或强刷（Ctrl+Shift+R）
+# Nginx 日志
+tail -f /var/log/nginx/access.log
+tail -f /var/log/nginx/error.log
+# 或（源码安装）
+tail -f /usr/local/nginx/logs/error.log
 ```
-
-### 前后端同时更新
-
-```bash
-# 1. 构建前端
-npm run build
-
-# 2. 打包上传
-tar -czvf update-package.tar.gz dist/ deploy/api/src/index.js
-scp update-package.tar.gz root@服务器IP:/tmp/
-
-# 3. 在服务器上执行
-ssh root@服务器IP << 'REMOTE'
-cd /tmp
-tar -xzvf update-package.tar.gz
-
-# 更新前端
-cp -r dist/* /opt/gov-platform/web/
-
-# 恢复 config.js
-cat > /opt/gov-platform/web/config.js << 'EOF'
-window.GOV_CONFIG = {
-  API_BASE_URL: "http://服务器实际IP:3001",
-  APP_NAME: "昌吉州党政办公平台",
-  VERSION: "1.0.0",
-  OFFLINE_MODE: true
-};
-EOF
-
-# 更新后端
-cp deploy/api/src/index.js /opt/gov-platform/api/src/
-
-# 重启后端
-systemctl restart gov-api
-
-# 清理
-rm -rf /tmp/update-package.tar.gz /tmp/dist /tmp/deploy
-
-echo "✅ 更新完成"
-REMOTE
-```
-
-### 数据库增量更新
-
-如有新增表或字段，将增量 SQL 文件上传后执行：
-
-```bash
-mysql -u root -p --default-character-set=utf8mb4 gov_platform < /path/to/deploy/database/incremental-update.sql
-```
-
-> ⚠️ 增量 SQL 应使用幂等语法（`IF NOT EXISTS`、`INSERT ... WHERE NOT EXISTS`），确保可重复执行。
