@@ -160,6 +160,32 @@ ORDER BY ordinal_position;
 SHOW PROCEDURE STATUS WHERE Db = DATABASE() AND Name = 'deduct_leave_balance';
 
 -- ============================================
+-- 更新: organizations 表添加 external_no 字段
+-- 日期: 2025-03-03
+-- 说明: 用于存储信任体系推送的组织编号(no)，
+--       作为外部系统的唯一标识，用于匹配父子关系
+-- ============================================
+
+ALTER TABLE `organizations`
+  ADD COLUMN IF NOT EXISTS `external_no` VARCHAR(255) DEFAULT NULL COMMENT '外部组织编号(信任体系no)';
+
+-- 添加唯一索引（如果不存在）
+-- MariaDB 不支持 CREATE INDEX IF NOT EXISTS，用存储过程包裹
+DELIMITER $$
+CREATE PROCEDURE IF NOT EXISTS add_external_no_index()
+BEGIN
+  DECLARE idx_exists INT DEFAULT 0;
+  SELECT COUNT(*) INTO idx_exists FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'organizations' AND INDEX_NAME = 'idx_org_external_no';
+  IF idx_exists = 0 THEN
+    CREATE UNIQUE INDEX idx_org_external_no ON organizations(external_no);
+  END IF;
+END$$
+DELIMITER ;
+CALL add_external_no_index();
+DROP PROCEDURE IF EXISTS add_external_no_index;
+
+-- ============================================
 -- 执行说明
 -- ============================================
 -- 1. 连接数据库: mysql -u root -p --default-character-set=utf8mb4 gov_platform
