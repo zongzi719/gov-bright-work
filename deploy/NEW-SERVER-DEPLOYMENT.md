@@ -777,5 +777,102 @@ systemctl restart mariadb
 | 后端部署 | 5-10 分钟 |
 | 前端部署 | 5 分钟 |
 | Nginx 配置 | 10-15 分钟 |
+| 信任体系接口验证 | 5 分钟 |
 | 验证测试 | 10 分钟 |
-| **总计** | **约 50-70 分钟** |
+| **总计** | **约 55-75 分钟** |
+
+---
+
+## 🔄 增量更新流程
+
+首次部署完成后，后续代码更新只需以下步骤（无需重装 Node.js/MariaDB/Nginx）：
+
+### 仅更新后端 API
+
+当后端接口有修改（如新增信任体系接口等）时：
+
+```bash
+# 1. 上传新的 index.js 到服务器
+scp deploy/api/src/index.js root@服务器IP:/opt/gov-platform/api/src/
+
+# 2. 重启后端服务
+systemctl restart gov-api
+
+# 3. 验证
+curl http://localhost:3001/api/health
+```
+
+### 仅更新前端
+
+当页面或 UI 有修改时：
+
+```bash
+# 1. 在开发机构建
+npm run build
+
+# 2. 上传到服务器（覆盖旧文件）
+scp -r dist/* root@服务器IP:/opt/gov-platform/web/
+
+# 3. ⚠️ 必须恢复 config.js（构建会覆盖它）
+ssh root@服务器IP "cat > /opt/gov-platform/web/config.js << 'EOF'
+window.GOV_CONFIG = {
+  API_BASE_URL: \"http://服务器实际IP:3001\",
+  APP_NAME: \"昌吉州党政办公平台\",
+  VERSION: \"1.0.0\",
+  OFFLINE_MODE: true
+};
+EOF"
+
+# 4. 清除浏览器缓存或强刷（Ctrl+Shift+R）
+```
+
+### 前后端同时更新
+
+```bash
+# 1. 构建前端
+npm run build
+
+# 2. 打包上传
+tar -czvf update-package.tar.gz dist/ deploy/api/src/index.js
+scp update-package.tar.gz root@服务器IP:/tmp/
+
+# 3. 在服务器上执行
+ssh root@服务器IP << 'REMOTE'
+cd /tmp
+tar -xzvf update-package.tar.gz
+
+# 更新前端
+cp -r dist/* /opt/gov-platform/web/
+
+# 恢复 config.js
+cat > /opt/gov-platform/web/config.js << 'EOF'
+window.GOV_CONFIG = {
+  API_BASE_URL: "http://服务器实际IP:3001",
+  APP_NAME: "昌吉州党政办公平台",
+  VERSION: "1.0.0",
+  OFFLINE_MODE: true
+};
+EOF
+
+# 更新后端
+cp deploy/api/src/index.js /opt/gov-platform/api/src/
+
+# 重启后端
+systemctl restart gov-api
+
+# 清理
+rm -rf /tmp/update-package.tar.gz /tmp/dist /tmp/deploy
+
+echo "✅ 更新完成"
+REMOTE
+```
+
+### 数据库增量更新
+
+如有新增表或字段，将增量 SQL 文件上传后执行：
+
+```bash
+mysql -u root -p --default-character-set=utf8mb4 gov_platform < /path/to/deploy/database/incremental-update.sql
+```
+
+> ⚠️ 增量 SQL 应使用幂等语法（`IF NOT EXISTS`、`INSERT ... WHERE NOT EXISTS`），确保可重复执行。
