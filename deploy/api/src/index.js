@@ -3743,6 +3743,61 @@ app.post('/api/cjgov/message-subscription', express.text({ type: '*/*', limit: '
       }
     }
 
+    // ===== 第二轮：回填组织的 parent_id =====
+    for (const resource of resources) {
+      if (resource.type === 'Organization' && resource.parent_org) {
+        // 通过 parent_org (即父组织的 external_no) 查找父组织 ID
+        const [parents] = await pool.execute(
+          'SELECT id FROM organizations WHERE external_no = ? LIMIT 1',
+          [resource.parent_org]
+        );
+        if (parents.length > 0) {
+          await pool.execute(
+            'UPDATE organizations SET parent_id = ?, updated_at = NOW() WHERE external_no = ?',
+            [parents[0].id, resource.no]
+          );
+          console.log('[handleOrganization] 设置父组织:', resource.name, '→ parent:', resource.parent_org);
+        } else {
+          console.log('[handleOrganization] 未找到父组织:', resource.parent_org, '(子组织:', resource.name, ')');
+        }
+      }
+    }
+
+    // ===== 第三轮：处理用户 =====
+    for (const resource of resources) {
+      if (resource.type === 'User') {
+        console.log('[handleUser]', JSON.stringify(resource));
+        const [existing] = await pool.execute(
+          'SELECT id FROM contacts WHERE rmsid = ?', [resource.no]
+        );
+        if (existing.length > 0) {
+          await pool.execute(
+            'UPDATE contacts SET name = ?, is_active = ?, updated_at = NOW() WHERE rmsid = ?',
+            [resource.name, resource.status === 0 ? 1 : 0, resource.no]
+          );
+          console.log('[handleUser] 更新联系人:', resource.name);
+        } else if (resource.belong_org) {
+          // 通过 belong_org (external_no) 查找所属组织
+          const [orgs] = await pool.execute(
+            'SELECT id FROM organizations WHERE external_no = ? LIMIT 1',
+            [resource.belong_org]
+          );
+          const orgId = orgs.length > 0 ? orgs[0].id : null;
+          if (orgId) {
+            const newId = uuidv4();
+            await pool.execute(
+              `INSERT INTO contacts (id, name, organization_id, rmsid, is_active, password_hash, security_level, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, '123456', '公开', NOW(), NOW())`,
+              [newId, resource.name, orgId, resource.no, resource.status === 0 ? 1 : 0]
+            );
+            console.log('[handleUser] 新建联系人:', resource.name);
+          } else {
+            console.log('[handleUser] 未找到所属组织:', resource.belong_org, '(用户:', resource.name, ')');
+          }
+        }
+      }
+    }
+
     const responseXml = buildResponseEnvelope('0', '处理成功');
     res.set('Content-Type', 'application/xml; charset=utf-8').status(200).send(responseXml);
   } catch (e) {
