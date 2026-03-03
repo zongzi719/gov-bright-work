@@ -3717,59 +3717,26 @@ app.post('/api/cjgov/message-subscription', express.text({ type: '*/*', limit: '
 
     // 处理每个资源 - 同步到本地数据库
     for (const resource of resources) {
-      if (resource.type === 'User') {
-        console.log('[handleUser]', JSON.stringify(resource));
-        // 根据 rmsid (resource.no) 查找或创建联系人
-        const [existing] = await pool.execute(
-          'SELECT id FROM contacts WHERE rmsid = ?', [resource.no]
-        );
-        if (existing.length > 0) {
-          // 更新
-          await pool.execute(
-            'UPDATE contacts SET name = ?, is_active = ?, updated_at = NOW() WHERE rmsid = ?',
-            [resource.name, resource.status === 0 ? 1 : 0, resource.no]
-          );
-          console.log('[handleUser] 更新联系人:', resource.name);
-        } else if (resource.belong_org) {
-          // 新建 - 需要找到所属组织
-          const [orgs] = await pool.execute(
-            'SELECT id FROM organizations WHERE name = ? OR short_name = ? LIMIT 1',
-            [resource.belong_org, resource.belong_org]
-          );
-          const orgId = orgs.length > 0 ? orgs[0].id : null;
-          if (orgId) {
-            const newId = uuidv4();
-            await pool.execute(
-              `INSERT INTO contacts (id, name, organization_id, rmsid, is_active, password_hash, security_level, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, '123456', '公开', NOW(), NOW())`,
-              [newId, resource.name, orgId, resource.no, resource.status === 0 ? 1 : 0]
-            );
-            console.log('[handleUser] 新建联系人:', resource.name);
-          }
-        }
-      } else if (resource.type === 'Organization') {
+      // ===== 第一轮：处理所有组织（先创建/更新，不处理父子关系） =====
+      if (resource.type === 'Organization') {
         console.log('[handleOrganization]', JSON.stringify(resource));
-        // 根据名称查找或创建组织
+        // 用 external_no 作为唯一标识查找
         const [existing] = await pool.execute(
-          'SELECT id FROM organizations WHERE name = ?', [resource.name]
+          'SELECT id, name FROM organizations WHERE external_no = ?', [resource.no]
         );
         if (existing.length > 0) {
-          console.log('[handleOrganization] 组织已存在:', resource.name);
+          // 更新名称
+          await pool.execute(
+            'UPDATE organizations SET name = ?, updated_at = NOW() WHERE external_no = ?',
+            [resource.name, resource.no]
+          );
+          console.log('[handleOrganization] 更新组织:', resource.name);
         } else {
-          // 查找父组织
-          let parentId = null;
-          if (resource.parent_org) {
-            const [parents] = await pool.execute(
-              'SELECT id FROM organizations WHERE name = ? OR short_name = ? LIMIT 1',
-              [resource.parent_org, resource.parent_org]
-            );
-            if (parents.length > 0) parentId = parents[0].id;
-          }
           const newId = uuidv4();
           await pool.execute(
-            `INSERT INTO organizations (id, name, parent_id, level, sort_order, created_at, updated_at)
-             VALUES (?, ?, ?, 1, 0, NOW(), NOW())`,
-            [newId, resource.name, parentId]
+            `INSERT INTO organizations (id, name, external_no, parent_id, level, sort_order, created_at, updated_at)
+             VALUES (?, ?, ?, NULL, 1, 0, NOW(), NOW())`,
+            [newId, resource.name, resource.no]
           );
           console.log('[handleOrganization] 新建组织:', resource.name);
         }
