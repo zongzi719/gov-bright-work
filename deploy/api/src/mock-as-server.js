@@ -20,7 +20,8 @@ const PORT = 10318;
 const challengeStore = new Map();
 
 // 模拟用户 rmsid 列表（可按需修改，需与 contacts 表中的 rmsid 匹配）
-const MOCK_RMSID = process.env.MOCK_RMSID || 'test-user-001';
+// 默认使用消息订阅推送过来的「测试人员1」的 rmsid
+const MOCK_RMSID = process.env.MOCK_RMSID || '59a5005e-320c-4d43-8c80-5b5dbf7af375';
 
 function generateChallenge() {
   return crypto.randomBytes(16).toString('hex');
