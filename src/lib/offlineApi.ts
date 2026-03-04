@@ -303,6 +303,19 @@ export async function checkHealth() {
   return request<{ status: string; database: string }>('/api/health');
 }
 
+// ==================== SSO 单点登录 ====================
+
+export async function ssoGetChallenge() {
+  return request<string>('/api/cjgov/sso/challenge');
+}
+
+export async function ssoVerifyTicket(challenge: string, identityticket: string) {
+  return request<any>('/api/cjgov/sso/verifyTicket', {
+    method: 'POST',
+    body: JSON.stringify({ challenge, identityticket }),
+  });
+}
+
 // ==================== 管理员认证 ====================
 
 export interface AdminLoginResult {
@@ -349,6 +362,8 @@ export const offlineApi = {
   uploadFile,
   checkHealth,
   adminLogin,
+  ssoGetChallenge,
+  ssoVerifyTicket,
   isOfflineMode,
 };
 
