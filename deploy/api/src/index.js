@@ -3875,7 +3875,14 @@ app.post('/api/cjgov/sso/challenge', async (req, res) => {
     }
 
     const responseText = await response.text();
-    const challenge = responseText.trim();
+    console.log('[SSO] as_server 原始响应:', responseText);
+
+    // 解析响应：真实 as_server 可能返回纯文本，mock 返回 XML
+    let challenge = responseText.trim();
+    const challengeMatch = challenge.match(/<challenge>([\s\S]*?)<\/challenge>/);
+    if (challengeMatch) {
+      challenge = challengeMatch[1].trim();
+    }
     console.log('[SSO] 获取随机数成功:', challenge);
 
     res.json({ code: 0, message: '获取随机数成功', data: challenge });
