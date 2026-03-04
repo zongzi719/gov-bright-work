@@ -362,6 +362,8 @@ export const offlineApi = {
   uploadFile,
   checkHealth,
   adminLogin,
+  ssoGetChallenge,
+  ssoVerifyTicket,
   isOfflineMode,
 };
 
