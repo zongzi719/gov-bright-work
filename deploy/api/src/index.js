@@ -3844,6 +3844,164 @@ app.post('/api/cjgov/message-subscription', express.text({ type: '*/*', limit: '
   }
 });
 
+// ==================== SSO 单点登录 ====================
+
+// SSO 配置
+const SSO_AS_SERVER_URL = process.env.CJ_GOV_AS_SERVER_URL || 'http://localhost:10318';
+const SSO_APP_SERVER_ID = process.env.CJ_GOV_APP_SERVER_ID || '';
+
+// 简易 XML 标签值提取
+function extractXmlTagValue(xml, tag) {
+  const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`);
+  const match = xml.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+// 步骤1：获取随机数（Challenge）
+// 后端调 as_server 的 GeneratorChallenge，返回 challenge 给前端
+app.post('/api/cjgov/sso/challenge', async (req, res) => {
+  try {
+    const challengeUrl = `${SSO_AS_SERVER_URL}/GeneratorChallenge`;
+    console.log(`[SSO] 请求随机数: ${challengeUrl}`);
+
+    const response = await fetch(challengeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/xml' },
+      body: '',
+    });
+
+    if (!response.ok) {
+      throw new Error(`as_server 返回 HTTP ${response.status}`);
+    }
+
+    const responseText = await response.text();
+    const challenge = responseText.trim();
+    console.log('[SSO] 获取随机数成功:', challenge);
+
+    res.json({ code: 0, message: '获取随机数成功', data: challenge });
+  } catch (e) {
+    console.error('[SSO] 获取随机数失败:', e.message);
+    res.status(500).json({ code: 1, message: '获取随机数失败: ' + e.message });
+  }
+});
+
+// 步骤3：验证票据（verifyTicket）
+// 前端提交 challenge + identityticket，后端向 as_server 验证，返回用户信息
+app.post('/api/cjgov/sso/verifyTicket', async (req, res) => {
+  try {
+    const { challenge, identityticket } = req.body;
+
+    if (!challenge || !identityticket) {
+      return res.status(400).json({ code: 1, message: '缺少 challenge 或 identityticket 参数' });
+    }
+
+    // 构造验证请求 XML（与 Laravel 参考一致）
+    const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const requestXml = `<verifyidentityticketreq version="1">
+    <challenge>${escapeXml(challenge)}</challenge>
+    <identityticket>${escapeXml(identityticket)}</identityticket>
+    <appserverid>${escapeXml(SSO_APP_SERVER_ID)}</appserverid>
+</verifyidentityticketreq>`;
+
+    const verifyUrl = `${SSO_AS_SERVER_URL}/VerifyIdentity`;
+    console.log(`[SSO] 验证票据: ${verifyUrl}`);
+
+    const response = await fetch(verifyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+      body: requestXml,
+    });
+
+    if (!response.ok) {
+      throw new Error(`as_server 返回 HTTP ${response.status}`);
+    }
+
+    const responseXml = await response.text();
+
+    // 第1层：提取 result 节点（Base64 编码）
+    const resultB64 = extractXmlTagValue(responseXml, 'result');
+    if (!resultB64) {
+      throw new Error('响应中未找到 result 节点');
+    }
+
+    // 第2层：Base64 解码得到原文 XML
+    const resultXml = Buffer.from(resultB64, 'base64').toString('utf-8');
+    console.log('[SSO] 解码后原文:', resultXml);
+
+    // 检查验证结果
+    const resultCode = extractXmlTagValue(resultXml, 'result');
+    if (resultCode !== '0') {
+      const errorMsg = extractXmlTagValue(resultXml, 'error');
+      throw new Error('票据验证失败: ' + (errorMsg || '未知错误'));
+    }
+
+    // 提取 rmsid（兼容标准模式和定制模式）
+    let rmsidRaw = extractXmlTagValue(resultXml, 'rmsid');
+    let rmsid = rmsidRaw;
+    let account = '';
+
+    // 定制模式：rmsid 本身可能是 base64(<user><rmsid>...</rmsid><account>...</account></user>)
+    try {
+      const decoded = Buffer.from(rmsidRaw, 'base64').toString('utf-8');
+      if (decoded.includes('<user>')) {
+        rmsid = extractXmlTagValue(decoded, 'rmsid') || rmsidRaw;
+        account = extractXmlTagValue(decoded, 'account') || '';
+      }
+    } catch (_) {
+      // 非 base64，标准模式，rmsid 直接使用
+    }
+
+    const userName = extractXmlTagValue(resultXml, 'name');
+    console.log('[SSO] 提取用户标识 rmsid:', rmsid, ', name:', userName);
+
+    // 在 contacts 表中查找匹配用户
+    const [contacts] = await pool.execute(
+      `SELECT c.id, c.name, c.mobile, c.account, c.position, c.department,
+              c.security_level, c.organization_id, c.is_leader, o.name as organization_name
+       FROM contacts c
+       LEFT JOIN organizations o ON c.organization_id = o.id
+       WHERE c.rmsid = ? AND c.is_active = 1
+       LIMIT 1`,
+      [rmsid]
+    );
+
+    if (contacts.length === 0) {
+      console.error('[SSO] 未找到匹配用户, rmsid:', rmsid);
+      return res.status(404).json({
+        code: 1,
+        message: `未找到匹配的用户（rmsid: ${rmsid}）`,
+        data: { rmsid, account }
+      });
+    }
+
+    const user = contacts[0];
+    console.log('[SSO] 用户匹配成功:', user.name);
+
+    res.json({
+      code: 0,
+      message: '票据验证成功',
+      data: {
+        rmsid,
+        account,
+        user: {
+          id: user.id,
+          name: user.name,
+          mobile: user.mobile,
+          position: user.position,
+          department: user.department,
+          organization: user.organization_name || '',
+          organization_id: user.organization_id,
+          security_level: user.security_level || '一般',
+          is_leader: user.is_leader ? true : false,
+        }
+      }
+    });
+  } catch (e) {
+    console.error('[SSO] 验证票据失败:', e.message);
+    res.status(500).json({ code: 1, message: e.message });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {
