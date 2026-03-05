@@ -48,9 +48,9 @@ const Login = () => {
 
       console.log("[SSO] 获取随机数成功:", challenge);
 
-      // 第2步：WebSocket 获取票据（暂时跳过，使用模拟票据）
-      // TODO: 正式对接时，通过 WebSocket 连接本地安全客户端获取 identityTicket
-      const identityticket = "mock-ticket-for-testing";
+      // 第2步：WebSocket 连接本地安全客户端获取票据
+      console.log("[SSO] 正在通过 WebSocket 连接本地安全客户端...");
+      const identityticket = await getTicketViaWebSocket(challenge);
 
       // 第3步：验证票据
       const verifyResult = await offlineApi.ssoVerifyTicket(challenge, identityticket);
