@@ -82,6 +82,8 @@ function getTicketViaWebSocket(challenge: string): Promise<string> {
     };
   });
 }
+
+const Login = () => {
   const navigate = useNavigate();
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
