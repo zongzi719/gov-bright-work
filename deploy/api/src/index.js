@@ -2480,6 +2480,24 @@ app.delete('/api/leader-schedules/:id', async (req, res) => {
 
 // ==================== 领导日程权限 ====================
 
+// 检查用户是否有领导日程权限
+app.get('/api/leader-schedule-permissions/check', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    if (!user_id) {
+      return res.json({ has_permission: false });
+    }
+    const [rows] = await pool.execute(
+      'SELECT id FROM leader_schedule_permissions WHERE user_id = ? LIMIT 1',
+      [user_id]
+    );
+    res.json({ has_permission: rows.length > 0 });
+  } catch (error) {
+    console.error('Check leader schedule permission error:', error);
+    res.json({ has_permission: false });
+  }
+});
+
 app.get('/api/leader-schedule-permissions', async (req, res) => {
   try {
     const { user_id } = req.query;
