@@ -59,11 +59,13 @@ const Login = () => {
       }
 
       const responseData = verifyResult.data as any;
-      if (responseData.code !== 0 || !responseData.user) {
-        throw new Error(responseData.message || "SSO 验证失败");
+      const isSuccess = responseData?.success === true || responseData?.code === 0;
+      const user = responseData?.user || responseData?.data?.user;
+
+      if (!isSuccess || !user) {
+        throw new Error(responseData?.error || responseData?.message || "SSO 验证失败");
       }
 
-      const user = responseData.user;
       saveUserAndRedirect({
         id: user.id,
         name: user.name,
