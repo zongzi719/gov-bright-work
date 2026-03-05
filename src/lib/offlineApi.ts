@@ -306,7 +306,9 @@ export async function checkHealth() {
 // ==================== SSO 单点登录 ====================
 
 export async function ssoGetChallenge() {
-  return request<string>('/api/cjgov/sso/challenge');
+  return request<string>('/api/cjgov/sso/challenge', {
+    method: 'POST',
+  });
 }
 
 export async function ssoVerifyTicket(challenge: string, identityticket: string) {
