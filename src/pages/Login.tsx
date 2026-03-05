@@ -10,6 +10,79 @@ import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
 
+const WS_URL = "ws://127.0.0.1:30318/";
+const WS_TIMEOUT = 15000; // 15秒超时
+
+/**
+ * 通过 WebSocket 连接本地安全客户端获取 SSO 票据
+ * 协议：发送含 challenge 的 XML，接收含 tokeninfo 的 XML 响应
+ */
+function getTicketViaWebSocket(challenge: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let ws: WebSocket;
+    
+    try {
+      ws = new WebSocket(WS_URL);
+    } catch (err) {
+      reject(new Error("无法连接本地安全客户端，请确认客户端已启动"));
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new Error("连接安全客户端超时，请检查客户端是否正常运行"));
+    }, WS_TIMEOUT);
+
+    ws.onopen = () => {
+      console.log("[SSO WebSocket] 已连接安全客户端");
+      const requestXml = `<?xml version="1.0" encoding="UTF-8"?><getsignandtokenreq version="1"><challenge>${challenge}</challenge></getsignandtokenreq>`;
+      ws.send(requestXml);
+      console.log("[SSO WebSocket] 已发送 challenge");
+    };
+
+    ws.onmessage = (evt) => {
+      clearTimeout(timer);
+      const responseXml = evt.data as string;
+      console.log("[SSO WebSocket] 收到响应:", responseXml.substring(0, 200));
+
+      // 解析 <result> 值
+      const resultMatch = responseXml.match(/<result>(\d+)<\/result>/);
+      const result = resultMatch ? resultMatch[1] : "";
+
+      if (result !== "0") {
+        // 失败：提取错误信息
+        const errorMatch = responseXml.match(/<errorinfo>([\s\S]*?)<\/errorinfo>/);
+        const errorMsg = errorMatch ? errorMatch[1] : "未知错误";
+        ws.close();
+        reject(new Error(`安全客户端返回错误: ${errorMsg}`));
+        return;
+      }
+
+      // 成功：提取 tokeninfo 作为 identityticket
+      const tokenMatch = responseXml.match(/<tokeninfo>([\s\S]*?)<\/tokeninfo>/);
+      if (!tokenMatch || !tokenMatch[1]) {
+        ws.close();
+        reject(new Error("安全客户端返回的票据数据为空"));
+        return;
+      }
+
+      console.log("[SSO WebSocket] 获取票据成功, 长度:", tokenMatch[1].length);
+      ws.close();
+      resolve(tokenMatch[1]);
+    };
+
+    ws.onerror = (err) => {
+      clearTimeout(timer);
+      console.error("[SSO WebSocket] 连接错误:", err);
+      reject(new Error("无法连接本地安全客户端，请确认客户端已启动并运行在端口 30318"));
+    };
+
+    ws.onclose = () => {
+      clearTimeout(timer);
+    };
+  });
+}
+
 const Login = () => {
   const navigate = useNavigate();
   const [mobile, setMobile] = useState("");
@@ -48,9 +121,9 @@ const Login = () => {
 
       console.log("[SSO] 获取随机数成功:", challenge);
 
-      // 第2步：WebSocket 获取票据（暂时跳过，使用模拟票据）
-      // TODO: 正式对接时，通过 WebSocket 连接本地安全客户端获取 identityTicket
-      const identityticket = "mock-ticket-for-testing";
+      // 第2步：WebSocket 连接本地安全客户端获取票据
+      console.log("[SSO] 正在通过 WebSocket 连接本地安全客户端...");
+      const identityticket = await getTicketViaWebSocket(challenge);
 
       // 第3步：验证票据
       const verifyResult = await offlineApi.ssoVerifyTicket(challenge, identityticket);
