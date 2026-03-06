@@ -3827,8 +3827,8 @@ app.post('/api/cjgov/message-subscription', express.text({ type: '*/*', limit: '
         );
         if (existing.length > 0) {
           await pool.execute(
-            'UPDATE contacts SET name = ?, is_active = ?, updated_at = NOW() WHERE rmsid = ?',
-            [resource.name, resource.status === 0 ? 1 : 0, resource.no]
+            'UPDATE contacts SET name = ?, account = ?, is_active = ?, updated_at = NOW() WHERE rmsid = ?',
+            [resource.name, resource.no, resource.status === 0 ? 1 : 0, resource.no]
           );
           console.log('[handleUser] 更新联系人:', resource.name);
         } else if (resource.belong_org) {
@@ -3841,9 +3841,9 @@ app.post('/api/cjgov/message-subscription', express.text({ type: '*/*', limit: '
           if (orgId) {
             const newId = uuidv4();
             await pool.execute(
-              `INSERT INTO contacts (id, name, organization_id, rmsid, is_active, password_hash, security_level, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, '123456', '公开', NOW(), NOW())`,
-              [newId, resource.name, orgId, resource.no, resource.status === 0 ? 1 : 0]
+              `INSERT INTO contacts (id, name, organization_id, rmsid, account, is_active, password_hash, security_level, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, '123456', '公开', NOW(), NOW())`,
+              [newId, resource.name, orgId, resource.no, resource.no, resource.status === 0 ? 1 : 0]
             );
             console.log('[handleUser] 新建联系人:', resource.name);
           } else {
