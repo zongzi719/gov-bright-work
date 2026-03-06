@@ -3827,8 +3827,8 @@ app.post('/api/cjgov/message-subscription', express.text({ type: '*/*', limit: '
         );
         if (existing.length > 0) {
           await pool.execute(
-            'UPDATE contacts SET name = ?, is_active = ?, updated_at = NOW() WHERE rmsid = ?',
-            [resource.name, resource.status === 0 ? 1 : 0, resource.no]
+            'UPDATE contacts SET name = ?, account = ?, is_active = ?, updated_at = NOW() WHERE rmsid = ?',
+            [resource.name, resource.no, resource.status === 0 ? 1 : 0, resource.no]
           );
           console.log('[handleUser] 更新联系人:', resource.name);
         } else if (resource.belong_org) {
