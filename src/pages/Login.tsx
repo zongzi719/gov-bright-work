@@ -272,6 +272,30 @@ const Login = () => {
     }
   };
 
+  // 自动 SSO 检测中，显示加载页面
+  if (autoSsoChecking || (ssoLoading && !autoSsoAttempted)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-primary animate-pulse" />
+            </div>
+            <CardTitle className="text-2xl">昌吉州党政办公平台</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              {autoSsoChecking ? "正在检测安全客户端..." : "正在进行身份认证，请稍候..."}
+            </p>
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
