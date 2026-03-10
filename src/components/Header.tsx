@@ -9,6 +9,7 @@ import PasswordChangeDialog from "./PasswordChangeDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import partyEmblem from "@/assets/party-emblem.png";
+import { useUKeyMonitor } from "@/hooks/useUKeyMonitor";
 import {
   DropdownMenu,
   DropdownMenuContent,
