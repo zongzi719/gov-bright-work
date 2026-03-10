@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,9 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
+  const [autoSsoAttempted, setAutoSsoAttempted] = useState(false);
+  const [autoSsoChecking, setAutoSsoChecking] = useState(() => isOfflineMode());
+  const ssoTriggeredRef = useRef(false);
 
   // 保存用户信息并跳转
   const saveUserAndRedirect = (userData: any) => {
@@ -99,6 +102,59 @@ const Login = () => {
     });
     navigate("/");
   };
+
+  // 检测本地 UKey 是否已插入（通过 WebSocket 快速探测）
+  const checkUKeyPresence = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      try {
+        const ws = new WebSocket(WS_URL);
+        const timer = setTimeout(() => {
+          ws.close();
+          resolve(false);
+        }, 3000); // 3秒快速超时
+
+        ws.onopen = () => {
+          clearTimeout(timer);
+          ws.close();
+          resolve(true);
+        };
+
+        ws.onerror = () => {
+          clearTimeout(timer);
+          resolve(false);
+        };
+      } catch {
+        resolve(false);
+      }
+    });
+  };
+
+  // 页面加载时自动尝试 SSO 登录（离线模式下）
+  useEffect(() => {
+    if (!isOfflineMode() || ssoTriggeredRef.current) return;
+    ssoTriggeredRef.current = true;
+
+    const autoLogin = async () => {
+      try {
+        const hasKey = await checkUKeyPresence();
+        if (hasKey) {
+          console.log("[SSO] 检测到 UKey，自动触发单点登录...");
+          setAutoSsoChecking(false);
+          // 延迟一帧确保状态更新后再触发
+          setTimeout(() => handleSsoLogin(), 0);
+        } else {
+          console.log("[SSO] 未检测到 UKey，显示登录页面");
+          setAutoSsoChecking(false);
+          setAutoSsoAttempted(true);
+        }
+      } catch {
+        setAutoSsoChecking(false);
+        setAutoSsoAttempted(true);
+      }
+    };
+
+    autoLogin();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // SSO 单点登录
   const handleSsoLogin = async () => {
@@ -215,6 +271,30 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // 自动 SSO 检测中，显示加载页面
+  if (autoSsoChecking || (ssoLoading && !autoSsoAttempted)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-primary animate-pulse" />
+            </div>
+            <CardTitle className="text-2xl">昌吉州党政办公平台</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              {autoSsoChecking ? "正在检测安全客户端..." : "正在进行身份认证，请稍候..."}
+            </p>
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
