@@ -2527,12 +2527,13 @@ export async function updateTodosByNodeName(instanceId: string, nodeName: string
   // 简化处理：直接通过 approval_instance_id 和当前状态更新
   // 注意：由于 todo_items 没有 node_name 字段，需要通过关联的 approval_records 来判断
   // 这里采用两步方式：先查审批记录获取审批人列表，再更新对应的待办
+  // 注意：不按 approval_records 的 status 过滤，因为或签清除时
+  // approval_records 可能已先被更新为 approved，需要获取该节点所有审批人ID
   const { data: records } = await supabase
     .from("approval_records")
     .select("approver_id")
     .eq("instance_id", instanceId)
-    .eq("node_name", nodeName)
-    .eq("status", status as any);
+    .eq("node_name", nodeName);
   
   if (records && records.length > 0) {
     const approverIds = records.map(r => r.approver_id);
