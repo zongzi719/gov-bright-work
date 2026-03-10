@@ -2012,10 +2012,10 @@ app.put('/api/todo-items/by-node/:instanceId/:nodeName', async (req, res) => {
     const { instanceId, nodeName } = req.params;
     const { current_status, updates } = req.body;
     
-    // 先获取该节点对应的审批人ID列表
+    // 获取该节点所有审批人ID（不按status过滤，因为或签时approval_records可能已先被更新）
     const [records] = await pool.execute(
-      `SELECT approver_id FROM approval_records WHERE instance_id = ? AND node_name = ? AND status = ?`,
-      [instanceId, decodeURIComponent(nodeName), current_status]
+      `SELECT DISTINCT approver_id FROM approval_records WHERE instance_id = ? AND node_name = ?`,
+      [instanceId, decodeURIComponent(nodeName)]
     );
     
     if (records.length === 0) {
