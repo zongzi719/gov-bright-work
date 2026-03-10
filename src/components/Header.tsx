@@ -9,6 +9,7 @@ import PasswordChangeDialog from "./PasswordChangeDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import partyEmblem from "@/assets/party-emblem.png";
+import { useUKeyMonitor } from "@/hooks/useUKeyMonitor";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Header = () => {
+  // 监控 UKey 拔出自动退出（仅离线模式生效）
+  useUKeyMonitor();
   const [headerBgUrl, setHeaderBgUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
