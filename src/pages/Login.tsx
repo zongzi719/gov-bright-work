@@ -103,6 +103,59 @@ const Login = () => {
     navigate("/");
   };
 
+  // 检测本地 UKey 是否已插入（通过 WebSocket 快速探测）
+  const checkUKeyPresence = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      try {
+        const ws = new WebSocket(WS_URL);
+        const timer = setTimeout(() => {
+          ws.close();
+          resolve(false);
+        }, 3000); // 3秒快速超时
+
+        ws.onopen = () => {
+          clearTimeout(timer);
+          ws.close();
+          resolve(true);
+        };
+
+        ws.onerror = () => {
+          clearTimeout(timer);
+          resolve(false);
+        };
+      } catch {
+        resolve(false);
+      }
+    });
+  };
+
+  // 页面加载时自动尝试 SSO 登录（离线模式下）
+  useEffect(() => {
+    if (!isOfflineMode() || ssoTriggeredRef.current) return;
+    ssoTriggeredRef.current = true;
+
+    const autoLogin = async () => {
+      try {
+        const hasKey = await checkUKeyPresence();
+        if (hasKey) {
+          console.log("[SSO] 检测到 UKey，自动触发单点登录...");
+          setAutoSsoChecking(false);
+          // 延迟一帧确保状态更新后再触发
+          setTimeout(() => handleSsoLogin(), 0);
+        } else {
+          console.log("[SSO] 未检测到 UKey，显示登录页面");
+          setAutoSsoChecking(false);
+          setAutoSsoAttempted(true);
+        }
+      } catch {
+        setAutoSsoChecking(false);
+        setAutoSsoAttempted(true);
+      }
+    };
+
+    autoLogin();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // SSO 单点登录
   const handleSsoLogin = async () => {
     setSsoLoading(true);
