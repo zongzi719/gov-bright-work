@@ -89,6 +89,9 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
+  const [autoSsoAttempted, setAutoSsoAttempted] = useState(false);
+  const [autoSsoChecking, setAutoSsoChecking] = useState(() => isOfflineMode());
+  const ssoTriggeredRef = useRef(false);
 
   // 保存用户信息并跳转
   const saveUserAndRedirect = (userData: any) => {
