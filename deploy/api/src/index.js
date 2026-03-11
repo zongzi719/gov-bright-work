@@ -2535,12 +2535,35 @@ app.post('/api/schedules', async (req, res) => {
 app.put('/api/schedules/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, schedule_date, start_time, end_time, location, notes } = req.body;
+    const { contact_id, title, schedule_date, start_time, end_time, location, notes } = req.body;
+    
+    // 处理 undefined 值为 null，防止 MariaDB 驱动报错
+    const safeContactId = contact_id || null;
+    const safeTitle = title || null;
+    const safeScheduleDate = schedule_date || null;
+    const safeStartTime = start_time || null;
+    const safeEndTime = end_time || null;
+    const safeLocation = location !== undefined ? location : null;
+    const safeNotes = notes !== undefined ? notes : null;
+    
+    // 动态构建更新字段
+    const fields = [];
+    const values = [];
+    
+    if (safeContactId) { fields.push('contact_id = ?'); values.push(safeContactId); }
+    if (safeTitle) { fields.push('title = ?'); values.push(safeTitle); }
+    if (safeScheduleDate) { fields.push('schedule_date = ?'); values.push(safeScheduleDate); }
+    if (safeStartTime) { fields.push('start_time = ?'); values.push(safeStartTime); }
+    if (safeEndTime) { fields.push('end_time = ?'); values.push(safeEndTime); }
+    fields.push('location = ?'); values.push(safeLocation);
+    fields.push('notes = ?'); values.push(safeNotes);
+    fields.push('updated_at = NOW()');
+    
+    values.push(id);
     
     await pool.execute(
-      `UPDATE schedules SET title = ?, schedule_date = ?, start_time = ?, end_time = ?, location = ?, notes = ?, updated_at = NOW()
-       WHERE id = ?`,
-      [title, schedule_date, start_time, end_time, location, notes, id]
+      `UPDATE schedules SET ${fields.join(', ')} WHERE id = ?`,
+      values
     );
     
     res.json({ success: true });
