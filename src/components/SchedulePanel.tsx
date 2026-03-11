@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -41,6 +42,7 @@ interface Schedule {
 }
 
 const SchedulePanel = () => {
+  const navigate = useNavigate();
   const getCurrentUser = () => {
     try {
       const userStr = localStorage.getItem("frontendUser");
@@ -260,14 +262,12 @@ const SchedulePanel = () => {
       <div className="px-3 md:px-4 py-2 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="gov-card-title text-sm md:text-base">日程管理</h2>
         <div className="flex items-center gap-1 md:gap-2">
-          <a
-            href="/schedule-list"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline"
+          <button
+            onClick={() => navigate("/schedule-list")}
+            className="text-xs text-primary hover:underline bg-transparent border-none cursor-pointer"
           >
             查看全部
-          </a>
+          </button>
           <button 
             onClick={openAddDialog} 
             className="flex items-center justify-center rounded"
