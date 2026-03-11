@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { normalizeDate, normalizeTime } from "@/lib/utils";
 
 interface Leader {
   id: string;
@@ -162,7 +163,7 @@ const LeaderSchedulePage = () => {
   const getSchedulesForLeaderAndDay = (leaderId: string, date: Date): LeaderSchedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
     return leaderSchedules.filter(
-      (s) => s.leader_id === leaderId && s.schedule_date === dateStr
+      (s) => s.leader_id === leaderId && normalizeDate(s.schedule_date) === dateStr
     );
   };
 

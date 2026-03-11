@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, addDays, isSameMonth, isSameDay } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Calendar, List, MapPin, Clock } from "lucide-react";
+import { normalizeDate, normalizeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,12 +86,7 @@ const ScheduleList = () => {
 
   const getSchedulesForDay = (date: Date): Schedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return schedules.filter((s) => {
-      const sDate = s.schedule_date.includes("T")
-        ? format(new Date(s.schedule_date), "yyyy-MM-dd")
-        : s.schedule_date;
-      return sDate === dateStr;
-    });
+    return schedules.filter((s) => normalizeDate(s.schedule_date) === dateStr);
   };
 
   // Calendar grid
@@ -119,9 +115,9 @@ const ScheduleList = () => {
     setEditingSchedule(schedule);
     setFormData({
       title: schedule.title,
-      schedule_date: schedule.schedule_date.includes("T") ? format(new Date(schedule.schedule_date), "yyyy-MM-dd") : schedule.schedule_date,
-      start_time: schedule.start_time.slice(0, 5),
-      end_time: schedule.end_time.slice(0, 5),
+      schedule_date: normalizeDate(schedule.schedule_date),
+      start_time: normalizeTime(schedule.start_time),
+      end_time: normalizeTime(schedule.end_time),
       location: schedule.location || "",
       notes: schedule.notes || "",
     });
@@ -297,14 +293,13 @@ const ScheduleList = () => {
             ) : (
               <div className="divide-y divide-border">
                 {allSchedulesSorted.map((item) => {
-                  const dateStr = item.schedule_date.includes("T")
-                    ? format(new Date(item.schedule_date), "MM-dd EEEE", { locale: zhCN })
-                    : format(new Date(item.schedule_date + "T00:00:00"), "MM-dd EEEE", { locale: zhCN });
+                  const normalized = normalizeDate(item.schedule_date);
+                  const dateStr = format(new Date(normalized + "T00:00:00"), "MM-dd EEEE", { locale: zhCN });
                   return (
                     <div key={item.id} className="flex items-center px-4 py-3 hover:bg-muted/30 transition-colors group">
                       <div className="w-28 flex-shrink-0 text-sm text-muted-foreground">{dateStr}</div>
                       <div className="w-24 flex-shrink-0 text-sm text-primary font-medium">
-                        {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)}
+                        {normalizeTime(item.start_time)} - {normalizeTime(item.end_time)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium text-foreground">{item.title}</span>

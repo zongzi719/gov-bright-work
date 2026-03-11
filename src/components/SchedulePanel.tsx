@@ -21,6 +21,7 @@ import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, subWeeks, addWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { normalizeDate, normalizeTime } from "@/lib/utils";
 
 interface Contact {
   id: string;
@@ -110,13 +111,7 @@ const SchedulePanel = () => {
 
   const getSchedulesForDay = (date: Date): Schedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return schedules.filter((s) => {
-      // 兼容 "2026-03-11" 和 "2026-03-11T16:00:00.000Z" 两种格式
-      const sDate = s.schedule_date.includes('T') 
-        ? format(new Date(s.schedule_date), "yyyy-MM-dd")
-        : s.schedule_date;
-      return sDate === dateStr;
-    });
+    return schedules.filter((s) => normalizeDate(s.schedule_date) === dateStr);
   };
 
   const hasSchedule = (date: Date): boolean => {
@@ -159,22 +154,14 @@ const SchedulePanel = () => {
     setDialogOpen(true);
   };
 
-  const normalizeDate = (dateStr: string): string => {
-    if (!dateStr) return "";
-    if (dateStr.includes('T') || dateStr.includes('Z')) {
-      return format(new Date(dateStr), "yyyy-MM-dd");
-    }
-    return dateStr.substring(0, 10);
-  };
-
   const openEditDialog = (schedule: Schedule) => {
     setEditingSchedule(schedule);
     setFormData({
       contact_id: schedule.contact_id,
       title: schedule.title,
       schedule_date: normalizeDate(schedule.schedule_date),
-      start_time: schedule.start_time.slice(0, 5),
-      end_time: schedule.end_time.slice(0, 5),
+      start_time: normalizeTime(schedule.start_time),
+      end_time: normalizeTime(schedule.end_time),
       location: schedule.location || "",
       notes: schedule.notes || "",
     });

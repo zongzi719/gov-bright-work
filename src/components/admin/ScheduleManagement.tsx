@@ -11,7 +11,7 @@ import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { parseTime } from "@/lib/utils";
+import { parseTime, normalizeDate, normalizeTime } from "@/lib/utils";
 import TablePagination from "./TablePagination";
 import { usePagination } from "@/hooks/use-pagination";
 
@@ -154,9 +154,9 @@ const ScheduleManagement = () => {
     setFormData({
       contact_id: schedule.contact_id,
       title: schedule.title,
-      schedule_date: schedule.schedule_date ? schedule.schedule_date.substring(0, 10) : "",
-      start_time: schedule.start_time.slice(0, 5),
-      end_time: schedule.end_time.slice(0, 5),
+      schedule_date: normalizeDate(schedule.schedule_date),
+      start_time: normalizeTime(schedule.start_time),
+      end_time: normalizeTime(schedule.end_time),
       location: schedule.location || "",
       notes: schedule.notes || "",
     });

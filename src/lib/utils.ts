@@ -31,6 +31,32 @@ export const parseTime = (value: string): Date => {
 /**
  * 生成本地时间的ISO格式字符串（不含Z后缀），用于写入数据库
  */
+/**
+ * 将日期字符串归一化为 YYYY-MM-DD 格式（本地时区）
+ * 兼容 MariaDB 返回的 ISO 格式（如 "2026-03-10T16:00:00.000Z"）
+ * 和普通日期格式（如 "2026-03-11"）
+ */
+export const normalizeDate = (dateStr: string): string => {
+  if (!dateStr) return "";
+  // 含 T 或 Z 说明是 ISO 格式，需要用 Date 对象转本地时区
+  if (dateStr.includes('T') || dateStr.includes('Z')) {
+    const d = parseTime(dateStr);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  // 普通格式直接截取前10位
+  return dateStr.substring(0, 10);
+};
+
+/**
+ * 将时间字符串归一化为 HH:MM 格式
+ * 兼容 "09:00:00" 和 "09:00" 格式
+ */
+export const normalizeTime = (timeStr: string): string => {
+  if (!timeStr) return "";
+  return timeStr.slice(0, 5);
+};
+
 export const formatLocalNow = (): string => {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');

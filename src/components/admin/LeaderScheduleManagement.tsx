@@ -14,7 +14,7 @@ import { Plus, RefreshCw, ChevronLeft, ChevronRight, Trash2, Edit, Shield, Searc
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { parseTime } from "@/lib/utils";
+import { parseTime, normalizeDate, normalizeTime } from "@/lib/utils";
 import LeaderSchedulePermissions from "./LeaderSchedulePermissions";
 import TablePagination from "./TablePagination";
 import { usePagination } from "@/hooks/use-pagination";
@@ -201,9 +201,9 @@ const LeaderScheduleManagement = () => {
       leader_id: schedule.leader_id,
       title: schedule.title,
       location: schedule.location || "",
-      schedule_date: schedule.schedule_date,
-      start_time: schedule.start_time.slice(0, 5),
-      end_time: schedule.end_time.slice(0, 5),
+      schedule_date: normalizeDate(schedule.schedule_date),
+      start_time: normalizeTime(schedule.start_time),
+      end_time: normalizeTime(schedule.end_time),
       schedule_type: schedule.schedule_type,
       notes: schedule.notes || "",
     });
@@ -220,7 +220,7 @@ const LeaderScheduleManagement = () => {
 
   const getSchedulesForLeaderAndDay = (leaderId: string, date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return schedules.filter(s => s.leader_id === leaderId && s.schedule_date === dateStr);
+    return schedules.filter(s => s.leader_id === leaderId && normalizeDate(s.schedule_date) === dateStr);
   };
 
   const filteredSchedules = allSchedules.filter((schedule) => {
