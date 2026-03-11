@@ -195,6 +195,8 @@ const Login = () => {
         throw new Error(responseData?.error || responseData?.message || "SSO 验证失败");
       }
 
+      // SSO 登录标记登录方式
+      localStorage.setItem("loginMethod", "sso");
       saveUserAndRedirect({
         id: user.id,
         name: user.name,
