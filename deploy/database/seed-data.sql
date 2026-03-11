@@ -361,4 +361,10 @@ SELECT CONCAT('表单字段: ', COUNT(*)) FROM approval_form_fields
 UNION ALL
 SELECT CONCAT('食堂菜谱: ', COUNT(*)) FROM canteen_menus
 UNION ALL
-SELECT CONCAT('假期余额: ', COUNT(*)) FROM leave_balances;
+SELECT CONCAT('假期余额: ', COUNT(*)) FROM leave_balances
+UNION ALL
+SELECT CONCAT('通知公告: ', COUNT(*)) FROM notices
+UNION ALL
+SELECT CONCAT('通知图片: ', COUNT(*)) FROM notice_images
+UNION ALL
+SELECT CONCAT('收发文: ', COUNT(*)) FROM file_transfers;
