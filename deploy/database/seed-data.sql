@@ -57,7 +57,9 @@ INSERT INTO `contacts` (`id`, `name`, `mobile`, `phone`, `email`, `position`, `d
 ('a0d20ddd-1e4e-4c16-9e3a-fc2aa4c7af7a', '许慧芳', '13300133002', '0851-72345679', 'xuhuifang@gov.cn', '副局长', '规划科', 'ebbdec13-69fc-44ca-bb9d-56d21faa00b0', 0, 1, 2, '自然资源大厦802室', NULL, '一般', 'on_duty', '123456'),
 ('4a637f4c-2c19-498e-a1b2-38f10e16b76b', '郭志强', '13200132002', '0851-82345679', 'guozhiqiang@gov.cn', '副局长', '工程科', '74cdb875-def6-40d4-aff8-ef1c79fb6d6f', 0, 1, 2, '住建大厦902室', NULL, '一般', 'on_duty', '123456'),
 ('3ec3d508-e4e7-4eee-b1bb-bb3a6e5daabd', '方晓东', '13100131002', '0851-92345679', 'fangxiaodong@gov.cn', '副局长', '路政科', 'c2f0d252-220f-448f-8db6-dade3c444c9e', 0, 1, 2, '交通大厦802室', NULL, '一般', 'on_duty', '123456'),
-('b08d9e09-e86e-45e7-b1a3-e39f54ddd13f', '韩永生', '13800138002', '0851-12345679', 'hanyongsheng@gov.cn', '副主任', '综合科', '4910addd-88b4-47c8-aef5-7729a9c35920', 0, 1, 2, '1号楼502室', NULL, '一般', 'on_duty', '123456');
+('b08d9e09-e86e-45e7-b1a3-e39f54ddd13f', '韩永生', '13800138002', '0851-12345679', 'hanyongsheng@gov.cn', '副主任', '综合科', '4910addd-88b4-47c8-aef5-7729a9c35920', 0, 1, 2, '1号楼502室', NULL, '一般', 'on_duty', '123456'),
+-- 系统管理员（用于后台管理登录）
+('964cb75e-16ca-11f1-8c3b-fa163e0d6526', '系统管理员', '13800000001', NULL, 'admin@gov.cn', '系统管理员', '办公室', '4910addd-88b4-47c8-aef5-7729a9c35920', 0, 1, 99, NULL, NULL, '公开', 'on_duty', '123456');
 
 -- 更新组织的 department_head_id 和 direct_supervisor_id
 UPDATE `organizations` SET `department_head_id` = '60df0e23-5bd8-46e6-b033-6d1f42453990', `direct_supervisor_id` = '60df0e23-5bd8-46e6-b033-6d1f42453990' WHERE `id` = 'a770f66a-6dc7-4a8f-b03f-645744c71a63';
