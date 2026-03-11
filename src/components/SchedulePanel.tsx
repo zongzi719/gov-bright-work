@@ -159,12 +159,20 @@ const SchedulePanel = () => {
     setDialogOpen(true);
   };
 
+  const normalizeDate = (dateStr: string): string => {
+    if (!dateStr) return "";
+    if (dateStr.includes('T') || dateStr.includes('Z')) {
+      return format(new Date(dateStr), "yyyy-MM-dd");
+    }
+    return dateStr.substring(0, 10);
+  };
+
   const openEditDialog = (schedule: Schedule) => {
     setEditingSchedule(schedule);
     setFormData({
       contact_id: schedule.contact_id,
       title: schedule.title,
-      schedule_date: schedule.schedule_date ? schedule.schedule_date.substring(0, 10) : "",
+      schedule_date: normalizeDate(schedule.schedule_date),
       start_time: schedule.start_time.slice(0, 5),
       end_time: schedule.end_time.slice(0, 5),
       location: schedule.location || "",
