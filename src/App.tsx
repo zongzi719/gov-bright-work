@@ -21,6 +21,7 @@ import H5Login from "./pages/H5Login";
 import TodoList from "./pages/TodoList";
 import AbsenceApplication from "./pages/AbsenceApplication";
 import ProcurementApplication from "./pages/ProcurementApplication";
+import ScheduleList from "./pages/ScheduleList";
 
 const queryClient = new QueryClient();
 
