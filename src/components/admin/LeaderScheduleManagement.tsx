@@ -14,7 +14,7 @@ import { Plus, RefreshCw, ChevronLeft, ChevronRight, Trash2, Edit, Shield, Searc
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { parseTime } from "@/lib/utils";
+import { parseTime, normalizeDate, normalizeTime } from "@/lib/utils";
 import LeaderSchedulePermissions from "./LeaderSchedulePermissions";
 import TablePagination from "./TablePagination";
 import { usePagination } from "@/hooks/use-pagination";
