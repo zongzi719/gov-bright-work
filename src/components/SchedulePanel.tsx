@@ -261,16 +261,6 @@ const SchedulePanel = () => {
         <h2 className="gov-card-title text-sm md:text-base">日程管理</h2>
         <div className="flex items-center gap-1 md:gap-2">
           <button 
-            className="text-xs hover:underline flex items-center gap-0.5"
-            style={{ color: '#3b82f6' }}
-            onClick={() => {
-              window.location.href = '/schedule-list';
-            }}
-          >
-            查看全部
-            <ChevronRight className="w-3 h-3" />
-          </button>
-          <button 
             onClick={openAddDialog} 
             className="flex items-center justify-center rounded"
             style={{ 
