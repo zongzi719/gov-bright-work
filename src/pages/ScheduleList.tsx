@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, addDays, isSameMonth, isSameDay } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Calendar, List, MapPin, Clock } from "lucide-react";
+import { normalizeDate, normalizeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
