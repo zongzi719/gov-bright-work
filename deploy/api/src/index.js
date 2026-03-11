@@ -2540,9 +2540,10 @@ app.put('/api/schedules/:id', async (req, res) => {
     // 处理 undefined 值为 null，防止 MariaDB 驱动报错
     const safeContactId = contact_id || null;
     const safeTitle = title || null;
-    const safeScheduleDate = schedule_date || null;
-    const safeStartTime = start_time || null;
-    const safeEndTime = end_time || null;
+    // schedule_date 可能是 ISO 格式 "2026-03-11T16:00:00.000Z"，需截取为 YYYY-MM-DD
+    const safeScheduleDate = schedule_date ? schedule_date.substring(0, 10) : null;
+    const safeStartTime = start_time ? start_time.substring(0, 5) : null;
+    const safeEndTime = end_time ? end_time.substring(0, 5) : null;
     const safeLocation = location !== undefined ? location : null;
     const safeNotes = notes !== undefined ? notes : null;
     
