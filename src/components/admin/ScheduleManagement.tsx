@@ -154,7 +154,7 @@ const ScheduleManagement = () => {
     setFormData({
       contact_id: schedule.contact_id,
       title: schedule.title,
-      schedule_date: schedule.schedule_date,
+      schedule_date: schedule.schedule_date ? schedule.schedule_date.substring(0, 10) : "",
       start_time: schedule.start_time.slice(0, 5),
       end_time: schedule.end_time.slice(0, 5),
       location: schedule.location || "",
