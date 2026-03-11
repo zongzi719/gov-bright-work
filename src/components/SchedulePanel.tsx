@@ -111,13 +111,7 @@ const SchedulePanel = () => {
 
   const getSchedulesForDay = (date: Date): Schedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return schedules.filter((s) => {
-      // 兼容 "2026-03-11" 和 "2026-03-11T16:00:00.000Z" 两种格式
-      const sDate = s.schedule_date.includes('T') 
-        ? format(new Date(s.schedule_date), "yyyy-MM-dd")
-        : s.schedule_date;
-      return sDate === dateStr;
-    });
+    return schedules.filter((s) => normalizeDate(s.schedule_date) === dateStr);
   };
 
   const hasSchedule = (date: Date): boolean => {
