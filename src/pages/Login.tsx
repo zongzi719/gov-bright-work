@@ -285,7 +285,7 @@ const Login = () => {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-primary animate-pulse" />
             </div>
-            <CardTitle className="text-2xl">昌吉州党政办公平台</CardTitle>
+            <CardTitle className="text-2xl">党政办公平台</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
