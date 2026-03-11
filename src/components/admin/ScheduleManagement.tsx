@@ -11,7 +11,7 @@ import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { parseTime } from "@/lib/utils";
+import { parseTime, normalizeDate, normalizeTime } from "@/lib/utils";
 import TablePagination from "./TablePagination";
 import { usePagination } from "@/hooks/use-pagination";
 
