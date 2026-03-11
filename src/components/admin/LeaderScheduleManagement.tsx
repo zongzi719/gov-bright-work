@@ -201,9 +201,9 @@ const LeaderScheduleManagement = () => {
       leader_id: schedule.leader_id,
       title: schedule.title,
       location: schedule.location || "",
-      schedule_date: schedule.schedule_date,
-      start_time: schedule.start_time.slice(0, 5),
-      end_time: schedule.end_time.slice(0, 5),
+      schedule_date: normalizeDate(schedule.schedule_date),
+      start_time: normalizeTime(schedule.start_time),
+      end_time: normalizeTime(schedule.end_time),
       schedule_type: schedule.schedule_type,
       notes: schedule.notes || "",
     });
