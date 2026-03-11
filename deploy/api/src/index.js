@@ -2518,11 +2518,15 @@ app.post('/api/schedules', async (req, res) => {
   try {
     const id = uuidv4();
     const { contact_id, title, schedule_date, start_time, end_time, location, notes } = req.body;
+    // 格式化日期和时间，防止 ISO 格式导致 MariaDB 报错
+    const safeDate = schedule_date ? schedule_date.substring(0, 10) : null;
+    const safeStartTime = start_time ? start_time.substring(0, 5) : null;
+    const safeEndTime = end_time ? end_time.substring(0, 5) : null;
     
     await pool.execute(
       `INSERT INTO schedules (id, contact_id, title, schedule_date, start_time, end_time, location, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, contact_id, title, schedule_date, start_time, end_time, location, notes]
+      [id, contact_id, title, safeDate, safeStartTime, safeEndTime, location || null, notes || null]
     );
     
     res.json({ success: true, id });
