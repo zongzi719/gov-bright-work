@@ -42,6 +42,7 @@ interface Schedule {
 }
 
 const SchedulePanel = () => {
+  const navigate = useNavigate();
   const getCurrentUser = () => {
     try {
       const userStr = localStorage.getItem("frontendUser");
