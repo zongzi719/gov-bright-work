@@ -86,12 +86,7 @@ const ScheduleList = () => {
 
   const getSchedulesForDay = (date: Date): Schedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return schedules.filter((s) => {
-      const sDate = s.schedule_date.includes("T")
-        ? format(new Date(s.schedule_date), "yyyy-MM-dd")
-        : s.schedule_date;
-      return sDate === dateStr;
-    });
+    return schedules.filter((s) => normalizeDate(s.schedule_date) === dateStr);
   };
 
   // Calendar grid
