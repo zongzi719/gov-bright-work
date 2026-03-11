@@ -1521,7 +1521,8 @@ app.post('/api/purchase-requests', async (req, res) => {
        funding_detail, procurement_method, budget_amount, total_amount, expected_completion_date, purchase_date, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [id, requested_by, department, purpose, reason, funding_source, 
-       funding_detail, procurement_method, budget_amount || 0, total_amount || 0, expected_completion_date, purchaseDateValue]
+       funding_detail, procurement_method, budget_amount || 0, total_amount || 0, 
+       expected_completion_date ? expected_completion_date.substring(0, 10) : null, purchaseDateValue]
     );
     
     res.json({ success: true, id });
