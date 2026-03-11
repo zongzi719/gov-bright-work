@@ -167,7 +167,7 @@ const BannerManagement = () => {
                 <div className="relative w-full h-24 bg-muted rounded-lg overflow-hidden border">
                   <img src={formData.image_url} alt="导航栏背景预览" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary/60 flex items-center px-4">
-                    <span className="text-white font-bold text-lg">昌吉州党政办公平台</span>
+                    <span className="text-white font-bold text-lg">党政办公平台</span>
                   </div>
                 </div>
               ) : (
