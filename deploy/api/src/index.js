@@ -2518,11 +2518,15 @@ app.post('/api/schedules', async (req, res) => {
   try {
     const id = uuidv4();
     const { contact_id, title, schedule_date, start_time, end_time, location, notes } = req.body;
+    // 格式化日期和时间，防止 ISO 格式导致 MariaDB 报错
+    const safeDate = schedule_date ? schedule_date.substring(0, 10) : null;
+    const safeStartTime = start_time ? start_time.substring(0, 5) : null;
+    const safeEndTime = end_time ? end_time.substring(0, 5) : null;
     
     await pool.execute(
       `INSERT INTO schedules (id, contact_id, title, schedule_date, start_time, end_time, location, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, contact_id, title, schedule_date, start_time, end_time, location, notes]
+      [id, contact_id, title, safeDate, safeStartTime, safeEndTime, location || null, notes || null]
     );
     
     res.json({ success: true, id });
@@ -2540,9 +2544,10 @@ app.put('/api/schedules/:id', async (req, res) => {
     // 处理 undefined 值为 null，防止 MariaDB 驱动报错
     const safeContactId = contact_id || null;
     const safeTitle = title || null;
-    const safeScheduleDate = schedule_date || null;
-    const safeStartTime = start_time || null;
-    const safeEndTime = end_time || null;
+    // schedule_date 可能是 ISO 格式 "2026-03-11T16:00:00.000Z"，需截取为 YYYY-MM-DD
+    const safeScheduleDate = schedule_date ? schedule_date.substring(0, 10) : null;
+    const safeStartTime = start_time ? start_time.substring(0, 5) : null;
+    const safeEndTime = end_time ? end_time.substring(0, 5) : null;
     const safeLocation = location !== undefined ? location : null;
     const safeNotes = notes !== undefined ? notes : null;
     
