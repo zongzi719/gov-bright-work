@@ -265,6 +265,8 @@ const Login = () => {
         };
       }
 
+      // 账号密码登录标记登录方式
+      localStorage.setItem("loginMethod", "password");
       saveUserAndRedirect(userData);
     } catch (err) {
       console.error("Login error:", err);

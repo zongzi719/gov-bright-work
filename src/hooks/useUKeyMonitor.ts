@@ -18,8 +18,9 @@ export const useUKeyMonitor = () => {
   const loggedOutRef = useRef(false);
 
   useEffect(() => {
-    // 仅离线模式 + 已登录用户才启用监控
-    if (!isOfflineMode() || !user?.id) return;
+    // 仅离线模式 + 已登录用户 + SSO登录方式 才启用监控
+    const loginMethod = localStorage.getItem("loginMethod");
+    if (!isOfflineMode() || !user?.id || loginMethod !== "sso") return;
 
     loggedOutRef.current = false;
     failCountRef.current = 0;
