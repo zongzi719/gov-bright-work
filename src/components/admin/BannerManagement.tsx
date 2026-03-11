@@ -172,7 +172,7 @@ const BannerManagement = () => {
                 </div>
               ) : (
                 <div className="w-full h-24 bg-header-gradient rounded-lg flex items-center px-4 border">
-                  <span className="text-white font-bold text-lg">昌吉州党政办公平台（默认渐变背景）</span>
+                  <span className="text-white font-bold text-lg">党政办公平台（默认渐变背景）</span>
                 </div>
               )}
             </div>

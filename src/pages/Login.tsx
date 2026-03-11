@@ -307,7 +307,7 @@ const Login = () => {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-primary text-2xl font-bold">政</span>
           </div>
-          <CardTitle className="text-2xl">昌吉州党政办公平台</CardTitle>
+          <CardTitle className="text-2xl">党政办公平台</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* SSO 单点登录按钮 - 仅离线模式显示 */}

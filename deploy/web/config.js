@@ -6,7 +6,7 @@ window.GOV_CONFIG = {
   API_BASE_URL: "http://83.10.82.240:3001",
 
   // 应用名称
-  APP_NAME: "昌吉州党政办公平台",
+  APP_NAME: "党政办公平台",
 
   // 版本号
   VERSION: "1.0.0",
