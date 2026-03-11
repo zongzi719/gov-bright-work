@@ -21,6 +21,7 @@ import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { format, startOfWeek, addDays, subWeeks, addWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { normalizeDate, normalizeTime } from "@/lib/utils";
 
 interface Contact {
   id: string;
