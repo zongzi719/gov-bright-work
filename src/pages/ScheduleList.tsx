@@ -115,9 +115,9 @@ const ScheduleList = () => {
     setEditingSchedule(schedule);
     setFormData({
       title: schedule.title,
-      schedule_date: schedule.schedule_date.includes("T") ? format(new Date(schedule.schedule_date), "yyyy-MM-dd") : schedule.schedule_date,
-      start_time: schedule.start_time.slice(0, 5),
-      end_time: schedule.end_time.slice(0, 5),
+      schedule_date: normalizeDate(schedule.schedule_date),
+      start_time: normalizeTime(schedule.start_time),
+      end_time: normalizeTime(schedule.end_time),
       location: schedule.location || "",
       notes: schedule.notes || "",
     });
