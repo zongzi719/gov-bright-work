@@ -2434,10 +2434,15 @@ app.post('/api/leader-schedules', async (req, res) => {
     const id = uuidv4();
     const { leader_id, title, schedule_date, start_time, end_time, schedule_type, location, notes } = req.body;
     
+    // 格式化日期和时间，防止 ISO 格式导致 MariaDB 报错
+    const safeDate = schedule_date ? schedule_date.substring(0, 10) : null;
+    const safeStartTime = start_time ? start_time.substring(0, 5) : null;
+    const safeEndTime = end_time ? end_time.substring(0, 5) : null;
+    
     await pool.execute(
       `INSERT INTO leader_schedules (id, leader_id, title, schedule_date, start_time, end_time, schedule_type, location, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, leader_id, title, schedule_date, start_time, end_time, schedule_type || 'meeting', location || null, notes || null]
+      [id, leader_id, title, safeDate, safeStartTime, safeEndTime, schedule_type || 'meeting', location || null, notes || null]
     );
     
     res.json({ id, success: true });
