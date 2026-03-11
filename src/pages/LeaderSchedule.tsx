@@ -163,7 +163,7 @@ const LeaderSchedulePage = () => {
   const getSchedulesForLeaderAndDay = (leaderId: string, date: Date): LeaderSchedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
     return leaderSchedules.filter(
-      (s) => s.leader_id === leaderId && s.schedule_date === dateStr
+      (s) => s.leader_id === leaderId && normalizeDate(s.schedule_date) === dateStr
     );
   };
 
