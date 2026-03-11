@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
