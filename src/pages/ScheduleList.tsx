@@ -293,14 +293,13 @@ const ScheduleList = () => {
             ) : (
               <div className="divide-y divide-border">
                 {allSchedulesSorted.map((item) => {
-                  const dateStr = item.schedule_date.includes("T")
-                    ? format(new Date(item.schedule_date), "MM-dd EEEE", { locale: zhCN })
-                    : format(new Date(item.schedule_date + "T00:00:00"), "MM-dd EEEE", { locale: zhCN });
+                  const normalized = normalizeDate(item.schedule_date);
+                  const dateStr = format(new Date(normalized + "T00:00:00"), "MM-dd EEEE", { locale: zhCN });
                   return (
                     <div key={item.id} className="flex items-center px-4 py-3 hover:bg-muted/30 transition-colors group">
                       <div className="w-28 flex-shrink-0 text-sm text-muted-foreground">{dateStr}</div>
                       <div className="w-24 flex-shrink-0 text-sm text-primary font-medium">
-                        {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)}
+                        {normalizeTime(item.start_time)} - {normalizeTime(item.end_time)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium text-foreground">{item.title}</span>
