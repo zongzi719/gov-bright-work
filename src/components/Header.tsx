@@ -174,7 +174,7 @@ const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1.5 md:gap-2 hover:opacity-80 transition-opacity cursor-pointer">
-                  <Avatar className="w-7 h-7 border-2 border-white/30">
+                  <Avatar className="w-7 h-7 border-2 border-white-30">
                     <AvatarFallback className="bg-white text-primary font-bold text-xs">{avatarChar}</AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block text-left">
