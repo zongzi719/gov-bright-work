@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     // 添加旧浏览器兼容性支持（针对麒麟系统老版本Firefox/Chrome）
     legacy({
-      targets: ["Firefox >= 52", "Chrome >= 49", "ie >= 11"],
+      targets: ["Firefox >= 45", "Chrome >= 49", "ie >= 11"],
       // 为旧版浏览器添加必要的 polyfills
       additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
       // 关键：为"半现代"浏览器（如 Firefox 62）也添加 polyfills
