@@ -337,7 +337,9 @@ app.get('/api/contacts/:id', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: '联系人不存在' });
     }
-    res.json(rows[0]);
+    const row = rows[0];
+    row.first_work_date = row.first_work_date ? new Date(row.first_work_date).toISOString().substring(0, 10) : null;
+    res.json(row);
   } catch (error) {
     console.error('Get contact error:', error);
     res.status(500).json({ error: '获取联系人失败' });
