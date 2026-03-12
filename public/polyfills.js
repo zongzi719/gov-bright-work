@@ -115,6 +115,28 @@
     };
   }
 
+  // ========== 7. Legacy browser detection ==========
+  // Detect browsers that don't support CSS Color Level 4 (space-separated hsl)
+  // e.g. Firefox < 65, Chrome < 66
+  (function detectLegacyBrowser() {
+    try {
+      var testEl = document.createElement('div');
+      testEl.style.color = 'hsl(0 0% 0%)';
+      // If the browser doesn't understand space-separated hsl, it ignores it
+      if (!testEl.style.color) {
+        document.documentElement.classList.add('legacy-browser');
+        if (typeof console !== 'undefined' && console.log) {
+          console.log('[Polyfills] Legacy browser detected, added .legacy-browser class');
+        }
+      }
+    } catch (e) {
+      // If classList or createElement fails, mark as legacy
+      try {
+        document.documentElement.className += ' legacy-browser';
+      } catch (e2) {}
+    }
+  })();
+
   // Log success for debugging
   if (typeof console !== 'undefined' && console.log) {
     console.log('[Polyfills] Loaded successfully for legacy browser support');

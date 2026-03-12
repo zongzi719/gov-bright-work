@@ -252,3 +252,118 @@
 .carousel-overlay {
   background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 40%, transparent 100%);
 }
+
+/* =========================================================
+   旧版浏览器兼容 (.legacy-browser)
+   Firefox < 65 / Chrome < 66 不支持 CSS Color Level 4
+   空格分隔 hsl(354 73% 43%) 语法无效，需要逗号分隔
+   polyfills.js 检测后自动在 <html> 上添加 .legacy-browser
+   ========================================================= */
+
+/* Background colors */
+.legacy-browser .bg-background { background-color: hsl(220, 14%, 96%) !important; }
+.legacy-browser .bg-foreground { background-color: hsl(0, 0%, 15%) !important; }
+.legacy-browser .bg-card { background-color: hsl(0, 0%, 100%) !important; }
+.legacy-browser .bg-primary { background-color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .bg-primary-dark { background-color: hsl(354, 73%, 35%) !important; }
+.legacy-browser .bg-primary-foreground { background-color: hsl(0, 0%, 100%) !important; }
+.legacy-browser .bg-secondary { background-color: hsl(220, 14%, 96%) !important; }
+.legacy-browser .bg-muted { background-color: hsl(220, 14%, 92%) !important; }
+.legacy-browser .bg-accent { background-color: hsl(38, 92%, 50%) !important; }
+.legacy-browser .bg-accent-light { background-color: hsl(43, 96%, 56%) !important; }
+.legacy-browser .bg-destructive { background-color: hsl(0, 84%, 60%) !important; }
+.legacy-browser .bg-popover { background-color: hsl(0, 0%, 100%) !important; }
+.legacy-browser .bg-input { background-color: hsl(220, 13%, 91%) !important; }
+.legacy-browser .bg-gov-red { background-color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .bg-gov-red-dark { background-color: hsl(354, 73%, 35%) !important; }
+.legacy-browser .bg-gov-red-light { background-color: hsl(354, 73%, 95%) !important; }
+.legacy-browser .bg-gov-gold { background-color: hsl(38, 92%, 50%) !important; }
+.legacy-browser .bg-gov-gold-light { background-color: hsl(43, 96%, 70%) !important; }
+.legacy-browser .bg-sidebar { background-color: hsl(0, 0%, 98%) !important; }
+.legacy-browser .bg-sidebar-accent { background-color: hsl(354, 73%, 95%) !important; }
+.legacy-browser .bg-sidebar-primary { background-color: hsl(354, 73%, 43%) !important; }
+
+/* Text colors */
+.legacy-browser .text-foreground { color: hsl(0, 0%, 15%) !important; }
+.legacy-browser .text-background { color: hsl(220, 14%, 96%) !important; }
+.legacy-browser .text-primary { color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .text-primary-foreground { color: hsl(0, 0%, 100%) !important; }
+.legacy-browser .text-primary-dark { color: hsl(354, 73%, 35%) !important; }
+.legacy-browser .text-secondary-foreground { color: hsl(0, 0%, 25%) !important; }
+.legacy-browser .text-muted-foreground { color: hsl(0, 0%, 45%) !important; }
+.legacy-browser .text-accent { color: hsl(38, 92%, 50%) !important; }
+.legacy-browser .text-accent-foreground { color: hsl(0, 0%, 15%) !important; }
+.legacy-browser .text-destructive { color: hsl(0, 84%, 60%) !important; }
+.legacy-browser .text-destructive-foreground { color: hsl(0, 0%, 100%) !important; }
+.legacy-browser .text-card-foreground { color: hsl(0, 0%, 15%) !important; }
+.legacy-browser .text-popover-foreground { color: hsl(0, 0%, 15%) !important; }
+.legacy-browser .text-gov-red { color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .text-gov-red-dark { color: hsl(354, 73%, 35%) !important; }
+.legacy-browser .text-gov-gold { color: hsl(38, 92%, 50%) !important; }
+.legacy-browser .text-gov-text { color: hsl(0, 0%, 25%) !important; }
+.legacy-browser .text-sidebar-foreground { color: hsl(240, 5.3%, 26.1%) !important; }
+.legacy-browser .text-sidebar-primary { color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .text-sidebar-primary-foreground { color: hsl(0, 0%, 100%) !important; }
+.legacy-browser .text-sidebar-accent-foreground { color: hsl(354, 73%, 35%) !important; }
+
+/* Border colors */
+.legacy-browser .border-border { border-color: hsl(220, 13%, 88%) !important; }
+.legacy-browser .border-input { border-color: hsl(220, 13%, 91%) !important; }
+.legacy-browser .border-primary { border-color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .border-destructive { border-color: hsl(0, 84%, 60%) !important; }
+.legacy-browser .border-muted { border-color: hsl(220, 14%, 92%) !important; }
+.legacy-browser .border-accent { border-color: hsl(38, 92%, 50%) !important; }
+.legacy-browser .border-sidebar-border { border-color: hsl(220, 13%, 91%) !important; }
+
+/* Ring colors */
+.legacy-browser .ring-ring { --tw-ring-color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .ring-primary { --tw-ring-color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .ring-destructive { --tw-ring-color: hsl(0, 84%, 60%) !important; }
+
+/* Opacity variants → solid color fallbacks (旧浏览器不支持 / 透明度语法) */
+.legacy-browser [class*="bg-primary\\/"] { background-color: hsl(354, 73%, 90%) !important; }
+.legacy-browser [class*="bg-muted-foreground\\/"] { background-color: hsl(0, 0%, 75%) !important; }
+.legacy-browser [class*="bg-accent\\/"] { background-color: hsl(38, 92%, 85%) !important; }
+.legacy-browser [class*="text-muted-foreground\\/"] { color: hsl(0, 0%, 60%) !important; }
+
+/* Hover states */
+.legacy-browser .hover\:bg-primary:hover { background-color: hsl(354, 73%, 38%) !important; }
+.legacy-browser .hover\:bg-primary-dark:hover { background-color: hsl(354, 73%, 30%) !important; }
+.legacy-browser .hover\:bg-muted:hover { background-color: hsl(220, 14%, 88%) !important; }
+.legacy-browser .hover\:bg-accent:hover { background-color: hsl(38, 92%, 45%) !important; }
+.legacy-browser .hover\:bg-secondary:hover { background-color: hsl(220, 14%, 92%) !important; }
+.legacy-browser .hover\:bg-destructive:hover { background-color: hsl(0, 84%, 55%) !important; }
+.legacy-browser .hover\:text-primary:hover { color: hsl(354, 73%, 43%) !important; }
+.legacy-browser .hover\:text-accent-foreground:hover { color: hsl(0, 0%, 15%) !important; }
+
+/* Header/gold gradient → solid fallback */
+.legacy-browser .bg-header-gradient {
+  background-color: hsl(354, 73%, 40%) !important;
+  background-image: none !important;
+}
+.legacy-browser .bg-gold-gradient {
+  background-color: hsl(38, 92%, 50%) !important;
+  background-image: none !important;
+}
+
+/* Shadow fallbacks (hsla 需要逗号分隔) */
+.legacy-browser .shadow-card { box-shadow: 0 2px 8px -2px rgba(0,0,0,0.08), 0 4px 16px -4px rgba(0,0,0,0.06) !important; }
+.legacy-browser .shadow-card-hover { box-shadow: 0 8px 24px -6px rgba(0,0,0,0.12), 0 12px 32px -8px rgba(0,0,0,0.1) !important; }
+.legacy-browser .shadow-header { box-shadow: 0 2px 12px -2px rgba(186,30,51,0.3) !important; }
+
+/* Focus ring */
+.legacy-browser .focus-visible\:ring-ring:focus-visible { --tw-ring-color: hsl(354, 73%, 43%) !important; }
+
+/* Placeholder */
+.legacy-browser .placeholder\:text-muted-foreground::placeholder { color: hsl(0, 0%, 45%) !important; }
+
+/* body base colors */
+.legacy-browser body {
+  background-color: hsl(220, 14%, 96%) !important;
+  color: hsl(0, 0%, 15%) !important;
+}
+
+/* Scrollbar */
+.legacy-browser ::-webkit-scrollbar-track { background-color: hsl(220, 14%, 92%) !important; }
+.legacy-browser ::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.2) !important; }
+.legacy-browser ::-webkit-scrollbar-thumb:hover { background-color: rgba(0, 0, 0, 0.35) !important; }
