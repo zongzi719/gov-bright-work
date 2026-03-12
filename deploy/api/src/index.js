@@ -44,6 +44,20 @@ function formatDateForMySQL(isoString) {
   }
 }
 
+// 将 mysql2 返回的 DATE 类型（JS Date 对象）安全格式化为 YYYY-MM-DD 字符串
+// 避免 JSON 序列化时产生 UTC 时区偏移（如 2026-03-02T16:00:00.000Z → 应为 2026-03-03）
+function safeDateStr(val) {
+  if (!val) return null;
+  if (typeof val === 'string') return val.substring(0, 10);
+  if (val instanceof Date) {
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    const d = String(val.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return null;
+}
+
 // 数据库连接池
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
