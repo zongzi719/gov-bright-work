@@ -352,7 +352,7 @@ app.get('/api/contacts/:id', async (req, res) => {
       return res.status(404).json({ error: '联系人不存在' });
     }
     const row = rows[0];
-    row.first_work_date = row.first_work_date ? new Date(row.first_work_date).toISOString().substring(0, 10) : null;
+    row.first_work_date = safeDateStr(row.first_work_date);
     res.json(row);
   } catch (error) {
     console.error('Get contact error:', error);
