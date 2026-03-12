@@ -303,16 +303,22 @@ app.get('/api/contacts', async (req, res) => {
     
     const [rows] = await pool.execute(sql, params);
     
+    // 格式化日期字段，避免 mysql2 返回 UTC Date 对象导致时区偏移
+    const formatContactDates = (row) => ({
+      ...row,
+      first_work_date: row.first_work_date ? new Date(row.first_work_date).toISOString().substring(0, 10) : null,
+    });
+
     // 如果需要 with_org 格式，添加 organization 对象
     if (with_org === 'true') {
       const formatted = rows.map(row => ({
-        ...row,
+        ...formatContactDates(row),
         organization: row.organization_name ? { name: row.organization_name } : null
       }));
       return res.json(formatted);
     }
     
-    res.json(rows);
+    res.json(rows.map(formatContactDates));
   } catch (error) {
     console.error('Get contacts error:', error);
     res.status(500).json({ error: '获取通讯录失败' });
@@ -331,7 +337,9 @@ app.get('/api/contacts/:id', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: '联系人不存在' });
     }
-    res.json(rows[0]);
+    const row = rows[0];
+    row.first_work_date = row.first_work_date ? new Date(row.first_work_date).toISOString().substring(0, 10) : null;
+    res.json(row);
   } catch (error) {
     console.error('Get contact error:', error);
     res.status(500).json({ error: '获取联系人失败' });
@@ -375,7 +383,7 @@ app.post('/api/contacts', async (req, res) => {
       [id, organization_id, name, position || null, department || null, phone || null, 
        mobile || null, email || null, office_location || null, sort_order || 0, 
        is_active !== false ? 1 : 0, status || 'on_duty', status_note || null, 
-       security_level || '公开', is_leader ? 1 : 0, first_work_date || null, password_hash || '123456',
+       security_level || '公开', is_leader ? 1 : 0, first_work_date ? first_work_date.substring(0, 10) : null, password_hash || '123456',
        account || null]
     );
     
@@ -408,7 +416,7 @@ app.put('/api/contacts/:id', async (req, res) => {
     if (updates.status_note !== undefined) { fields.push('status_note = ?'); values.push(updates.status_note); }
     if (updates.security_level !== undefined) { fields.push('security_level = ?'); values.push(updates.security_level); }
     if (updates.is_leader !== undefined) { fields.push('is_leader = ?'); values.push(updates.is_leader ? 1 : 0); }
-    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date); }
+    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date ? updates.first_work_date.substring(0, 10) : null); }
     if (updates.account !== undefined) { fields.push('account = ?'); values.push(updates.account); }
     
     if (fields.length === 0) {
