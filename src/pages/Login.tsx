@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { LogIn, Shield } from "lucide-react";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
-import { Separator } from "@/components/ui/separator";
+
 
 const WS_URL = "ws://127.0.0.1:30318/";
 const WS_TIMEOUT = 15000; // 15秒超时
