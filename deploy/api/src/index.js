@@ -1102,10 +1102,12 @@ app.get('/api/file-transfers', async (req, res) => {
     sql += ' ORDER BY created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    // 解析attachments JSON
+    // 解析attachments JSON + 格式化日期字段
     const transfers = rows.map(row => ({
       ...row,
-      attachments: JSON.parse(row.attachments || '[]')
+      attachments: JSON.parse(row.attachments || '[]'),
+      document_date: safeDateStr(row.document_date),
+      sign_date: safeDateStr(row.sign_date),
     }));
     res.json(transfers);
   } catch (error) {
