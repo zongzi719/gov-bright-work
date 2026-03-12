@@ -1432,7 +1432,11 @@ app.get('/api/supply-purchases', async (req, res) => {
     sql += ' ORDER BY created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    const formatted = rows.map(row => ({
+      ...row,
+      purchase_date: safeDateStr(row.purchase_date),
+    }));
+    res.json(formatted);
   } catch (error) {
     console.error('Get supply purchases error:', error);
     res.status(500).json({ error: '获取采购申请失败' });
