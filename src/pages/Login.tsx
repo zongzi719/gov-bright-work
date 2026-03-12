@@ -279,19 +279,19 @@ const Login = () => {
   // 自动 SSO 检测中，显示加载页面
   if (autoSsoChecking || (ssoLoading && !autoSsoAttempted)) {
     return (
-      <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
+      <div className="min-h-screen bg-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 rounded-full bg-gov-red-light flex items-center justify-center mx-auto mb-4">
+          <CardHeader style={{ textAlign: 'center' }}>
+            <div style={{ width: '4rem', height: '4rem', borderRadius: '50%', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="bg-gov-red-light">
               <Shield className="w-8 h-8 text-primary animate-pulse" />
             </div>
-            <CardTitle className="text-2xl">党政办公平台</CardTitle>
+            <CardTitle className="text-2xl" style={{ textAlign: 'center' }}>党政办公平台</CardTitle>
           </CardHeader>
-          <CardContent className="text-center space-y-4">
+          <CardContent style={{ textAlign: 'center' }}>
             <p className="text-muted-foreground">
               {autoSsoChecking ? "正在检测安全客户端..." : "正在进行身份认证，请稍候..."}
             </p>
-            <div className="flex justify-center">
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
               <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
             </div>
           </CardContent>
