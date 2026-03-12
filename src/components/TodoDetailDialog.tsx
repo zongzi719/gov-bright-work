@@ -806,6 +806,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       toast.success("申请已撤回");
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to withdraw application:", error);
