@@ -60,19 +60,17 @@ const Header = () => {
     fetchHeaderBg();
   }, []);
 
-  // Fetch pending todo count for current user
+  // Fetch pending todo count for current user (with 30s polling + event-driven refresh)
   useEffect(() => {
-    const fetchTodoCount = async () => {
-      if (!user?.id) return;
+    if (!user?.id) return;
 
+    const fetchTodoCount = async () => {
       if (isOfflineMode()) {
-        // 离线模式
         const { data, error } = await offlineApi.getTodoCount(user.id);
         if (!error && data) {
           setTodoCount(data.count);
         }
       } else {
-        // 在线模式
         const { count, error } = await supabase
           .from("todo_items")
           .select("*", { count: "exact", head: true })
@@ -85,7 +83,20 @@ const Header = () => {
       }
     };
 
+    // 初次加载
     fetchTodoCount();
+
+    // 30秒轮询
+    const interval = setInterval(fetchTodoCount, 30000);
+
+    // 监听审批操作事件，立即刷新
+    const handleRefresh = () => fetchTodoCount();
+    window.addEventListener("todo-count-refresh", handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("todo-count-refresh", handleRefresh);
+    };
   }, [user?.id]);
 
   // Redirect to login if not authenticated

@@ -224,6 +224,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       console.log("CC item marked as read successfully");
       // 通知父组件刷新列表
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
     } catch (error) {
       console.error("Failed to mark CC as read:", error);
     }
@@ -691,6 +692,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to submit approval:", error);
@@ -773,6 +775,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       toast.success(toastMessage);
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to return approval:", error);
@@ -803,6 +806,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       toast.success("申请已撤回");
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to withdraw application:", error);
@@ -847,6 +851,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       toast.success("已重新提交，等待审批");
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to resubmit application:", error);
