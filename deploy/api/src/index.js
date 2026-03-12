@@ -2447,6 +2447,7 @@ app.get('/api/leader-schedules', async (req, res) => {
     // 格式化为前端期望的结构
     const schedules = rows.map(row => ({
       ...row,
+      schedule_date: safeDateStr(row.schedule_date),
       leader: {
         id: row.leader_id,
         name: row.leader_name,
