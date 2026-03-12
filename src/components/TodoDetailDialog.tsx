@@ -851,6 +851,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       toast.success("已重新提交，等待审批");
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to resubmit application:", error);
