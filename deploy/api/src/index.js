@@ -2153,7 +2153,7 @@ app.get('/api/leave-balances', async (req, res) => {
           name: row.contact_name,
           department: row.contact_department,
           position: row.contact_position,
-          first_work_date: row.first_work_date,
+          first_work_date: safeDateStr(row.first_work_date),
           created_at: row.contact_created_at,
           organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
         } : null
