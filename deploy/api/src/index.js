@@ -1301,7 +1301,7 @@ app.get('/api/schedules', async (req, res) => {
       id: row.id,
       contact_id: row.contact_id,
       title: row.title,
-      schedule_date: row.schedule_date,
+      schedule_date: safeDateStr(row.schedule_date),
       start_time: row.start_time,
       end_time: row.end_time,
       location: row.location,
