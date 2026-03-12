@@ -285,7 +285,7 @@ app.get('/api/contacts', async (req, res) => {
         name: row.name,
         department: row.department,
         position: row.position,
-        first_work_date: row.first_work_date,
+        first_work_date: safeDateStr(row.first_work_date),
         created_at: row.created_at,
         organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
       }));
