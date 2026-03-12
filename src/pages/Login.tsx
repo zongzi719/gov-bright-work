@@ -329,11 +329,10 @@ const Login = () => {
                   </>
                 )}
               </Button>
-              <div className="relative">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
-                  或使用账号密码
-                </span>
+              <div className="flex items-center">
+                <div className="h-px flex-1 bg-border" />
+                <span className="px-3 text-xs text-muted-foreground">或使用账号密码</span>
+                <div className="h-px flex-1 bg-border" />
               </div>
             </>
           )}
