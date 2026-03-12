@@ -375,7 +375,7 @@ app.post('/api/contacts', async (req, res) => {
       [id, organization_id, name, position || null, department || null, phone || null, 
        mobile || null, email || null, office_location || null, sort_order || 0, 
        is_active !== false ? 1 : 0, status || 'on_duty', status_note || null, 
-       security_level || '公开', is_leader ? 1 : 0, first_work_date || null, password_hash || '123456',
+       security_level || '公开', is_leader ? 1 : 0, first_work_date ? first_work_date.substring(0, 10) : null, password_hash || '123456',
        account || null]
     );
     
