@@ -320,7 +320,7 @@ app.get('/api/contacts', async (req, res) => {
     // 格式化日期字段，避免 mysql2 返回 UTC Date 对象导致时区偏移
     const formatContactDates = (row) => ({
       ...row,
-      first_work_date: row.first_work_date ? new Date(row.first_work_date).toISOString().substring(0, 10) : null,
+      first_work_date: safeDateStr(row.first_work_date),
     });
 
     // 如果需要 with_org 格式，添加 organization 对象
