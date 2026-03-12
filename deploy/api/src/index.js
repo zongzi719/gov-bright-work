@@ -408,7 +408,7 @@ app.put('/api/contacts/:id', async (req, res) => {
     if (updates.status_note !== undefined) { fields.push('status_note = ?'); values.push(updates.status_note); }
     if (updates.security_level !== undefined) { fields.push('security_level = ?'); values.push(updates.security_level); }
     if (updates.is_leader !== undefined) { fields.push('is_leader = ?'); values.push(updates.is_leader ? 1 : 0); }
-    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date); }
+    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date ? updates.first_work_date.substring(0, 10) : null); }
     if (updates.account !== undefined) { fields.push('account = ?'); values.push(updates.account); }
     
     if (fields.length === 0) {
