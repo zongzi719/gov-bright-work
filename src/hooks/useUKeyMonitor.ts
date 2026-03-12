@@ -82,7 +82,7 @@ export const useUKeyMonitor = () => {
         // 清除登录状态，跳转到 /misslogin 页面
         localStorage.removeItem("frontendUser");
         localStorage.removeItem("loginMethod");
-        window.location.href = "/#/misslogin";
+        window.location.href = "/misslogin";
       }
     };
 
