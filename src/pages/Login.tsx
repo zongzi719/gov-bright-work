@@ -279,10 +279,10 @@ const Login = () => {
   // 自动 SSO 检测中，显示加载页面
   if (autoSsoChecking || (ssoLoading && !autoSsoAttempted)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-full bg-gov-red-light flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-primary animate-pulse" />
             </div>
             <CardTitle className="text-2xl">党政办公平台</CardTitle>
@@ -292,7 +292,7 @@ const Login = () => {
               {autoSsoChecking ? "正在检测安全客户端..." : "正在进行身份认证，请稍候..."}
             </p>
             <div className="flex justify-center">
-              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
             </div>
           </CardContent>
         </Card>
@@ -301,10 +301,10 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-gov-red-light flex items-center justify-center mx-auto mb-4">
             <span className="text-primary text-2xl font-bold">政</span>
           </div>
           <CardTitle className="text-2xl">党政办公平台</CardTitle>
@@ -329,7 +329,7 @@ const Login = () => {
                   </>
                 )}
               </Button>
-              <div className="relative">
+              <div className="relative py-1">
                 <Separator />
                 <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
                   或使用账号密码
