@@ -51,7 +51,7 @@ const App = () => (
           <Route path="/absence" element={<AbsenceApplication />} />
           <Route path="/procurement" element={<ProcurementApplication />} />
           <Route path="/schedule-list" element={<ScheduleList />} />
-          <Route path="/misslogin" element={<MissLogin />} />
+          <Route path="/ukey-required" element={<MissLogin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
