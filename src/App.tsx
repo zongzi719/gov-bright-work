@@ -22,6 +22,7 @@ import TodoList from "./pages/TodoList";
 import AbsenceApplication from "./pages/AbsenceApplication";
 import ProcurementApplication from "./pages/ProcurementApplication";
 import ScheduleList from "./pages/ScheduleList";
+import MissLogin from "./pages/MissLogin";
 
 const queryClient = new QueryClient();
 
