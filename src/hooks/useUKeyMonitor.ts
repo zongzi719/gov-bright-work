@@ -79,12 +79,10 @@ export const useUKeyMonitor = () => {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
-        toast({
-          title: "安全提示",
-          description: "检测到 UKey 已拔出，系统已自动退出登录",
-          variant: "destructive",
-        });
-        logout();
+        // 清除登录状态，跳转到 /misslogin 页面
+        localStorage.removeItem("frontendUser");
+        localStorage.removeItem("loginMethod");
+        window.location.href = "/#/misslogin";
       }
     };
 
