@@ -18,14 +18,14 @@ const Index = () => {
         {/* 移动端：垂直滚动布局 | 桌面端：三栏布局 */}
         
         {/* 桌面端三栏布局 - hidden on mobile */}
-        <div className="hidden lg:grid h-full grid-cols-10 gap-3">
+        <div className="hidden lg:flex h-full gap-3">
           {/* 左侧：工作事项 - 20% */}
-          <div className="col-span-2 flex flex-col overflow-hidden">
+          <div style={{width: '20%'}} className="flex flex-col overflow-hidden">
             <WorkPanel />
           </div>
 
           {/* 中间：通知公告 + 快捷入口 - 50% */}
-          <div className="col-span-5 flex flex-col gap-3 overflow-hidden">
+          <div style={{width: '50%'}} className="flex flex-col gap-3 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-hidden">
               <NoticeList />
             </div>
@@ -35,7 +35,7 @@ const Index = () => {
           </div>
 
           {/* 右侧：日程管理 + 常用链接 + 食堂菜谱 - 30% */}
-          <div className="col-span-3 flex flex-col gap-3 overflow-hidden">
+          <div style={{width: '30%'}} className="flex flex-col gap-3 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-hidden">
               <SchedulePanel />
             </div>

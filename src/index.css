@@ -230,6 +230,64 @@
   }
 }
 
+/* ===== 兼容旧版浏览器的 rgba 颜色工具类 ===== */
+/* 替代 Tailwind 的 /opacity 简写，FF45 不支持 rgb(255 255 255 / 0.9) 语法 */
+.text-white-90 {
+  color: rgba(255, 255, 255, 0.9);
+}
+.text-white-70 {
+  color: rgba(255, 255, 255, 0.7);
+}
+.hover-bg-white-10:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.border-white-30 {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== Legacy browser (Firefox < 60) layout fixes ===== */
+/* 仅在 polyfills.js 检测到旧版浏览器时生效 */
+.legacy-browser .flex {
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+/* 修复旧版 Firefox 下 flex items-center justify-center 的居中问题 */
+.legacy-browser .items-center {
+  -webkit-box-align: center;
+  -moz-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+}
+
+.legacy-browser .justify-center {
+  -webkit-box-pack: center;
+  -moz-box-pack: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+}
+
+/* 修复 gap 属性不支持的问题 - 用 margin 模拟 */
+.legacy-browser .gap-2 > * + * {
+  margin-left: 0.5rem;
+}
+.legacy-browser .flex-col.gap-2 > * + * {
+  margin-left: 0;
+  margin-top: 0.5rem;
+}
+.legacy-browser .gap-3 > * + * {
+  margin-left: 0.75rem;
+}
+.legacy-browser .flex-col.gap-3 > * + * {
+  margin-left: 0;
+  margin-top: 0.75rem;
+}
+.legacy-browser .space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
 /* 自定义滚动条 */
 ::-webkit-scrollbar {
   width: 6px;

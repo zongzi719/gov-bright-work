@@ -115,6 +115,17 @@
     };
   }
 
+  // ========== Browser Detection ==========
+  // Add 'legacy-browser' class to <html> for Firefox < 60 or other old engines
+  // This enables CSS-only fallback styles without affecting modern browsers
+  try {
+    var ua = navigator.userAgent || '';
+    var ffMatch = ua.match(/Firefox\/(\d+)/);
+    if (ffMatch && parseInt(ffMatch[1], 10) < 60) {
+      document.documentElement.className += ' legacy-browser';
+    }
+  } catch(e) {}
+
   // Log success for debugging
   if (typeof console !== 'undefined' && console.log) {
     console.log('[Polyfills] Loaded successfully for legacy browser support');
