@@ -692,6 +692,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to submit approval:", error);
