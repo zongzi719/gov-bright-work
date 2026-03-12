@@ -306,9 +306,9 @@ const SchedulePanel = () => {
         {/* 两周日期视图 */}
         <div className="mt-2 flex-shrink-0 space-y-1">
           {/* 第一周 */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="flex flex-wrap -mx-0.5">
             {weekLabels.map((label, idx) => (
-              <div key={`week1-${label}`} className="text-center">
+              <div key={`week1-${label}`} className="w-[14.2857%] px-0.5 text-center">
                 <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
                 <div
                   onClick={() => handleDateClick(weekDays[idx])}
@@ -328,9 +328,9 @@ const SchedulePanel = () => {
             ))}
           </div>
           {/* 第二周 */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="flex flex-wrap -mx-0.5">
             {weekLabels.map((label, idx) => (
-              <div key={`week2-${label}`} className="text-center">
+              <div key={`week2-${label}`} className="w-[14.2857%] px-0.5 text-center">
                 <div
                   onClick={() => handleDateClick(weekDays[idx + 7])}
                   className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center cursor-pointer text-xs transition-all ${
