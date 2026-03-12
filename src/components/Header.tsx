@@ -158,7 +158,7 @@ const Header = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="relative text-white hover:bg-white/10 w-7 h-7 md:w-8 md:h-8"
+              className="relative text-white hover-bg-white-10 w-7 h-7 md:w-8 md:h-8"
               onClick={() => navigate("/todo?tab=pending")}
               title="待办事项"
             >
