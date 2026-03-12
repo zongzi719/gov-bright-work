@@ -17,16 +17,16 @@ const Index = () => {
       <main className="flex-1 p-2 md:p-3 overflow-hidden">
         {/* 移动端：垂直滚动布局 | 桌面端：三栏布局 */}
         
-        {/* 桌面端三栏布局 - hidden on mobile */}
-        <div className="hidden lg:grid h-full grid-cols-10 gap-3">
+        {/* 桌面端三栏布局 - 兼容旧版浏览器，避免 CSS Grid 导致内容被 hidden */}
+        <div className="hidden lg:flex h-full">
           {/* 左侧：工作事项 - 20% */}
-          <div className="col-span-2 flex flex-col overflow-hidden">
+          <div className="w-1/5 flex flex-col overflow-hidden mr-3">
             <WorkPanel />
           </div>
 
           {/* 中间：通知公告 + 快捷入口 - 50% */}
-          <div className="col-span-5 flex flex-col gap-3 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="w-1/2 flex flex-col overflow-hidden mr-3">
+            <div className="flex-1 min-h-0 overflow-hidden mb-3">
               <NoticeList />
             </div>
             <div className="flex-shrink-0">
@@ -35,11 +35,11 @@ const Index = () => {
           </div>
 
           {/* 右侧：日程管理 + 常用链接 + 食堂菜谱 - 30% */}
-          <div className="col-span-3 flex flex-col gap-3 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="w-[30%] flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden mb-3">
               <SchedulePanel />
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 mb-3">
               <ExternalLinks />
             </div>
             <div className="flex-shrink-0">
