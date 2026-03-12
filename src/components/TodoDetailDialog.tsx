@@ -775,6 +775,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       toast.success(toastMessage);
       onOpenChange(false);
       onApprovalComplete?.();
+      window.dispatchEvent(new Event("todo-count-refresh"));
 
     } catch (error) {
       console.error("Failed to return approval:", error);
