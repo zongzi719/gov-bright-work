@@ -38,8 +38,9 @@ export default defineConfig(({ mode }) => ({
     include: ["react", "react-dom"],
   },
   build: {
-    // 注意：不设置 target，让 @vitejs/plugin-legacy 自动处理
-    // 明确的 rollup 配置确保正确的模块分割
+    // 强制目标为 ES5，确保即使 legacy 插件未生效，代码也兼容 Firefox 45
+    target: "es5",
+    cssTarget: "firefox45",
     rollupOptions: {
       output: {
         // 确保 React 只有一个实例
