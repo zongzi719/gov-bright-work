@@ -139,7 +139,7 @@ const Header = () => {
           {/* 右侧：日期、用户信息、退出 */}
           <div className="flex items-center gap-2 md:gap-4">
             {/* 日期显示 - 仅桌面端 */}
-            <span className="text-white/90 text-sm hidden lg:block">{dateString}</span>
+            <span className="text-white-90 text-sm hidden lg:block">{dateString}</span>
 
             {/* 返回工作台 - 仅在非首页显示 */}
             {location.pathname !== "/" && (
