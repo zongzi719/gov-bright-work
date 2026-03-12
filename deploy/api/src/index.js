@@ -44,20 +44,6 @@ function formatDateForMySQL(isoString) {
   }
 }
 
-// 将 mysql2 返回的 DATE 类型（JS Date 对象）安全格式化为 YYYY-MM-DD 字符串
-// 避免 JSON 序列化时产生 UTC 时区偏移（如 2026-03-02T16:00:00.000Z → 应为 2026-03-03）
-function safeDateStr(val) {
-  if (!val) return null;
-  if (typeof val === 'string') return val.substring(0, 10);
-  if (val instanceof Date) {
-    const y = val.getFullYear();
-    const m = String(val.getMonth() + 1).padStart(2, '0');
-    const d = String(val.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-  return null;
-}
-
 // 数据库连接池
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -285,7 +271,7 @@ app.get('/api/contacts', async (req, res) => {
         name: row.name,
         department: row.department,
         position: row.position,
-        first_work_date: safeDateStr(row.first_work_date),
+        first_work_date: row.first_work_date,
         created_at: row.created_at,
         organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
       }));
@@ -317,22 +303,16 @@ app.get('/api/contacts', async (req, res) => {
     
     const [rows] = await pool.execute(sql, params);
     
-    // 格式化日期字段，避免 mysql2 返回 UTC Date 对象导致时区偏移
-    const formatContactDates = (row) => ({
-      ...row,
-      first_work_date: safeDateStr(row.first_work_date),
-    });
-
     // 如果需要 with_org 格式，添加 organization 对象
     if (with_org === 'true') {
       const formatted = rows.map(row => ({
-        ...formatContactDates(row),
+        ...row,
         organization: row.organization_name ? { name: row.organization_name } : null
       }));
       return res.json(formatted);
     }
     
-    res.json(rows.map(formatContactDates));
+    res.json(rows);
   } catch (error) {
     console.error('Get contacts error:', error);
     res.status(500).json({ error: '获取通讯录失败' });
@@ -351,9 +331,7 @@ app.get('/api/contacts/:id', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: '联系人不存在' });
     }
-    const row = rows[0];
-    row.first_work_date = safeDateStr(row.first_work_date);
-    res.json(row);
+    res.json(rows[0]);
   } catch (error) {
     console.error('Get contact error:', error);
     res.status(500).json({ error: '获取联系人失败' });
@@ -397,7 +375,7 @@ app.post('/api/contacts', async (req, res) => {
       [id, organization_id, name, position || null, department || null, phone || null, 
        mobile || null, email || null, office_location || null, sort_order || 0, 
        is_active !== false ? 1 : 0, status || 'on_duty', status_note || null, 
-       security_level || '公开', is_leader ? 1 : 0, first_work_date ? first_work_date.substring(0, 10) : null, password_hash || '123456',
+       security_level || '公开', is_leader ? 1 : 0, first_work_date || null, password_hash || '123456',
        account || null]
     );
     
@@ -430,7 +408,7 @@ app.put('/api/contacts/:id', async (req, res) => {
     if (updates.status_note !== undefined) { fields.push('status_note = ?'); values.push(updates.status_note); }
     if (updates.security_level !== undefined) { fields.push('security_level = ?'); values.push(updates.security_level); }
     if (updates.is_leader !== undefined) { fields.push('is_leader = ?'); values.push(updates.is_leader ? 1 : 0); }
-    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date ? updates.first_work_date.substring(0, 10) : null); }
+    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date); }
     if (updates.account !== undefined) { fields.push('account = ?'); values.push(updates.account); }
     
     if (fields.length === 0) {
@@ -1102,12 +1080,10 @@ app.get('/api/file-transfers', async (req, res) => {
     sql += ' ORDER BY created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    // 解析attachments JSON + 格式化日期字段
+    // 解析attachments JSON
     const transfers = rows.map(row => ({
       ...row,
-      attachments: JSON.parse(row.attachments || '[]'),
-      document_date: safeDateStr(row.document_date),
-      sign_date: safeDateStr(row.sign_date),
+      attachments: JSON.parse(row.attachments || '[]')
     }));
     res.json(transfers);
   } catch (error) {
@@ -1301,7 +1277,7 @@ app.get('/api/schedules', async (req, res) => {
       id: row.id,
       contact_id: row.contact_id,
       title: row.title,
-      schedule_date: safeDateStr(row.schedule_date),
+      schedule_date: row.schedule_date,
       start_time: row.start_time,
       end_time: row.end_time,
       location: row.location,
@@ -1432,11 +1408,7 @@ app.get('/api/supply-purchases', async (req, res) => {
     sql += ' ORDER BY created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    const formatted = rows.map(row => ({
-      ...row,
-      purchase_date: safeDateStr(row.purchase_date),
-    }));
-    res.json(formatted);
+    res.json(rows);
   } catch (error) {
     console.error('Get supply purchases error:', error);
     res.status(500).json({ error: '获取采购申请失败' });
@@ -1528,12 +1500,7 @@ app.get('/api/purchase-requests', async (req, res) => {
     sql += ' ORDER BY pr.created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    const formatted = rows.map(row => ({
-      ...row,
-      purchase_date: safeDateStr(row.purchase_date),
-      expected_completion_date: safeDateStr(row.expected_completion_date),
-    }));
-    res.json(formatted);
+    res.json(rows);
   } catch (error) {
     console.error('Get purchase requests error:', error);
     res.status(500).json({ error: '获取采购申请失败' });
@@ -2153,7 +2120,7 @@ app.get('/api/leave-balances', async (req, res) => {
           name: row.contact_name,
           department: row.contact_department,
           position: row.contact_position,
-          first_work_date: safeDateStr(row.first_work_date),
+          first_work_date: row.first_work_date,
           created_at: row.contact_created_at,
           organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
         } : null
@@ -2447,7 +2414,6 @@ app.get('/api/leader-schedules', async (req, res) => {
     // 格式化为前端期望的结构
     const schedules = rows.map(row => ({
       ...row,
-      schedule_date: safeDateStr(row.schedule_date),
       leader: {
         id: row.leader_id,
         name: row.leader_name,

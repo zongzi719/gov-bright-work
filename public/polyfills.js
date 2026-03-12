@@ -23,12 +23,12 @@
   if (typeof window !== 'undefined' && typeof window.queueMicrotask !== 'function') {
     var microTaskQueue = [];
     var scheduled = false;
-
-    var flushMicroTasks = function() {
+    
+    function flushMicroTasks() {
       scheduled = false;
       var tasks = microTaskQueue.slice();
       microTaskQueue.length = 0;
-
+      
       for (var i = 0; i < tasks.length; i++) {
         try {
           tasks[i]();
@@ -37,8 +37,8 @@
           setTimeout(function() { throw e; }, 0);
         }
       }
-    };
-
+    }
+    
     window.queueMicrotask = function(callback) {
       if (typeof callback !== 'function') {
         throw new TypeError('queueMicrotask requires a callback function');
@@ -114,17 +114,6 @@
       return this.replace(/\s+$/, '');
     };
   }
-
-  // ========== Browser Detection ==========
-  // Add 'legacy-browser' class to <html> for Firefox < 60 or other old engines
-  // This enables CSS-only fallback styles without affecting modern browsers
-  try {
-    var ua = navigator.userAgent || '';
-    var ffMatch = ua.match(/Firefox\/(\d+)/);
-    if (ffMatch && parseInt(ffMatch[1], 10) < 60) {
-      document.documentElement.className += ' legacy-browser';
-    }
-  } catch(e) {}
 
   // Log success for debugging
   if (typeof console !== 'undefined' && console.log) {

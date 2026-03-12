@@ -1,12 +1,5 @@
 import type { Config } from "tailwindcss";
 
-const withOpacity =
-  (cssVar: string) =>
-  ({ opacityValue }: { opacityValue?: string }) =>
-    opacityValue === undefined
-      ? `hsl(var(${cssVar}))`
-      : `hsla(var(${cssVar}), ${opacityValue})`;
-
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
@@ -21,59 +14,59 @@ export default {
     },
     extend: {
       colors: {
-        border: withOpacity("--border"),
-        input: withOpacity("--input"),
-        ring: withOpacity("--ring"),
-        background: withOpacity("--background"),
-        foreground: withOpacity("--foreground"),
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: withOpacity("--primary"),
-          foreground: withOpacity("--primary-foreground"),
-          dark: withOpacity("--primary-dark"),
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          dark: "hsl(var(--primary-dark))",
         },
         secondary: {
-          DEFAULT: withOpacity("--secondary"),
-          foreground: withOpacity("--secondary-foreground"),
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: withOpacity("--destructive"),
-          foreground: withOpacity("--destructive-foreground"),
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: withOpacity("--muted"),
-          foreground: withOpacity("--muted-foreground"),
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: withOpacity("--accent"),
-          foreground: withOpacity("--accent-foreground"),
-          light: withOpacity("--accent-light"),
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+          light: "hsl(var(--accent-light))",
         },
         popover: {
-          DEFAULT: withOpacity("--popover"),
-          foreground: withOpacity("--popover-foreground"),
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: withOpacity("--card"),
-          foreground: withOpacity("--card-foreground"),
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
         gov: {
-          red: withOpacity("--gov-red"),
-          "red-dark": withOpacity("--gov-red-dark"),
-          "red-light": withOpacity("--gov-red-light"),
-          gold: withOpacity("--gov-gold"),
-          "gold-light": withOpacity("--gov-gold-light"),
-          gray: withOpacity("--gov-gray"),
-          text: withOpacity("--gov-text"),
+          red: "hsl(var(--gov-red))",
+          "red-dark": "hsl(var(--gov-red-dark))",
+          "red-light": "hsl(var(--gov-red-light))",
+          gold: "hsl(var(--gov-gold))",
+          "gold-light": "hsl(var(--gov-gold-light))",
+          gray: "hsl(var(--gov-gray))",
+          text: "hsl(var(--gov-text))",
         },
         sidebar: {
-          DEFAULT: withOpacity("--sidebar-background"),
-          foreground: withOpacity("--sidebar-foreground"),
-          primary: withOpacity("--sidebar-primary"),
-          "primary-foreground": withOpacity("--sidebar-primary-foreground"),
-          accent: withOpacity("--sidebar-accent"),
-          "accent-foreground": withOpacity("--sidebar-accent-foreground"),
-          border: withOpacity("--sidebar-border"),
-          ring: withOpacity("--sidebar-ring"),
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
         },
       },
       borderRadius: {

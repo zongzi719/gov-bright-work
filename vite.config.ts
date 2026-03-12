@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     // 添加旧浏览器兼容性支持（针对麒麟系统老版本Firefox/Chrome）
     legacy({
-      targets: ["Firefox >= 45", "Chrome >= 49", "ie >= 11"],
+      targets: ["Firefox >= 52", "Chrome >= 49", "ie >= 11"],
       // 为旧版浏览器添加必要的 polyfills
       additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
       // 关键：为"半现代"浏览器（如 Firefox 62）也添加 polyfills
@@ -38,9 +38,8 @@ export default defineConfig(({ mode }) => ({
     include: ["react", "react-dom"],
   },
   build: {
-    // 强制目标为 ES5，确保即使 legacy 插件未生效，代码也兼容 Firefox 45
-    target: "es5",
-    cssTarget: "firefox45",
+    // 注意：不设置 target，让 @vitejs/plugin-legacy 自动处理
+    // 明确的 rollup 配置确保正确的模块分割
     rollupOptions: {
       output: {
         // 确保 React 只有一个实例

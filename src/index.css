@@ -7,53 +7,53 @@
 @layer base {
   :root {
     /* 核心政务红色系 */
-    --background: 220, 14%, 96%;
-    --foreground: 0, 0%, 15%;
+    --background: 220 14% 96%;
+    --foreground: 0 0% 15%;
 
-    --card: 0, 0%, 100%;
-    --card-foreground: 0, 0%, 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
 
-    --popover: 0, 0%, 100%;
-    --popover-foreground: 0, 0%, 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 15%;
 
     /* 党建红/中国红 */
-    --primary: 354, 73%, 43%;
-    --primary-foreground: 0, 0%, 100%;
-    --primary-dark: 354, 73%, 35%;
+    --primary: 354 73% 43%;
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 354 73% 35%;
     --primary-rgb: 186, 30, 51;
 
     /* 荣耀金/香槟金 */
-    --accent: 38, 92%, 50%;
-    --accent-foreground: 0, 0%, 15%;
-    --accent-light: 43, 96%, 56%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 15%;
+    --accent-light: 43 96% 56%;
 
-    --secondary: 220, 14%, 96%;
-    --secondary-foreground: 0, 0%, 25%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 0 0% 25%;
 
-    --muted: 220, 14%, 92%;
-    --muted-foreground: 0, 0%, 45%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 0 0% 45%;
 
-    --destructive: 0, 84%, 60%;
-    --destructive-foreground: 0, 0%, 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220, 13%, 88%;
-    --input: 220, 13%, 91%;
-    --ring: 354, 73%, 43%;
+    --border: 220 13% 88%;
+    --input: 220 13% 91%;
+    --ring: 354 73% 43%;
 
     --radius: 0.375rem;
 
     /* 自定义政务变量 */
-    --gov-red: 354, 73%, 43%;
-    --gov-red-dark: 354, 73%, 35%;
-    --gov-red-light: 354, 73%, 95%;
-    --gov-gold: 38, 92%, 50%;
-    --gov-gold-light: 43, 96%, 70%;
-    --gov-gray: 220, 14%, 96%;
-    --gov-text: 0, 0%, 25%;
+    --gov-red: 354 73% 43%;
+    --gov-red-dark: 354 73% 35%;
+    --gov-red-light: 354 73% 95%;
+    --gov-gold: 38 92% 50%;
+    --gov-gold-light: 43 96% 70%;
+    --gov-gray: 220 14% 96%;
+    --gov-text: 0 0% 25%;
 
     /* 渐变 */
-    --gradient-header: linear-gradient(135deg, hsl(354, 73%, 35%) 0%, hsl(354, 73%, 43%) 50%, hsl(354, 65%, 48%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(38, 92%, 50%) 0%, hsl(43, 96%, 56%) 100%);
+    --gradient-header: linear-gradient(135deg, hsl(354 73% 35%) 0%, hsl(354 73% 43%) 50%, hsl(354 65% 48%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(43 96% 56%) 100%);
     
     /* 阴影 */
     --shadow-card: 0 2px 8px -2px hsla(0, 0%, 0%, 0.08), 0 4px 16px -4px hsla(0, 0%, 0%, 0.06);
@@ -61,44 +61,44 @@
     --shadow-header: 0 2px 12px -2px hsla(354, 73%, 35%, 0.3);
 
     /* 侧边栏 */
-    --sidebar-background: 0, 0%, 98%;
-    --sidebar-foreground: 240, 5.3%, 26.1%;
-    --sidebar-primary: 354, 73%, 43%;
-    --sidebar-primary-foreground: 0, 0%, 100%;
-    --sidebar-accent: 354, 73%, 95%;
-    --sidebar-accent-foreground: 354, 73%, 35%;
-    --sidebar-border: 220, 13%, 91%;
-    --sidebar-ring: 354, 73%, 43%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 354 73% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 354 73% 95%;
+    --sidebar-accent-foreground: 354 73% 35%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 354 73% 43%;
   }
 
   .dark {
-    --background: 0, 0%, 10%;
-    --foreground: 0, 0%, 95%;
-    --card: 0, 0%, 12%;
-    --card-foreground: 0, 0%, 95%;
-    --popover: 0, 0%, 12%;
-    --popover-foreground: 0, 0%, 95%;
-    --primary: 354, 73%, 50%;
-    --primary-foreground: 0, 0%, 100%;
-    --secondary: 0, 0%, 18%;
-    --secondary-foreground: 0, 0%, 90%;
-    --muted: 0, 0%, 18%;
-    --muted-foreground: 0, 0%, 65%;
-    --accent: 38, 92%, 55%;
-    --accent-foreground: 0, 0%, 10%;
-    --destructive: 0, 62%, 30%;
-    --destructive-foreground: 0, 0%, 98%;
-    --border: 0, 0%, 20%;
-    --input: 0, 0%, 20%;
-    --ring: 354, 73%, 50%;
-    --sidebar-background: 0, 0%, 12%;
-    --sidebar-foreground: 0, 0%, 90%;
-    --sidebar-primary: 354, 73%, 50%;
-    --sidebar-primary-foreground: 0, 0%, 100%;
-    --sidebar-accent: 0, 0%, 18%;
-    --sidebar-accent-foreground: 0, 0%, 90%;
-    --sidebar-border: 0, 0%, 20%;
-    --sidebar-ring: 354, 73%, 50%;
+    --background: 0 0% 10%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 354 73% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 354 73% 50%;
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 354 73% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 354 73% 50%;
   }
 }
 
@@ -228,64 +228,6 @@
   .menu-tab-inactive {
     @apply text-muted-foreground hover:bg-muted;
   }
-}
-
-/* ===== 兼容旧版浏览器的 rgba 颜色工具类 ===== */
-/* 替代 Tailwind 的 /opacity 简写，FF45 不支持 rgb(255 255 255 / 0.9) 语法 */
-.text-white-90 {
-  color: rgba(255, 255, 255, 0.9);
-}
-.text-white-70 {
-  color: rgba(255, 255, 255, 0.7);
-}
-.hover-bg-white-10:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-.border-white-30 {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* ===== Legacy browser (Firefox < 60) layout fixes ===== */
-/* 仅在 polyfills.js 检测到旧版浏览器时生效 */
-.legacy-browser .flex {
-  display: -webkit-box;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-}
-
-/* 修复旧版 Firefox 下 flex items-center justify-center 的居中问题 */
-.legacy-browser .items-center {
-  -webkit-box-align: center;
-  -moz-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
-}
-
-.legacy-browser .justify-center {
-  -webkit-box-pack: center;
-  -moz-box-pack: center;
-  -ms-flex-pack: center;
-  justify-content: center;
-}
-
-/* 修复 gap 属性不支持的问题 - 用 margin 模拟 */
-.legacy-browser .gap-2 > * + * {
-  margin-left: 0.5rem;
-}
-.legacy-browser .flex-col.gap-2 > * + * {
-  margin-left: 0;
-  margin-top: 0.5rem;
-}
-.legacy-browser .gap-3 > * + * {
-  margin-left: 0.75rem;
-}
-.legacy-browser .flex-col.gap-3 > * + * {
-  margin-left: 0;
-  margin-top: 0.75rem;
-}
-.legacy-browser .space-y-4 > * + * {
-  margin-top: 1rem;
 }
 
 /* 自定义滚动条 */
