@@ -23,22 +23,24 @@
   if (typeof window !== 'undefined' && typeof window.queueMicrotask !== 'function') {
     var microTaskQueue = [];
     var scheduled = false;
-    
-    function flushMicroTasks() {
+
+    var flushMicroTasks = function() {
       scheduled = false;
       var tasks = microTaskQueue.slice();
       microTaskQueue.length = 0;
-      
+
       for (var i = 0; i < tasks.length; i++) {
         try {
           tasks[i]();
         } catch (e) {
           // Re-throw errors asynchronously to not break the queue
-          setTimeout(function() { throw e; }, 0);
+          (function(err) {
+            setTimeout(function() { throw err; }, 0);
+          })(e);
         }
       }
-    }
-    
+    };
+
     window.queueMicrotask = function(callback) {
       if (typeof callback !== 'function') {
         throw new TypeError('queueMicrotask requires a callback function');
