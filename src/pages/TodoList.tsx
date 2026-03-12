@@ -326,14 +326,14 @@ const TodoList = () => {
           </div>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
             <div className="flex items-center px-4 py-3 border-b border-border bg-card">
-              <TabsList className="bg-muted/50 p-1">
-                <TabsTrigger value="pending" className="px-4">
+              <TabsList className="bg-muted p-1 gap-1">
+                <TabsTrigger value="pending" className="px-5 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:font-bold">
                   待办 ({pendingCount})
                 </TabsTrigger>
-                <TabsTrigger value="completed" className="px-4">
+                <TabsTrigger value="completed" className="px-5 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:font-bold">
                   已办 ({completedCount})
                 </TabsTrigger>
-                <TabsTrigger value="cc" className="px-4">
+                <TabsTrigger value="cc" className="px-5 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:font-bold">
                   抄送 ({ccCount})
                 </TabsTrigger>
               </TabsList>
