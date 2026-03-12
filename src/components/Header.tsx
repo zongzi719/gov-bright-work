@@ -179,7 +179,7 @@ const Header = () => {
                   </Avatar>
                   <div className="hidden md:block text-left">
                     <p className="text-white font-medium text-sm leading-tight">{user?.name || "用户"}</p>
-                    <p className="text-white/70 text-xs">
+                    <p className="text-white-70 text-xs">
                       {user?.department || user?.organization || "未设置部门"}
                       {user?.position && ` · ${user.position}`}
                     </p>
