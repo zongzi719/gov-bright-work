@@ -33,13 +33,30 @@ export const useUKeyMonitor = () => {
         const timeout = setTimeout(() => {
           ws.close();
           handleFailure();
-        }, 3000);
+        }, 4000);
 
         ws.onopen = () => {
+          // 连接成功后，发送探测请求检查 UKey 是否在位
+          const probeXml = `<?xml version="1.0" encoding="UTF-8"?><getsignandtokenreq version="1"><challenge>ukey_probe_${Date.now()}</challenge></getsignandtokenreq>`;
+          ws.send(probeXml);
+        };
+
+        ws.onmessage = (evt) => {
           clearTimeout(timeout);
+          const response = evt.data as string;
+          const resultMatch = response.match(/<result>(\d+)<\/result>/);
+          const result = resultMatch ? resultMatch[1] : "";
+
+          if (result === "0") {
+            // UKey 在位，重置失败计数
+            failCountRef.current = 0;
+            console.log("[UKey Monitor] UKey 在位，状态正常");
+          } else {
+            // UKey 不在位（安全客户端返回错误码）
+            console.log("[UKey Monitor] UKey 不在位，result:", result);
+            handleFailure();
+          }
           ws.close();
-          // 连接成功，重置失败计数
-          failCountRef.current = 0;
         };
 
         ws.onerror = () => {
