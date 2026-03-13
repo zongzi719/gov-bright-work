@@ -1767,6 +1767,40 @@ app.put('/api/approval-templates/:id', async (req, res) => {
   }
 });
 
+// 获取单个审批模板
+app.get('/api/approval-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute('SELECT * FROM approval_templates WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: '模板不存在' });
+    const row = rows[0];
+    res.json({
+      ...row,
+      is_active: row.is_active === 1 || row.is_active === true,
+      allow_withdraw: row.allow_withdraw === 1 || row.allow_withdraw === true,
+      allow_transfer: row.allow_transfer === 1 || row.allow_transfer === true,
+      notify_initiator: row.notify_initiator === 1 || row.notify_initiator === true,
+      notify_approver: row.notify_approver === 1 || row.notify_approver === true,
+    });
+  } catch (error) {
+    console.error('获取审批模板详情失败:', error.message);
+    res.status(500).json({ error: '获取审批模板详情失败' });
+  }
+});
+
+// 删除审批模板
+app.delete('/api/approval-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM approval_form_fields WHERE template_id = ?', [id]);
+    await pool.execute('DELETE FROM approval_nodes WHERE template_id = ?', [id]);
+    await pool.execute('DELETE FROM approval_templates WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('删除审批模板失败:', error.message);
+    res.status(500).json({ error: '删除审批模板失败' });
+  }
+
 // 初始化/种子审批模板
 app.post('/api/approval-templates/seed', async (req, res) => {
   try {
