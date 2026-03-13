@@ -6,6 +6,7 @@ import { Briefcase, CalendarOff, LogOut } from "lucide-react";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { parseTime } from "@/lib/utils";
