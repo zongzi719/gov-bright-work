@@ -822,6 +822,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         return;
       }
 
+      await logAudit({
+        action: AUDIT_ACTIONS.UPDATE,
+        module: AUDIT_MODULES.TODO,
+        target_type: '撤回申请',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id },
+      });
+
       toast.success("申请已撤回");
       onOpenChange(false);
       onApprovalComplete?.();
