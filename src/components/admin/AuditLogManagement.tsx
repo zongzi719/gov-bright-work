@@ -108,8 +108,8 @@ const AuditLogManagement = () => {
           query = query.lte('created_at', `${format(dateTo, 'yyyy-MM-dd')}T23:59:59`);
         }
 
-        const from = (currentPage - 1) * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
         query = query.order('created_at', { ascending: false }).range(from, to);
 
         const { data, count, error } = await query;
