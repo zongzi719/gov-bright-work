@@ -47,7 +47,40 @@ const NOISE_LABELS = new Set([
   "提交", "保存", "新建", "编辑", "删除", // 这些由语义化日志覆盖
 ]);
 
+const PAGE_NAME_MAP: Record<string, string> = {
+  "/": "前台工作台",
+  "/todo": "待办事项",
+  "/businesstrip": "出差申请",
+  "/leave": "请假申请",
+  "/out": "外出申请",
+  "/absence": "考勤管理",
+  "/requisition": "领用申请",
+  "/purchase": "采购申请",
+  "/supplies-purchase": "办公用品采购",
+  "/procurement": "物资申请",
+  "/contacts": "通讯录",
+  "/leader-schedule": "领导日程",
+  "/schedule-list": "日程列表",
+  "/login": "前台登录",
+  "/admin/login": "管理后台登录",
+  "/admin": "管理后台",
+  "/h5/login": "移动端登录",
+  "/h5/official-document": "移动端公文",
+};
+
+const resolvePageName = (pathname: string): string => {
+  // 精确匹配
+  if (PAGE_NAME_MAP[pathname]) return PAGE_NAME_MAP[pathname];
+  // 前缀匹配（取最长匹配）
+  const sorted = Object.keys(PAGE_NAME_MAP).sort((a, b) => b.length - a.length);
+  for (const key of sorted) {
+    if (pathname.startsWith(key) && key !== "/") return PAGE_NAME_MAP[key];
+  }
+  return PAGE_NAME_MAP["/"] || pathname;
+};
+
 const resolveModule = (pathname: string): string => {
+  if (pathname.startsWith("/admin/login")) return AUDIT_MODULES.AUTH;
   if (pathname.startsWith("/admin")) return AUDIT_MODULES.SYSTEM;
   if (pathname === "/") return AUDIT_MODULES.WORKBENCH;
   if (pathname.startsWith("/todo")) return AUDIT_MODULES.TODO;
@@ -91,7 +124,7 @@ const useOperationTracker = () => {
       action: AUDIT_ACTIONS.PAGE_VIEW,
       module: resolveModule(pathname),
       target_type: "页面",
-      target_name: pathname,
+      target_name: resolvePageName(pathname),
       detail: { path: pathname, event: "route_change" },
     });
   }, [pathname]);
