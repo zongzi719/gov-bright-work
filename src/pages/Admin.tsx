@@ -152,6 +152,7 @@ const Admin = () => {
   };
 
   const handleLogout = async () => {
+    await logAudit({ action: AUDIT_ACTIONS.LOGOUT, module: AUDIT_MODULES.AUTH });
     if (isOfflineMode()) {
       localStorage.removeItem('adminUser');
     } else {
