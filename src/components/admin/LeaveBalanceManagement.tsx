@@ -214,6 +214,7 @@ const LeaveBalanceManagement = () => {
         console.error(error);
       } else {
         toast.success("更新成功");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.LEAVE, target_type: '假期余额', target_id: editingId });
         closeDialog();
         fetchBalances();
       }
