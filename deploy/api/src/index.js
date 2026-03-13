@@ -4220,6 +4220,157 @@ app.post('/api/role-permissions/batch', async (req, res) => {
   }
 });
 
+// ==================== 角色用户管理 ====================
+
+app.get('/api/user-roles', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT ur.*, c.name as user_name, c.email, c.mobile
+       FROM user_roles ur
+       LEFT JOIN contacts c ON c.id = ur.user_id
+       ORDER BY ur.created_at DESC`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('获取角色用户列表失败:', error.message);
+    res.status(500).json({ error: '获取角色用户列表失败' });
+  }
+});
+
+app.post('/api/user-roles', async (req, res) => {
+  try {
+    const { user_id, role } = req.body;
+    if (!user_id || !role) return res.status(400).json({ error: '缺少必填字段: user_id, role' });
+
+    // 三员互斥检查
+    const threeOfficerRoles = ['sys_admin', 'security_admin', 'audit_admin'];
+    if (threeOfficerRoles.includes(role)) {
+      const [existing] = await pool.execute(
+        'SELECT role FROM user_roles WHERE user_id = ? AND role IN (?, ?, ?)',
+        [user_id, 'sys_admin', 'security_admin', 'audit_admin']
+      );
+      if (existing.length > 0 && existing[0].role !== role) {
+        return res.status(400).json({ error: `三员角色不可兼任，该用户已持有「${existing[0].role}」角色` });
+      }
+    }
+
+    // 检查重复
+    const [dup] = await pool.execute(
+      'SELECT id FROM user_roles WHERE user_id = ? AND role = ?',
+      [user_id, role]
+    );
+    if (dup.length > 0) {
+      return res.status(400).json({ error: '该用户已拥有此角色' });
+    }
+
+    const id = uuidv4();
+    await pool.execute(
+      'INSERT INTO user_roles (id, user_id, role, created_at) VALUES (?, ?, ?, NOW())',
+      [id, user_id, role]
+    );
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('添加角色用户失败:', error.message);
+    res.status(500).json({ error: '添加角色用户失败' });
+  }
+});
+
+app.delete('/api/user-roles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM user_roles WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('删除角色用户失败:', error.message);
+    res.status(500).json({ error: '删除角色用户失败' });
+  }
+});
+
+// ==================== 权限配置查询 ====================
+
+app.get('/api/role-permissions', async (req, res) => {
+  try {
+    const { role } = req.query;
+    let sql = 'SELECT * FROM role_permissions';
+    const params = [];
+    if (role) {
+      sql += ' WHERE role = ?';
+      params.push(role);
+    }
+    sql += ' ORDER BY module_name ASC';
+    const [rows] = await pool.execute(sql, params);
+    const permissions = rows.map(row => ({
+      ...row,
+      can_create: row.can_create === 1 || row.can_create === true,
+      can_read: row.can_read === 1 || row.can_read === true,
+      can_update: row.can_update === 1 || row.can_update === true,
+      can_delete: row.can_delete === 1 || row.can_delete === true,
+    }));
+    res.json(permissions);
+  } catch (error) {
+    console.error('获取权限配置失败:', error.message);
+    res.status(500).json({ error: '获取权限配置失败' });
+  }
+});
+
+app.put('/api/role-permissions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { can_create, can_read, can_update, can_delete, data_scope } = req.body;
+    const fields = [];
+    const values = [];
+    if (can_create !== undefined) { fields.push('can_create = ?'); values.push(can_create ? 1 : 0); }
+    if (can_read !== undefined) { fields.push('can_read = ?'); values.push(can_read ? 1 : 0); }
+    if (can_update !== undefined) { fields.push('can_update = ?'); values.push(can_update ? 1 : 0); }
+    if (can_delete !== undefined) { fields.push('can_delete = ?'); values.push(can_delete ? 1 : 0); }
+    if (data_scope !== undefined) { fields.push('data_scope = ?'); values.push(data_scope); }
+    if (fields.length === 0) return res.status(400).json({ error: '无更新字段' });
+    fields.push('updated_at = NOW()');
+    values.push(id);
+    await pool.execute(`UPDATE role_permissions SET ${fields.join(', ')} WHERE id = ?`, values);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('更新权限配置失败:', error.message);
+    res.status(500).json({ error: '更新权限配置失败' });
+  }
+});
+
+// ==================== 库存变动查询 ====================
+
+app.get('/api/stock-movements', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT sm.*, os.name as supply_name, os.specification, os.unit
+       FROM stock_movements sm
+       LEFT JOIN office_supplies os ON os.id = sm.supply_id
+       ORDER BY sm.created_at DESC`
+    );
+    // 转换为前端期望的嵌套格式
+    const movements = rows.map(row => ({
+      id: row.id,
+      supply_id: row.supply_id,
+      movement_type: row.movement_type,
+      quantity: row.quantity,
+      before_stock: row.before_stock,
+      after_stock: row.after_stock,
+      reference_type: row.reference_type,
+      reference_id: row.reference_id,
+      operator_name: row.operator_name,
+      notes: row.notes,
+      created_at: row.created_at,
+      office_supplies: row.supply_name ? {
+        name: row.supply_name,
+        specification: row.specification,
+        unit: row.unit,
+      } : null,
+    }));
+    res.json(movements);
+  } catch (error) {
+    console.error('获取库存变动记录失败:', error.message);
+    res.status(500).json({ error: '获取库存变动记录失败' });
+  }
+});
+
 // ==================== 审计日志 ====================
 
 // POST /api/audit-logs - 写入审计日志
