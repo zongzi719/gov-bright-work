@@ -6,6 +6,7 @@ import FileTransferDetail from "./FileTransferDetail";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface FileTransferListProps {
   activeTab: "pending" | "completed";
