@@ -167,7 +167,7 @@ const NoticeManagement = () => {
     }
 
     toast.success("删除成功");
-    fetchNotices();
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.NOTICE, target_type: '通知', target_id: id });
   };
 
   const resetForm = () => {

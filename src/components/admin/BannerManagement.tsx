@@ -78,6 +78,7 @@ const BannerManagement = () => {
 
         if (error) throw error;
         toast.success("背景设置成功");
+        await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.BANNER, target_type: '轮播图', target_name: formData.title });
       }
       fetchBanner();
     } catch (error: any) {

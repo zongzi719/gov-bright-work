@@ -130,6 +130,7 @@ const MenuManagement = () => {
     }
 
     toast.success("删除成功");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.MENU, target_type: '菜谱', target_id: deletingMenu.id });
     setDeleteDialogOpen(false);
     setDeletingMenu(null);
     fetchMenus();
