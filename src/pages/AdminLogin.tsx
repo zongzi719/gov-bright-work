@@ -56,10 +56,8 @@ const AdminLogin = () => {
   };
 
   const resolveEmail = async (input: string): Promise<string> => {
-    // If it looks like an email already, use it directly
     if (input.includes('@')) return input;
 
-    // If it's a phone number, look up the contact's email
     const { data } = await supabase
       .from("contacts")
       .select("email")
@@ -72,12 +70,10 @@ const AdminLogin = () => {
       return data[0].email;
     }
 
-    // No email found, return input as-is (will fail auth gracefully)
     return input;
   };
 
   const handleOnlineLogin = async () => {
-    // Resolve account to email (handles phone number lookup)
     const email = await resolveEmail(account);
 
     // Sign in via Supabase Auth
@@ -106,7 +102,55 @@ const AdminLogin = () => {
 
     let roles = roleData.map(r => r.role);
 
-    // Admin role is always allowed to login regardless of is_active status
+    // For non-admin roles, check if the role is active in the roles table
+    if (!roles.includes('admin')) {
+      const { data: activeRoles } = await supabase
+        .from("roles")
+        .select("name")
+        .in("name", roles)
+        .eq("is_active", true);
+
+      const activeRoleNames = activeRoles?.map(r => r.name) || [];
+      roles = roles.filter(r => activeRoleNames.includes(r));
+
+      if (!roles.length) {
+        await supabase.auth.signOut();
+        toast.error("您的管理员角色当前未激活，请联系超级管理员");
+        return;
+      }
+    }
+
+    // Fetch user display name from contacts or profiles
+    let displayName = '';
+    const { data: contactData } = await supabase
+      .from("contacts")
+      .select("name")
+      .eq("email", email)
+      .eq("is_active", true)
+      .limit(1);
+
+    if (contactData?.length) {
+      displayName = contactData[0].name;
+    } else {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("display_name, email")
+        .eq("user_id", data.user.id)
+        .limit(1);
+
+      if (profileData?.length) {
+        displayName = profileData[0].display_name || profileData[0].email || email;
+      } else {
+        displayName = email;
+      }
+    }
+
+    // Store admin session info for the Admin page header
+    localStorage.setItem('adminSession', JSON.stringify({
+      name: displayName,
+      roles,
+      userId: data.user.id,
+    }));
 
     const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
     toast.success(`登录成功，当前身份：${roleLabel}`);
