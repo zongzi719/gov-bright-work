@@ -356,6 +356,7 @@ const ContactManagement = () => {
 
   const handleEditContact = (contact: Contact) => {
     setEditingContact(contact);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.CONTACT, target_type: '联系人', target_id: contact.id, target_name: contact.name });
     setContactFormData({
       organization_id: contact.organization_id,
       name: contact.name,

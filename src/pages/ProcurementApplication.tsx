@@ -630,6 +630,7 @@ const SuppliesPurchaseContent = () => {
       const { data } = await dataAdapter.getSupplyPurchaseItems(record.id);
       if (data) setSelectedItems(data as SupplyPurchaseItem[]);
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品采购', target_id: record.id, target_name: `${record.department} - ${record.applicant_name}` });
     }
   };
 

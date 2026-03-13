@@ -143,6 +143,7 @@ const NoticeManagement = () => {
 
   const handleEdit = (notice: Notice) => {
     setEditingNotice(notice);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.NOTICE, target_type: '通知', target_id: notice.id, target_name: notice.title });
     setFormData({
       title: notice.title,
       department: notice.department,

@@ -200,6 +200,7 @@ const LeaderScheduleManagement = () => {
 
   const openEditDialog = (schedule: Schedule) => {
     setEditingSchedule(schedule);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '领导日程', target_id: schedule.id, target_name: schedule.title });
     setFormData({
       leader_id: schedule.leader_id,
       title: schedule.title,

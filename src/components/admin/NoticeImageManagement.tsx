@@ -176,6 +176,7 @@ const NoticeImageManagement = () => {
 
   const handleEdit = (image: NoticeImage) => {
     setEditingImage(image);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.NOTICE, target_type: '通知图片', target_id: image.id, target_name: image.title });
     setFormData({
       image_url: image.image_url,
       title: image.title,

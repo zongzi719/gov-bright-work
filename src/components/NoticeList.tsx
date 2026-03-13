@@ -128,6 +128,7 @@ const NoticeList = () => {
   const handleNoticeClick = (notice: NoticeItem) => {
     setSelectedNotice(notice);
     setDialogOpen(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.NOTICE, target_type: '通知公告', target_id: notice.id, target_name: notice.title });
   };
 
   const goToPrevImage = () => {
