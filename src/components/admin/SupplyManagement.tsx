@@ -435,6 +435,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("已拒绝采购申请");
+    await logAudit({ action: AUDIT_ACTIONS.REJECT, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请', target_id: id });
     fetchPurchaseRequests();
   };
 
