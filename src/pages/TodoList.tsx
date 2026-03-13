@@ -211,6 +211,7 @@ const TodoList = () => {
 
   const handleItemClick = (item: TodoItem) => {
     markAsRead(item.id);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.TODO, target_type: '待办事项', target_id: item.id, target_name: item.title });
     
     if (item.action_url) {
       window.open(item.action_url, "_blank");

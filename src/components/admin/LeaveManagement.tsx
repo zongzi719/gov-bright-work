@@ -209,6 +209,7 @@ const LeaveManagement = () => {
     setSelectedRecord(record);
     setApprovalInstanceStatus(null);
     setIsDetailDialogOpen(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.LEAVE, target_type: '请假申请', target_id: record.id, target_name: record.reason });
     
     // 获取审批实例的真实状态
     const { data: instanceData } = await dataAdapter.getApprovalInstanceForDetail(record.id, "leave");

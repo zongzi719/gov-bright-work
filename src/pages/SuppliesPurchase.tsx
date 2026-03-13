@@ -156,6 +156,7 @@ const SuppliesPurchase = () => {
         setSelectedItems(data as PurchaseItem[]);
       }
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品采购', target_id: record.id, target_name: `${record.department} - ${record.applicant_name}` });
     }
   };
 

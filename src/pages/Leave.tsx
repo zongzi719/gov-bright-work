@@ -107,6 +107,7 @@ const Leave = () => {
     if (record) {
       setSelectedRecord(record);
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.LEAVE, target_type: '请假申请', target_id: record.id, target_name: record.reason });
     }
   };
 
