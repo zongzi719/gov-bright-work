@@ -142,6 +142,7 @@ const ApprovalSettings = () => {
       return;
     }
     toast.success(template.is_active ? "已停用" : "已启用");
+    await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name, detail: { is_active: !template.is_active } });
     fetchTemplates();
   };
 

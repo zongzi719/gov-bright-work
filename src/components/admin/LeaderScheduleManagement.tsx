@@ -179,6 +179,7 @@ const LeaderScheduleManagement = () => {
     }
 
     toast.success("日程已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '领导日程', target_id: id });
     // 强制触发数据刷新
     setRefreshKey(prev => prev + 1);
   };

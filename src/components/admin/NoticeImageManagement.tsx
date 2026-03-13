@@ -196,6 +196,7 @@ const NoticeImageManagement = () => {
     }
 
     toast.success("删除成功");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.NOTICE, target_type: '通知图片', target_id: id });
     fetchImages();
   };
 

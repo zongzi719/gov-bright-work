@@ -176,6 +176,7 @@ const ScheduleManagement = () => {
       console.error(error);
     } else {
       toast.success("日程已删除");
+      await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.SCHEDULE, target_type: '日程', target_id: id });
       fetchSchedules();
     }
   };

@@ -150,6 +150,7 @@ const PermissionManagement = () => {
       }
 
       toast.success("权限配置已保存");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.PERMISSION, target_type: '权限配置', target_name: selectedRole });
       await fetchPermissions();
     } catch (error) {
       toast.error("保存失败");

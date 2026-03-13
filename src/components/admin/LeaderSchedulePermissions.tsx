@@ -216,6 +216,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     }
 
     toast.success("权限已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '日程权限', target_id: userId });
     fetchPermissions();
   };
 
