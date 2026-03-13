@@ -239,6 +239,7 @@ const ContactManagement = () => {
         return;
       }
       toast.success("单位已更新");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.CONTACT, target_type: '单位', target_id: editingOrg.id, target_name: payload.name });
     } else {
       const { error } = await dataAdapter.createOrganization(payload);
 
