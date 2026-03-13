@@ -324,7 +324,7 @@ const AbsenceApplication = () => {
                 onAddClick={() => setLeaveFormOpen(true)}
                 onItemClick={(item) => {
                   const record = leaveRecords.find(r => r.id === item.id);
-                  if (record) { setSelectedLeave(record); setLeaveDetailOpen(true); }
+                  if (record) { setSelectedLeave(record); setLeaveDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.LEAVE, target_type: '请假申请', target_id: record.id, target_name: record.reason }); }
                 }}
                 searchPlaceholder="搜索请假类型或事由..."
                 emptyText="暂无请假记录"
