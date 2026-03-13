@@ -133,6 +133,7 @@ const ScheduleManagement = () => {
         console.error(error);
       } else {
         toast.success("日程已更新");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SCHEDULE, target_type: '日程', target_id: editingSchedule.id, target_name: formData.title });
         fetchSchedules();
         closeDialog();
       }
