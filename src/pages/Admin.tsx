@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck, FileSearch } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck, FileSearch, KeyRound, User } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
@@ -17,6 +17,7 @@ import SystemManagement from "@/components/admin/SystemManagement";
 import LeaderScheduleManagement from "@/components/admin/LeaderScheduleManagement";
 import ScheduleManagement from "@/components/admin/ScheduleManagement";
 import ApprovalSettings from "@/components/admin/ApprovalSettings";
+import AdminPasswordChangeDialog from "@/components/admin/AdminPasswordChangeDialog";
 import { isOfflineMode } from "@/lib/offlineApi";
 
 const ADMIN_ROLE_IDS = ['admin', 'sys_admin', 'security_admin', 'audit_admin'];
@@ -50,16 +51,11 @@ const TAB_CONFIG: TabConfig[] = [
   { value: 'audit', label: '审计日志', icon: FileSearch, roles: ['admin', 'audit_admin'] },
 ];
 
-const getRoleLabel = (roles: string[]) => {
-  for (const r of roles) {
-    if (ROLE_LABELS[r]) return ROLE_LABELS[r];
-  }
-  return '管理员';
-};
-
 const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [userName, setUserName] = useState('');
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,7 +64,6 @@ const Admin = () => {
 
   const checkAuth = async () => {
     if (isOfflineMode()) {
-      // Offline mode: use localStorage
       const storedAdmin = localStorage.getItem('adminUser');
       if (!storedAdmin) {
         navigate("/admin/login");
@@ -78,11 +73,13 @@ const Admin = () => {
         const adminUser = JSON.parse(storedAdmin);
         if (adminUser?.role === 'admin') {
           setUserRoles(['admin']);
+          setUserName(adminUser.name || '管理员');
           setLoading(false);
           return;
         }
         if (adminUser?.roles && Array.isArray(adminUser.roles) && adminUser.roles.length > 0) {
           setUserRoles(adminUser.roles);
+          setUserName(adminUser.name || '管理员');
           setLoading(false);
           return;
         }
@@ -93,7 +90,7 @@ const Admin = () => {
       return;
     }
 
-    // Online mode - always use Supabase Auth session
+    // Online mode
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/admin/login");
@@ -115,7 +112,37 @@ const Admin = () => {
 
     let roles = roleData.map(r => r.role);
 
-    // Admin role is always allowed regardless of is_active status
+    // For non-admin roles, check if the role is active (blocking check)
+    if (!roles.includes('admin')) {
+      const { data: activeRoles } = await supabase
+        .from("roles")
+        .select("name")
+        .in("name", roles)
+        .eq("is_active", true);
+
+      const activeRoleNames = activeRoles?.map(r => r.name) || [];
+      roles = roles.filter(r => activeRoleNames.includes(r));
+
+      if (!roles.length) {
+        toast.error("您的管理员角色当前未激活，请联系超级管理员");
+        await supabase.auth.signOut();
+        navigate("/admin/login");
+        return;
+      }
+    }
+
+    // Read stored session info for display name
+    const storedSession = localStorage.getItem('adminSession');
+    if (storedSession) {
+      try {
+        const session = JSON.parse(storedSession);
+        setUserName(session.name || user.email || '管理员');
+      } catch {
+        setUserName(user.email || '管理员');
+      }
+    } else {
+      setUserName(user.email || '管理员');
+    }
 
     setUserRoles(roles);
     setLoading(false);
@@ -126,8 +153,28 @@ const Admin = () => {
       localStorage.removeItem('adminUser');
     } else {
       await supabase.auth.signOut();
+      localStorage.removeItem('adminSession');
     }
     toast.success("已退出登录");
+    navigate("/admin/login");
+  };
+
+  const handlePasswordChange = async (oldPassword: string, newPassword: string) => {
+    if (isOfflineMode()) {
+      toast.error("离线模式暂不支持修改密码");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      toast.error("密码修改失败：" + error.message);
+      return;
+    }
+
+    toast.success("密码修改成功，请重新登录");
+    setPasswordDialogOpen(false);
+    await supabase.auth.signOut();
+    localStorage.removeItem('adminSession');
     navigate("/admin/login");
   };
 
@@ -148,6 +195,8 @@ const Admin = () => {
   );
 
   const defaultTab = allowedTabs[0]?.value || 'banners';
+
+  const roleLabel = userRoles.map(r => ROLE_LABELS[r]).filter(Boolean).join('、') || '管理员';
 
   const renderTabContent = (value: string) => {
     switch (value) {
@@ -190,19 +239,45 @@ const Admin = () => {
             <div>
               <h1 className="text-base font-bold leading-tight">内容管理后台</h1>
               <p className="text-[10px] text-primary-foreground/70">
-                {getRoleLabel(userRoles)} · 政府一体化工作平台
+                政府一体化工作平台
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-primary-foreground hover:bg-primary-foreground/10 h-8"
-          >
-            <LogOut className="w-4 h-4 mr-1" />
-            退出登录
-          </Button>
+
+          <div className="flex items-center gap-3">
+            {/* 用户信息 */}
+            <div className="flex items-center gap-2 text-primary-foreground/90">
+              <User className="w-4 h-4" />
+              <span className="text-sm font-medium">{userName}</span>
+              <span className="text-xs text-primary-foreground/60 border border-primary-foreground/30 rounded px-1.5 py-0.5">
+                {roleLabel}
+              </span>
+            </div>
+
+            <div className="w-px h-5 bg-primary-foreground/30" />
+
+            {/* 修改密码 */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPasswordDialogOpen(true)}
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-8"
+            >
+              <KeyRound className="w-4 h-4 mr-1" />
+              修改密码
+            </Button>
+
+            {/* 退出登录 */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-8"
+            >
+              <LogOut className="w-4 h-4 mr-1" />
+              退出登录
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -233,6 +308,13 @@ const Admin = () => {
           </div>
         </Tabs>
       </main>
+
+      {/* 修改密码对话框 */}
+      <AdminPasswordChangeDialog
+        open={passwordDialogOpen}
+        onOpenChange={setPasswordDialogOpen}
+        onSubmit={handlePasswordChange}
+      />
     </div>
   );
 };
