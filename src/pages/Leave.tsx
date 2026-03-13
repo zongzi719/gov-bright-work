@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import PageLayout from "@/components/PageLayout";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import MyLeaveBalance from "@/components/MyLeaveBalance";
