@@ -165,6 +165,7 @@ const LeaderScheduleManagement = () => {
     
     // 显示成功提示
     toast.success(editingSchedule ? "日程已更新" : "日程已添加");
+    await logAudit({ action: editingSchedule ? AUDIT_ACTIONS.UPDATE : AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '领导日程', target_name: formData.title });
   };
 
   const handleDelete = async (id: string) => {
