@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Search, RefreshCw, Eye, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { isOfflineMode } from "@/lib/offlineApi";
-import TablePagination from "./TablePagination";
 
 interface AuditLog {
   id: string;
