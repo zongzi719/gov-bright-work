@@ -306,7 +306,7 @@ const AbsenceApplication = () => {
                 onAddClick={() => setTripFormOpen(true)}
                 onItemClick={(item) => {
                   const record = tripRecords.find(r => r.id === item.id);
-                  if (record) { setSelectedTrip(record); setTripDetailOpen(true); }
+                  if (record) { setSelectedTrip(record); setTripDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '出差申请', target_id: record.id, target_name: record.reason }); }
                 }}
                 searchPlaceholder="搜索目的地或事由..."
                 emptyText="暂无出差记录"
