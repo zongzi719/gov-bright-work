@@ -95,8 +95,21 @@ const Login = () => {
   const ssoTriggeredRef = useRef(false);
 
   // 保存用户信息并跳转
-  const saveUserAndRedirect = (userData: any) => {
+  const saveUserAndRedirect = async (userData: any) => {
     localStorage.setItem("frontendUser", JSON.stringify(userData));
+
+    await logAudit({
+      operator_id: userData.id,
+      operator_name: userData.name,
+      operator_role: "user",
+      action: AUDIT_ACTIONS.LOGIN,
+      module: AUDIT_MODULES.AUTH,
+      detail: {
+        source: "frontend",
+        login_method: localStorage.getItem("loginMethod") || "password",
+      },
+    });
+
     toast({
       title: "登录成功",
       description: `欢迎回来，${userData.name}`,
