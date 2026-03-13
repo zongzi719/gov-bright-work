@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { supabase } from "@/integrations/supabase/client";
 import { isOfflineMode } from "@/lib/offlineApi";

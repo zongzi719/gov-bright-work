@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { usePagination } from "@/hooks/use-pagination";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";

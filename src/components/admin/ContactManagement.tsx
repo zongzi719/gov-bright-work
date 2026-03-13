@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import * as dataAdapter from "@/lib/dataAdapter";
