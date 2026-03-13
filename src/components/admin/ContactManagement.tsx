@@ -257,6 +257,7 @@ const ContactManagement = () => {
 
   const handleEditOrg = (org: Organization) => {
     setEditingOrg(org);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.CONTACT, target_type: '单位', target_id: org.id, target_name: org.name });
     setOrgFormData({
       name: org.name,
       short_name: org.short_name || "",
