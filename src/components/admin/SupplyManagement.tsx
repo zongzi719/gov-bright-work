@@ -405,6 +405,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("采购申请已提交");
+    await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请' });
     setPurchaseDialogOpen(false);
     fetchPurchaseRequests();
   };
