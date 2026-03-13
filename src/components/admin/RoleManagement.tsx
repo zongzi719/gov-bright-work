@@ -269,11 +269,23 @@ const RoleManagement = () => {
       data_scope: 'self' as const,
     }));
 
-    const { error } = await supabase
-      .from("role_permissions")
-      .insert(permissionRecords);
+    try {
+      if (isOfflineMode()) {
+        await offlineRequest<{ success: boolean }>("/api/role-permissions/batch", {
+          method: "POST",
+          body: JSON.stringify(permissionRecords),
+        });
+        return;
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from("role_permissions")
+        .insert(permissionRecords);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
       console.error("初始化权限配置失败:", error);
       // 不阻止角色创建，只记录错误
     }
@@ -287,18 +299,28 @@ const RoleManagement = () => {
 
     if (!confirm(`确定要删除角色"${role.label}"吗？`)) return;
 
-    const { error } = await supabase
-      .from("roles")
-      .delete()
-      .eq("id", role.id);
+    try {
+      if (isOfflineMode()) {
+        await offlineRequest<{ success: boolean }>(`/api/roles/${role.id}`, {
+          method: "DELETE",
+        });
+      } else {
+        const { error } = await supabase
+          .from("roles")
+          .delete()
+          .eq("id", role.id);
 
-    if (error) {
-      toast.error("删除角色失败");
-      return;
+        if (error) {
+          throw error;
+        }
+      }
+
+      toast.success("角色已删除");
+      await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: role.id, target_name: role.label });
+      fetchRoles();
+    } catch (error: any) {
+      toast.error(error?.message ? `删除角色失败：${error.message}` : "删除角色失败");
     }
-    toast.success("角色已删除");
-    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: role.id, target_name: role.label });
-    fetchRoles();
   };
 
   if (loading) {
