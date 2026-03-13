@@ -321,6 +321,7 @@ const LeaveBalanceManagement = () => {
       console.error(error);
     } else {
       toast.success(`已为 ${contactsToAdd.length} 人初始化假期`);
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEAVE, target_type: '批量初始化假期', detail: { count: contactsToAdd.length } });
       fetchBalances();
     }
   };

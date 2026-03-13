@@ -51,7 +51,7 @@ const TAB_CONFIG: TabConfig[] = [
   { value: 'leader-schedule', label: '领导日程', icon: Star, roles: ['admin', 'sys_admin'] },
   { value: 'approval', label: '审批设置', icon: ClipboardCheck, roles: ['admin', 'security_admin'] },
   { value: 'system', label: '系统管理', icon: Settings, roles: ['admin', 'security_admin'] },
-  { value: 'audit', label: '审计日志', icon: FileSearch, roles: ['admin', 'security_admin', 'audit_admin'] },
+  { value: 'audit', label: '操作日志', icon: FileSearch, roles: ['admin', 'security_admin', 'audit_admin'] },
 ];
 
 const Admin = () => {
