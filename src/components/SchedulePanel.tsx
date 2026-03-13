@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { format, startOfWeek, addDays, subWeeks, addWeeks } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { normalizeDate, normalizeTime } from "@/lib/utils";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface Contact {
   id: string;
