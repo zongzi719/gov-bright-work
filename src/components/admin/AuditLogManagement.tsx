@@ -242,8 +242,8 @@ const AuditLogManagement = () => {
       </div>
 
       {/* 日志表格 */}
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
+      <div className="border rounded-lg overflow-x-auto">
+        <Table className="w-full">
           <TableHeader>
             <TableRow>
               <TableHead className="whitespace-nowrap">时间</TableHead>
