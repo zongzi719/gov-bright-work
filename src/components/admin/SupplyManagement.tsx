@@ -344,6 +344,7 @@ const SupplyManagement = () => {
         return;
       }
       toast.success("添加成功");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品', target_name: supplyForm.name });
     }
 
     setSupplyDialogOpen(false);
