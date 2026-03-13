@@ -643,6 +643,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
     
     toast.success("节点添加成功");
+    void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '流程节点', target_name: config?.label || type });
     await fetchNodes();
     
     // 打开详情面板编辑新节点
