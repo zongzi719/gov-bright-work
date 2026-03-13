@@ -466,6 +466,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("采购已入库，库存已更新");
+    await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SUPPLY, target_type: '采购入库', target_id: request.id });
     fetchPurchaseRequests();
     fetchSupplies();
   };
