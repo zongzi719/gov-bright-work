@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Input, Button, Toast } from "antd-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { AUDIT_ACTIONS, AUDIT_MODULES, logAudit } from "@/hooks/useAuditLog";
 
 const H5Login = () => {
   const navigate = useNavigate();
@@ -50,6 +51,15 @@ const H5Login = () => {
           is_leader: true,
         };
         localStorage.setItem("h5User", JSON.stringify(userInfo));
+
+        await logAudit({
+          operator_id: userInfo.id,
+          operator_name: userInfo.name,
+          operator_role: "user",
+          action: AUDIT_ACTIONS.LOGIN,
+          module: AUDIT_MODULES.AUTH,
+          detail: { source: "h5", login_method: "password" },
+        });
 
         Toast.show({
           icon: "success",
@@ -145,3 +155,4 @@ const H5Login = () => {
 };
 
 export default H5Login;
+

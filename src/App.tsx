@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import useOperationTracker from "./hooks/useOperationTracker";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
@@ -26,12 +27,18 @@ import MissLogin from "./pages/UKeyRequired";
 
 const queryClient = new QueryClient();
 
+const OperationTrackerBridge = () => {
+  useOperationTracker();
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <OperationTrackerBridge />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
