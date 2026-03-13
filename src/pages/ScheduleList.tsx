@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageLayout from "@/components/PageLayout";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface Schedule {
   id: string;
@@ -140,10 +141,16 @@ const ScheduleList = () => {
       };
       if (editingSchedule) {
         const { error } = await dataAdapter.updateSchedule(editingSchedule.id, payload);
-        if (error) toast.error("修改失败"); else { toast.success("已修改"); setDialogOpen(false); resetForm(); fetchSchedules(); }
+        if (error) { toast.error("修改失败"); } else {
+          await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: editingSchedule.id, target_name: formData.title });
+          toast.success("已修改"); setDialogOpen(false); resetForm(); fetchSchedules();
+        }
       } else {
-        const { error } = await dataAdapter.createSchedule(payload);
-        if (error) toast.error("添加失败"); else { toast.success("已添加"); setDialogOpen(false); resetForm(); fetchSchedules(); }
+        const { data, error } = await dataAdapter.createSchedule(payload);
+        if (error) { toast.error("添加失败"); } else {
+          await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: (data as any)?.id, target_name: formData.title });
+          toast.success("已添加"); setDialogOpen(false); resetForm(); fetchSchedules();
+        }
       }
     } finally { setSubmitting(false); }
   };
@@ -151,7 +158,10 @@ const ScheduleList = () => {
   const confirmDelete = async () => {
     if (!scheduleToDelete) return;
     const { error } = await dataAdapter.deleteSchedule(scheduleToDelete.id);
-    if (error) toast.error("删除失败"); else { toast.success("已删除"); fetchSchedules(); }
+    if (error) { toast.error("删除失败"); } else {
+      await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: scheduleToDelete.id, target_name: scheduleToDelete.title });
+      toast.success("已删除"); fetchSchedules();
+    }
     setDeleteDialogOpen(false);
     setScheduleToDelete(null);
   };

@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useApprovalProgression } from "@/hooks/useApprovalProgression";
 import BusinessDataRenderer from "@/components/todo/BusinessDataRenderer";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface TodoItem {
   id: string;
@@ -684,6 +685,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         console.error("Failed to advance workflow:", progressResult.error);
       }
 
+      await logAudit({
+        action: AUDIT_ACTIONS.APPROVE,
+        module: AUDIT_MODULES.TODO,
+        target_type: '待办审批',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id, comment: comment.trim() || null, completed: progressResult.completed },
+      });
+
       if (progressResult.completed) {
         toast.success("审批流程已完成");
       } else {
@@ -772,6 +782,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         processed_by: currentUser.id,
       });
 
+      await logAudit({
+        action: AUDIT_ACTIONS.REJECT,
+        module: AUDIT_MODULES.TODO,
+        target_type: '待办退回',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id, return_type: returnType, comment: comment.trim() || null },
+      });
+
       toast.success(toastMessage);
       onOpenChange(false);
       onApprovalComplete?.();
@@ -802,6 +821,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         toast.error(result.error || "撤回失败");
         return;
       }
+
+      await logAudit({
+        action: AUDIT_ACTIONS.UPDATE,
+        module: AUDIT_MODULES.TODO,
+        target_type: '撤回申请',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id },
+      });
 
       toast.success("申请已撤回");
       onOpenChange(false);
@@ -847,6 +875,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         toast.error(result.error || "重新提交失败");
         return;
       }
+
+      await logAudit({
+        action: AUDIT_ACTIONS.FORM_SUBMIT,
+        module: AUDIT_MODULES.TODO,
+        target_type: '重新提交',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id },
+      });
 
       toast.success("已重新提交，等待审批");
       onOpenChange(false);
