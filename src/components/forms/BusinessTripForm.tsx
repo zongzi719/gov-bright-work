@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,8 +198,15 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
       });
 
       if (approvalResult.success) {
+        await logAudit({
+          action: AUDIT_ACTIONS.CREATE,
+          module: AUDIT_MODULES.ABSENCE,
+          target_type: '出差申请',
+          target_id: record.id,
+          target_name: `出差 - ${form.destination}`,
+          detail: { destination: form.destination, duration_days: durationData?.days, reason: form.reason },
+        });
         toast.success("出差申请已提交，等待审批");
-        onOpenChange(false);
         setForm({
           reason: "",
           destination: "",

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,8 +138,15 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
       });
 
       if (approvalResult.success) {
+        await logAudit({
+          action: AUDIT_ACTIONS.CREATE,
+          module: AUDIT_MODULES.ABSENCE,
+          target_type: '外出申请',
+          target_id: record.id,
+          target_name: `${outTypeLabel} - ${form.out_location}`,
+          detail: { out_type: form.out_type, out_location: form.out_location, reason: form.reason },
+        });
         toast.success("外出申请已提交，等待审批");
-        onOpenChange(false);
         setForm({
           out_type: "",
           out_location: "",

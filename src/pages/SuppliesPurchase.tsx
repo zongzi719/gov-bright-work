@@ -21,6 +21,7 @@ import { parseTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import ApprovalTimeline from "@/components/admin/ApprovalTimeline";
 
 interface SupplyPurchase {
@@ -270,8 +271,15 @@ const SuppliesPurchase = () => {
     setSubmitting(false);
 
     if (approvalResult.success) {
+      await logAudit({
+        action: AUDIT_ACTIONS.CREATE,
+        module: AUDIT_MODULES.SUPPLY,
+        target_type: '办公用品采购',
+        target_id: record.id,
+        target_name: itemNames.substring(0, 50),
+        detail: { total_amount: calculatedTotal, department },
+      });
       toast.success("采购申请已提交");
-      setFormOpen(false);
       fetchRecords();
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
