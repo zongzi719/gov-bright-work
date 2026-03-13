@@ -75,7 +75,7 @@ const AuditLogManagement = () => {
         // Offline mode: fetch from API
         const params = new URLSearchParams();
         params.set('page', String(currentPage));
-        params.set('pageSize', String(PAGE_SIZE));
+        params.set('pageSize', String(pageSize));
         if (keyword) params.set('keyword', keyword);
         if (moduleFilter !== 'all') params.set('module', moduleFilter);
         if (actionFilter !== 'all') params.set('action', actionFilter);
