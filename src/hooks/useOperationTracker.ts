@@ -40,6 +40,13 @@ const getCurrentOperatorId = (): string => {
 const normalizeText = (text: string): string =>
   text.replace(/\s+/g, " ").replace(/[\r\n\t]/g, "").trim();
 
+/** 无实际业务语义的按钮文本，前台也不需要记录 */
+const NOISE_LABELS = new Set([
+  "取消", "关闭", "返回", "确定", "确认", "搜索",
+  "重置", "展开", "收起", "上一页", "下一页",
+  "提交", "保存", "新建", "编辑", "删除", // 这些由语义化日志覆盖
+]);
+
 const resolveModule = (pathname: string): string => {
   if (pathname.startsWith("/admin")) return AUDIT_MODULES.SYSTEM;
   if (pathname === "/") return AUDIT_MODULES.WORKBENCH;
@@ -101,17 +108,13 @@ const useOperationTracker = () => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
 
-      const clickable = target.closest<HTMLElement>("button,a,[role='menuitem'],[data-audit-action]");
+      // 仅捕获带 data-audit-action 的显式标记元素，跳过普通按钮/链接
+      const clickable = target.closest<HTMLElement>("[data-audit-action]");
       if (!clickable || clickable.getAttribute("data-audit-ignore") === "true") return;
 
-      const label = normalizeText(
-        clickable.getAttribute("data-audit-action") ||
-          clickable.getAttribute("aria-label") ||
-          clickable.textContent ||
-          "",
-      );
+      const label = normalizeText(clickable.getAttribute("data-audit-action") || "");
 
-      if (!label || label.length > 40) return;
+      if (!label || label.length > 40 || NOISE_LABELS.has(label)) return;
 
       emitWithDedupe(`click:${pathname}:${label}`, {
         action: AUDIT_ACTIONS.UI_CLICK,
