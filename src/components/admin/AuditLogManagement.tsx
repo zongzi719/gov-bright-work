@@ -63,7 +63,9 @@ const AuditLogManagement = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
+  const [jumpPage, setJumpPage] = useState("");
   const [detailLog, setDetailLog] = useState<AuditLog | null>(null);
 
   const fetchLogs = useCallback(async () => {
