@@ -337,6 +337,7 @@ const ContactManagement = () => {
         return;
       }
       toast.success("联系人已更新");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.CONTACT, target_type: '联系人', target_id: editingContact.id, target_name: payload.name });
     } else {
       const { error } = await dataAdapter.createContact(payload);
 
