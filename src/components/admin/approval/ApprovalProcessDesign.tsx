@@ -744,6 +744,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       return;
     }
     toast.success("节点更新成功");
+    void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '流程节点', target_id: selectedNode.id, target_name: nodeForm.node_name });
     setDetailPanelOpen(false);
     fetchNodes();
   };
