@@ -69,6 +69,23 @@ const RoleUserManagement = () => {
   const [filterRole, setFilterRole] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const getApiBaseUrl = (): string => {
+    if (typeof window !== "undefined" && (window as any).GOV_CONFIG?.API_BASE_URL) {
+      return (window as any).GOV_CONFIG.API_BASE_URL;
+    }
+    return "http://localhost:3001";
+  };
+
+  const offlineRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
+      ...options,
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result as T;
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -80,36 +97,63 @@ const RoleUserManagement = () => {
   };
 
   const fetchUserRoles = async () => {
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("获取角色用户列表失败");
-      return;
-    }
-    setUserRoles(data || []);
+    try {
+      if (isOfflineMode()) {
+        const data = await offlineRequest<UserRole[]>("/api/user-roles");
+        setUserRoles(data || []);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) { toast.error("获取角色用户列表失败"); return; }
+      setUserRoles(data || []);
+    } catch { toast.error("获取角色用户列表失败"); }
   };
 
   const fetchRoles = async () => {
-    const { data, error } = await supabase
-      .from("roles")
-      .select("id, name, label, is_system")
-      .eq("is_active", true)
-      .order("sort_order");
-
-    if (error) {
-      toast.error("获取角色列表失败");
-      return;
-    }
-    setRoles(data || []);
+    try {
+      if (isOfflineMode()) {
+        const data = await offlineRequest<Role[]>("/api/roles");
+        setRoles((data || []).filter(r => r.is_active !== false));
+        return;
+      }
+      const { data, error } = await supabase
+        .from("roles")
+        .select("id, name, label, is_system")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) { toast.error("获取角色列表失败"); return; }
+      setRoles(data || []);
+    } catch { toast.error("获取角色列表失败"); }
   };
 
   const fetchUsers = async () => {
-    // Fetch from both profiles and contacts, merge by unique identifier
     const options: UserOption[] = [];
     const seenIds = new Set<string>();
+
+    if (isOfflineMode()) {
+      // 离线模式：只从 contacts 获取用户
+      try {
+        const contacts = await offlineRequest<any[]>("/api/contacts");
+        if (contacts) {
+          for (const c of contacts) {
+            if (!seenIds.has(c.id)) {
+              seenIds.add(c.id);
+              options.push({
+                id: c.id,
+                name: c.name,
+                email: c.email || c.mobile || '-',
+                source: 'contact',
+              });
+            }
+          }
+        }
+      } catch { /* ignore */ }
+      setUserOptions(options);
+      return;
+    }
 
     // 1. Fetch profiles (Supabase Auth users)
     const { data: profiles } = await supabase
