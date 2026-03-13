@@ -175,6 +175,7 @@ const Admin = () => {
       return;
     }
 
+    await logAudit({ action: AUDIT_ACTIONS.PASSWORD_CHANGE, module: AUDIT_MODULES.AUTH });
     toast.success("密码修改成功，请重新登录");
     setPasswordDialogOpen(false);
     await supabase.auth.signOut();
