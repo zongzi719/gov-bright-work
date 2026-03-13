@@ -6,6 +6,7 @@ import DocumentDetail from "@/components/h5/DocumentDetail";
 import ProcessDocumentDetail from "@/components/h5/ProcessDocumentDetail";
 import FileTransferList from "@/components/h5/FileTransferList";
 import { supabase } from "@/integrations/supabase/client";
+import { AUDIT_ACTIONS, AUDIT_MODULES, logAudit } from "@/hooks/useAuditLog";
 
 // 更真实的模拟数据
 const mockDocuments = [
