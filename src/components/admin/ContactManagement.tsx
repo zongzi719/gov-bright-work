@@ -281,6 +281,7 @@ const ContactManagement = () => {
       return;
     }
     toast.success("单位已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.CONTACT, target_type: '单位', target_id: id });
     fetchData();
   };
 
