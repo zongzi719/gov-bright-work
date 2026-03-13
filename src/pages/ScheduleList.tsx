@@ -114,6 +114,7 @@ const ScheduleList = () => {
 
   const openEditDialog = (schedule: Schedule) => {
     setEditingSchedule(schedule);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: schedule.id, target_name: schedule.title });
     setFormData({
       title: schedule.title,
       schedule_date: normalizeDate(schedule.schedule_date),
