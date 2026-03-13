@@ -6,8 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, RefreshCw, Eye, Calendar } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Search, RefreshCw, Eye, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { isOfflineMode } from "@/lib/offlineApi";
 
 interface AuditLog {
