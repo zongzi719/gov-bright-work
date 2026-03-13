@@ -124,7 +124,7 @@ const useOperationTracker = () => {
       action: AUDIT_ACTIONS.PAGE_VIEW,
       module: resolveModule(pathname),
       target_type: "页面",
-      target_name: pathname,
+      target_name: resolvePageName(pathname),
       detail: { path: pathname, event: "route_change" },
     });
   }, [pathname]);
