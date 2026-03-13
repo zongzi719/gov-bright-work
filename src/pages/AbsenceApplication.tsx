@@ -6,6 +6,7 @@ import { Briefcase, CalendarOff, LogOut } from "lucide-react";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { parseTime } from "@/lib/utils";
@@ -305,7 +306,7 @@ const AbsenceApplication = () => {
                 onAddClick={() => setTripFormOpen(true)}
                 onItemClick={(item) => {
                   const record = tripRecords.find(r => r.id === item.id);
-                  if (record) { setSelectedTrip(record); setTripDetailOpen(true); }
+                  if (record) { setSelectedTrip(record); setTripDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '出差申请', target_id: record.id, target_name: record.reason }); }
                 }}
                 searchPlaceholder="搜索目的地或事由..."
                 emptyText="暂无出差记录"
@@ -323,7 +324,7 @@ const AbsenceApplication = () => {
                 onAddClick={() => setLeaveFormOpen(true)}
                 onItemClick={(item) => {
                   const record = leaveRecords.find(r => r.id === item.id);
-                  if (record) { setSelectedLeave(record); setLeaveDetailOpen(true); }
+                  if (record) { setSelectedLeave(record); setLeaveDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.LEAVE, target_type: '请假申请', target_id: record.id, target_name: record.reason }); }
                 }}
                 searchPlaceholder="搜索请假类型或事由..."
                 emptyText="暂无请假记录"
@@ -341,7 +342,7 @@ const AbsenceApplication = () => {
                 onAddClick={() => setOutFormOpen(true)}
                 onItemClick={(item) => {
                   const record = outRecords.find(r => r.id === item.id);
-                  if (record) { setSelectedOut(record); setOutDetailOpen(true); }
+                  if (record) { setSelectedOut(record); setOutDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '外出申请', target_id: record.id, target_name: record.reason }); }
                 }}
                 searchPlaceholder="搜索外出类型、地点或事由..."
                 emptyText="暂无外出记录"

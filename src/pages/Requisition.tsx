@@ -148,6 +148,7 @@ const Requisition = () => {
         setSelectedItems(formattedItems as RequisitionItem[]);
       }
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: record.id, target_name: `${record.requisition_by} - ${record.requisition_date}` });
     }
   };
 

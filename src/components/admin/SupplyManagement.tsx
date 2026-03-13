@@ -282,6 +282,7 @@ const SupplyManagement = () => {
     setSelectedOfficePurchase(purchase);
     await fetchOfficePurchaseItems(purchase.id);
     setOfficePurchaseDetailOpen(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品采购', target_id: purchase.id, target_name: `${purchase.department} - ${purchase.applicant_name}` });
   };
 
   // =============== 库存管理 ===============

@@ -176,6 +176,7 @@ const Purchase = () => {
         setSelectedItems(data as PurchaseItem[]);
       }
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请', target_id: record.id, target_name: record.purpose || '采购申请' });
     }
   };
 

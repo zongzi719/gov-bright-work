@@ -200,6 +200,7 @@ const ApprovalSettings = () => {
   const handleViewDetail = (template: ApprovalTemplate) => {
     setSelectedTemplate(template);
     setIsCreating(false);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name });
     setActiveTab("basic");
   };
 
