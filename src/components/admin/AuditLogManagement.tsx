@@ -270,22 +270,22 @@ const AuditLogManagement = () => {
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                     {format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss')}
                   </TableCell>
-                  <TableCell className="font-medium text-sm">{log.operator_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
+                  <TableCell className="font-medium text-sm whitespace-nowrap">{log.operator_name}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge variant="outline" className="text-xs whitespace-nowrap">
                       {ROLE_LABELS[log.operator_role || ''] || log.operator_role || '-'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-800'}`}>
+                  <TableCell className="whitespace-nowrap">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-800'}`}>
                       {log.action}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">{log.module}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">
+                  <TableCell className="text-sm whitespace-nowrap">{log.module}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={log.target_name || log.target_type || '-'}>
                     {log.target_name || log.target_type || '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailLog(log)}>
                       <Eye className="w-4 h-4" />
                     </Button>
