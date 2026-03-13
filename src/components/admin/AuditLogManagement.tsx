@@ -205,11 +205,30 @@ const AuditLogManagement = () => {
             <SelectItem value="移除角色">移除角色</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-1">
-          <Calendar className="w-4 h-4 text-muted-foreground" />
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[130px] h-9" />
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("h-9 w-[140px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1.5 h-4 w-4" />
+                {dateFrom ? format(dateFrom, 'yyyy-MM-dd') : '开始日期'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dateFrom} onSelect={setDateFrom} locale={zhCN} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
           <span className="text-muted-foreground">—</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[130px] h-9" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("h-9 w-[140px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1.5 h-4 w-4" />
+                {dateTo ? format(dateTo, 'yyyy-MM-dd') : '结束日期'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dateTo} onSelect={setDateTo} locale={zhCN} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
         </div>
         <Button size="sm" onClick={handleSearch} className="h-9">
           <Search className="w-4 h-4 mr-1" /> 查询
