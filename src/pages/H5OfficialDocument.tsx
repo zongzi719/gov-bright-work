@@ -170,7 +170,17 @@ const H5OfficialDocument = () => {
     return matchCategory && matchTab && matchSearch;
   });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (user?.id) {
+      await logAudit({
+        operator_id: user.id,
+        operator_name: user.name,
+        operator_role: "user",
+        action: AUDIT_ACTIONS.LOGOUT,
+        module: AUDIT_MODULES.AUTH,
+        detail: { source: "h5", reason: "manual" },
+      });
+    }
     localStorage.removeItem("h5User");
     navigate("/h5login");
   };
