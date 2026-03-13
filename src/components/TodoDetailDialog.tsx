@@ -685,6 +685,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         console.error("Failed to advance workflow:", progressResult.error);
       }
 
+      await logAudit({
+        action: AUDIT_ACTIONS.APPROVE,
+        module: AUDIT_MODULES.TODO,
+        target_type: '待办审批',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id, comment: comment.trim() || null, completed: progressResult.completed },
+      });
+
       if (progressResult.completed) {
         toast.success("审批流程已完成");
       } else {
