@@ -94,7 +94,7 @@ const PermissionManagement = () => {
     try {
       if (isOfflineMode()) {
         const data = await offlineRequest<Role[]>("/api/roles");
-        setRoles((data || []).filter(r => r.is_active !== false));
+        setRoles((data || []).filter((r: any) => r.is_active !== false));
         return;
       }
       const { data, error } = await supabase
