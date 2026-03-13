@@ -91,6 +91,7 @@ const MenuManagement = () => {
     }
 
     toast.success("更新成功");
+    await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.MENU, target_type: '菜谱', target_id: editingMenu.id });
     setDialogOpen(false);
     fetchMenus();
   };
