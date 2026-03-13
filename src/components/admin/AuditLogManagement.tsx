@@ -215,6 +215,7 @@ const AuditLogManagement = () => {
       link.click();
       URL.revokeObjectURL(url);
       toast.success(`已导出 ${allLogs.length} 条记录`);
+      void logAudit({ action: AUDIT_ACTIONS.EXPORT, module: AUDIT_MODULES.SYSTEM, target_type: '审计日志', detail: { count: allLogs.length } });
     } catch (err) {
       console.error('Export error:', err);
       toast.error('导出失败');
