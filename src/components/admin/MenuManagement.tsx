@@ -110,6 +110,7 @@ const MenuManagement = () => {
     }
 
     toast.success("添加成功");
+    await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.MENU, target_type: '菜谱' });
     fetchMenus();
   };
 
