@@ -18,6 +18,9 @@ import LeaderScheduleManagement from "@/components/admin/LeaderScheduleManagemen
 import ScheduleManagement from "@/components/admin/ScheduleManagement";
 import ApprovalSettings from "@/components/admin/ApprovalSettings";
 import AdminPasswordChangeDialog from "@/components/admin/AdminPasswordChangeDialog";
+import AuditLogManagement from "@/components/admin/AuditLogManagement";
+import SessionLockScreen from "@/components/admin/SessionLockScreen";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { isOfflineMode } from "@/lib/offlineApi";
 
 const ADMIN_ROLE_IDS = ['admin', 'sys_admin', 'security_admin', 'audit_admin'];
@@ -149,6 +152,7 @@ const Admin = () => {
   };
 
   const handleLogout = async () => {
+    await logAudit({ action: AUDIT_ACTIONS.LOGOUT, module: AUDIT_MODULES.AUTH });
     if (isOfflineMode()) {
       localStorage.removeItem('adminUser');
     } else {
@@ -216,13 +220,7 @@ const Admin = () => {
       case 'leader-schedule': return <LeaderScheduleManagement />;
       case 'approval': return <ApprovalSettings />;
       case 'system': return <SystemManagement />;
-      case 'audit': return (
-        <div className="text-center py-20 text-muted-foreground">
-          <FileSearch className="w-16 h-16 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium">审计日志</p>
-          <p className="text-sm mt-2">此功能将在第二期上线</p>
-        </div>
-      );
+      case 'audit': return <AuditLogManagement />;
       default: return null;
     }
   };
@@ -314,6 +312,14 @@ const Admin = () => {
         open={passwordDialogOpen}
         onOpenChange={setPasswordDialogOpen}
         onSubmit={handlePasswordChange}
+      />
+
+      {/* 会话超时锁屏 */}
+      <SessionLockScreen
+        userName={userName}
+        timeoutMinutes={15}
+        onUnlock={() => {}}
+        onForceLogout={handleLogout}
       />
     </div>
   );

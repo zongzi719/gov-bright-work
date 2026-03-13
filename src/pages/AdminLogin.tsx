@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
 import { isOfflineMode } from "@/lib/offlineApi";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 const ADMIN_ROLE_IDS = ['admin', 'sys_admin', 'security_admin', 'audit_admin'];
 
@@ -47,6 +48,13 @@ const AdminLogin = () => {
       }
 
       localStorage.setItem('adminUser', JSON.stringify(result.admin));
+      await logAudit({
+        operator_id: result.admin?.id || 'unknown',
+        operator_name: result.admin?.name || '管理员',
+        operator_role: result.admin?.roles?.[0] || result.admin?.role || 'admin',
+        action: AUDIT_ACTIONS.LOGIN,
+        module: AUDIT_MODULES.AUTH,
+      });
       toast.success("登录成功");
       navigate("/admin");
     } catch (error) {
@@ -153,6 +161,16 @@ const AdminLogin = () => {
     }));
 
     const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
+
+    // Log audit
+    await logAudit({
+      operator_id: data.user.id,
+      operator_name: displayName,
+      operator_role: roles[0],
+      action: AUDIT_ACTIONS.LOGIN,
+      module: AUDIT_MODULES.AUTH,
+    });
+
     toast.success(`登录成功，当前身份：${roleLabel}`);
     navigate("/admin");
   };
