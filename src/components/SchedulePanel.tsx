@@ -200,12 +200,13 @@ const SchedulePanel = () => {
           toast.error("修改日程失败");
           console.error(error);
         } else {
+          await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: editingSchedule.id, target_name: formData.title });
           toast.success("日程已修改");
           closeDialog();
           fetchSchedules();
         }
       } else {
-        const { error } = await dataAdapter.createSchedule({
+        const { data, error } = await dataAdapter.createSchedule({
           contact_id: contactId,
           title: formData.title,
           schedule_date: formData.schedule_date,
@@ -219,6 +220,7 @@ const SchedulePanel = () => {
           toast.error("添加日程失败");
           console.error(error);
         } else {
+          await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: (data as any)?.id, target_name: formData.title });
           toast.success("日程已添加");
           closeDialog();
           fetchSchedules();
