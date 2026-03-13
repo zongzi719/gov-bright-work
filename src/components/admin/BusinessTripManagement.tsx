@@ -284,6 +284,7 @@ const BusinessTripManagement = () => {
       if (error) throw error;
       
       toast.success("删除成功");
+      await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.ABSENCE, target_type: '出差记录', target_id: deleteRecordId });
       setDeleteRecordId(null);
       fetchRecords();
     } catch (error) {

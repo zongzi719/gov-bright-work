@@ -543,6 +543,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("已拒绝领用申请");
+    await logAudit({ action: AUDIT_ACTIONS.REJECT, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: id });
     fetchRequisitions();
   };
 
