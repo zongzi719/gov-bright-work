@@ -6,8 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, RefreshCw, Eye, Calendar } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Search, RefreshCw, Eye, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { isOfflineMode } from "@/lib/offlineApi";
 
 interface AuditLog {
@@ -47,7 +51,8 @@ const ACTION_COLORS: Record<string, string> = {
   '修改密码': 'bg-amber-100 text-amber-800',
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const DEFAULT_PAGE_SIZE = 20;
 
 const AuditLogManagement = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -55,10 +60,12 @@ const AuditLogManagement = () => {
   const [keyword, setKeyword] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [actionFilter, setActionFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
+  const [jumpPage, setJumpPage] = useState("");
   const [detailLog, setDetailLog] = useState<AuditLog | null>(null);
 
   const fetchLogs = useCallback(async () => {
@@ -68,12 +75,12 @@ const AuditLogManagement = () => {
         // Offline mode: fetch from API
         const params = new URLSearchParams();
         params.set('page', String(currentPage));
-        params.set('pageSize', String(PAGE_SIZE));
+        params.set('pageSize', String(pageSize));
         if (keyword) params.set('keyword', keyword);
         if (moduleFilter !== 'all') params.set('module', moduleFilter);
         if (actionFilter !== 'all') params.set('action', actionFilter);
-        if (dateFrom) params.set('dateFrom', dateFrom);
-        if (dateTo) params.set('dateTo', dateTo);
+        if (dateFrom) params.set('dateFrom', format(dateFrom, 'yyyy-MM-dd'));
+        if (dateTo) params.set('dateTo', format(dateTo, 'yyyy-MM-dd'));
 
         const baseUrl = typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL
           ? (window as any).GOV_CONFIG.API_BASE_URL : 'http://localhost:3001';
@@ -95,14 +102,14 @@ const AuditLogManagement = () => {
           query = query.eq('action', actionFilter);
         }
         if (dateFrom) {
-          query = query.gte('created_at', `${dateFrom}T00:00:00`);
+          query = query.gte('created_at', `${format(dateFrom, 'yyyy-MM-dd')}T00:00:00`);
         }
         if (dateTo) {
-          query = query.lte('created_at', `${dateTo}T23:59:59`);
+          query = query.lte('created_at', `${format(dateTo, 'yyyy-MM-dd')}T23:59:59`);
         }
 
-        const from = (currentPage - 1) * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
         query = query.order('created_at', { ascending: false }).range(from, to);
 
         const { data, count, error } = await query;
@@ -120,7 +127,7 @@ const AuditLogManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, keyword, moduleFilter, actionFilter, dateFrom, dateTo]);
+  }, [currentPage, pageSize, keyword, moduleFilter, actionFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchLogs();
@@ -135,12 +142,12 @@ const AuditLogManagement = () => {
     setKeyword("");
     setModuleFilter("all");
     setActionFilter("all");
-    setDateFrom("");
-    setDateTo("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
     setCurrentPage(1);
   };
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="space-y-4">
@@ -201,11 +208,30 @@ const AuditLogManagement = () => {
             <SelectItem value="移除角色">移除角色</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-1">
-          <Calendar className="w-4 h-4 text-muted-foreground" />
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[130px] h-9" />
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("h-9 w-[140px] justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1.5 h-4 w-4" />
+                {dateFrom ? format(dateFrom, 'yyyy-MM-dd') : '开始日期'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dateFrom} onSelect={setDateFrom} locale={zhCN} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
           <span className="text-muted-foreground">—</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[130px] h-9" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("h-9 w-[140px] justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1.5 h-4 w-4" />
+                {dateTo ? format(dateTo, 'yyyy-MM-dd') : '结束日期'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dateTo} onSelect={setDateTo} locale={zhCN} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
         </div>
         <Button size="sm" onClick={handleSearch} className="h-9">
           <Search className="w-4 h-4 mr-1" /> 查询
@@ -271,15 +297,43 @@ const AuditLogManagement = () => {
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            第 {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} 条，共 {totalCount} 条
-          </p>
+      {totalPages > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>第 {totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0}–{Math.min(currentPage * pageSize, totalCount)} 条，共 {totalCount} 条</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[90px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map(s => (
+                  <SelectItem key={s} value={String(s)}>{s} 条/页</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>上一页</Button>
             <span className="text-sm">{currentPage} / {totalPages}</span>
             <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>下一页</Button>
+            <div className="flex items-center gap-1 ml-2">
+              <Input
+                className="w-[60px] h-8 text-center text-sm"
+                placeholder="页码"
+                value={jumpPage}
+                onChange={(e) => setJumpPage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const p = parseInt(jumpPage);
+                    if (p >= 1 && p <= totalPages) { setCurrentPage(p); setJumpPage(""); }
+                  }
+                }}
+              />
+              <Button variant="outline" size="sm" className="h-8" onClick={() => {
+                const p = parseInt(jumpPage);
+                if (p >= 1 && p <= totalPages) { setCurrentPage(p); setJumpPage(""); }
+              }}>跳转</Button>
+            </div>
           </div>
         </div>
       )}
