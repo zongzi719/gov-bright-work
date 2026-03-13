@@ -257,6 +257,7 @@ const RoleUserManagement = () => {
           }
 
           toast.success("角色用户已添加，认证账号已创建");
+          await logAudit({ action: AUDIT_ACTIONS.ROLE_ASSIGN, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: selectedUserId, target_name: `${selectedUser?.name} → ${getRoleLabel(selectedRole)}` });
           setDialogOpen(false);
           setSelectedUserId("");
           setSelectedRole("user");
