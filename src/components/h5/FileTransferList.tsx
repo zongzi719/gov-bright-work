@@ -354,11 +354,19 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     });
     
     if (result) {
+      const fileRecord = fileTransfers.find(f => f.id === id);
       const { error } = await dataAdapter.deleteFileTransfer(id);
       
       if (error) {
         Toast.show({ icon: "fail", content: "删除失败" });
       } else {
+        await logAudit({
+          action: AUDIT_ACTIONS.DELETE,
+          module: AUDIT_MODULES.MOBILE_DOC,
+          target_type: '文件收发',
+          target_id: id,
+          target_name: fileRecord?.title || '',
+        });
         Toast.show({ icon: "success", content: "删除成功" });
         fetchFileTransfers();
       }
