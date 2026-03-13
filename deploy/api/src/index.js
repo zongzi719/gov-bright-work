@@ -285,7 +285,7 @@ app.get('/api/contacts', async (req, res) => {
         name: row.name,
         department: row.department,
         position: row.position,
-        first_work_date: row.first_work_date,
+        first_work_date: safeDateStr(row.first_work_date),
         created_at: row.created_at,
         organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
       }));
@@ -317,16 +317,22 @@ app.get('/api/contacts', async (req, res) => {
     
     const [rows] = await pool.execute(sql, params);
     
+    // 格式化日期字段，避免 mysql2 返回 UTC Date 对象导致时区偏移
+    const formatContactDates = (row) => ({
+      ...row,
+      first_work_date: safeDateStr(row.first_work_date),
+    });
+
     // 如果需要 with_org 格式，添加 organization 对象
     if (with_org === 'true') {
       const formatted = rows.map(row => ({
-        ...row,
+        ...formatContactDates(row),
         organization: row.organization_name ? { name: row.organization_name } : null
       }));
       return res.json(formatted);
     }
     
-    res.json(rows);
+    res.json(rows.map(formatContactDates));
   } catch (error) {
     console.error('Get contacts error:', error);
     res.status(500).json({ error: '获取通讯录失败' });
@@ -345,7 +351,9 @@ app.get('/api/contacts/:id', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: '联系人不存在' });
     }
-    res.json(rows[0]);
+    const row = rows[0];
+    row.first_work_date = safeDateStr(row.first_work_date);
+    res.json(row);
   } catch (error) {
     console.error('Get contact error:', error);
     res.status(500).json({ error: '获取联系人失败' });
@@ -389,7 +397,7 @@ app.post('/api/contacts', async (req, res) => {
       [id, organization_id, name, position || null, department || null, phone || null, 
        mobile || null, email || null, office_location || null, sort_order || 0, 
        is_active !== false ? 1 : 0, status || 'on_duty', status_note || null, 
-       security_level || '公开', is_leader ? 1 : 0, first_work_date || null, password_hash || '123456',
+       security_level || '公开', is_leader ? 1 : 0, first_work_date ? first_work_date.substring(0, 10) : null, password_hash || '123456',
        account || null]
     );
     
@@ -422,7 +430,7 @@ app.put('/api/contacts/:id', async (req, res) => {
     if (updates.status_note !== undefined) { fields.push('status_note = ?'); values.push(updates.status_note); }
     if (updates.security_level !== undefined) { fields.push('security_level = ?'); values.push(updates.security_level); }
     if (updates.is_leader !== undefined) { fields.push('is_leader = ?'); values.push(updates.is_leader ? 1 : 0); }
-    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date); }
+    if (updates.first_work_date !== undefined) { fields.push('first_work_date = ?'); values.push(updates.first_work_date ? updates.first_work_date.substring(0, 10) : null); }
     if (updates.account !== undefined) { fields.push('account = ?'); values.push(updates.account); }
     
     if (fields.length === 0) {
@@ -1094,10 +1102,12 @@ app.get('/api/file-transfers', async (req, res) => {
     sql += ' ORDER BY created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    // 解析attachments JSON
+    // 解析attachments JSON + 格式化日期字段
     const transfers = rows.map(row => ({
       ...row,
-      attachments: JSON.parse(row.attachments || '[]')
+      attachments: JSON.parse(row.attachments || '[]'),
+      document_date: safeDateStr(row.document_date),
+      sign_date: safeDateStr(row.sign_date),
     }));
     res.json(transfers);
   } catch (error) {
@@ -1291,7 +1301,7 @@ app.get('/api/schedules', async (req, res) => {
       id: row.id,
       contact_id: row.contact_id,
       title: row.title,
-      schedule_date: row.schedule_date,
+      schedule_date: safeDateStr(row.schedule_date),
       start_time: row.start_time,
       end_time: row.end_time,
       location: row.location,
@@ -1422,7 +1432,11 @@ app.get('/api/supply-purchases', async (req, res) => {
     sql += ' ORDER BY created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    const formatted = rows.map(row => ({
+      ...row,
+      purchase_date: safeDateStr(row.purchase_date),
+    }));
+    res.json(formatted);
   } catch (error) {
     console.error('Get supply purchases error:', error);
     res.status(500).json({ error: '获取采购申请失败' });
@@ -1514,7 +1528,12 @@ app.get('/api/purchase-requests', async (req, res) => {
     sql += ' ORDER BY pr.created_at DESC';
     
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    const formatted = rows.map(row => ({
+      ...row,
+      purchase_date: safeDateStr(row.purchase_date),
+      expected_completion_date: safeDateStr(row.expected_completion_date),
+    }));
+    res.json(formatted);
   } catch (error) {
     console.error('Get purchase requests error:', error);
     res.status(500).json({ error: '获取采购申请失败' });
@@ -2134,7 +2153,7 @@ app.get('/api/leave-balances', async (req, res) => {
           name: row.contact_name,
           department: row.contact_department,
           position: row.contact_position,
-          first_work_date: row.first_work_date,
+          first_work_date: safeDateStr(row.first_work_date),
           created_at: row.contact_created_at,
           organization: row.org_id ? { id: row.org_id, name: row.org_name } : null
         } : null
@@ -2428,6 +2447,7 @@ app.get('/api/leader-schedules', async (req, res) => {
     // 格式化为前端期望的结构
     const schedules = rows.map(row => ({
       ...row,
+      schedule_date: safeDateStr(row.schedule_date),
       leader: {
         id: row.leader_id,
         name: row.leader_name,
@@ -4080,194 +4100,6 @@ app.post('/api/cjgov/sso/verifyTicket', async (req, res) => {
   }
 });
 
-// ==================== 角色管理（离线） ====================
-
-const normalizeRoleKey = (role) => {
-  const roleText = String(role || '').trim();
-  const roleMap = {
-    '超级管理员': 'admin',
-    '系统管理员': 'sys_admin',
-    '安全保密管理员': 'security_admin',
-    '安全审计员': 'audit_admin',
-  };
-
-  return roleMap[roleText] || roleText;
-};
-
-app.get('/api/roles', async (req, res) => {
-  try {
-    const { is_active } = req.query;
-    let sql = 'SELECT * FROM roles WHERE 1=1';
-    const params = [];
-
-    if (is_active !== undefined) {
-      sql += ' AND is_active = ?';
-      params.push(is_active === 'true' || is_active === '1' ? 1 : 0);
-    }
-
-    sql += ' ORDER BY sort_order ASC, created_at ASC';
-
-    const [rows] = await pool.execute(sql, params);
-    const roles = rows.map(row => ({
-      ...row,
-      is_system: row.is_system === 1 || row.is_system === true || row.is_system === '1',
-      is_active: row.is_active === 1 || row.is_active === true || row.is_active === '1',
-    }));
-
-    res.json(roles);
-  } catch (error) {
-    console.error('获取角色列表失败:', error.message);
-    res.status(500).json({ error: '获取角色列表失败' });
-  }
-});
-
-app.post('/api/roles', async (req, res) => {
-  try {
-    const {
-      name,
-      label,
-      description = null,
-      is_system = false,
-      is_active = true,
-      sort_order = 0,
-    } = req.body;
-
-    if (!name || !label) {
-      return res.status(400).json({ error: '缺少必填字段: name, label' });
-    }
-
-    const id = uuidv4();
-    await pool.execute(
-      `INSERT INTO roles (id, name, label, description, is_system, is_active, sort_order, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [id, name, label, description, is_system ? 1 : 0, is_active ? 1 : 0, sort_order]
-    );
-
-    res.json({ success: true, id, name });
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: '角色标识已存在' });
-    }
-    console.error('创建角色失败:', error.message);
-    res.status(500).json({ error: '创建角色失败' });
-  }
-});
-
-app.put('/api/roles/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body || {};
-
-    const fields = [];
-    const values = [];
-
-    if (updates.label !== undefined) {
-      fields.push('label = ?');
-      values.push(updates.label);
-    }
-
-    if (updates.description !== undefined) {
-      fields.push('description = ?');
-      values.push(updates.description || null);
-    }
-
-    if (updates.is_active !== undefined) {
-      fields.push('is_active = ?');
-      values.push(updates.is_active ? 1 : 0);
-    }
-
-    if (fields.length === 0) {
-      return res.json({ success: true });
-    }
-
-    fields.push('updated_at = NOW()');
-    values.push(id);
-
-    await pool.execute(`UPDATE roles SET ${fields.join(', ')} WHERE id = ?`, values);
-    res.json({ success: true });
-  } catch (error) {
-    console.error('更新角色失败:', error.message);
-    res.status(500).json({ error: '更新角色失败' });
-  }
-});
-
-app.delete('/api/roles/:id', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { id } = req.params;
-
-    const [roleRows] = await connection.execute(
-      'SELECT id, name, label, is_system FROM roles WHERE id = ? LIMIT 1',
-      [id]
-    );
-
-    if (!roleRows.length) {
-      return res.status(404).json({ error: '角色不存在' });
-    }
-
-    const role = roleRows[0];
-    if (role.is_system === 1 || role.is_system === true || role.is_system === '1') {
-      return res.status(400).json({ error: '系统角色不能删除' });
-    }
-
-    await connection.beginTransaction();
-    await connection.execute('DELETE FROM role_permissions WHERE role = ?', [role.name]);
-    await connection.execute('DELETE FROM user_roles WHERE role = ?', [role.name]);
-    await connection.execute('DELETE FROM roles WHERE id = ?', [id]);
-    await connection.commit();
-
-    res.json({ success: true });
-  } catch (error) {
-    await connection.rollback();
-    console.error('删除角色失败:', error.message);
-    res.status(500).json({ error: '删除角色失败' });
-  } finally {
-    connection.release();
-  }
-});
-
-app.post('/api/role-permissions/batch', async (req, res) => {
-  try {
-    const records = Array.isArray(req.body) ? req.body : [];
-    if (!records.length) {
-      return res.status(400).json({ error: '请求体不能为空数组' });
-    }
-
-    const placeholders = records.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())').join(', ');
-    const values = records.flatMap(record => [
-      uuidv4(),
-      record.role,
-      record.module_name,
-      record.module_label,
-      record.can_create ? 1 : 0,
-      record.can_read ? 1 : 0,
-      record.can_update ? 1 : 0,
-      record.can_delete ? 1 : 0,
-      record.data_scope || 'self',
-    ]);
-
-    await pool.execute(
-      `INSERT INTO role_permissions
-       (id, role, module_name, module_label, can_create, can_read, can_update, can_delete, data_scope, created_at, updated_at)
-       VALUES ${placeholders}
-       ON DUPLICATE KEY UPDATE
-         module_label = VALUES(module_label),
-         can_create = VALUES(can_create),
-         can_read = VALUES(can_read),
-         can_update = VALUES(can_update),
-         can_delete = VALUES(can_delete),
-         data_scope = VALUES(data_scope),
-         updated_at = NOW()`,
-      values
-    );
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('批量初始化角色权限失败:', error.message);
-    res.status(500).json({ error: '批量初始化角色权限失败' });
-  }
-});
-
 // ==================== 审计日志 ====================
 
 // POST /api/audit-logs - 写入审计日志
@@ -4291,7 +4123,7 @@ app.post('/api/audit-logs', async (req, res) => {
         id,
         operator_id,
         operator_name || '未知用户',
-        normalizeRoleKey(operator_role) || null,
+        operator_role || null,
         action,
         module,
         target_type || null,
@@ -4322,7 +4154,7 @@ app.get('/api/audit-logs', async (req, res) => {
     const actionFilter = req.query.action || '';
     const dateFrom = req.query.dateFrom || '';
     const dateTo = req.query.dateTo || '';
-    const operatorRole = normalizeRoleKey(req.query.operatorRole || ''); // 当前查询者的角色
+    const operatorRole = req.query.operatorRole || ''; // 当前查询者的角色
 
     // 构建 WHERE 条件
     const conditions = [];
