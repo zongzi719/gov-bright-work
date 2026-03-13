@@ -76,8 +76,8 @@ const AuditLogManagement = () => {
         if (keyword) params.set('keyword', keyword);
         if (moduleFilter !== 'all') params.set('module', moduleFilter);
         if (actionFilter !== 'all') params.set('action', actionFilter);
-        if (dateFrom) params.set('dateFrom', dateFrom);
-        if (dateTo) params.set('dateTo', dateTo);
+        if (dateFrom) params.set('dateFrom', format(dateFrom, 'yyyy-MM-dd'));
+        if (dateTo) params.set('dateTo', format(dateTo, 'yyyy-MM-dd'));
 
         const baseUrl = typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL
           ? (window as any).GOV_CONFIG.API_BASE_URL : 'http://localhost:3001';
