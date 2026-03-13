@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { isOfflineMode } from "@/lib/offlineApi";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
