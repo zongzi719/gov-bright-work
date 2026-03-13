@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageLayout from "@/components/PageLayout";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface Schedule {
   id: string;
