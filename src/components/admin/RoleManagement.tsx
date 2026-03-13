@@ -227,6 +227,7 @@ const RoleManagement = () => {
       return;
     }
     toast.success("角色已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: role.id, target_name: role.label });
     fetchRoles();
   };
 
