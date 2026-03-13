@@ -133,6 +133,7 @@ const NoticeManagement = () => {
         return;
       }
       toast.success("添加成功");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.NOTICE, target_type: '通知', target_name: formData.title });
     }
 
     setDialogOpen(false);
