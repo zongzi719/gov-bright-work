@@ -256,6 +256,7 @@ const LeaveBalanceManagement = () => {
 
   const handleEdit = (balance: LeaveBalance) => {
     setIsEditing(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.LEAVE, target_type: '假期余额', target_id: balance.id, target_name: balance.contact_id });
     setEditingId(balance.id);
     setFormData({
       contact_id: balance.contact_id,

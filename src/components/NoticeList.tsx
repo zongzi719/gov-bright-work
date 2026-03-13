@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 interface NoticeItem {
   id: string;
   title: string;
@@ -127,6 +128,7 @@ const NoticeList = () => {
   const handleNoticeClick = (notice: NoticeItem) => {
     setSelectedNotice(notice);
     setDialogOpen(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.NOTICE, target_type: '通知公告', target_id: notice.id, target_name: notice.title });
   };
 
   const goToPrevImage = () => {

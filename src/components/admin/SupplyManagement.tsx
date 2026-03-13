@@ -300,6 +300,7 @@ const SupplyManagement = () => {
 
   const handleEditSupply = (supply: OfficeSupply) => {
     setEditingSupply(supply);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品', target_id: supply.id, target_name: supply.name });
     setSupplyForm({
       name: supply.name,
       specification: supply.specification || "",

@@ -129,6 +129,7 @@ const RoleManagement = () => {
         label: role.label,
         description: role.description || "",
       });
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: role.id, target_name: role.label });
     } else {
       resetForm();
     }

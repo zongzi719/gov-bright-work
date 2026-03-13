@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import PageLayout from "@/components/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, ShoppingCart } from "lucide-react";
@@ -195,6 +196,7 @@ const RequisitionContent = () => {
       const { data } = await dataAdapter.getSupplyRequisitionItems(record.id);
       if (data) setSelectedItems(data as RequisitionItem[]);
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: record.id, target_name: `${record.requisition_by} - ${record.requisition_date}` });
     }
   };
 
@@ -408,6 +410,7 @@ const PurchaseContent = () => {
       const { data } = await dataAdapter.getPurchaseRequestItems(record.id);
       if (data) setSelectedItems(data as PurchaseItem[]);
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请', target_id: record.id, target_name: record.purpose || '采购申请' });
     }
   };
 
@@ -627,6 +630,7 @@ const SuppliesPurchaseContent = () => {
       const { data } = await dataAdapter.getSupplyPurchaseItems(record.id);
       if (data) setSelectedItems(data as SupplyPurchaseItem[]);
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品采购', target_id: record.id, target_name: `${record.department} - ${record.applicant_name}` });
     }
   };
 
