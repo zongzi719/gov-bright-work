@@ -325,6 +325,13 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
       }
 
       Toast.show({ icon: "success", content: "新增成功" });
+      await logAudit({
+        action: AUDIT_ACTIONS.CREATE,
+        module: AUDIT_MODULES.MOBILE_DOC,
+        target_type: '文件收发',
+        target_name: formData.title,
+        detail: { doc_number: formData.docNumber, security_level: formData.securityLevel[0], send_unit: formData.sendUnit },
+      });
       resetForm();
       setShowAddPopup(false);
       // 重新加载数据
