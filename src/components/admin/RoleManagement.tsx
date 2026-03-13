@@ -3,6 +3,7 @@ import { usePagination } from "@/hooks/use-pagination";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
