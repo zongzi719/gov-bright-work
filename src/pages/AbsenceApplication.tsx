@@ -342,7 +342,7 @@ const AbsenceApplication = () => {
                 onAddClick={() => setOutFormOpen(true)}
                 onItemClick={(item) => {
                   const record = outRecords.find(r => r.id === item.id);
-                  if (record) { setSelectedOut(record); setOutDetailOpen(true); }
+                  if (record) { setSelectedOut(record); setOutDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '外出申请', target_id: record.id, target_name: record.reason }); }
                 }}
                 searchPlaceholder="搜索外出类型、地点或事由..."
                 emptyText="暂无外出记录"
