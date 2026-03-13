@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useApprovalProgression } from "@/hooks/useApprovalProgression";
 import BusinessDataRenderer from "@/components/todo/BusinessDataRenderer";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface TodoItem {
   id: string;
