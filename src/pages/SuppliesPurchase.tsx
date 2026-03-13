@@ -21,6 +21,7 @@ import { parseTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import ApprovalTimeline from "@/components/admin/ApprovalTimeline";
 
 interface SupplyPurchase {
