@@ -273,7 +273,16 @@ const AuditLogManagement = () => {
       </div>
 
       {totalPages > 1 && (
-        <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            第 {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} 条，共 {totalCount} 条
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>上一页</Button>
+            <span className="text-sm">{currentPage} / {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>下一页</Button>
+          </div>
+        </div>
       )}
 
       {/* 详情弹窗 */}
