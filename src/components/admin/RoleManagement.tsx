@@ -58,24 +58,58 @@ const RoleManagement = () => {
     description: "",
   });
 
+  const getApiBaseUrl = (): string => {
+    if (typeof window !== "undefined" && (window as any).GOV_CONFIG?.API_BASE_URL) {
+      return (window as any).GOV_CONFIG.API_BASE_URL;
+    }
+    return "http://localhost:3001";
+  };
+
+  const offlineRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP ${response.status}`);
+    }
+
+    return result as T;
+  };
+
   useEffect(() => {
     fetchRoles();
   }, []);
 
   const fetchRoles = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("roles")
-      .select("*")
-      .order("sort_order", { ascending: true });
+    try {
+      if (isOfflineMode()) {
+        const data = await offlineRequest<Role[]>("/api/roles");
+        setRoles(data || []);
+        return;
+      }
 
-    if (error) {
+      const { data, error } = await supabase
+        .from("roles")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        toast.error("获取角色列表失败");
+        return;
+      }
+      setRoles(data || []);
+    } catch {
       toast.error("获取角色列表失败");
+    } finally {
       setLoading(false);
-      return;
     }
-    setRoles(data || []);
-    setLoading(false);
   };
 
   const resetForm = () => {
