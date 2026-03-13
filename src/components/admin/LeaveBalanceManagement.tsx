@@ -247,6 +247,7 @@ const LeaveBalanceManagement = () => {
         console.error(error);
       } else {
         toast.success("添加成功");
+        await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEAVE, target_type: '假期余额', target_name: formData.contact_id });
         closeDialog();
         fetchBalances();
       }
