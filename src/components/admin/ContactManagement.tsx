@@ -248,6 +248,7 @@ const ContactManagement = () => {
         return;
       }
       toast.success("单位已添加");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.CONTACT, target_type: '单位', target_name: payload.name });
     }
 
     resetOrgForm();
