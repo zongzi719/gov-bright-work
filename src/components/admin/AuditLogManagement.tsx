@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -214,6 +215,7 @@ const AuditLogManagement = () => {
       link.click();
       URL.revokeObjectURL(url);
       toast.success(`已导出 ${allLogs.length} 条记录`);
+      void logAudit({ action: AUDIT_ACTIONS.EXPORT, module: AUDIT_MODULES.SYSTEM, target_type: '审计日志', detail: { count: allLogs.length } });
     } catch (err) {
       console.error('Export error:', err);
       toast.error('导出失败');
