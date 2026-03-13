@@ -166,6 +166,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
         return;
       }
       toast.success("字段更新成功");
+      void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '表单字段', target_id: editingField.id, target_name: fieldData.field_label || editingField.field_label });
     } else {
       // 添加新字段
       const maxOrder = fields.length > 0 ? Math.max(...fields.map(f => f.sort_order)) : 0;
