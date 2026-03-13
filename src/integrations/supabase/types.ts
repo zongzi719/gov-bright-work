@@ -1753,6 +1753,16 @@ export type Database = {
           updated_count: number
         }[]
       }
+      verify_admin_login: {
+        Args: { p_account: string; p_password: string }
+        Returns: {
+          contact_email: string
+          contact_id: string
+          contact_mobile: string
+          contact_name: string
+          contact_roles: string[]
+        }[]
+      }
       verify_contact_login: {
         Args: { p_mobile: string; p_password: string }
         Returns: {
