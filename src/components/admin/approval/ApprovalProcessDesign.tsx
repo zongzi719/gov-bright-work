@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -356,6 +357,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     // Note: current_version_id 在离线模式下不需要更新
 
     toast.success(`已发布版本 V${newVersionNumber}`);
+    void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '流程版本', target_name: `流程版本V${newVersionNumber}`, detail: { version_number: newVersionNumber, node_count: nodes.length } });
     
     // 先更新快照，确保 hasChanges 变为 false（使用规范化比较）
     const currentSnapshot = normalizeNodesForComparison(nodes);
@@ -641,6 +643,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     }
     
     toast.success("节点添加成功");
+    void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '流程节点', target_name: config?.label || type });
     await fetchNodes();
     
     // 打开详情面板编辑新节点
@@ -741,6 +744,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       return;
     }
     toast.success("节点更新成功");
+    void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '流程节点', target_id: selectedNode.id, target_name: nodeForm.node_name });
     setDetailPanelOpen(false);
     fetchNodes();
   };
@@ -754,7 +758,9 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       toast.error("删除节点失败");
       return;
     }
+    const deletedNode = nodes.find(n => n.id === id);
     toast.success("节点已删除");
+    void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '流程节点', target_id: id, target_name: deletedNode?.node_name });
     setDetailPanelOpen(false);
     setSelectedNode(null);
     fetchNodes();

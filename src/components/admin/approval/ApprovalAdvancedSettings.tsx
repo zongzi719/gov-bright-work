@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,6 +98,7 @@ const ApprovalAdvancedSettings = ({ templateId }: ApprovalAdvancedSettingsProps)
       toast.error("保存失败");
     } else {
       toast.success("设置已保存");
+      void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '高级设置', target_id: templateId, detail: { callback_url: !!settings.callback_url, auto_approve_timeout: settings.auto_approve_timeout, allow_withdraw: settings.allow_withdraw, allow_transfer: settings.allow_transfer } });
     }
     setSaving(false);
   };

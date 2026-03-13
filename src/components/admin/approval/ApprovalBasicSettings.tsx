@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,6 +114,7 @@ const ApprovalBasicSettings = ({
         return;
       }
       toast.success("保存成功");
+      void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: formData.name, detail: { fields: ['name', 'description', 'category', 'is_active'] } });
       onTemplateUpdated(data as unknown as ApprovalTemplate);
     } else {
       // 创建
@@ -135,6 +137,7 @@ const ApprovalBasicSettings = ({
         return;
       }
       toast.success("创建成功，可以继续配置表单和流程");
+      void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_name: formData.name });
       onTemplateCreated(data as unknown as ApprovalTemplate);
     }
 
@@ -154,6 +157,7 @@ const ApprovalBasicSettings = ({
       return;
     }
     toast.success("删除成功");
+    void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name });
     // 触发返回列表
     window.history.back();
   };
