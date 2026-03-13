@@ -329,6 +329,7 @@ const SupplyManagement = () => {
         return;
       }
       toast.success("更新成功");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品', target_id: editingSupply.id, target_name: supplyForm.name });
     } else {
       const { error } = await dataAdapter.createOfficeSupply({
         name: supplyForm.name.trim(),
