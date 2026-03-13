@@ -212,6 +212,17 @@ const H5OfficialDocument = () => {
     );
   }
 
+  const handleSelectDocument = (doc: DocumentType) => {
+    setSelectedDocument(doc);
+    void logAudit({
+      action: AUDIT_ACTIONS.VIEW,
+      module: AUDIT_MODULES.MOBILE_DOC,
+      target_type: doc.category === 'process' ? '公文办理' : '发文审签',
+      target_id: doc.id,
+      target_name: doc.title,
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 p-4">

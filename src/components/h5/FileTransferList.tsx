@@ -419,7 +419,10 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
           {filteredFiles.map((file) => (
             <div
               key={file.id}
-              onClick={() => setSelectedFile(file)}
+              onClick={() => {
+                setSelectedFile(file);
+                void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.MOBILE_DOC, target_type: '文件收发', target_id: file.id, target_name: file.title });
+              }}
               className="bg-white rounded-lg p-3 shadow-sm active:bg-slate-50 transition-colors cursor-pointer relative"
             >
               {/* 删除按钮 */}
