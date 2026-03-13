@@ -4066,6 +4066,130 @@ app.post('/api/cjgov/sso/verifyTicket', async (req, res) => {
   }
 });
 
+// ==================== 审计日志 ====================
+
+// POST /api/audit-logs - 写入审计日志
+app.post('/api/audit-logs', async (req, res) => {
+  try {
+    const {
+      operator_id, operator_name, operator_role,
+      action, module, target_type, target_id, target_name,
+      detail, ip_address, user_agent
+    } = req.body;
+
+    if (!operator_id || !action || !module) {
+      return res.status(400).json({ error: '缺少必填字段: operator_id, action, module' });
+    }
+
+    const id = uuidv4();
+    await pool.execute(
+      `INSERT INTO audit_logs (id, operator_id, operator_name, operator_role, action, module, target_type, target_id, target_name, detail, ip_address, user_agent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        operator_id,
+        operator_name || '未知用户',
+        operator_role || null,
+        action,
+        module,
+        target_type || null,
+        target_id || null,
+        target_name || null,
+        detail ? JSON.stringify(detail) : null,
+        ip_address || req.ip || null,
+        user_agent || req.headers['user-agent']?.substring(0, 500) || null
+      ]
+    );
+
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('写入审计日志失败:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/audit-logs - 查询审计日志（支持角色隔离、分页、筛选）
+app.get('/api/audit-logs', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = Math.min(parseInt(req.query.pageSize) || 20, 200);
+    const offset = (page - 1) * pageSize;
+
+    const keyword = req.query.keyword || '';
+    const moduleFilter = req.query.module || '';
+    const actionFilter = req.query.action || '';
+    const dateFrom = req.query.dateFrom || '';
+    const dateTo = req.query.dateTo || '';
+    const operatorRole = req.query.operatorRole || ''; // 当前查询者的角色
+
+    // 构建 WHERE 条件
+    const conditions = [];
+    const params = [];
+
+    // 角色隔离：
+    // security_admin -> 只能看普通用户和 audit_admin 的日志
+    // audit_admin -> 只能看 sys_admin 和 security_admin 的日志
+    // admin/sys_admin -> 看全部
+    if (operatorRole === 'security_admin') {
+      conditions.push(`(operator_role IS NULL OR operator_role NOT IN ('admin', 'security_admin', 'sys_admin'))`);
+    } else if (operatorRole === 'audit_admin') {
+      conditions.push(`operator_role IN ('security_admin', 'sys_admin')`);
+    }
+    // admin 和 sys_admin 无过滤，看全量
+
+    if (keyword) {
+      conditions.push(`(operator_name LIKE ? OR target_name LIKE ? OR module LIKE ?)`);
+      params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    }
+
+    if (moduleFilter) {
+      conditions.push(`module = ?`);
+      params.push(moduleFilter);
+    }
+
+    if (actionFilter) {
+      conditions.push(`action = ?`);
+      params.push(actionFilter);
+    }
+
+    if (dateFrom) {
+      conditions.push(`created_at >= ?`);
+      params.push(`${dateFrom} 00:00:00`);
+    }
+
+    if (dateTo) {
+      conditions.push(`created_at <= ?`);
+      params.push(`${dateTo} 23:59:59`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // 查总数
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM audit_logs ${whereClause}`,
+      params
+    );
+    const total = countRows[0]?.total || 0;
+
+    // 查数据
+    const [rows] = await pool.execute(
+      `SELECT * FROM audit_logs ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...params, pageSize, offset]
+    );
+
+    // 格式化 detail 字段（MariaDB JSON 返回字符串）
+    const logs = rows.map(row => ({
+      ...row,
+      detail: typeof row.detail === 'string' ? (() => { try { return JSON.parse(row.detail); } catch { return row.detail; } })() : row.detail
+    }));
+
+    res.json({ logs, total, page, pageSize });
+  } catch (error) {
+    console.error('查询审计日志失败:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {

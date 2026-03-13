@@ -83,6 +83,12 @@ const AuditLogManagement = () => {
         if (actionFilter !== 'all') params.set('action', actionFilter);
         if (dateFrom) params.set('dateFrom', format(dateFrom, 'yyyy-MM-dd'));
         if (dateTo) params.set('dateTo', format(dateTo, 'yyyy-MM-dd'));
+        // 传递当前管理员角色用于角色隔离
+        try {
+          const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+          const role = adminUser?.roles?.[0] || adminUser?.role || '';
+          if (role) params.set('operatorRole', role);
+        } catch {}
 
         const baseUrl = typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL
           ? (window as any).GOV_CONFIG.API_BASE_URL : 'http://localhost:3001';
