@@ -106,23 +106,7 @@ const AdminLogin = () => {
 
     let roles = roleData.map(r => r.role);
 
-    // Check if admin role is still active
-    if (roles.includes('admin')) {
-      const { data: adminRole } = await supabase
-        .from("roles")
-        .select("is_active")
-        .eq("name", "admin")
-        .single();
-
-      if (!adminRole?.is_active) {
-        roles = roles.filter(r => r !== 'admin');
-        if (!roles.length) {
-          await supabase.auth.signOut();
-          toast.error("超级管理员已停用，请使用三员账号登录");
-          return;
-        }
-      }
-    }
+    // Admin role is always allowed to login regardless of is_active status
 
     const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
     toast.success(`登录成功，当前身份：${roleLabel}`);
