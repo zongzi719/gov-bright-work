@@ -195,6 +195,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
       }
 
       toast.success(editMode ? "权限已更新" : "权限已添加");
+      await logAudit({ action: editMode ? AUDIT_ACTIONS.UPDATE : AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '日程权限', target_id: formData.contact_id });
       setDialogOpen(false);
       resetForm();
       fetchPermissions();
