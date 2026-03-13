@@ -352,7 +352,7 @@ const H5OfficialDocument = () => {
               {filteredDocuments.map((doc) => (
                 <div
                   key={doc.id}
-                  onClick={() => setSelectedDocument(doc)}
+                  onClick={() => handleSelectDocument(doc)}
                   className="bg-white rounded-lg p-3 border border-slate-100 active:bg-slate-50 transition-colors cursor-pointer"
                 >
                   {/* 流程类型标识区域 */}
