@@ -122,6 +122,7 @@ const PermissionManagement = () => {
       if (error) { toast.error("获取权限配置失败"); return; }
       setPermissions(data || []);
       setModifiedPermissions({});
+    } catch { toast.error("获取权限配置失败"); }
   };
 
   const getRoleLabel = (roleName: string): string => {
