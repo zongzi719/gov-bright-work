@@ -201,6 +201,76 @@ const RoleUserManagement = () => {
       return;
     }
 
+    const selectedUser = userOptions.find(u => u.id === selectedUserId);
+
+    // For contact-based users getting admin roles, auto-create Supabase Auth account
+    if (selectedUser?.source === 'contact' && selectedUser.email && selectedUser.email !== '-') {
+      toast.info("正在为用户创建认证账号...");
+      try {
+        // Get the contact's password_hash to use as their auth password
+        const { data: contactData } = await supabase
+          .from("contacts")
+          .select("password_hash")
+          .eq("id", selectedUserId)
+          .single();
+
+        const contactPassword = contactData?.password_hash || '123456';
+
+        const { data: provisionResult, error: provisionError } = await supabase.functions.invoke(
+          "create-admin",
+          {
+            body: {
+              action: "provision",
+              contact_id: selectedUserId,
+              email: selectedUser.email,
+              password: contactPassword,
+              role: selectedRole,
+            },
+          }
+        );
+
+        if (provisionError) {
+          console.error("Provision error:", provisionError);
+          toast.error("创建认证账号失败: " + provisionError.message);
+          return;
+        }
+
+        if (provisionResult?.user_id) {
+          // Insert role with the new auth user_id
+          const { error } = await supabase
+            .from("user_roles")
+            .insert({
+              user_id: provisionResult.user_id,
+              role: selectedRole,
+            });
+
+          if (error) {
+            if (error.message.includes('不可兼任')) {
+              toast.error("三员角色不可兼任");
+            } else if (error.message.includes('duplicate')) {
+              toast.error("该用户已拥有此角色");
+            } else {
+              toast.error("添加角色失败: " + error.message);
+            }
+            return;
+          }
+
+          toast.success("角色用户已添加，认证账号已创建");
+          setDialogOpen(false);
+          setSelectedUserId("");
+          setSelectedRole("user");
+          setSearchQuery("");
+          fetchData();
+          return;
+        }
+      } catch (err) {
+        console.error("Provision failed:", err);
+        toast.error("创建认证账号时出错");
+        return;
+      }
+    }
+
+    // For profile-based users (already have auth accounts), just insert role
     const { error } = await supabase
       .from("user_roles")
       .insert({
@@ -209,7 +279,6 @@ const RoleUserManagement = () => {
       });
 
     if (error) {
-      // Parse trigger error message
       if (error.message.includes('不可兼任')) {
         toast.error("三员角色不可兼任：" + error.message);
       } else {

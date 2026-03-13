@@ -67,9 +67,13 @@ const Admin = () => {
   }, []);
 
   const checkAuth = async () => {
-    // Check localStorage first (used by both offline and contact-based online login)
-    const storedAdmin = localStorage.getItem('adminUser');
-    if (storedAdmin) {
+    if (isOfflineMode()) {
+      // Offline mode: use localStorage
+      const storedAdmin = localStorage.getItem('adminUser');
+      if (!storedAdmin) {
+        navigate("/admin/login");
+        return;
+      }
       try {
         const adminUser = JSON.parse(storedAdmin);
         if (adminUser?.role === 'admin') {
@@ -85,14 +89,11 @@ const Admin = () => {
       } catch {
         localStorage.removeItem('adminUser');
       }
-    }
-
-    if (isOfflineMode()) {
       navigate("/admin/login");
       return;
     }
 
-    // Online mode - check Supabase Auth session
+    // Online mode - always use Supabase Auth session
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/admin/login");
@@ -114,7 +115,6 @@ const Admin = () => {
 
     let roles = roleData.map(r => r.role);
 
-    // Check if admin role is still active
     if (roles.includes('admin')) {
       const { data: adminRole } = await supabase
         .from("roles")

@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { Shield } from "lucide-react";
 import { isOfflineMode } from "@/lib/offlineApi";
 
+const ADMIN_ROLE_IDS = ['admin', 'sys_admin', 'security_admin', 'audit_admin'];
+
 const ROLE_LABELS: Record<string, string> = {
   admin: '超级管理员',
   sys_admin: '系统管理员',
@@ -53,78 +55,59 @@ const AdminLogin = () => {
     }
   };
 
-  const handleOnlineLogin = async () => {
-    // 1. Try Supabase Auth first (for admin@gov.cn with Supabase password)
-    const isEmail = account.includes('@');
-    if (isEmail) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: account,
-        password,
-      });
+  const resolveEmail = async (input: string): Promise<string> => {
+    // If it looks like an email already, use it directly
+    if (input.includes('@')) return input;
 
-      if (!error && data?.user) {
-        // Check admin roles via user_roles table
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id)
-          .in("role", ['admin', 'sys_admin', 'security_admin', 'audit_admin']);
+    // If it's a phone number, look up the contact's email
+    const { data } = await supabase
+      .from("contacts")
+      .select("email")
+      .eq("mobile", input)
+      .eq("is_active", true)
+      .not("email", "is", null)
+      .limit(1);
 
-        if (roleData?.length) {
-          let roles = roleData.map(r => r.role);
-
-          if (roles.includes('admin')) {
-            const { data: adminRole } = await supabase
-              .from("roles")
-              .select("is_active")
-              .eq("name", "admin")
-              .single();
-
-            if (!adminRole?.is_active) {
-              roles = roles.filter(r => r !== 'admin');
-            }
-          }
-
-          if (roles.length) {
-            const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
-            toast.success(`登录成功，当前身份：${roleLabel}`);
-            navigate("/admin");
-            return;
-          }
-        }
-        // No admin role via Supabase Auth, sign out and try contacts
-        await supabase.auth.signOut();
-      }
+    if (data?.length && data[0].email) {
+      return data[0].email;
     }
 
-    // 2. Try contacts-based login via verify_admin_login function
-    const { data: result, error } = await supabase.rpc("verify_admin_login", {
-      p_account: account,
-      p_password: password,
+    // No email found, return input as-is (will fail auth gracefully)
+    return input;
+  };
+
+  const handleOnlineLogin = async () => {
+    // Resolve account to email (handles phone number lookup)
+    const email = await resolveEmail(account);
+
+    // Sign in via Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
     if (error) {
-      console.error('verify_admin_login error:', error);
-      toast.error("登录失败：系统错误");
-      return;
-    }
-
-    if (!result?.length) {
       toast.error("登录失败：账号或密码错误");
       return;
     }
 
-    const user = result[0];
-    const roles: string[] = user.contact_roles || [];
+    // Check admin roles
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .in("role", ADMIN_ROLE_IDS);
 
-    if (!roles.length) {
+    if (!roleData?.length) {
+      await supabase.auth.signOut();
       toast.error("您没有管理员权限");
       return;
     }
 
-    // Check admin is_active
-    let activeRoles = [...roles];
-    if (activeRoles.includes('admin')) {
+    let roles = roleData.map(r => r.role);
+
+    // Check if admin role is still active
+    if (roles.includes('admin')) {
       const { data: adminRole } = await supabase
         .from("roles")
         .select("is_active")
@@ -132,24 +115,16 @@ const AdminLogin = () => {
         .single();
 
       if (!adminRole?.is_active) {
-        activeRoles = activeRoles.filter(r => r !== 'admin');
-        if (!activeRoles.length) {
+        roles = roles.filter(r => r !== 'admin');
+        if (!roles.length) {
+          await supabase.auth.signOut();
           toast.error("超级管理员已停用，请使用三员账号登录");
           return;
         }
       }
     }
 
-    // Store contact-based admin session
-    localStorage.setItem('adminUser', JSON.stringify({
-      id: user.contact_id,
-      name: user.contact_name,
-      email: user.contact_email,
-      roles: activeRoles,
-      source: 'contact',
-    }));
-
-    const roleLabel = ROLE_LABELS[activeRoles[0]] || '管理员';
+    const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
     toast.success(`登录成功，当前身份：${roleLabel}`);
     navigate("/admin");
   };
