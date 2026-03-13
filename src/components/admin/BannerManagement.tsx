@@ -66,6 +66,7 @@ const BannerManagement = () => {
 
         if (error) throw error;
         toast.success("背景更新成功");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.BANNER, target_type: '轮播图', target_id: banner.id, target_name: formData.title });
       } else {
         // 创建新记录
         const { error } = await dataAdapter.createBanner({
