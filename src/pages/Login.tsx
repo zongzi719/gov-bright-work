@@ -211,7 +211,7 @@ const Login = () => {
 
       // SSO 登录标记登录方式
       localStorage.setItem("loginMethod", "sso");
-      saveUserAndRedirect({
+      await saveUserAndRedirect({
         id: user.id,
         name: user.name,
         mobile: user.mobile,
