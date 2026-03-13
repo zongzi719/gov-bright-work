@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +31,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, UserCheck, RefreshCw, Search } from "lucide-react";
+import { Plus, Trash2, Users, RefreshCw, Search } from "lucide-react";
+import { isOfflineMode } from "@/lib/offlineApi";
 
 interface UserRole {
   id: string;
@@ -47,17 +48,19 @@ interface Role {
   is_system: boolean;
 }
 
-interface Profile {
-  id: string;
-  user_id: string;
-  email: string | null;
-  display_name: string | null;
+interface UserOption {
+  id: string;       // user_id (auth.users.id) or contact_id
+  name: string;
+  email: string;
+  source: 'profile' | 'contact';
 }
+
+const THREE_OFFICER_ROLES = ['sys_admin', 'security_admin', 'audit_admin'];
 
 const RoleUserManagement = () => {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("user");
@@ -71,7 +74,7 @@ const RoleUserManagement = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchUserRoles(), fetchRoles(), fetchProfiles()]);
+    await Promise.all([fetchUserRoles(), fetchRoles(), fetchUsers()]);
     setLoading(false);
   };
 
@@ -102,17 +105,53 @@ const RoleUserManagement = () => {
     setRoles(data || []);
   };
 
-  const fetchProfiles = async () => {
-    const { data, error } = await supabase
+  const fetchUsers = async () => {
+    // Fetch from both profiles and contacts, merge by unique identifier
+    const options: UserOption[] = [];
+    const seenIds = new Set<string>();
+
+    // 1. Fetch profiles (Supabase Auth users)
+    const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, user_id, email, display_name")
+      .select("user_id, email, display_name")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      toast.error("获取用户列表失败");
-      return;
+    if (profiles) {
+      for (const p of profiles) {
+        if (!seenIds.has(p.user_id)) {
+          seenIds.add(p.user_id);
+          options.push({
+            id: p.user_id,
+            name: p.display_name || p.email?.split('@')[0] || '未知用户',
+            email: p.email || '-',
+            source: 'profile',
+          });
+        }
+      }
     }
-    setProfiles(data || []);
+
+    // 2. Fetch contacts (前台用户)
+    const { data: contacts } = await supabase
+      .from("contacts")
+      .select("id, name, mobile, email, position, department")
+      .eq("is_active", true)
+      .order("sort_order");
+
+    if (contacts) {
+      for (const c of contacts) {
+        if (!seenIds.has(c.id)) {
+          seenIds.add(c.id);
+          options.push({
+            id: c.id,
+            name: c.name,
+            email: c.email || c.mobile || '-',
+            source: 'contact',
+          });
+        }
+      }
+    }
+
+    setUserOptions(options);
   };
 
   const getRoleLabel = (roleName: string): string => {
@@ -120,18 +159,23 @@ const RoleUserManagement = () => {
     return role?.label || roleName;
   };
 
-  const getProfileByUserId = (userId: string): Profile | undefined => {
-    return profiles.find(p => p.user_id === userId);
+  const getUserDisplay = (userId: string) => {
+    const user = userOptions.find(u => u.id === userId);
+    if (user) {
+      return { name: user.name, email: user.email };
+    }
+    return { name: userId.substring(0, 8) + "...", email: "-" };
   };
 
-  const getFilteredProfiles = () => {
-    if (!searchQuery) return profiles;
-    const query = searchQuery.toLowerCase();
-    return profiles.filter(p => 
-      p.email?.toLowerCase().includes(query) ||
-      p.display_name?.toLowerCase().includes(query)
+  // Filter user options for the dialog search
+  const filteredUserOptions = useMemo(() => {
+    if (!searchQuery.trim()) return userOptions;
+    const q = searchQuery.toLowerCase();
+    return userOptions.filter(u =>
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q)
     );
-  };
+  }, [userOptions, searchQuery]);
 
   const handleAddUserRole = async () => {
     if (!selectedUserId) {
@@ -139,36 +183,42 @@ const RoleUserManagement = () => {
       return;
     }
 
-    // 检查用户是否已有角色（每用户只能有一个角色）
-    const existingRole = userRoles.find(ur => ur.user_id === selectedUserId);
-    if (existingRole) {
-      // 更新现有角色
-      const { error } = await supabase
-        .from("user_roles")
-        .update({ role: selectedRole })
-        .eq("id", existingRole.id);
-
-      if (error) {
-        toast.error("更新用户角色失败: " + error.message);
+    // Check three-officer mutual exclusivity on frontend for better UX
+    if (THREE_OFFICER_ROLES.includes(selectedRole)) {
+      const existingOfficer = userRoles.find(
+        ur => ur.user_id === selectedUserId && THREE_OFFICER_ROLES.includes(ur.role) && ur.role !== selectedRole
+      );
+      if (existingOfficer) {
+        toast.error(`该用户已持有「${getRoleLabel(existingOfficer.role)}」角色，三员不可兼任`);
         return;
       }
-      toast.success("用户角色已更新");
-    } else {
-      // 新增角色
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: selectedUserId,
-          role: selectedRole,
-        });
-
-      if (error) {
-        toast.error("添加角色用户失败: " + error.message);
-        return;
-      }
-      toast.success("角色用户已添加");
     }
 
+    // Check if user already has this exact role
+    const existingExact = userRoles.find(ur => ur.user_id === selectedUserId && ur.role === selectedRole);
+    if (existingExact) {
+      toast.error("该用户已拥有此角色");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("user_roles")
+      .insert({
+        user_id: selectedUserId,
+        role: selectedRole,
+      });
+
+    if (error) {
+      // Parse trigger error message
+      if (error.message.includes('不可兼任')) {
+        toast.error("三员角色不可兼任：" + error.message);
+      } else {
+        toast.error("添加角色用户失败: " + error.message);
+      }
+      return;
+    }
+
+    toast.success("角色用户已添加");
     setDialogOpen(false);
     setSelectedUserId("");
     setSelectedRole("user");
@@ -197,24 +247,7 @@ const RoleUserManagement = () => {
     return userRoles.filter((ur) => ur.role === filterRole);
   };
 
-  const getUserDisplay = (userId: string) => {
-    const profile = getProfileByUserId(userId);
-    if (profile) {
-      return {
-        name: profile.display_name || profile.email?.split('@')[0] || userId.substring(0, 8),
-        email: profile.email || "-"
-      };
-    }
-    return {
-      name: userId.substring(0, 8) + "...",
-      email: "-"
-    };
-  };
-
-  // 获取所有角色用于下拉选择（支持自定义角色）
-  const getAllRoles = () => {
-    return roles;
-  };
+  const getAllRoles = () => roles;
 
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">加载中...</div>;
@@ -273,7 +306,7 @@ const RoleUserManagement = () => {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="搜索用户邮箱或名称..."
+                        placeholder="搜索用户姓名、邮箱或手机号..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9"
@@ -281,25 +314,35 @@ const RoleUserManagement = () => {
                     </div>
                     <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="选择用户" />
+                        <SelectValue placeholder="选择用户">
+                          {selectedUserId ? getUserDisplay(selectedUserId).name : "选择用户"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="max-h-[200px]">
-                        {getFilteredProfiles().slice(0, 20).map((profile) => (
-                          <SelectItem key={profile.user_id} value={profile.user_id}>
-                            <div className="flex flex-col">
-                              <span>{profile.display_name || profile.email?.split('@')[0] || '未知用户'}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {profile.email || profile.user_id.substring(0, 8) + '...'}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {filteredUserOptions.length === 0 ? (
+                          <div className="py-4 text-center text-sm text-muted-foreground">
+                            未找到匹配用户
+                          </div>
+                        ) : (
+                          filteredUserOptions.slice(0, 30).map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{user.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {user.email}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
+                    {filteredUserOptions.length > 30 && (
+                      <p className="text-xs text-muted-foreground">
+                        显示前30条结果，请输入关键词缩小范围
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    每个用户只能分配一个角色，如已有角色将被更新
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">分配角色 *</Label>
@@ -311,10 +354,18 @@ const RoleUserManagement = () => {
                       {getAllRoles().map(role => (
                         <SelectItem key={role.name} value={role.name}>
                           {role.label}
+                          {THREE_OFFICER_ROLES.includes(role.name) && (
+                            <span className="ml-1 text-xs text-muted-foreground">（三员）</span>
+                          )}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {THREE_OFFICER_ROLES.includes(selectedRole) && (
+                    <p className="text-xs text-amber-600">
+                      ⚠ 三员角色互斥，同一用户只能持有一个三员角色
+                    </p>
+                  )}
                 </div>
               </div>
               <DialogFooter>
@@ -336,13 +387,11 @@ const RoleUserManagement = () => {
           getUserDisplay={getUserDisplay}
           onDelete={handleDeleteRole}
         />
-
       </CardContent>
     </Card>
   );
 };
 
-// 抽取表格组件以支持分页
 const UserRoleTable = ({
   userRoles,
   getRoleLabel,
@@ -356,13 +405,19 @@ const UserRoleTable = ({
 }) => {
   const pagination = usePagination(userRoles);
 
+  const getRoleBadgeVariant = (role: string) => {
+    if (role === 'admin') return 'default' as const;
+    if (THREE_OFFICER_ROLES.includes(role)) return 'destructive' as const;
+    return 'secondary' as const;
+  };
+
   return (
     <>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>用户名</TableHead>
-            <TableHead>邮箱</TableHead>
+            <TableHead>邮箱/手机</TableHead>
             <TableHead>角色</TableHead>
             <TableHead>分配时间</TableHead>
             <TableHead className="w-[100px]">操作</TableHead>
@@ -387,7 +442,7 @@ const UserRoleTable = ({
                     {userDisplay.email}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={ur.role === 'admin' ? 'default' : 'secondary'}>
+                    <Badge variant={getRoleBadgeVariant(ur.role)}>
                       {getRoleLabel(ur.role)}
                     </Badge>
                   </TableCell>
