@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import {
   DndContext,
   DragEndEvent,
