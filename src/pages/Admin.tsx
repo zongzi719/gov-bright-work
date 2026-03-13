@@ -18,6 +18,9 @@ import LeaderScheduleManagement from "@/components/admin/LeaderScheduleManagemen
 import ScheduleManagement from "@/components/admin/ScheduleManagement";
 import ApprovalSettings from "@/components/admin/ApprovalSettings";
 import AdminPasswordChangeDialog from "@/components/admin/AdminPasswordChangeDialog";
+import AuditLogManagement from "@/components/admin/AuditLogManagement";
+import SessionLockScreen from "@/components/admin/SessionLockScreen";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { isOfflineMode } from "@/lib/offlineApi";
 
 const ADMIN_ROLE_IDS = ['admin', 'sys_admin', 'security_admin', 'audit_admin'];
