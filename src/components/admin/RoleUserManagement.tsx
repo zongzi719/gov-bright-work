@@ -290,8 +290,8 @@ const RoleUserManagement = () => {
     }
 
     toast.success("角色用户已添加");
-    const selectedUser = userOptions.find(u => u.id === selectedUserId);
-    await logAudit({ action: AUDIT_ACTIONS.ROLE_ASSIGN, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: selectedUserId, target_name: `${selectedUser?.name || selectedUserId} → ${getRoleLabel(selectedRole)}` });
+    const addedUser = userOptions.find(u => u.id === selectedUserId);
+    await logAudit({ action: AUDIT_ACTIONS.ROLE_ASSIGN, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: selectedUserId, target_name: `${addedUser?.name || selectedUserId} → ${getRoleLabel(selectedRole)}` });
     setDialogOpen(false);
     setSelectedUserId("");
     setSelectedRole("user");
