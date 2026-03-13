@@ -161,6 +161,16 @@ const AdminLogin = () => {
     }));
 
     const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
+
+    // Log audit
+    await logAudit({
+      operator_id: data.user.id,
+      operator_name: displayName,
+      operator_role: roles[0],
+      action: AUDIT_ACTIONS.LOGIN,
+      module: AUDIT_MODULES.AUTH,
+    });
+
     toast.success(`登录成功，当前身份：${roleLabel}`);
     navigate("/admin");
   };
