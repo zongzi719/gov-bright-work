@@ -25,7 +25,7 @@ const getApiBaseUrl = (): string => {
 };
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState("");
+  const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const AdminLogin = () => {
       const response = await fetch(`${baseUrl}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: account, password }),
       });
 
       const result = await response.json();
@@ -56,56 +56,148 @@ const AdminLogin = () => {
   };
 
   const handleOnlineLogin = async () => {
-    try {
+    // Strategy: try Supabase Auth first, then fall back to contacts-based login
+
+    // 1. Try Supabase Auth (for admin@gov.cn etc.)
+    const isEmail = account.includes('@');
+    if (isEmail) {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: account,
         password,
       });
 
-      if (error) {
-        toast.error("登录失败：" + error.message);
-        return;
-      }
-
-      // Check for any admin-level role
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .in("role", ADMIN_ROLE_IDS);
-
-      if (roleError || !roleData?.length) {
+      if (!error && data?.user) {
+        // Check admin roles
+        const result = await checkSupabaseUserRoles(data.user.id);
+        if (result) return; // success
+        // If no admin role, sign out and continue to contacts fallback
         await supabase.auth.signOut();
-        toast.error("您没有管理员权限");
-        return;
       }
+    }
 
-      let roles = roleData.map(r => r.role);
+    // 2. Try contacts-based login (for three officers)
+    await handleContactsLogin();
+  };
 
-      // If user has admin role, check if it's still active
-      if (roles.includes('admin')) {
-        const { data: adminRole } = await supabase
-          .from("roles")
-          .select("is_active")
-          .eq("name", "admin")
-          .single();
+  const checkSupabaseUserRoles = async (userId: string): Promise<boolean> => {
+    const { data: roleData, error: roleError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .in("role", ADMIN_ROLE_IDS);
 
-        if (!adminRole?.is_active) {
-          roles = roles.filter(r => r !== 'admin');
-          if (!roles.length) {
-            await supabase.auth.signOut();
-            toast.error("超级管理员已停用，三员已就位，请使用对应三员账号登录");
-            return;
-          }
+    if (roleError || !roleData?.length) {
+      return false;
+    }
+
+    let roles = roleData.map(r => r.role);
+
+    // Check if admin role is still active
+    if (roles.includes('admin')) {
+      const { data: adminRole } = await supabase
+        .from("roles")
+        .select("is_active")
+        .eq("name", "admin")
+        .single();
+
+      if (!adminRole?.is_active) {
+        roles = roles.filter(r => r !== 'admin');
+        if (!roles.length) {
+          toast.error("超级管理员已停用，请使用三员账号登录");
+          return false;
         }
       }
-
-      const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
-      toast.success(`登录成功，当前身份：${roleLabel}`);
-      navigate("/admin");
-    } catch {
-      toast.error("登录失败，请重试");
     }
+
+    const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
+    toast.success(`登录成功，当前身份：${roleLabel}`);
+    navigate("/admin");
+    return true;
+  };
+
+  const handleContactsLogin = async () => {
+    // Try to find the contact by email or mobile, verify password
+    const { data: contacts, error } = await supabase
+      .from("contacts")
+      .select("id, name, email, mobile, position, department")
+      .or(`email.eq.${account},mobile.eq.${account}`)
+      .eq("is_active", true);
+
+    if (error || !contacts?.length) {
+      toast.error("登录失败：账号或密码错误");
+      return;
+    }
+
+    // Verify password using the verify_contact_login function
+    const { data: verified } = await supabase.rpc("verify_contact_login", {
+      p_mobile: account,
+      p_password: password,
+    });
+
+    if (!verified?.length) {
+      // Also try with email as mobile param (the function checks mobile field)
+      // We need to find the contact's mobile if they logged in with email
+      const contact = contacts[0];
+      if (contact.email === account && contact.mobile) {
+        const { data: verified2 } = await supabase.rpc("verify_contact_login", {
+          p_mobile: contact.mobile,
+          p_password: password,
+        });
+        if (!verified2?.length) {
+          toast.error("登录失败：账号或密码错误");
+          return;
+        }
+      } else {
+        toast.error("登录失败：账号或密码错误");
+        return;
+      }
+    }
+
+    const contact = contacts[0];
+
+    // Check if this contact has any admin roles
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", contact.id)
+      .in("role", ADMIN_ROLE_IDS);
+
+    if (!roleData?.length) {
+      toast.error("您没有管理员权限");
+      return;
+    }
+
+    let roles = roleData.map(r => r.role);
+
+    // Check admin is_active
+    if (roles.includes('admin')) {
+      const { data: adminRole } = await supabase
+        .from("roles")
+        .select("is_active")
+        .eq("name", "admin")
+        .single();
+
+      if (!adminRole?.is_active) {
+        roles = roles.filter(r => r !== 'admin');
+        if (!roles.length) {
+          toast.error("超级管理员已停用，请使用三员账号登录");
+          return;
+        }
+      }
+    }
+
+    // Store contact-based admin session
+    localStorage.setItem('adminUser', JSON.stringify({
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      roles: roles,
+      source: 'contact',
+    }));
+
+    const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
+    toast.success(`登录成功，当前身份：${roleLabel}`);
+    navigate("/admin");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -118,6 +210,8 @@ const AdminLogin = () => {
       } else {
         await handleOnlineLogin();
       }
+    } catch {
+      toast.error("登录失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -138,13 +232,13 @@ const AdminLogin = () => {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">账号（邮箱）</Label>
+                <Label htmlFor="account">账号（邮箱/手机号）</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="请输入邮箱"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="account"
+                  type="text"
+                  placeholder="请输入邮箱或手机号"
+                  value={account}
+                  onChange={(e) => setAccount(e.target.value)}
                   required
                 />
               </div>
