@@ -242,17 +242,17 @@ const AuditLogManagement = () => {
       </div>
 
       {/* 日志表格 */}
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
+      <div className="border rounded-lg overflow-x-auto">
+        <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[160px]">时间</TableHead>
-              <TableHead className="w-[100px]">操作人</TableHead>
-              <TableHead className="w-[110px]">角色</TableHead>
-              <TableHead className="w-[80px]">操作</TableHead>
-              <TableHead className="w-[110px]">功能模块</TableHead>
-              <TableHead>操作对象</TableHead>
-              <TableHead className="w-[60px]">详情</TableHead>
+              <TableHead className="whitespace-nowrap">时间</TableHead>
+              <TableHead className="whitespace-nowrap">操作人</TableHead>
+              <TableHead className="whitespace-nowrap">角色</TableHead>
+              <TableHead className="whitespace-nowrap">操作</TableHead>
+              <TableHead className="whitespace-nowrap">功能模块</TableHead>
+              <TableHead className="whitespace-nowrap">操作对象</TableHead>
+              <TableHead className="whitespace-nowrap text-center w-[50px]">详情</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -270,22 +270,22 @@ const AuditLogManagement = () => {
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                     {format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss')}
                   </TableCell>
-                  <TableCell className="font-medium text-sm">{log.operator_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
+                  <TableCell className="font-medium text-sm whitespace-nowrap">{log.operator_name}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge variant="outline" className="text-xs whitespace-nowrap">
                       {ROLE_LABELS[log.operator_role || ''] || log.operator_role || '-'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-800'}`}>
+                  <TableCell className="whitespace-nowrap">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-800'}`}>
                       {log.action}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">{log.module}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">
+                  <TableCell className="text-sm whitespace-nowrap">{log.module}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap" title={log.target_name || log.target_type || '-'}>
                     {log.target_name || log.target_type || '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailLog(log)}>
                       <Eye className="w-4 h-4" />
                     </Button>
