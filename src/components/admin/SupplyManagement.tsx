@@ -422,6 +422,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("已批准采购申请");
+    await logAudit({ action: AUDIT_ACTIONS.APPROVE, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请', target_id: id });
     fetchPurchaseRequests();
   };
 
