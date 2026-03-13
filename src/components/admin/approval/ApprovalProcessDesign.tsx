@@ -357,6 +357,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
     // Note: current_version_id 在离线模式下不需要更新
 
     toast.success(`已发布版本 V${newVersionNumber}`);
+    void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '流程版本', target_name: `流程版本V${newVersionNumber}`, detail: { version_number: newVersionNumber, node_count: nodes.length } });
     
     // 先更新快照，确保 hasChanges 变为 false（使用规范化比较）
     const currentSnapshot = normalizeNodesForComparison(nodes);
