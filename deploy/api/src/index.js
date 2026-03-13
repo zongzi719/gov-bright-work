@@ -4274,7 +4274,7 @@ app.get('/api/audit-logs', async (req, res) => {
     const actionFilter = req.query.action || '';
     const dateFrom = req.query.dateFrom || '';
     const dateTo = req.query.dateTo || '';
-    const operatorRole = req.query.operatorRole || ''; // 当前查询者的角色
+    const operatorRole = normalizeRoleKey(req.query.operatorRole || ''); // 当前查询者的角色
 
     // 构建 WHERE 条件
     const conditions = [];
