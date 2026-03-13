@@ -96,63 +96,8 @@ const useOperationTracker = () => {
     });
   }, [pathname]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleClick = (event: MouseEvent) => {
-      if (!getCurrentOperatorId()) return;
-
-      // 管理后台页面已有语义化日志，跳过通用点击捕捉避免冗余
-      if (pathname.startsWith("/admin")) return;
-
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-
-      // 仅捕获带 data-audit-action 的显式标记元素，跳过普通按钮/链接
-      const clickable = target.closest<HTMLElement>("[data-audit-action]");
-      if (!clickable || clickable.getAttribute("data-audit-ignore") === "true") return;
-
-      const label = normalizeText(clickable.getAttribute("data-audit-action") || "");
-
-      if (!label || label.length > 40 || NOISE_LABELS.has(label)) return;
-
-      emitWithDedupe(`click:${pathname}:${label}`, {
-        action: AUDIT_ACTIONS.UI_CLICK,
-        module: resolveModule(pathname),
-        target_type: "界面操作",
-        target_name: label,
-        detail: { path: pathname, event: "click" },
-      });
-    };
-
-    const handleSubmit = (event: Event) => {
-      if (!getCurrentOperatorId()) return;
-
-      const form = event.target as HTMLFormElement | null;
-      if (!form || form.getAttribute("data-audit-ignore") === "true") return;
-
-      const submitter = (event as SubmitEvent).submitter as HTMLElement | null;
-      const label = normalizeText(
-        submitter?.textContent || form.getAttribute("aria-label") || form.getAttribute("id") || "表单提交",
-      );
-
-      emitWithDedupe(`submit:${pathname}:${label}`, {
-        action: AUDIT_ACTIONS.FORM_SUBMIT,
-        module: resolveModule(pathname),
-        target_type: "表单",
-        target_name: label,
-        detail: { path: pathname, event: "submit" },
-      });
-    };
-
-    document.addEventListener("click", handleClick, true);
-    document.addEventListener("submit", handleSubmit, true);
-
-    return () => {
-      document.removeEventListener("click", handleClick, true);
-      document.removeEventListener("submit", handleSubmit, true);
-    };
-  }, [pathname]);
+  // 不再自动捕获通用点击和表单提交——所有增删改查由各业务组件的语义化 logAudit 覆盖
+  // useOperationTracker 仅负责页面访问记录
 };
 
 export default useOperationTracker;
