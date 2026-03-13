@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { LogIn, Shield } from "lucide-react";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
+import { AUDIT_ACTIONS, AUDIT_MODULES, logAudit } from "@/hooks/useAuditLog";
 
 
 const WS_URL = "ws://127.0.0.1:30318/";
