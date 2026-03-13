@@ -115,23 +115,7 @@ const Admin = () => {
 
     let roles = roleData.map(r => r.role);
 
-    if (roles.includes('admin')) {
-      const { data: adminRole } = await supabase
-        .from("roles")
-        .select("is_active")
-        .eq("name", "admin")
-        .single();
-
-      if (!adminRole?.is_active) {
-        roles = roles.filter(r => r !== 'admin');
-        if (!roles.length) {
-          toast.error("超级管理员已停用，请使用三员账号登录");
-          await supabase.auth.signOut();
-          navigate("/admin/login");
-          return;
-        }
-      }
-    }
+    // Admin role is always allowed regardless of is_active status
 
     setUserRoles(roles);
     setLoading(false);
