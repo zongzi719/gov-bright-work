@@ -141,10 +141,16 @@ const ScheduleList = () => {
       };
       if (editingSchedule) {
         const { error } = await dataAdapter.updateSchedule(editingSchedule.id, payload);
-        if (error) toast.error("修改失败"); else { toast.success("已修改"); setDialogOpen(false); resetForm(); fetchSchedules(); }
+        if (error) { toast.error("修改失败"); } else {
+          await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: editingSchedule.id, target_name: formData.title });
+          toast.success("已修改"); setDialogOpen(false); resetForm(); fetchSchedules();
+        }
       } else {
-        const { error } = await dataAdapter.createSchedule(payload);
-        if (error) toast.error("添加失败"); else { toast.success("已添加"); setDialogOpen(false); resetForm(); fetchSchedules(); }
+        const { data, error } = await dataAdapter.createSchedule(payload);
+        if (error) { toast.error("添加失败"); } else {
+          await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: (data as any)?.id, target_name: formData.title });
+          toast.success("已添加"); setDialogOpen(false); resetForm(); fetchSchedules();
+        }
       }
     } finally { setSubmitting(false); }
   };
