@@ -313,6 +313,14 @@ const Admin = () => {
         onOpenChange={setPasswordDialogOpen}
         onSubmit={handlePasswordChange}
       />
+
+      {/* 会话超时锁屏 */}
+      <SessionLockScreen
+        userName={userName}
+        timeoutMinutes={15}
+        onUnlock={() => {}}
+        onForceLogout={handleLogout}
+      />
     </div>
   );
 };
