@@ -51,7 +51,8 @@ const ACTION_COLORS: Record<string, string> = {
   '修改密码': 'bg-amber-100 text-amber-800',
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const DEFAULT_PAGE_SIZE = 20;
 
 const AuditLogManagement = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
