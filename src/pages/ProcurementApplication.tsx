@@ -196,6 +196,7 @@ const RequisitionContent = () => {
       const { data } = await dataAdapter.getSupplyRequisitionItems(record.id);
       if (data) setSelectedItems(data as RequisitionItem[]);
       setDetailOpen(true);
+      void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: record.id, target_name: `${record.requisition_by} - ${record.requisition_date}` });
     }
   };
 
