@@ -137,6 +137,7 @@ const ApprovalBasicSettings = ({
         return;
       }
       toast.success("创建成功，可以继续配置表单和流程");
+      void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_name: formData.name });
       onTemplateCreated(data as unknown as ApprovalTemplate);
     }
 
