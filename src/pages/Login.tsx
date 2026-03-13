@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { LogIn, Shield } from "lucide-react";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
+import { AUDIT_ACTIONS, AUDIT_MODULES, logAudit } from "@/hooks/useAuditLog";
 
 
 const WS_URL = "ws://127.0.0.1:30318/";
@@ -94,8 +95,21 @@ const Login = () => {
   const ssoTriggeredRef = useRef(false);
 
   // 保存用户信息并跳转
-  const saveUserAndRedirect = (userData: any) => {
+  const saveUserAndRedirect = async (userData: any) => {
     localStorage.setItem("frontendUser", JSON.stringify(userData));
+
+    await logAudit({
+      operator_id: userData.id,
+      operator_name: userData.name,
+      operator_role: "user",
+      action: AUDIT_ACTIONS.LOGIN,
+      module: AUDIT_MODULES.AUTH,
+      detail: {
+        source: "frontend",
+        login_method: localStorage.getItem("loginMethod") || "password",
+      },
+    });
+
     toast({
       title: "登录成功",
       description: `欢迎回来，${userData.name}`,
@@ -197,7 +211,7 @@ const Login = () => {
 
       // SSO 登录标记登录方式
       localStorage.setItem("loginMethod", "sso");
-      saveUserAndRedirect({
+      await saveUserAndRedirect({
         id: user.id,
         name: user.name,
         mobile: user.mobile,
@@ -267,7 +281,7 @@ const Login = () => {
 
       // 账号密码登录标记登录方式
       localStorage.setItem("loginMethod", "password");
-      saveUserAndRedirect(userData);
+      await saveUserAndRedirect(userData);
     } catch (err) {
       console.error("Login error:", err);
       toast({ title: "登录失败", description: "系统错误，请稍后重试", variant: "destructive" });

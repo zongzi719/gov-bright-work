@@ -6,6 +6,7 @@ import DocumentDetail from "@/components/h5/DocumentDetail";
 import ProcessDocumentDetail from "@/components/h5/ProcessDocumentDetail";
 import FileTransferList from "@/components/h5/FileTransferList";
 import { supabase } from "@/integrations/supabase/client";
+import { AUDIT_ACTIONS, AUDIT_MODULES, logAudit } from "@/hooks/useAuditLog";
 
 // 更真实的模拟数据
 const mockDocuments = [
@@ -169,7 +170,17 @@ const H5OfficialDocument = () => {
     return matchCategory && matchTab && matchSearch;
   });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (user?.id) {
+      await logAudit({
+        operator_id: user.id,
+        operator_name: user.name,
+        operator_role: "user",
+        action: AUDIT_ACTIONS.LOGOUT,
+        module: AUDIT_MODULES.AUTH,
+        detail: { source: "h5", reason: "manual" },
+      });
+    }
     localStorage.removeItem("h5User");
     navigate("/h5login");
   };

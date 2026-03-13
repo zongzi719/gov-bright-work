@@ -79,10 +79,8 @@ export const useUKeyMonitor = () => {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
-        // 清除登录状态，跳转到 /misslogin 页面
-        localStorage.removeItem("frontendUser");
-        localStorage.removeItem("loginMethod");
-        window.location.href = "/ukey-required";
+        // 清除登录状态并跳转到 UKey 提示页
+        void logout({ reason: "ukey_removed", redirectTo: "/ukey-required" });
       }
     };
 

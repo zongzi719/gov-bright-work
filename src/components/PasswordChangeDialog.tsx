@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { offlineApi, isOfflineMode } from "@/lib/offlineApi";
 import { Eye, EyeOff } from "lucide-react";
+import { AUDIT_ACTIONS, AUDIT_MODULES, logAudit } from "@/hooks/useAuditLog";
 
 interface PasswordChangeDialogProps {
   open: boolean;
@@ -90,6 +91,21 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId }: PasswordChangeDial
         }
       }
 
+      await logAudit({
+        operator_id: userId,
+        action: AUDIT_ACTIONS.PASSWORD_CHANGE,
+        module: AUDIT_MODULES.AUTH,
+        target_type: "用户密码",
+        detail: { source: "frontend" },
+      });
+
+      await logAudit({
+        operator_id: userId,
+        action: AUDIT_ACTIONS.LOGOUT,
+        module: AUDIT_MODULES.AUTH,
+        detail: { source: "frontend", reason: "password_changed" },
+      });
+
       toast({
         title: "密码修改成功",
         description: "请使用新密码重新登录",
@@ -101,6 +117,7 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId }: PasswordChangeDial
       onOpenChange(false);
 
       localStorage.removeItem("frontendUser");
+      localStorage.removeItem("loginMethod");
       window.location.href = "/login";
     } catch (err) {
       console.error("Password change error:", err);
