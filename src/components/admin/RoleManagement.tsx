@@ -169,6 +169,7 @@ const RoleManagement = () => {
       }
       
       toast.success("角色已创建");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_name: formData.label });
     }
 
     handleCloseDialog();
