@@ -758,7 +758,9 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
       toast.error("删除节点失败");
       return;
     }
+    const deletedNode = nodes.find(n => n.id === id);
     toast.success("节点已删除");
+    void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '流程节点', target_id: id, target_name: deletedNode?.node_name });
     setDetailPanelOpen(false);
     setSelectedNode(null);
     fetchNodes();

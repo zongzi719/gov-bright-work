@@ -205,6 +205,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
       return;
     }
     toast.success("字段已删除");
+    void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '表单字段', target_id: id });
     fetchFields();
   };
 

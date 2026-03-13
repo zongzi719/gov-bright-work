@@ -192,6 +192,7 @@ const ApprovalSettings = () => {
     }
 
     toast.success(`已创建${form.name}模板，请继续配置审批流程`);
+    void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_name: form.name, detail: { business_type: form.business_type, create_mode: 'from_existing' } });
     setSelectedTemplate(data as unknown as ApprovalTemplate);
     setIsCreating(false);
     setActiveTab("process"); // 直接跳到流程设计

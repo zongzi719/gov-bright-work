@@ -157,6 +157,7 @@ const ApprovalBasicSettings = ({
       return;
     }
     toast.success("删除成功");
+    void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name });
     // 触发返回列表
     window.history.back();
   };
