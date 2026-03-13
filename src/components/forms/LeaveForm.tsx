@@ -400,8 +400,16 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
       });
 
       if (approvalResult.success) {
+        const leaveTypeName = leaveTypes.find(t => t.value === form.leave_type)?.label || form.leave_type;
+        await logAudit({
+          action: AUDIT_ACTIONS.CREATE,
+          module: AUDIT_MODULES.LEAVE,
+          target_type: '请假申请',
+          target_id: record.id,
+          target_name: `${leaveTypeName} ${duration.hours}小时`,
+          detail: { leave_type: form.leave_type, duration_hours: duration.hours, duration_days: duration.days, reason: form.reason },
+        });
         toast.success("请假申请已提交，等待审批");
-        onOpenChange(false);
         setForm({
           leave_type: "",
           reason: "",
