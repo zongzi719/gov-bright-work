@@ -483,6 +483,54 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          detail: Json | null
+          id: string
+          ip_address: string | null
+          module: string
+          operator_id: string
+          operator_name: string
+          operator_role: string | null
+          target_id: string | null
+          target_name: string | null
+          target_type: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          ip_address?: string | null
+          module: string
+          operator_id: string
+          operator_name: string
+          operator_role?: string | null
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          ip_address?: string | null
+          module?: string
+          operator_id?: string
+          operator_name?: string
+          operator_role?: string | null
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           created_at: string
