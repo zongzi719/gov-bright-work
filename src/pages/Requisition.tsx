@@ -243,9 +243,14 @@ const Requisition = () => {
     setSubmitting(false);
 
     if (approvalResult.success) {
+      await logAudit({
+        action: AUDIT_ACTIONS.CREATE,
+        module: AUDIT_MODULES.SUPPLY,
+        target_type: '领用申请',
+        target_id: record.id,
+        target_name: itemNames.substring(0, 50),
+      });
       toast.success("领用申请已提交");
-      setFormOpen(false);
-      setFormItems([{ supply_id: "", quantity: 1 }]);
       fetchRecords();
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
