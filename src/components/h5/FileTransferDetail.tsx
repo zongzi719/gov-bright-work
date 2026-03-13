@@ -1,5 +1,6 @@
 import { Toast } from "antd-mobile";
 import { LeftOutline, LinkOutline } from "antd-mobile-icons";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface FileTransferData {
   id: string;
