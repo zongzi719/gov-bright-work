@@ -158,7 +158,10 @@ const ScheduleList = () => {
   const confirmDelete = async () => {
     if (!scheduleToDelete) return;
     const { error } = await dataAdapter.deleteSchedule(scheduleToDelete.id);
-    if (error) toast.error("删除失败"); else { toast.success("已删除"); fetchSchedules(); }
+    if (error) { toast.error("删除失败"); } else {
+      await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: scheduleToDelete.id, target_name: scheduleToDelete.title });
+      toast.success("已删除"); fetchSchedules();
+    }
     setDeleteDialogOpen(false);
     setScheduleToDelete(null);
   };

@@ -876,6 +876,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         return;
       }
 
+      await logAudit({
+        action: AUDIT_ACTIONS.FORM_SUBMIT,
+        module: AUDIT_MODULES.TODO,
+        target_type: '重新提交',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id },
+      });
+
       toast.success("已重新提交，等待审批");
       onOpenChange(false);
       onApprovalComplete?.();

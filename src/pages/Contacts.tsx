@@ -111,6 +111,7 @@ const Contacts = () => {
   const handleViewDetail = (contact: Contact) => {
     setSelectedContact(contact);
     setDetailOpen(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.CONTACT, target_type: '联系人', target_id: contact.id, target_name: contact.name });
   };
 
   // Get selected org name for display

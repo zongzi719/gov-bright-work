@@ -246,6 +246,7 @@ const SchedulePanel = () => {
       toast.error("删除日程失败");
       console.error(error);
     } else {
+      await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.SCHEDULE, target_type: '个人日程', target_id: scheduleToDelete.id, target_name: scheduleToDelete.title });
       toast.success("日程已删除");
       fetchSchedules();
     }
