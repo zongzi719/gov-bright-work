@@ -139,8 +139,8 @@ const AuditLogManagement = () => {
     setKeyword("");
     setModuleFilter("all");
     setActionFilter("all");
-    setDateFrom("");
-    setDateTo("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
     setCurrentPage(1);
   };
 
