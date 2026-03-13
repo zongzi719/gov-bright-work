@@ -106,8 +106,8 @@ const Header = () => {
     }
   }, [loading, user, navigate]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout({ reason: "manual" });
     toast({
       title: "已退出登录",
     });
