@@ -246,13 +246,13 @@ const AuditLogManagement = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[160px]">时间</TableHead>
-              <TableHead className="w-[100px]">操作人</TableHead>
-              <TableHead className="w-[110px]">角色</TableHead>
-              <TableHead className="w-[80px]">操作</TableHead>
-              <TableHead className="w-[110px]">功能模块</TableHead>
-              <TableHead>操作对象</TableHead>
-              <TableHead className="w-[60px]">详情</TableHead>
+              <TableHead className="whitespace-nowrap">时间</TableHead>
+              <TableHead className="whitespace-nowrap">操作人</TableHead>
+              <TableHead className="whitespace-nowrap">角色</TableHead>
+              <TableHead className="whitespace-nowrap">操作</TableHead>
+              <TableHead className="whitespace-nowrap">功能模块</TableHead>
+              <TableHead className="whitespace-nowrap">操作对象</TableHead>
+              <TableHead className="whitespace-nowrap text-center w-[50px]">详情</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
