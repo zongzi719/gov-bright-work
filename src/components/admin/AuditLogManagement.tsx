@@ -99,10 +99,10 @@ const AuditLogManagement = () => {
           query = query.eq('action', actionFilter);
         }
         if (dateFrom) {
-          query = query.gte('created_at', `${dateFrom}T00:00:00`);
+          query = query.gte('created_at', `${format(dateFrom, 'yyyy-MM-dd')}T00:00:00`);
         }
         if (dateTo) {
-          query = query.lte('created_at', `${dateTo}T23:59:59`);
+          query = query.lte('created_at', `${format(dateTo, 'yyyy-MM-dd')}T23:59:59`);
         }
 
         const from = (currentPage - 1) * PAGE_SIZE;
