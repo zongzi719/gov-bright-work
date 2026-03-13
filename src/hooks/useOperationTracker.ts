@@ -95,6 +95,9 @@ const useOperationTracker = () => {
     const handleClick = (event: MouseEvent) => {
       if (!getCurrentOperatorId()) return;
 
+      // 管理后台页面已有语义化日志，跳过通用点击捕捉避免冗余
+      if (pathname.startsWith("/admin")) return;
+
       const target = event.target as HTMLElement | null;
       if (!target) return;
 
