@@ -188,6 +188,7 @@ const ApprovalFormDesign = ({ templateId, businessType }: ApprovalFormDesignProp
         return;
       }
       toast.success("字段添加成功");
+      void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '表单字段', target_name: fieldData.field_label || '新字段' });
     }
 
     setDialogOpen(false);
