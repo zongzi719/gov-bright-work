@@ -147,7 +147,7 @@ const AuditLogManagement = () => {
     setCurrentPage(1);
   };
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
     <div className="space-y-4">
