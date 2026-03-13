@@ -513,6 +513,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("领用申请已提交");
+    await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请' });
     setRequisitionDialogOpen(false);
     fetchRequisitions();
   };
