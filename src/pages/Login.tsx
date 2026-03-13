@@ -281,7 +281,7 @@ const Login = () => {
 
       // 账号密码登录标记登录方式
       localStorage.setItem("loginMethod", "password");
-      saveUserAndRedirect(userData);
+      await saveUserAndRedirect(userData);
     } catch (err) {
       console.error("Login error:", err);
       toast({ title: "登录失败", description: "系统错误，请稍后重试", variant: "destructive" });
