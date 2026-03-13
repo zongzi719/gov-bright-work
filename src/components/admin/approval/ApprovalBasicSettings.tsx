@@ -114,6 +114,7 @@ const ApprovalBasicSettings = ({
         return;
       }
       toast.success("保存成功");
+      void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: formData.name, detail: { fields: ['name', 'description', 'category', 'is_active'] } });
       onTemplateUpdated(data as unknown as ApprovalTemplate);
     } else {
       // 创建
