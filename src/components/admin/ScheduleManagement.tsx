@@ -145,6 +145,7 @@ const ScheduleManagement = () => {
         console.error(error);
       } else {
         toast.success("日程已添加");
+        await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SCHEDULE, target_type: '日程', target_name: formData.title });
         fetchSchedules();
         closeDialog();
       }
