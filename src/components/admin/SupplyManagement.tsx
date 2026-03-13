@@ -362,6 +362,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("删除成功");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品', target_id: deleteSupplyId });
     setDeleteSupplyId(null);
     fetchSupplies();
   };
