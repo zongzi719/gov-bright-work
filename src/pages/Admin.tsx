@@ -220,13 +220,7 @@ const Admin = () => {
       case 'leader-schedule': return <LeaderScheduleManagement />;
       case 'approval': return <ApprovalSettings />;
       case 'system': return <SystemManagement />;
-      case 'audit': return (
-        <div className="text-center py-20 text-muted-foreground">
-          <FileSearch className="w-16 h-16 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium">审计日志</p>
-          <p className="text-sm mt-2">此功能将在第二期上线</p>
-        </div>
-      );
+      case 'audit': return <AuditLogManagement />;
       default: return null;
     }
   };
