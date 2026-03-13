@@ -782,6 +782,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         processed_by: currentUser.id,
       });
 
+      await logAudit({
+        action: AUDIT_ACTIONS.REJECT,
+        module: AUDIT_MODULES.TODO,
+        target_type: '待办退回',
+        target_id: todoItem.id,
+        target_name: todoItem.title,
+        detail: { instance_id: todoItem.approval_instance_id, return_type: returnType, comment: comment.trim() || null },
+      });
+
       toast.success(toastMessage);
       onOpenChange(false);
       onApprovalComplete?.();
