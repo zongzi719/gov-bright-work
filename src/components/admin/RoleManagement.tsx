@@ -137,6 +137,7 @@ const RoleManagement = () => {
         return;
       }
       toast.success("角色已更新");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: editingRole.id, target_name: formData.label });
     } else {
       const maxSortOrder = Math.max(...roles.map(r => r.sort_order), 0);
       const roleName = generateRoleName(formData.label);
