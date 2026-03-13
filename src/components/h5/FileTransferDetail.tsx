@@ -1,5 +1,6 @@
 import { Toast } from "antd-mobile";
 import { LeftOutline, LinkOutline } from "antd-mobile-icons";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface FileTransferData {
   id: string;
@@ -28,6 +29,14 @@ const FileTransferDetail = ({ file, onBack }: FileTransferDetailProps) => {
     Toast.show({
       icon: "success",
       content: "签收成功",
+    });
+    void logAudit({
+      action: AUDIT_ACTIONS.APPROVE,
+      module: AUDIT_MODULES.MOBILE_DOC,
+      target_type: '文件签收',
+      target_id: file.id,
+      target_name: file.title,
+      detail: { doc_number: file.docNumber },
     });
     // 确保调用 onBack
     if (onBack && typeof onBack === 'function') {

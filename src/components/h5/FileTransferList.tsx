@@ -6,6 +6,7 @@ import FileTransferDetail from "./FileTransferDetail";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface FileTransferListProps {
   activeTab: "pending" | "completed";
@@ -324,6 +325,13 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
       }
 
       Toast.show({ icon: "success", content: "新增成功" });
+      await logAudit({
+        action: AUDIT_ACTIONS.CREATE,
+        module: AUDIT_MODULES.MOBILE_DOC,
+        target_type: '文件收发',
+        target_name: formData.title,
+        detail: { doc_number: formData.docNumber, security_level: formData.securityLevel[0], send_unit: formData.sendUnit },
+      });
       resetForm();
       setShowAddPopup(false);
       // 重新加载数据
@@ -346,11 +354,19 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
     });
     
     if (result) {
+      const fileRecord = fileTransfers.find(f => f.id === id);
       const { error } = await dataAdapter.deleteFileTransfer(id);
       
       if (error) {
         Toast.show({ icon: "fail", content: "删除失败" });
       } else {
+        await logAudit({
+          action: AUDIT_ACTIONS.DELETE,
+          module: AUDIT_MODULES.MOBILE_DOC,
+          target_type: '文件收发',
+          target_id: id,
+          target_name: fileRecord?.title || '',
+        });
         Toast.show({ icon: "success", content: "删除成功" });
         fetchFileTransfers();
       }
@@ -403,7 +419,10 @@ const FileTransferList = ({ activeTab, searchText }: FileTransferListProps) => {
           {filteredFiles.map((file) => (
             <div
               key={file.id}
-              onClick={() => setSelectedFile(file)}
+              onClick={() => {
+                setSelectedFile(file);
+                void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.MOBILE_DOC, target_type: '文件收发', target_id: file.id, target_name: file.title });
+              }}
               className="bg-white rounded-lg p-3 shadow-sm active:bg-slate-50 transition-colors cursor-pointer relative"
             >
               {/* 删除按钮 */}

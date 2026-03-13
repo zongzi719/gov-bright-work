@@ -212,6 +212,17 @@ const H5OfficialDocument = () => {
     );
   }
 
+  const handleSelectDocument = (doc: DocumentType) => {
+    setSelectedDocument(doc);
+    void logAudit({
+      action: AUDIT_ACTIONS.VIEW,
+      module: AUDIT_MODULES.MOBILE_DOC,
+      target_type: doc.category === 'process' ? '公文办理' : '发文审签',
+      target_id: doc.id,
+      target_name: doc.title,
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 p-4">
@@ -341,7 +352,7 @@ const H5OfficialDocument = () => {
               {filteredDocuments.map((doc) => (
                 <div
                   key={doc.id}
-                  onClick={() => setSelectedDocument(doc)}
+                  onClick={() => handleSelectDocument(doc)}
                   className="bg-white rounded-lg p-3 border border-slate-100 active:bg-slate-50 transition-colors cursor-pointer"
                 >
                   {/* 流程类型标识区域 */}
