@@ -127,7 +127,7 @@ const AuditLogManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, keyword, moduleFilter, actionFilter, dateFrom, dateTo]);
+  }, [currentPage, pageSize, keyword, moduleFilter, actionFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchLogs();
