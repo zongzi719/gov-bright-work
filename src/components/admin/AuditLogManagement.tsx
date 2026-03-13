@@ -150,13 +150,88 @@ const AuditLogManagement = () => {
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const handleExport = async () => {
+    try {
+      toast.info('正在导出...');
+      // Fetch all matching records (up to 5000)
+      let allLogs: AuditLog[] = [];
+      if (isOfflineMode()) {
+        const params = new URLSearchParams();
+        params.set('page', '1');
+        params.set('pageSize', '5000');
+        if (keyword) params.set('keyword', keyword);
+        if (moduleFilter !== 'all') params.set('module', moduleFilter);
+        if (actionFilter !== 'all') params.set('action', actionFilter);
+        if (dateFrom) params.set('dateFrom', format(dateFrom, 'yyyy-MM-dd'));
+        if (dateTo) params.set('dateTo', format(dateTo, 'yyyy-MM-dd'));
+        const baseUrl = typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL
+          ? (window as any).GOV_CONFIG.API_BASE_URL : 'http://localhost:3001';
+        const res = await fetch(`${baseUrl}/api/audit-logs?${params}`);
+        const data = await res.json();
+        allLogs = data.logs || [];
+      } else {
+        let query = (supabase.from('audit_logs' as any).select('*') as any);
+        if (keyword) query = query.or(`operator_name.ilike.%${keyword}%,target_name.ilike.%${keyword}%,module.ilike.%${keyword}%`);
+        if (moduleFilter !== 'all') query = query.eq('module', moduleFilter);
+        if (actionFilter !== 'all') query = query.eq('action', actionFilter);
+        if (dateFrom) query = query.gte('created_at', `${format(dateFrom, 'yyyy-MM-dd')}T00:00:00`);
+        if (dateTo) query = query.lte('created_at', `${format(dateTo, 'yyyy-MM-dd')}T23:59:59`);
+        query = query.order('created_at', { ascending: false }).limit(5000);
+        const { data } = await query;
+        allLogs = (data as AuditLog[]) || [];
+      }
+
+      if (allLogs.length === 0) {
+        toast.warning('没有可导出的数据');
+        return;
+      }
+
+      // Build CSV with BOM for Excel compatibility
+      const BOM = '\uFEFF';
+      const headers = ['时间', '操作人', '角色', '操作', '功能模块', '操作对象', '对象ID', '详情', 'IP地址', '浏览器'];
+      const rows = allLogs.map(log => [
+        format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss'),
+        log.operator_name,
+        ROLE_LABELS[log.operator_role || ''] || log.operator_role || '',
+        log.action,
+        log.module,
+        log.target_name || log.target_type || '',
+        log.target_id || '',
+        log.detail ? JSON.stringify(log.detail) : '',
+        log.ip_address || '',
+        log.user_agent || '',
+      ]);
+
+      const csvContent = BOM + [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `审计日志_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(`已导出 ${allLogs.length} 条记录`);
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error('导出失败');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">审计日志</h2>
-        <Badge variant="outline" className="text-xs">
-          共 {totalCount} 条记录 · 保留200天
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} className="h-8">
+            <Download className="w-4 h-4 mr-1" /> 导出Excel
+          </Button>
+          <Badge variant="outline" className="text-xs">
+            共 {totalCount} 条记录 · 保留200天
+          </Badge>
+        </div>
       </div>
 
       {/* 筛选栏 */}
