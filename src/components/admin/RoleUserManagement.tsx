@@ -248,11 +248,30 @@ const RoleUserManagement = () => {
 
     const selectedUser = userOptions.find(u => u.id === selectedUserId);
 
+    if (isOfflineMode()) {
+      // 离线模式：直接通过 API 添加角色
+      try {
+        await offlineRequest<{ success: boolean; id: string }>("/api/user-roles", {
+          method: "POST",
+          body: JSON.stringify({ user_id: selectedUserId, role: selectedRole }),
+        });
+        toast.success("角色用户已添加");
+        await logAudit({ action: AUDIT_ACTIONS.ROLE_ASSIGN, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: selectedUserId, target_name: `${selectedUser?.name || selectedUserId} → ${getRoleLabel(selectedRole)}` });
+        setDialogOpen(false);
+        setSelectedUserId("");
+        setSelectedRole("user");
+        setSearchQuery("");
+        fetchData();
+      } catch (err: any) {
+        toast.error(err.message || "添加角色用户失败");
+      }
+      return;
+    }
+
     // For contact-based users getting admin roles, auto-create Supabase Auth account
     if (selectedUser?.source === 'contact' && selectedUser.email && selectedUser.email !== '-') {
       toast.info("正在为用户创建认证账号...");
       try {
-        // Get the contact's password_hash to use as their auth password
         const { data: contactData } = await supabase
           .from("contacts")
           .select("password_hash")
@@ -281,7 +300,6 @@ const RoleUserManagement = () => {
         }
 
         if (provisionResult?.user_id) {
-          // Insert role with the new auth user_id
           const { error } = await supabase
             .from("user_roles")
             .insert({
@@ -346,18 +364,30 @@ const RoleUserManagement = () => {
   const handleDeleteRole = async (id: string) => {
     if (!confirm("确定要删除该用户的角色吗？")) return;
 
-    const { error } = await supabase
-      .from("user_roles")
-      .delete()
-      .eq("id", id);
+    try {
+      if (isOfflineMode()) {
+        await offlineRequest<{ success: boolean }>(`/api/user-roles/${id}`, { method: "DELETE" });
+        toast.success("角色已删除");
+        await logAudit({ action: AUDIT_ACTIONS.ROLE_REMOVE, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: id });
+        fetchUserRoles();
+        return;
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        toast.error("删除角色失败");
+        return;
+      }
+      toast.success("角色已删除");
+      await logAudit({ action: AUDIT_ACTIONS.ROLE_REMOVE, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: id });
+      fetchUserRoles();
+    } catch {
       toast.error("删除角色失败");
-      return;
     }
-    toast.success("角色已删除");
-    await logAudit({ action: AUDIT_ACTIONS.ROLE_REMOVE, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: id });
-    fetchUserRoles();
   };
 
   const getFilteredUserRoles = () => {

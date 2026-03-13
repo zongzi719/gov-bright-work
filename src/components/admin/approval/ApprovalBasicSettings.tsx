@@ -87,6 +87,13 @@ const ApprovalBasicSettings = ({
     return `PROC_${timestamp}`;
   };
 
+  const getApiBaseUrl = (): string => {
+    if (typeof window !== "undefined" && (window as any).GOV_CONFIG?.API_BASE_URL) {
+      return (window as any).GOV_CONFIG.API_BASE_URL;
+    }
+    return "http://localhost:3001";
+  };
+
   const handleSave = async () => {
     if (!formData.name) {
       toast.error("请填写审批名称");
@@ -95,8 +102,52 @@ const ApprovalBasicSettings = ({
 
     setSaving(true);
 
+    if (isOfflineMode()) {
+      try {
+        const baseUrl = getApiBaseUrl();
+        if (template) {
+          const response = await fetch(`${baseUrl}/api/approval-templates/${template.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: formData.name,
+              description: formData.description,
+              category: formData.category,
+              is_active: formData.is_active,
+            }),
+          });
+          if (!response.ok) throw new Error('更新失败');
+          const data = await response.json();
+          toast.success("保存成功");
+          void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: formData.name });
+          onTemplateUpdated(data as ApprovalTemplate);
+        } else {
+          const code = generateCode();
+          const response = await fetch(`${baseUrl}/api/approval-templates`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: formData.name,
+              code,
+              description: formData.description,
+              category: formData.category,
+              is_active: formData.is_active,
+            }),
+          });
+          if (!response.ok) throw new Error('创建失败');
+          const data = await response.json();
+          toast.success("创建成功，可以继续配置表单和流程");
+          void logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_name: formData.name });
+          onTemplateCreated(data as ApprovalTemplate);
+        }
+      } catch {
+        toast.error(template ? "更新失败" : "创建失败");
+      }
+      setSaving(false);
+      return;
+    }
+
     if (template) {
-      // 更新
       const { data, error } = await supabase
         .from("approval_templates" as any)
         .update({
@@ -118,7 +169,6 @@ const ApprovalBasicSettings = ({
       void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: formData.name, detail: { fields: ['name', 'description', 'category', 'is_active'] } });
       onTemplateUpdated(data as unknown as ApprovalTemplate);
     } else {
-      // 创建
       const code = generateCode();
       const { data, error } = await supabase
         .from("approval_templates" as any)
@@ -148,19 +198,32 @@ const ApprovalBasicSettings = ({
   const handleDelete = async () => {
     if (!template) return;
 
-    const { error } = await supabase
-      .from("approval_templates" as any)
-      .delete()
-      .eq("id", template.id);
+    try {
+      if (isOfflineMode()) {
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/approval-templates/${template.id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('删除失败');
+        toast.success("删除成功");
+        void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name });
+        window.history.back();
+        return;
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from("approval_templates" as any)
+        .delete()
+        .eq("id", template.id);
+
+      if (error) {
+        toast.error("删除失败");
+        return;
+      }
+      toast.success("删除成功");
+      void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name });
+      window.history.back();
+    } catch {
       toast.error("删除失败");
-      return;
     }
-    toast.success("删除成功");
-    void logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name });
-    // 触发返回列表
-    window.history.back();
   };
 
   const handleCopyCode = () => {

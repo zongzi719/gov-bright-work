@@ -160,6 +160,20 @@ const PermissionManagement = () => {
     setSaving(true);
 
     try {
+      if (isOfflineMode()) {
+        for (const [id, changes] of updates) {
+          await offlineRequest(`/api/role-permissions/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(changes),
+          });
+        }
+        toast.success("权限配置已保存");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.PERMISSION, target_type: '权限配置', target_name: selectedRole });
+        await fetchPermissions();
+        setSaving(false);
+        return;
+      }
+
       for (const [id, changes] of updates) {
         const { error } = await supabase
           .from("role_permissions")
