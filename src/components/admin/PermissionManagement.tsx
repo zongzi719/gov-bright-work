@@ -3,6 +3,7 @@ import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -54,6 +55,23 @@ const scopeLabels: Record<DataScope, string> = {
   all: '全部',
 };
 
+const getApiBaseUrl = (): string => {
+  if (typeof window !== "undefined" && (window as any).GOV_CONFIG?.API_BASE_URL) {
+    return (window as any).GOV_CONFIG.API_BASE_URL;
+  }
+  return "http://localhost:3001";
+};
+
+const offlineRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+  return result as T;
+};
+
 const PermissionManagement = () => {
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -73,31 +91,38 @@ const PermissionManagement = () => {
   };
 
   const fetchRoles = async () => {
-    const { data, error } = await supabase
-      .from("roles")
-      .select("id, name, label, is_system")
-      .eq("is_active", true)
-      .order("sort_order");
-
-    if (error) {
-      toast.error("获取角色列表失败");
-      return;
-    }
-    setRoles(data || []);
+    try {
+      if (isOfflineMode()) {
+        const data = await offlineRequest<Role[]>("/api/roles");
+        setRoles((data || []).filter((r: any) => r.is_active !== false));
+        return;
+      }
+      const { data, error } = await supabase
+        .from("roles")
+        .select("id, name, label, is_system")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) { toast.error("获取角色列表失败"); return; }
+      setRoles(data || []);
+    } catch { toast.error("获取角色列表失败"); }
   };
 
   const fetchPermissions = async () => {
-    const { data, error } = await supabase
-      .from("role_permissions")
-      .select("*")
-      .order("module_name");
-
-    if (error) {
-      toast.error("获取权限配置失败");
-      return;
-    }
-    setPermissions(data || []);
-    setModifiedPermissions({});
+    try {
+      if (isOfflineMode()) {
+        const data = await offlineRequest<RolePermission[]>("/api/role-permissions");
+        setPermissions(data || []);
+        setModifiedPermissions({});
+        return;
+      }
+      const { data, error } = await supabase
+        .from("role_permissions")
+        .select("*")
+        .order("module_name");
+      if (error) { toast.error("获取权限配置失败"); return; }
+      setPermissions(data || []);
+      setModifiedPermissions({});
+    } catch { toast.error("获取权限配置失败"); }
   };
 
   const getRoleLabel = (roleName: string): string => {
@@ -136,6 +161,20 @@ const PermissionManagement = () => {
     setSaving(true);
 
     try {
+      if (isOfflineMode()) {
+        for (const [id, changes] of updates) {
+          await offlineRequest(`/api/role-permissions/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(changes),
+          });
+        }
+        toast.success("权限配置已保存");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.PERMISSION, target_type: '权限配置', target_name: selectedRole });
+        await fetchPermissions();
+        setSaving(false);
+        return;
+      }
+
       for (const [id, changes] of updates) {
         const { error } = await supabase
           .from("role_permissions")

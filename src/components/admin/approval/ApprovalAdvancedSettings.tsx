@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,52 +54,106 @@ const ApprovalAdvancedSettings = ({ templateId }: ApprovalAdvancedSettingsProps)
     fetchTemplate();
   }, [templateId]);
 
+  const getApiBaseUrl = (): string => {
+    if (typeof window !== "undefined" && (window as any).GOV_CONFIG?.API_BASE_URL) {
+      return (window as any).GOV_CONFIG.API_BASE_URL;
+    }
+    return "http://localhost:3001";
+  };
+
   const fetchTemplate = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("approval_templates" as any)
-      .select("*")
-      .eq("id", templateId)
-      .single();
+    try {
+      if (isOfflineMode()) {
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/approval-templates/${templateId}`);
+        if (!response.ok) { toast.error("获取模板信息失败"); setLoading(false); return; }
+        const templateData = await response.json() as ApprovalTemplate;
+        setTemplate(templateData);
+        setSettings({
+          callback_url: templateData.callback_url || "",
+          auto_approve_timeout: templateData.auto_approve_timeout || 0,
+          allow_withdraw: templateData.allow_withdraw ?? true,
+          allow_transfer: templateData.allow_transfer ?? false,
+          notify_initiator: templateData.notify_initiator ?? true,
+          notify_approver: templateData.notify_approver ?? true,
+        });
+        setLoading(false);
+        return;
+      }
 
-    if (error) {
+      const { data, error } = await supabase
+        .from("approval_templates" as any)
+        .select("*")
+        .eq("id", templateId)
+        .single();
+
+      if (error) {
+        toast.error("获取模板信息失败");
+        setLoading(false);
+        return;
+      }
+
+      const templateData = data as unknown as ApprovalTemplate;
+      setTemplate(templateData);
+      setSettings({
+        callback_url: templateData.callback_url || "",
+        auto_approve_timeout: templateData.auto_approve_timeout || 0,
+        allow_withdraw: templateData.allow_withdraw ?? true,
+        allow_transfer: templateData.allow_transfer ?? false,
+        notify_initiator: templateData.notify_initiator ?? true,
+        notify_approver: templateData.notify_approver ?? true,
+      });
+    } catch {
       toast.error("获取模板信息失败");
-      setLoading(false);
-      return;
     }
-    
-    const templateData = data as unknown as ApprovalTemplate;
-    setTemplate(templateData);
-    setSettings({
-      callback_url: templateData.callback_url || "",
-      auto_approve_timeout: templateData.auto_approve_timeout || 0,
-      allow_withdraw: templateData.allow_withdraw ?? true,
-      allow_transfer: templateData.allow_transfer ?? false,
-      notify_initiator: templateData.notify_initiator ?? true,
-      notify_approver: templateData.notify_approver ?? true,
-    });
     setLoading(false);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("approval_templates" as any)
-      .update({
-        callback_url: settings.callback_url || null,
-        auto_approve_timeout: settings.auto_approve_timeout || null,
-        allow_withdraw: settings.allow_withdraw,
-        allow_transfer: settings.allow_transfer,
-        notify_initiator: settings.notify_initiator,
-        notify_approver: settings.notify_approver,
-      })
-      .eq("id", templateId);
+    try {
+      if (isOfflineMode()) {
+        const baseUrl = getApiBaseUrl();
+        const response = await fetch(`${baseUrl}/api/approval-templates/${templateId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callback_url: settings.callback_url || null,
+            auto_approve_timeout: settings.auto_approve_timeout || null,
+            allow_withdraw: settings.allow_withdraw,
+            allow_transfer: settings.allow_transfer,
+            notify_initiator: settings.notify_initiator,
+            notify_approver: settings.notify_approver,
+          }),
+        });
+        if (!response.ok) throw new Error('保存失败');
+        toast.success("设置已保存");
+        void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '高级设置', target_id: templateId, detail: { callback_url: !!settings.callback_url, auto_approve_timeout: settings.auto_approve_timeout, allow_withdraw: settings.allow_withdraw, allow_transfer: settings.allow_transfer } });
+        setSaving(false);
+        return;
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from("approval_templates" as any)
+        .update({
+          callback_url: settings.callback_url || null,
+          auto_approve_timeout: settings.auto_approve_timeout || null,
+          allow_withdraw: settings.allow_withdraw,
+          allow_transfer: settings.allow_transfer,
+          notify_initiator: settings.notify_initiator,
+          notify_approver: settings.notify_approver,
+        })
+        .eq("id", templateId);
+
+      if (error) {
+        toast.error("保存失败");
+      } else {
+        toast.success("设置已保存");
+        void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '高级设置', target_id: templateId, detail: { callback_url: !!settings.callback_url, auto_approve_timeout: settings.auto_approve_timeout, allow_withdraw: settings.allow_withdraw, allow_transfer: settings.allow_transfer } });
+      }
+    } catch {
       toast.error("保存失败");
-    } else {
-      toast.success("设置已保存");
-      void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '高级设置', target_id: templateId, detail: { callback_url: !!settings.callback_url, auto_approve_timeout: settings.auto_approve_timeout, allow_withdraw: settings.allow_withdraw, allow_transfer: settings.allow_transfer } });
     }
     setSaving(false);
   };

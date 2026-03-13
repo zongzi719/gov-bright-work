@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,13 @@ const referenceTypeLabels: Record<string, string> = {
   supply_requisition: "领用申请",
 };
 
+const getApiBaseUrl = (): string => {
+  if (typeof window !== "undefined" && (window as any).GOV_CONFIG?.API_BASE_URL) {
+    return (window as any).GOV_CONFIG.API_BASE_URL;
+  }
+  return "http://localhost:3001";
+};
+
 const StockMovementHistory = () => {
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [search, setSearch] = useState("");
@@ -69,18 +77,29 @@ const StockMovementHistory = () => {
 
   const fetchMovements = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("stock_movements")
-      .select(`
-        *,
-        office_supplies (name, specification, unit)
-      `)
-      .order("created_at", { ascending: false });
+    try {
+      if (isOfflineMode()) {
+        const response = await fetch(`${getApiBaseUrl()}/api/stock-movements`);
+        const data = await response.json();
+        setMovements(data || []);
+        setLoading(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select(`
+          *,
+          office_supplies (name, specification, unit)
+        `)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Failed to fetch stock movements:", error);
-    } else {
-      setMovements(data as StockMovement[]);
+      if (error) {
+        console.error("Failed to fetch stock movements:", error);
+      } else {
+        setMovements(data as StockMovement[]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch stock movements:", err);
     }
     setLoading(false);
   };
