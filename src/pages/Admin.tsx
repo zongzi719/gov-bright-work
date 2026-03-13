@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck, FileSearch } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
@@ -19,9 +19,47 @@ import ScheduleManagement from "@/components/admin/ScheduleManagement";
 import ApprovalSettings from "@/components/admin/ApprovalSettings";
 import { isOfflineMode } from "@/lib/offlineApi";
 
+const ADMIN_ROLE_IDS = ['admin', 'sys_admin', 'security_admin', 'audit_admin'];
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: '超级管理员',
+  sys_admin: '系统管理员',
+  security_admin: '安全保密管理员',
+  audit_admin: '安全审计员',
+};
+
+interface TabConfig {
+  value: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: string[];
+}
+
+const TAB_CONFIG: TabConfig[] = [
+  { value: 'banners', label: '轮播图管理', icon: Image, roles: ['admin', 'sys_admin'] },
+  { value: 'notices', label: '通知公告', icon: Bell, roles: ['admin', 'sys_admin'] },
+  { value: 'menus', label: '食堂菜谱', icon: Utensils, roles: ['admin', 'sys_admin'] },
+  { value: 'contacts', label: '通讯录', icon: BookUser, roles: ['admin', 'sys_admin'] },
+  { value: 'absence', label: '外出管理', icon: CalendarClock, roles: ['admin', 'sys_admin'] },
+  { value: 'leave-balance', label: '假期管理', icon: Calendar, roles: ['admin', 'sys_admin'] },
+  { value: 'supplies', label: '办公用品', icon: Package, roles: ['admin', 'sys_admin'] },
+  { value: 'schedules', label: '日程管理', icon: CalendarDays, roles: ['admin', 'sys_admin'] },
+  { value: 'leader-schedule', label: '领导日程', icon: Star, roles: ['admin', 'sys_admin'] },
+  { value: 'approval', label: '审批设置', icon: ClipboardCheck, roles: ['admin', 'security_admin'] },
+  { value: 'system', label: '系统管理', icon: Settings, roles: ['admin', 'security_admin'] },
+  { value: 'audit', label: '审计日志', icon: FileSearch, roles: ['admin', 'audit_admin'] },
+];
+
+const getRoleLabel = (roles: string[]) => {
+  for (const r of roles) {
+    if (ROLE_LABELS[r]) return ROLE_LABELS[r];
+  }
+  return '管理员';
+};
+
 const Admin = () => {
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +67,6 @@ const Admin = () => {
   }, []);
 
   const checkAuth = async () => {
-    // 离线模式：检查 localStorage 中的管理员信息
     if (isOfflineMode()) {
       const storedAdmin = localStorage.getItem('adminUser');
       if (!storedAdmin) {
@@ -38,9 +75,13 @@ const Admin = () => {
       }
       try {
         const adminUser = JSON.parse(storedAdmin);
-        // 验证管理员权限
-        if (adminUser && adminUser.role === 'admin') {
-          setIsAdmin(true);
+        if (adminUser?.role === 'admin') {
+          setUserRoles(['admin']);
+          setLoading(false);
+          return;
+        }
+        if (adminUser?.roles && Array.isArray(adminUser.roles)) {
+          setUserRoles(adminUser.roles);
           setLoading(false);
           return;
         }
@@ -51,30 +92,48 @@ const Admin = () => {
       return;
     }
 
-    // 在线模式：使用 Supabase Auth
+    // Online mode
     const { data: { user } } = await supabase.auth.getUser();
-    
     if (!user) {
       navigate("/admin/login");
       return;
     }
 
-    // 检查管理员权限
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
+      .in("role", ADMIN_ROLE_IDS);
 
-    if (!roleData) {
+    if (!roleData?.length) {
       toast.error("您没有管理员权限");
       await supabase.auth.signOut();
       navigate("/admin/login");
       return;
     }
 
-    setIsAdmin(true);
+    let roles = roleData.map(r => r.role);
+
+    // Check if admin role is still active
+    if (roles.includes('admin')) {
+      const { data: adminRole } = await supabase
+        .from("roles")
+        .select("is_active")
+        .eq("name", "admin")
+        .single();
+
+      if (!adminRole?.is_active) {
+        roles = roles.filter(r => r !== 'admin');
+        if (!roles.length) {
+          toast.error("超级管理员已停用，请使用三员账号登录");
+          await supabase.auth.signOut();
+          navigate("/admin/login");
+          return;
+        }
+      }
+    }
+
+    setUserRoles(roles);
     setLoading(false);
   };
 
@@ -96,13 +155,48 @@ const Admin = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!userRoles.length) {
     return null;
   }
 
+  const allowedTabs = TAB_CONFIG.filter(tab =>
+    tab.roles.some(role => userRoles.includes(role))
+  );
+
+  const defaultTab = allowedTabs[0]?.value || 'banners';
+
+  const renderTabContent = (value: string) => {
+    switch (value) {
+      case 'banners': return <BannerManagement />;
+      case 'notices': return (
+        <div className="space-y-4">
+          <NoticeImageManagement />
+          <NoticeManagement />
+        </div>
+      );
+      case 'menus': return <MenuManagement />;
+      case 'contacts': return <ContactManagement />;
+      case 'absence': return <AbsenceManagement />;
+      case 'leave-balance': return <LeaveBalanceManagement />;
+      case 'supplies': return <SupplyManagement />;
+      case 'schedules': return <ScheduleManagement />;
+      case 'leader-schedule': return <LeaderScheduleManagement />;
+      case 'approval': return <ApprovalSettings />;
+      case 'system': return <SystemManagement />;
+      case 'audit': return (
+        <div className="text-center py-20 text-muted-foreground">
+          <FileSearch className="w-16 h-16 mx-auto mb-4 opacity-30" />
+          <p className="text-lg font-medium">审计日志</p>
+          <p className="text-sm mt-2">此功能将在第二期上线</p>
+        </div>
+      );
+      default: return null;
+    }
+  };
+
   return (
     <div className="h-screen bg-muted flex flex-col overflow-hidden">
-      {/* 顶部导航 - 固定 */}
+      {/* 顶部导航 */}
       <header className="bg-primary text-primary-foreground shadow-md flex-shrink-0">
         <div className="container mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -111,7 +205,9 @@ const Admin = () => {
             </div>
             <div>
               <h1 className="text-base font-bold leading-tight">内容管理后台</h1>
-              <p className="text-[10px] text-primary-foreground/70">政府一体化工作平台</p>
+              <p className="text-[10px] text-primary-foreground/70">
+                {getRoleLabel(userRoles)} · 政府一体化工作平台
+              </p>
             </div>
           </div>
           <Button
@@ -126,110 +222,29 @@ const Admin = () => {
         </div>
       </header>
 
-      {/* 主内容区 - 可滚动 */}
+      {/* 主内容区 */}
       <main className="flex-1 overflow-hidden">
-        <Tabs defaultValue="banners" className="h-full flex flex-col">
-          {/* 菜单栏 - 固定 */}
+        <Tabs defaultValue={defaultTab} className="h-full flex flex-col">
           <div className="bg-muted px-4 py-2 flex-shrink-0 border-b">
             <div className="container mx-auto">
               <TabsList className="bg-card border h-9">
-                <TabsTrigger value="banners" className="gap-2">
-                  <Image className="w-4 h-4" />
-                  轮播图管理
-                </TabsTrigger>
-                <TabsTrigger value="notices" className="gap-2">
-                  <Bell className="w-4 h-4" />
-                  通知公告
-                </TabsTrigger>
-                <TabsTrigger value="menus" className="gap-2">
-                  <Utensils className="w-4 h-4" />
-                  食堂菜谱
-                </TabsTrigger>
-                <TabsTrigger value="contacts" className="gap-2">
-                  <BookUser className="w-4 h-4" />
-                  通讯录
-                </TabsTrigger>
-                <TabsTrigger value="absence" className="gap-2">
-                  <CalendarClock className="w-4 h-4" />
-                  外出管理
-                </TabsTrigger>
-                <TabsTrigger value="leave-balance" className="gap-2">
-                  <Calendar className="w-4 h-4" />
-                  假期管理
-                </TabsTrigger>
-                <TabsTrigger value="supplies" className="gap-2">
-                  <Package className="w-4 h-4" />
-                  办公用品
-                </TabsTrigger>
-                <TabsTrigger value="schedules" className="gap-2">
-                  <CalendarDays className="w-4 h-4" />
-                  日程管理
-                </TabsTrigger>
-                <TabsTrigger value="leader-schedule" className="gap-2">
-                  <Star className="w-4 h-4" />
-                  领导日程
-                </TabsTrigger>
-                <TabsTrigger value="approval" className="gap-2">
-                  <ClipboardCheck className="w-4 h-4" />
-                  审批设置
-                </TabsTrigger>
-                <TabsTrigger value="system" className="gap-2">
-                  <Settings className="w-4 h-4" />
-                  系统管理
-                </TabsTrigger>
+                {allowedTabs.map(tab => (
+                  <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
+                    <tab.icon className="w-4 h-4" />
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </div>
           </div>
 
-          {/* 内容区 - 可滚动 */}
           <div className="flex-1 overflow-auto">
             <div className="container mx-auto px-4 py-3">
-              <TabsContent value="banners" className="mt-0">
-                <BannerManagement />
-              </TabsContent>
-
-              <TabsContent value="notices" className="mt-0">
-                <div className="space-y-4">
-                  <NoticeImageManagement />
-                  <NoticeManagement />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="menus" className="mt-0">
-                <MenuManagement />
-              </TabsContent>
-
-              <TabsContent value="contacts" className="mt-0">
-                <ContactManagement />
-              </TabsContent>
-
-              <TabsContent value="absence" className="mt-0">
-                <AbsenceManagement />
-              </TabsContent>
-
-              <TabsContent value="leave-balance" className="mt-0">
-                <LeaveBalanceManagement />
-              </TabsContent>
-
-              <TabsContent value="supplies" className="mt-0">
-                <SupplyManagement />
-              </TabsContent>
-
-              <TabsContent value="schedules" className="mt-0">
-                <ScheduleManagement />
-              </TabsContent>
-
-              <TabsContent value="leader-schedule" className="mt-0">
-                <LeaderScheduleManagement />
-              </TabsContent>
-
-              <TabsContent value="approval" className="mt-0">
-                <ApprovalSettings />
-              </TabsContent>
-
-              <TabsContent value="system" className="mt-0">
-                <SystemManagement />
-              </TabsContent>
+              {allowedTabs.map(tab => (
+                <TabsContent key={tab.value} value={tab.value} className="mt-0">
+                  {renderTabContent(tab.value)}
+                </TabsContent>
+              ))}
             </div>
           </div>
         </Tabs>

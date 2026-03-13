@@ -8,7 +8,15 @@ import { toast } from "sonner";
 import { Shield } from "lucide-react";
 import { isOfflineMode } from "@/lib/offlineApi";
 
-// 获取 API 基础地址
+const ADMIN_ROLE_IDS = ['admin', 'sys_admin', 'security_admin', 'audit_admin'];
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: '超级管理员',
+  sys_admin: '系统管理员',
+  security_admin: '安全保密管理员',
+  audit_admin: '安全审计员',
+};
+
 const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined' && (window as any).GOV_CONFIG?.API_BASE_URL) {
     return (window as any).GOV_CONFIG.API_BASE_URL;
@@ -22,7 +30,6 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // 离线模式管理员登录
   const handleOfflineLogin = async () => {
     try {
       const baseUrl = getApiBaseUrl();
@@ -39,7 +46,6 @@ const AdminLogin = () => {
         return;
       }
 
-      // 存储管理员信息
       localStorage.setItem('adminUser', JSON.stringify(result.admin));
       toast.success("登录成功");
       navigate("/admin");
@@ -49,7 +55,6 @@ const AdminLogin = () => {
     }
   };
 
-  // 在线模式管理员登录
   const handleOnlineLogin = async () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -62,21 +67,41 @@ const AdminLogin = () => {
         return;
       }
 
-      // 检查是否是管理员
+      // Check for any admin-level role
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", data.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+        .in("role", ADMIN_ROLE_IDS);
 
-      if (roleError || !roleData) {
+      if (roleError || !roleData?.length) {
         await supabase.auth.signOut();
         toast.error("您没有管理员权限");
         return;
       }
 
-      toast.success("登录成功");
+      let roles = roleData.map(r => r.role);
+
+      // If user has admin role, check if it's still active
+      if (roles.includes('admin')) {
+        const { data: adminRole } = await supabase
+          .from("roles")
+          .select("is_active")
+          .eq("name", "admin")
+          .single();
+
+        if (!adminRole?.is_active) {
+          roles = roles.filter(r => r !== 'admin');
+          if (!roles.length) {
+            await supabase.auth.signOut();
+            toast.error("超级管理员已停用，三员已就位，请使用对应三员账号登录");
+            return;
+          }
+        }
+      }
+
+      const roleLabel = ROLE_LABELS[roles[0]] || '管理员';
+      toast.success(`登录成功，当前身份：${roleLabel}`);
       navigate("/admin");
     } catch {
       toast.error("登录失败，请重试");
@@ -103,7 +128,6 @@ const AdminLogin = () => {
       <div className="w-full max-w-md">
         <div className="gov-card">
           <div className="p-8">
-            {/* Logo */}
             <div className="flex flex-col items-center mb-8">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4">
                 <Shield className="w-8 h-8 text-primary-foreground" />
@@ -112,7 +136,6 @@ const AdminLogin = () => {
               <p className="text-sm text-muted-foreground mt-1">政府一体化工作平台</p>
             </div>
 
-            {/* 登录表单 */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">账号（邮箱）</Label>
