@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import * as dataAdapter from "@/lib/dataAdapter";
@@ -328,6 +329,7 @@ const SupplyManagement = () => {
         return;
       }
       toast.success("更新成功");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品', target_id: editingSupply.id, target_name: supplyForm.name });
     } else {
       const { error } = await dataAdapter.createOfficeSupply({
         name: supplyForm.name.trim(),
@@ -342,6 +344,7 @@ const SupplyManagement = () => {
         return;
       }
       toast.success("添加成功");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品', target_name: supplyForm.name });
     }
 
     setSupplyDialogOpen(false);
@@ -359,6 +362,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("删除成功");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品', target_id: deleteSupplyId });
     setDeleteSupplyId(null);
     fetchSupplies();
   };
@@ -401,6 +405,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("采购申请已提交");
+    await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请' });
     setPurchaseDialogOpen(false);
     fetchPurchaseRequests();
   };
@@ -417,6 +422,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("已批准采购申请");
+    await logAudit({ action: AUDIT_ACTIONS.APPROVE, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请', target_id: id });
     fetchPurchaseRequests();
   };
 
@@ -429,6 +435,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("已拒绝采购申请");
+    await logAudit({ action: AUDIT_ACTIONS.REJECT, module: AUDIT_MODULES.SUPPLY, target_type: '采购申请', target_id: id });
     fetchPurchaseRequests();
   };
 
@@ -459,6 +466,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("采购已入库，库存已更新");
+    await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SUPPLY, target_type: '采购入库', target_id: request.id });
     fetchPurchaseRequests();
     fetchSupplies();
   };
@@ -505,6 +513,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("领用申请已提交");
+    await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请' });
     setRequisitionDialogOpen(false);
     fetchRequisitions();
   };
@@ -521,6 +530,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("已批准领用申请");
+    await logAudit({ action: AUDIT_ACTIONS.APPROVE, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: id });
     fetchRequisitions();
   };
 
@@ -533,6 +543,7 @@ const SupplyManagement = () => {
     }
 
     toast.success("已拒绝领用申请");
+    await logAudit({ action: AUDIT_ACTIONS.REJECT, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: id });
     fetchRequisitions();
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -194,6 +195,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
       }
 
       toast.success(editMode ? "权限已更新" : "权限已添加");
+      await logAudit({ action: editMode ? AUDIT_ACTIONS.UPDATE : AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '日程权限', target_id: formData.contact_id });
       setDialogOpen(false);
       resetForm();
       fetchPermissions();
@@ -214,6 +216,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
     }
 
     toast.success("权限已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '日程权限', target_id: userId });
     fetchPermissions();
   };
 

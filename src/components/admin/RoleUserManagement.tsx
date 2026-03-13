@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
@@ -256,6 +257,7 @@ const RoleUserManagement = () => {
           }
 
           toast.success("角色用户已添加，认证账号已创建");
+          await logAudit({ action: AUDIT_ACTIONS.ROLE_ASSIGN, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: selectedUserId, target_name: `${selectedUser?.name} → ${getRoleLabel(selectedRole)}` });
           setDialogOpen(false);
           setSelectedUserId("");
           setSelectedRole("user");
@@ -288,6 +290,8 @@ const RoleUserManagement = () => {
     }
 
     toast.success("角色用户已添加");
+    const addedUser = userOptions.find(u => u.id === selectedUserId);
+    await logAudit({ action: AUDIT_ACTIONS.ROLE_ASSIGN, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: selectedUserId, target_name: `${addedUser?.name || selectedUserId} → ${getRoleLabel(selectedRole)}` });
     setDialogOpen(false);
     setSelectedUserId("");
     setSelectedRole("user");
@@ -308,6 +312,7 @@ const RoleUserManagement = () => {
       return;
     }
     toast.success("角色已删除");
+    await logAudit({ action: AUDIT_ACTIONS.ROLE_REMOVE, module: AUDIT_MODULES.ROLE, target_type: '角色用户', target_id: id });
     fetchUserRoles();
   };
 

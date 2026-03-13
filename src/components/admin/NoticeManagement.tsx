@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { usePagination } from "@/hooks/use-pagination";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
@@ -123,6 +124,7 @@ const NoticeManagement = () => {
         return;
       }
       toast.success("更新成功");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.NOTICE, target_type: '通知', target_id: editingNotice.id, target_name: formData.title });
     } else {
       const { error } = await dataAdapter.createNotice(formData);
 
@@ -131,6 +133,7 @@ const NoticeManagement = () => {
         return;
       }
       toast.success("添加成功");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.NOTICE, target_type: '通知', target_name: formData.title });
     }
 
     setDialogOpen(false);
@@ -164,7 +167,7 @@ const NoticeManagement = () => {
     }
 
     toast.success("删除成功");
-    fetchNotices();
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.NOTICE, target_type: '通知', target_id: id });
   };
 
   const resetForm = () => {

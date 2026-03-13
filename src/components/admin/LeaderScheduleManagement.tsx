@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,6 +165,7 @@ const LeaderScheduleManagement = () => {
     
     // 显示成功提示
     toast.success(editingSchedule ? "日程已更新" : "日程已添加");
+    await logAudit({ action: editingSchedule ? AUDIT_ACTIONS.UPDATE : AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '领导日程', target_name: formData.title });
   };
 
   const handleDelete = async (id: string) => {
@@ -177,6 +179,7 @@ const LeaderScheduleManagement = () => {
     }
 
     toast.success("日程已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.LEADER_SCHEDULE, target_type: '领导日程', target_id: id });
     // 强制触发数据刷新
     setRefreshKey(prev => prev + 1);
   };

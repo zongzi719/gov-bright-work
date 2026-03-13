@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { usePagination } from "@/hooks/use-pagination";
 import TablePagination from "./TablePagination";
 import * as dataAdapter from "@/lib/dataAdapter";
@@ -238,6 +239,7 @@ const ContactManagement = () => {
         return;
       }
       toast.success("单位已更新");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.CONTACT, target_type: '单位', target_id: editingOrg.id, target_name: payload.name });
     } else {
       const { error } = await dataAdapter.createOrganization(payload);
 
@@ -246,6 +248,7 @@ const ContactManagement = () => {
         return;
       }
       toast.success("单位已添加");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.CONTACT, target_type: '单位', target_name: payload.name });
     }
 
     resetOrgForm();
@@ -278,6 +281,7 @@ const ContactManagement = () => {
       return;
     }
     toast.success("单位已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.CONTACT, target_type: '单位', target_id: id });
     fetchData();
   };
 
@@ -333,6 +337,7 @@ const ContactManagement = () => {
         return;
       }
       toast.success("联系人已更新");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.CONTACT, target_type: '联系人', target_id: editingContact.id, target_name: payload.name });
     } else {
       const { error } = await dataAdapter.createContact(payload);
 
@@ -341,6 +346,7 @@ const ContactManagement = () => {
         return;
       }
       toast.success("联系人已添加");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.CONTACT, target_type: '联系人', target_name: payload.name });
     }
 
     resetContactForm();
@@ -380,6 +386,7 @@ const ContactManagement = () => {
       return;
     }
     toast.success("联系人已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.CONTACT, target_type: '联系人', target_id: id });
     fetchContacts();
   };
 

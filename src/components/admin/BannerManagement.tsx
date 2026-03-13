@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { isOfflineMode } from "@/lib/offlineApi";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +66,7 @@ const BannerManagement = () => {
 
         if (error) throw error;
         toast.success("背景更新成功");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.BANNER, target_type: '轮播图', target_id: banner.id, target_name: formData.title });
       } else {
         // 创建新记录
         const { error } = await dataAdapter.createBanner({
@@ -76,6 +78,7 @@ const BannerManagement = () => {
 
         if (error) throw error;
         toast.success("背景设置成功");
+        await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.BANNER, target_type: '轮播图', target_name: formData.title });
       }
       fetchBanner();
     } catch (error: any) {

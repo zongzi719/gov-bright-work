@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { usePagination } from "@/hooks/use-pagination";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -136,6 +137,7 @@ const RoleManagement = () => {
         return;
       }
       toast.success("角色已更新");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: editingRole.id, target_name: formData.label });
     } else {
       const maxSortOrder = Math.max(...roles.map(r => r.sort_order), 0);
       const roleName = generateRoleName(formData.label);
@@ -167,6 +169,7 @@ const RoleManagement = () => {
       }
       
       toast.success("角色已创建");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_name: formData.label });
     }
 
     handleCloseDialog();
@@ -224,6 +227,7 @@ const RoleManagement = () => {
       return;
     }
     toast.success("角色已删除");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: role.id, target_name: role.label });
     fetchRoles();
   };
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +91,7 @@ const MenuManagement = () => {
     }
 
     toast.success("更新成功");
+    await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.MENU, target_type: '菜谱', target_id: editingMenu.id });
     setDialogOpen(false);
     fetchMenus();
   };
@@ -108,6 +110,7 @@ const MenuManagement = () => {
     }
 
     toast.success("添加成功");
+    await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.MENU, target_type: '菜谱' });
     fetchMenus();
   };
 
@@ -127,6 +130,7 @@ const MenuManagement = () => {
     }
 
     toast.success("删除成功");
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.MENU, target_type: '菜谱', target_id: deletingMenu.id });
     setDeleteDialogOpen(false);
     setDeletingMenu(null);
     fetchMenus();
