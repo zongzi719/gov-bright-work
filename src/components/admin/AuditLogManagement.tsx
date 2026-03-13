@@ -297,15 +297,43 @@ const AuditLogManagement = () => {
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            第 {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} 条，共 {totalCount} 条
-          </p>
+      {totalPages > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>第 {totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0}–{Math.min(currentPage * pageSize, totalCount)} 条，共 {totalCount} 条</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[90px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map(s => (
+                  <SelectItem key={s} value={String(s)}>{s} 条/页</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>上一页</Button>
             <span className="text-sm">{currentPage} / {totalPages}</span>
             <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>下一页</Button>
+            <div className="flex items-center gap-1 ml-2">
+              <Input
+                className="w-[60px] h-8 text-center text-sm"
+                placeholder="页码"
+                value={jumpPage}
+                onChange={(e) => setJumpPage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const p = parseInt(jumpPage);
+                    if (p >= 1 && p <= totalPages) { setCurrentPage(p); setJumpPage(""); }
+                  }
+                }}
+              />
+              <Button variant="outline" size="sm" className="h-8" onClick={() => {
+                const p = parseInt(jumpPage);
+                if (p >= 1 && p <= totalPages) { setCurrentPage(p); setJumpPage(""); }
+              }}>跳转</Button>
+            </div>
           </div>
         </div>
       )}
