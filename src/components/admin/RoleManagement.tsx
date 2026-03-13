@@ -3,6 +3,7 @@ import { usePagination } from "@/hooks/use-pagination";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -57,24 +58,58 @@ const RoleManagement = () => {
     description: "",
   });
 
+  const getApiBaseUrl = (): string => {
+    if (typeof window !== "undefined" && (window as any).GOV_CONFIG?.API_BASE_URL) {
+      return (window as any).GOV_CONFIG.API_BASE_URL;
+    }
+    return "http://localhost:3001";
+  };
+
+  const offlineRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP ${response.status}`);
+    }
+
+    return result as T;
+  };
+
   useEffect(() => {
     fetchRoles();
   }, []);
 
   const fetchRoles = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("roles")
-      .select("*")
-      .order("sort_order", { ascending: true });
+    try {
+      if (isOfflineMode()) {
+        const data = await offlineRequest<Role[]>("/api/roles");
+        setRoles(data || []);
+        return;
+      }
 
-    if (error) {
+      const { data, error } = await supabase
+        .from("roles")
+        .select("*")
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        toast.error("获取角色列表失败");
+        return;
+      }
+      setRoles(data || []);
+    } catch {
       toast.error("获取角色列表失败");
+    } finally {
       setLoading(false);
-      return;
     }
-    setRoles(data || []);
-    setLoading(false);
   };
 
   const resetForm = () => {
@@ -120,60 +155,95 @@ const RoleManagement = () => {
       return;
     }
 
-    if (editingRole) {
-      // 系统角色只能修改名称和描述，自定义角色也不允许修改标识
-      const updateData = { 
-        label: formData.label, 
-        description: formData.description || null 
-      };
-
-      const { error } = await supabase
-        .from("roles")
-        .update(updateData)
-        .eq("id", editingRole.id);
-
-      if (error) {
-        toast.error("更新角色失败");
-        return;
-      }
-      toast.success("角色已更新");
-      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: editingRole.id, target_name: formData.label });
-    } else {
-      const maxSortOrder = Math.max(...roles.map(r => r.sort_order), 0);
-      const roleName = generateRoleName(formData.label);
-      
-      const { data: newRole, error } = await supabase
-        .from("roles")
-        .insert({
-          name: roleName,
+    try {
+      if (editingRole) {
+        // 系统角色只能修改名称和描述，自定义角色也不允许修改标识
+        const updateData = {
           label: formData.label,
           description: formData.description || null,
-          is_system: false,
-          sort_order: maxSortOrder + 1,
-        })
-        .select()
-        .single();
+        };
 
-      if (error) {
-        if (error.code === "23505") {
+        if (isOfflineMode()) {
+          await offlineRequest(`/api/roles/${editingRole.id}`, {
+            method: "PUT",
+            body: JSON.stringify(updateData),
+          });
+        } else {
+          const { error } = await supabase
+            .from("roles")
+            .update(updateData)
+            .eq("id", editingRole.id);
+
+          if (error) {
+            throw error;
+          }
+        }
+
+        toast.success("角色已更新");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: editingRole.id, target_name: formData.label });
+      } else {
+        const maxSortOrder = Math.max(...roles.map(r => r.sort_order), 0);
+        const roleName = generateRoleName(formData.label);
+
+        if (isOfflineMode()) {
+          const created = await offlineRequest<{ id: string; name: string }>("/api/roles", {
+            method: "POST",
+            body: JSON.stringify({
+              name: roleName,
+              label: formData.label,
+              description: formData.description || null,
+              is_system: false,
+              sort_order: maxSortOrder + 1,
+            }),
+          });
+
+          if (created?.name) {
+            await initializeRolePermissions(created.name);
+          }
+        } else {
+          const { data: newRole, error } = await supabase
+            .from("roles")
+            .insert({
+              name: roleName,
+              label: formData.label,
+              description: formData.description || null,
+              is_system: false,
+              sort_order: maxSortOrder + 1,
+            })
+            .select()
+            .single();
+
+          if (error) {
+            if (error.code === "23505") {
+              toast.error("角色标识已存在，请重试");
+              return;
+            }
+            throw error;
+          }
+
+          // 自动初始化权限配置记录
+          if (newRole) {
+            await initializeRolePermissions(roleName);
+          }
+        }
+
+        toast.success("角色已创建");
+        await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_name: formData.label });
+      }
+
+      handleCloseDialog();
+      fetchRoles();
+    } catch (error: any) {
+      if (editingRole) {
+        toast.error(error?.message ? `更新角色失败：${error.message}` : "更新角色失败");
+      } else {
+        if (error?.message?.includes('Duplicate') || error?.message?.includes('已存在')) {
           toast.error("角色标识已存在，请重试");
         } else {
-          toast.error("创建角色失败");
+          toast.error(error?.message ? `创建角色失败：${error.message}` : "创建角色失败");
         }
-        return;
       }
-
-      // 自动初始化权限配置记录
-      if (newRole) {
-        await initializeRolePermissions(roleName);
-      }
-      
-      toast.success("角色已创建");
-      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_name: formData.label });
     }
-
-    handleCloseDialog();
-    fetchRoles();
   };
 
   // 初始化角色权限配置
@@ -199,11 +269,23 @@ const RoleManagement = () => {
       data_scope: 'self' as const,
     }));
 
-    const { error } = await supabase
-      .from("role_permissions")
-      .insert(permissionRecords);
+    try {
+      if (isOfflineMode()) {
+        await offlineRequest<{ success: boolean }>("/api/role-permissions/batch", {
+          method: "POST",
+          body: JSON.stringify(permissionRecords),
+        });
+        return;
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from("role_permissions")
+        .insert(permissionRecords);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
       console.error("初始化权限配置失败:", error);
       // 不阻止角色创建，只记录错误
     }
@@ -217,18 +299,28 @@ const RoleManagement = () => {
 
     if (!confirm(`确定要删除角色"${role.label}"吗？`)) return;
 
-    const { error } = await supabase
-      .from("roles")
-      .delete()
-      .eq("id", role.id);
+    try {
+      if (isOfflineMode()) {
+        await offlineRequest<{ success: boolean }>(`/api/roles/${role.id}`, {
+          method: "DELETE",
+        });
+      } else {
+        const { error } = await supabase
+          .from("roles")
+          .delete()
+          .eq("id", role.id);
 
-    if (error) {
-      toast.error("删除角色失败");
-      return;
+        if (error) {
+          throw error;
+        }
+      }
+
+      toast.success("角色已删除");
+      await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: role.id, target_name: role.label });
+      fetchRoles();
+    } catch (error: any) {
+      toast.error(error?.message ? `删除角色失败：${error.message}` : "删除角色失败");
     }
-    toast.success("角色已删除");
-    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.ROLE, target_type: '角色', target_id: role.id, target_name: role.label });
-    fetchRoles();
   };
 
   if (loading) {
