@@ -223,7 +223,7 @@ const AuditLogManagement = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">审计日志</h2>
+        <h2 className="text-lg font-semibold">操作日志</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleExport} className="h-8">
             <Download className="w-4 h-4 mr-1" /> 导出Excel

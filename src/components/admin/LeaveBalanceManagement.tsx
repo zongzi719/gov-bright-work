@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { isOfflineMode } from "@/lib/offlineApi";
 import { toast } from "sonner";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -213,6 +214,7 @@ const LeaveBalanceManagement = () => {
         console.error(error);
       } else {
         toast.success("更新成功");
+        await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.LEAVE, target_type: '假期余额', target_id: editingId });
         closeDialog();
         fetchBalances();
       }
@@ -245,6 +247,7 @@ const LeaveBalanceManagement = () => {
         console.error(error);
       } else {
         toast.success("添加成功");
+        await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEAVE, target_type: '假期余额', target_name: formData.contact_id });
         closeDialog();
         fetchBalances();
       }
@@ -318,6 +321,7 @@ const LeaveBalanceManagement = () => {
       console.error(error);
     } else {
       toast.success(`已为 ${contactsToAdd.length} 人初始化假期`);
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.LEAVE, target_type: '批量初始化假期', detail: { count: contactsToAdd.length } });
       fetchBalances();
     }
   };
