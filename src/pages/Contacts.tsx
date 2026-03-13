@@ -7,6 +7,7 @@ import { getContactsWithOrg, getOrganizations } from "@/lib/dataAdapter";
 import OrganizationTree from "@/components/contacts/OrganizationTree";
 import ContactTable from "@/components/contacts/ContactTable";
 import ContactDetailDialog from "@/components/contacts/ContactDetailDialog";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
 interface Organization {
   id: string;
