@@ -373,7 +373,7 @@ const Purchase = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>申请日期 *</Label>
-                <Popover>
+                <Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -384,7 +384,12 @@ const Purchase = () => {
                     <Calendar
                       mode="single"
                       selected={purchaseDate}
-                      onSelect={(date) => date && setPurchaseDate(date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          setPurchaseDate(date);
+                          setPurchaseDateOpen(false);
+                        }
+                      }}
                       locale={zhCN}
                       className="pointer-events-auto"
                     />
