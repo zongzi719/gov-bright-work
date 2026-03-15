@@ -252,6 +252,7 @@ const Requisition = () => {
         target_name: itemNames.substring(0, 50),
       });
       toast.success("领用申请已提交");
+      setFormOpen(false);
       fetchRecords();
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
