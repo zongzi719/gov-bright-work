@@ -18,7 +18,7 @@ import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { parseTime } from "@/lib/utils";
+import { parseTime, normalizeDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
@@ -164,7 +164,7 @@ const Purchase = () => {
     status: record.status,
     meta: [
       { label: "金额", value: `¥${(record.total_amount || 0).toFixed(2)}` },
-      { label: "日期", value: record.purchase_date },
+      { label: "日期", value: normalizeDate(record.purchase_date) },
     ],
   }));
 
@@ -662,11 +662,11 @@ const Purchase = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">申请日期</Label>
-                        <div className="text-sm">{selectedRecord.purchase_date}</div>
+                        <div className="text-sm">{normalizeDate(selectedRecord.purchase_date)}</div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">预计完成时间</Label>
-                        <div className="text-sm">{selectedRecord.expected_completion_date || "-"}</div>
+                        <div className="text-sm">{selectedRecord.expected_completion_date ? normalizeDate(selectedRecord.expected_completion_date) : "-"}</div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">采购方式</Label>
