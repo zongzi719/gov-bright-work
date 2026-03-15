@@ -1559,8 +1559,8 @@ app.post('/api/purchase-requests', async (req, res) => {
       `INSERT INTO purchase_requests (id, requested_by, department, purpose, reason, funding_source, 
        funding_detail, procurement_method, budget_amount, total_amount, expected_completion_date, purchase_date, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [id, requested_by, department, purpose, reason, funding_source, 
-       funding_detail, procurement_method, budget_amount || 0, total_amount || 0, 
+      [id, requested_by, department || null, purpose || null, reason || null, funding_source || null, 
+       funding_detail || null, procurement_method || null, budget_amount || 0, total_amount || 0, 
        expected_completion_date ? expected_completion_date.substring(0, 10) : null, purchaseDateValue]
     );
     
