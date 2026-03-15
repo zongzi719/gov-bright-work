@@ -219,6 +219,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
           estimated_cost: "",
           notes: "",
         });
+        onOpenChange(false);
       } else {
         toast.error(approvalResult.error || "启动审批流程失败");
       }
