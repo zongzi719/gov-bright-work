@@ -388,7 +388,9 @@ export async function createSupplyPurchase(purchase: {
 
 export async function getSupplyPurchaseItems(purchaseId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
