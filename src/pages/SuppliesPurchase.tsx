@@ -143,7 +143,7 @@ const SuppliesPurchase = () => {
     status: record.status,
     meta: [
       { label: "申请日期", value: normalizeDate(record.purchase_date) },
-      { label: "合计金额", value: `¥${(record.total_amount || 0).toFixed(2)}` },
+      { label: "合计金额", value: `¥${Number(record.total_amount || 0).toFixed(2)}` },
     ],
   }));
 
@@ -435,7 +435,7 @@ const SuppliesPurchase = () => {
                           />
                         </TableCell>
                         <TableCell className="p-2 text-right font-medium">
-                          ¥{(item.amount || 0).toFixed(2)}
+                          ¥{Number(item.amount || 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="p-2">
                           <Input
@@ -534,7 +534,7 @@ const SuppliesPurchase = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">合计金额</Label>
-                        <div className="text-sm font-medium text-primary">¥{(selectedRecord.total_amount || 0).toFixed(2)}</div>
+                        <div className="text-sm font-medium text-primary">¥{Number(selectedRecord.total_amount || 0).toFixed(2)}</div>
                       </div>
                     </div>
                     
@@ -567,8 +567,8 @@ const SuppliesPurchase = () => {
                                 <TableRow key={item.id}>
                                   <TableCell>{item.item_name}</TableCell>
                                   <TableCell>{item.quantity} {item.unit || ""}</TableCell>
-                                  <TableCell>¥{(item.unit_price || 0).toFixed(2)}</TableCell>
-                                  <TableCell>¥{(item.amount || 0).toFixed(2)}</TableCell>
+                                  <TableCell>¥{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                                  <TableCell>¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                                 </TableRow>
                               ))
                             )}

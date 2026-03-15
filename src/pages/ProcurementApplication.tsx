@@ -404,7 +404,7 @@ const PurchaseContent = () => {
 
   const filteredRecords = records.filter(r => r.requested_by.includes(search) || r.department?.includes(search) || r.purpose?.includes(search));
 
-  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `采购申请`, subtitle: record.purpose || `${record.requested_by} - ${record.department || ""}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "金额", value: `¥${(record.total_amount || 0).toFixed(2)}` }, { label: "日期", value: normalizeDate(record.purchase_date) }] }));
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `采购申请`, subtitle: record.purpose || `${record.requested_by} - ${record.department || ""}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "金额", value: `¥${Number(record.total_amount || 0).toFixed(2)}` }, { label: "日期", value: normalizeDate(record.purchase_date) }] }));
 
   const handleItemClick = async (item: ApplicationItem) => {
     const record = records.find(r => r.id === item.id);
@@ -546,8 +546,8 @@ const PurchaseContent = () => {
                         <Table>
                           <TableHeader><TableRow className="bg-muted/30"><TableHead>名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead><TableHead>单价</TableHead><TableHead>金额</TableHead></TableRow></TableHeader>
                           <TableBody>
-                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.item_name || "-"}</TableCell><TableCell>{item.specification || "-"}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>¥{item.unit_price.toFixed(2)}</TableCell><TableCell>¥{item.amount.toFixed(2)}</TableCell></TableRow>)))}
-                            {selectedItems.length > 0 && (<TableRow className="bg-muted/30"><TableCell colSpan={4} className="text-right font-medium">合计</TableCell><TableCell className="font-bold text-primary">¥{selectedRecord.total_amount?.toFixed(2) || "0.00"}</TableCell></TableRow>)}
+                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.item_name || "-"}</TableCell><TableCell>{item.specification || "-"}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>¥{Number(item.unit_price || 0).toFixed(2)}</TableCell><TableCell>¥{Number(item.amount || 0).toFixed(2)}</TableCell></TableRow>)))}
+                            {selectedItems.length > 0 && (<TableRow className="bg-muted/30"><TableCell colSpan={4} className="text-right font-medium">合计</TableCell><TableCell className="font-bold text-primary">¥{Number(selectedRecord.total_amount || 0).toFixed(2)}</TableCell></TableRow>)}
                           </TableBody>
                         </Table>
                       </div>
@@ -625,7 +625,7 @@ const SuppliesPurchaseContent = () => {
   const filteredRecords = records.filter(r => r.department.includes(search) || r.applicant_name.includes(search) || r.purchase_date.includes(search));
   const totalAmount = formItems.reduce((sum, item) => sum + item.amount, 0);
 
-  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `办公用品采购申请`, subtitle: `${record.department} - ${record.applicant_name}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "申请日期", value: normalizeDate(record.purchase_date) }, { label: "合计金额", value: `¥${record.total_amount.toFixed(2)}` }] }));
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `办公用品采购申请`, subtitle: `${record.department} - ${record.applicant_name}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "申请日期", value: normalizeDate(record.purchase_date) }, { label: "合计金额", value: `¥${Number(record.total_amount || 0).toFixed(2)}` }] }));
 
   const handleItemClick = async (item: ApplicationItem) => {
     const record = records.find(r => r.id === item.id);
@@ -739,7 +739,7 @@ const SuppliesPurchaseContent = () => {
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请科室</Label><div className="text-sm">{selectedRecord.department}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">经办人</Label><div className="text-sm">{selectedRecord.applicant_name}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请日期</Label><div className="text-sm">{normalizeDate(selectedRecord.purchase_date)}</div></div>
-                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">合计金额</Label><div className="text-sm font-medium text-primary">¥{selectedRecord.total_amount.toFixed(2)}</div></div>
+                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">合计金额</Label><div className="text-sm font-medium text-primary">¥{Number(selectedRecord.total_amount || 0).toFixed(2)}</div></div>
                     </div>
                     {selectedRecord.reason && <div className="space-y-1.5 pt-2"><Label className="text-xs text-muted-foreground font-normal">购置理由</Label><div className="text-sm">{selectedRecord.reason}</div></div>}
                     <div className="space-y-2 pt-2">

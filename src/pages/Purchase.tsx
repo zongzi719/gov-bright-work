@@ -163,7 +163,7 @@ const Purchase = () => {
     time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
-      { label: "金额", value: `¥${(record.total_amount || 0).toFixed(2)}` },
+      { label: "金额", value: `¥${Number(record.total_amount || 0).toFixed(2)}` },
       { label: "日期", value: normalizeDate(record.purchase_date) },
     ],
   }));
@@ -682,11 +682,11 @@ const Purchase = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">预算金额</Label>
-                        <div className="text-sm">{selectedRecord.budget_amount ? `¥${selectedRecord.budget_amount.toFixed(2)}` : "-"}</div>
+                        <div className="text-sm">{selectedRecord.budget_amount ? `¥${Number(selectedRecord.budget_amount).toFixed(2)}` : "-"}</div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">合计金额</Label>
-                        <div className="text-sm font-medium">¥{(selectedRecord.total_amount || 0).toFixed(2)}</div>
+                        <div className="text-sm font-medium">¥{Number(selectedRecord.total_amount || 0).toFixed(2)}</div>
                       </div>
                     </div>
 
@@ -726,8 +726,8 @@ const Purchase = () => {
                                     <TableCell>{item.specification || "-"}</TableCell>
                                     <TableCell>{item.unit || "-"}</TableCell>
                                     <TableCell>{item.quantity}</TableCell>
-                                    <TableCell>{item.unit_price.toFixed(2)}</TableCell>
-                                    <TableCell>{item.amount.toFixed(2)}</TableCell>
+                                    <TableCell>{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                                    <TableCell>{Number(item.amount || 0).toFixed(2)}</TableCell>
                                     <TableCell>
                                       {item.category_link ? (
                                         <a href={item.category_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">

@@ -1073,7 +1073,7 @@ const SupplyManagement = () => {
                           <TableCell className="font-medium">{purchase.department}</TableCell>
                           <TableCell>{purchase.applicant_name}</TableCell>
                           <TableCell>{purchase.purchase_date}</TableCell>
-                          <TableCell>¥{(purchase.total_amount || 0).toFixed(2)}</TableCell>
+                          <TableCell>¥{Number(purchase.total_amount || 0).toFixed(2)}</TableCell>
                           <TableCell>
                             <Badge className={officePurchaseStatusColors[purchase.status] || "bg-gray-100 text-gray-800"}>
                               {officePurchaseStatusLabels[purchase.status] || purchase.status}
@@ -1133,7 +1133,7 @@ const SupplyManagement = () => {
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs">总金额</Label>
-                    <div className="font-medium text-primary">¥{(selectedOfficePurchase.total_amount || 0).toFixed(2)}</div>
+                    <div className="font-medium text-primary">¥{Number(selectedOfficePurchase.total_amount || 0).toFixed(2)}</div>
                   </div>
                   {selectedOfficePurchase.reason && (
                     <div className="col-span-2">
@@ -1166,8 +1166,8 @@ const SupplyManagement = () => {
                             <TableRow key={item.id}>
                               <TableCell className="font-medium">{item.item_name}</TableCell>
                               <TableCell>{item.quantity}</TableCell>
-                              <TableCell>¥{(item.unit_price || 0).toFixed(2)}</TableCell>
-                              <TableCell>¥{(item.amount || 0).toFixed(2)}</TableCell>
+                              <TableCell>¥{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                              <TableCell>¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                               <TableCell className="text-muted-foreground">{item.remarks || "-"}</TableCell>
                             </TableRow>
                           ))
