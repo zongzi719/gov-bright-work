@@ -158,6 +158,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
           contact_phone: "",
           notes: "",
         });
+        onOpenChange(false);
       } else {
         toast.error(approvalResult.error || "启动审批流程失败");
       }
