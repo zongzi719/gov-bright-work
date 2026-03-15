@@ -1356,12 +1356,13 @@ app.get('/api/supply-requisitions', async (req, res) => {
 app.post('/api/supply-requisitions', async (req, res) => {
   try {
     const id = uuidv4();
-    const { requisition_by, supply_id, quantity, reason } = req.body;
+    const { requisition_by, requisition_date, supply_id, quantity } = req.body;
+    const dateStr = requisition_date ? requisition_date.substring(0, 10) : new Date().toISOString().substring(0, 10);
     
     await pool.execute(
-      `INSERT INTO supply_requisitions (id, requisition_by, supply_id, quantity, status)
-       VALUES (?, ?, ?, ?, 'pending')`,
-      [id, requisition_by, supply_id, quantity]
+      `INSERT INTO supply_requisitions (id, requisition_by, requisition_date, supply_id, quantity, status)
+       VALUES (?, ?, ?, ?, ?, 'pending')`,
+      [id, requisition_by, dateStr, supply_id || null, quantity || null]
     );
     
     res.json({ success: true, id });
@@ -1396,16 +1397,21 @@ app.get('/api/supply-requisition-items', async (req, res) => {
 
 app.post('/api/supply-requisition-items', async (req, res) => {
   try {
-    const id = uuidv4();
-    const { requisition_id, supply_id, quantity } = req.body;
+    const body = req.body;
+    // 支持批量插入（数组）和单条插入
+    const items = Array.isArray(body) ? body : [body];
     
-    await pool.execute(
-      `INSERT INTO supply_requisition_items (id, requisition_id, supply_id, quantity)
-       VALUES (?, ?, ?, ?)`,
-      [id, requisition_id, supply_id, quantity]
-    );
+    for (const item of items) {
+      const id = uuidv4();
+      const { requisition_id, supply_id, quantity } = item;
+      await pool.execute(
+        `INSERT INTO supply_requisition_items (id, requisition_id, supply_id, quantity)
+         VALUES (?, ?, ?, ?)`,
+        [id, requisition_id, supply_id, quantity]
+      );
+    }
     
-    res.json({ success: true, id });
+    res.json({ success: true });
   } catch (error) {
     console.error('Create supply requisition item error:', error);
     res.status(500).json({ error: '创建领用明细失败' });
