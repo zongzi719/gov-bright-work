@@ -704,7 +704,7 @@ const SuppliesPurchaseContent = () => {
                         <TableCell className="p-2"><Input value={item.item_name} onChange={(e) => handleItemChange(index, "item_name", e.target.value)} placeholder="物品名称" className="min-w-[140px]" /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleItemChange(index, "quantity", 1); }} className="min-w-[60px] text-center" /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)} onBlur={(e) => { if (!e.target.value) handleItemChange(index, "unit_price", 0); }} className="min-w-[80px] text-right" /></TableCell>
-                        <TableCell className="p-2 text-right font-medium whitespace-nowrap">¥{item.amount.toFixed(2)}</TableCell>
+                        <TableCell className="p-2 text-right font-medium whitespace-nowrap">¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                         <TableCell className="p-2"><Input value={item.remarks} onChange={(e) => handleItemChange(index, "remarks", e.target.value)} placeholder="备注" className="min-w-[100px]" /></TableCell>
                         <TableCell className="p-2 text-center"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                       </TableRow>

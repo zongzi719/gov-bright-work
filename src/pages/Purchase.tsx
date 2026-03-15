@@ -271,8 +271,8 @@ const Purchase = () => {
       specification: item.specification.trim() || null,
       unit: item.unit || "个",
       quantity: item.quantity,
-      unit_price: Number(item.unit_price.toFixed(2)),
-      amount: Number(item.amount.toFixed(2)),
+      unit_price: Number(Number(item.unit_price ?? 0).toFixed(2)),
+      amount: Number(Number(item.amount ?? 0).toFixed(2)),
       category_link: item.category_link.trim() || null,
       remarks: item.remarks.trim() || null,
     }));
