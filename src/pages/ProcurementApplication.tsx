@@ -773,8 +773,8 @@ const SuppliesPurchaseContent = () => {
                                 <TableRow key={item.id}>
                                   <TableCell className="whitespace-nowrap">{item.item_name}</TableCell>
                                   <TableCell className="text-center">{item.quantity}</TableCell>
-                                  <TableCell className="text-right whitespace-nowrap">¥{item.unit_price.toFixed(2)}</TableCell>
-                                  <TableCell className="text-right whitespace-nowrap">¥{item.amount.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right whitespace-nowrap">¥{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                                  <TableCell className="text-right whitespace-nowrap">¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                                   <TableCell>{item.remarks || "-"}</TableCell>
                                 </TableRow>
                               ))
