@@ -237,7 +237,9 @@ export async function getSupplyRequisitions(params: { requisition_by: string }) 
 
 export async function getAllSupplyRequisitions() {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>('/api/supply-requisitions');
+    const result = await offlineRequest<any[]>('/api/supply-requisitions');
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
