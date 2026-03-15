@@ -135,17 +135,21 @@ const Requisition = () => {
       const { data } = await dataAdapter.getSupplyRequisitionItems(record.id);
       
       if (data) {
-        // 格式化数据以匹配接口
-        const formattedItems = data.map((item: any) => ({
-          id: item.id,
-          supply_id: item.supply_id,
-          quantity: item.quantity,
-          office_supplies: item.office_supplies || (item.supply_name ? {
-            name: item.supply_name,
-            specification: item.specification,
-            unit: item.unit
-          } : null)
-        }));
+        // 格式化数据以匹配接口 - 优先使用扁平字段（离线API），再用嵌套对象（Supabase join）
+        const formattedItems = data.map((item: any) => {
+          const hasFlat = item.supply_name || item.unit;
+          const hasNested = item.office_supplies && item.office_supplies.name;
+          return {
+            id: item.id,
+            supply_id: item.supply_id,
+            quantity: item.quantity,
+            office_supplies: hasFlat ? {
+              name: item.supply_name || '',
+              specification: item.specification || null,
+              unit: item.unit || ''
+            } : hasNested ? item.office_supplies : null
+          };
+        });
         setSelectedItems(formattedItems as RequisitionItem[]);
       }
       setDetailOpen(true);
