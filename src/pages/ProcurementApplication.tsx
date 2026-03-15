@@ -450,7 +450,17 @@ const PurchaseContent = () => {
     setSubmitting(true);
     const { data: record, error } = await dataAdapter.createPurchaseRequest({ requested_by: currentUser?.name || "", department: department.trim() || null, purchase_date: format(purchaseDate, "yyyy-MM-dd"), procurement_method: procurementMethod, funding_source: fundingSource, funding_detail: fundingDetail.trim() || null, budget_amount: budgetAmount || null, expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null, purpose: purpose.trim() || null });
     if (error || !record) { toast.error("提交采购申请失败"); setSubmitting(false); return; }
-    const itemsToInsert = validItems.map(item => ({ request_id: record.id, item_name: item.item_name.trim(), specification: item.specification.trim() || null, unit: item.unit || "个", quantity: item.quantity, unit_price: Number(item.unit_price.toFixed(2)), amount: Number(item.amount.toFixed(2)), category_link: item.category_link.trim() || null, remarks: item.remarks.trim() || null }));
+    const itemsToInsert = validItems.map(item => ({
+      request_id: record.id,
+      item_name: item.item_name.trim(),
+      specification: item.specification.trim() || null,
+      unit: item.unit || "个",
+      quantity: item.quantity,
+      unit_price: Number(Number(item.unit_price || 0).toFixed(2)),
+      amount: Number(Number(item.amount || 0).toFixed(2)),
+      category_link: item.category_link.trim() || null,
+      remarks: item.remarks.trim() || null,
+    }));
     const { error: itemsError } = await dataAdapter.createPurchaseRequestItems(itemsToInsert);
     if (itemsError) { toast.error("保存采购明细失败"); setSubmitting(false); return; }
     const itemNames = validItems.map(item => `${item.item_name} x ${item.quantity}`).join(", ");
@@ -504,7 +514,7 @@ const PurchaseContent = () => {
                         <TableCell className="p-2"><Input value={item.unit} onChange={(e) => handleItemChange(index, "unit", e.target.value)} placeholder="单位" /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleItemChange(index, "quantity", 1); }} /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)} onBlur={(e) => { if (!e.target.value) handleItemChange(index, "unit_price", 0); }} /></TableCell>
-                        <TableCell className="p-2 text-right font-medium">¥{item.amount.toFixed(2)}</TableCell>
+                        <TableCell className="p-2 text-right font-medium">¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                         <TableCell className="p-2"><Input value={item.category_link} onChange={(e) => handleItemChange(index, "category_link", e.target.value)} placeholder="链接" /></TableCell>
                         <TableCell className="p-2"><Input value={item.remarks} onChange={(e) => handleItemChange(index, "remarks", e.target.value)} placeholder="备注" /></TableCell>
                         <TableCell className="p-2"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
@@ -704,7 +714,7 @@ const SuppliesPurchaseContent = () => {
                         <TableCell className="p-2"><Input value={item.item_name} onChange={(e) => handleItemChange(index, "item_name", e.target.value)} placeholder="物品名称" className="min-w-[140px]" /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleItemChange(index, "quantity", 1); }} className="min-w-[60px] text-center" /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)} onBlur={(e) => { if (!e.target.value) handleItemChange(index, "unit_price", 0); }} className="min-w-[80px] text-right" /></TableCell>
-                        <TableCell className="p-2 text-right font-medium whitespace-nowrap">¥{item.amount.toFixed(2)}</TableCell>
+                        <TableCell className="p-2 text-right font-medium whitespace-nowrap">¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                         <TableCell className="p-2"><Input value={item.remarks} onChange={(e) => handleItemChange(index, "remarks", e.target.value)} placeholder="备注" className="min-w-[100px]" /></TableCell>
                         <TableCell className="p-2 text-center"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                       </TableRow>
@@ -763,8 +773,8 @@ const SuppliesPurchaseContent = () => {
                                 <TableRow key={item.id}>
                                   <TableCell className="whitespace-nowrap">{item.item_name}</TableCell>
                                   <TableCell className="text-center">{item.quantity}</TableCell>
-                                  <TableCell className="text-right whitespace-nowrap">¥{item.unit_price.toFixed(2)}</TableCell>
-                                  <TableCell className="text-right whitespace-nowrap">¥{item.amount.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right whitespace-nowrap">¥{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                                  <TableCell className="text-right whitespace-nowrap">¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                                   <TableCell>{item.remarks || "-"}</TableCell>
                                 </TableRow>
                               ))
@@ -786,3 +796,4 @@ const SuppliesPurchaseContent = () => {
 };
 
 export default ProcurementApplication;
+Application;
