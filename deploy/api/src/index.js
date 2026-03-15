@@ -1806,6 +1806,7 @@ app.delete('/api/approval-templates/:id', async (req, res) => {
     console.error('删除审批模板失败:', error.message);
     res.status(500).json({ error: '删除审批模板失败' });
   }
+});
 
 // 初始化/种子审批模板
 app.post('/api/approval-templates/seed', async (req, res) => {
