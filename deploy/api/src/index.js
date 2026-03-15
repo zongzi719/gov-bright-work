@@ -1460,7 +1460,7 @@ app.post('/api/supply-purchases', async (req, res) => {
     await pool.execute(
       `INSERT INTO supply_purchases (id, applicant_id, applicant_name, department, reason, total_amount, purchase_date, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [id, applicant_id, applicant_name, department, reason, total_amount || 0, purchaseDateValue]
+      [id, applicant_id, applicant_name, department, reason || null, total_amount || 0, purchaseDateValue]
     );
     
     res.json({ success: true, id });
