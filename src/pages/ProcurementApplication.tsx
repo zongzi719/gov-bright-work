@@ -404,7 +404,7 @@ const PurchaseContent = () => {
 
   const filteredRecords = records.filter(r => r.requested_by.includes(search) || r.department?.includes(search) || r.purpose?.includes(search));
 
-  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `采购申请`, subtitle: record.purpose || `${record.requested_by} - ${record.department || ""}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "金额", value: `¥${(record.total_amount || 0).toFixed(2)}` }, { label: "日期", value: normalizeDate(record.purchase_date) }] }));
+  const listItems: ApplicationItem[] = filteredRecords.map(record => ({ id: record.id, title: `采购申请`, subtitle: record.purpose || `${record.requested_by} - ${record.department || ""}`, time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }), status: record.status, meta: [{ label: "金额", value: `¥${Number(record.total_amount || 0).toFixed(2)}` }, { label: "日期", value: normalizeDate(record.purchase_date) }] }));
 
   const handleItemClick = async (item: ApplicationItem) => {
     const record = records.find(r => r.id === item.id);
