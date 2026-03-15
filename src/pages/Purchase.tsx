@@ -317,6 +317,7 @@ const Purchase = () => {
         detail: { total_amount: totalAmount, procurement_method: procurementMethod },
       });
       toast.success("采购申请已提交");
+      setFormOpen(false);
       fetchRecords();
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
