@@ -546,8 +546,8 @@ const PurchaseContent = () => {
                         <Table>
                           <TableHeader><TableRow className="bg-muted/30"><TableHead>名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead><TableHead>单价</TableHead><TableHead>金额</TableHead></TableRow></TableHeader>
                           <TableBody>
-                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.item_name || "-"}</TableCell><TableCell>{item.specification || "-"}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>¥{item.unit_price.toFixed(2)}</TableCell><TableCell>¥{item.amount.toFixed(2)}</TableCell></TableRow>)))}
-                            {selectedItems.length > 0 && (<TableRow className="bg-muted/30"><TableCell colSpan={4} className="text-right font-medium">合计</TableCell><TableCell className="font-bold text-primary">¥{selectedRecord.total_amount?.toFixed(2) || "0.00"}</TableCell></TableRow>)}
+                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.item_name || "-"}</TableCell><TableCell>{item.specification || "-"}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>¥{Number(item.unit_price || 0).toFixed(2)}</TableCell><TableCell>¥{Number(item.amount || 0).toFixed(2)}</TableCell></TableRow>)))}
+                            {selectedItems.length > 0 && (<TableRow className="bg-muted/30"><TableCell colSpan={4} className="text-right font-medium">合计</TableCell><TableCell className="font-bold text-primary">¥{Number(selectedRecord.total_amount || 0).toFixed(2)}</TableCell></TableRow>)}
                           </TableBody>
                         </Table>
                       </div>
