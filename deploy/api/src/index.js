@@ -3187,7 +3187,7 @@ app.post('/api/stock-movements', async (req, res) => {
     await pool.execute(
       `INSERT INTO stock_movements (id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type, reference_id, operator_name, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type, reference_id, operator_name, notes]
+      [id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type || null, reference_id || null, operator_name || null, notes || null]
     );
     
     res.json({ id });
