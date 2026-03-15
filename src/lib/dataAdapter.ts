@@ -2892,7 +2892,9 @@ export async function checkLeaderSchedulePermission(userId: string) {
 // 按ID获取采购申请明细
 export async function getSupplyPurchaseItemsById(purchaseId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
