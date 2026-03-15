@@ -516,7 +516,9 @@ export async function updatePurchaseRequest(id: string, updates: {
 
 export async function getPurchaseRequestItems(requestId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/purchase-request-items?request_id=${requestId}`);
+    const result = await offlineRequest<any[]>(`/api/purchase-request-items?request_id=${requestId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
