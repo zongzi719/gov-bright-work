@@ -534,7 +534,7 @@ const SuppliesPurchase = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">合计金额</Label>
-                        <div className="text-sm font-medium text-primary">¥{(selectedRecord.total_amount || 0).toFixed(2)}</div>
+                        <div className="text-sm font-medium text-primary">¥{Number(selectedRecord.total_amount || 0).toFixed(2)}</div>
                       </div>
                     </div>
                     
