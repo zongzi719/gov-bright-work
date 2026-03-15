@@ -10,6 +10,25 @@ const getApiBaseUrl = (): string => {
   return 'http://localhost:3001';
 };
 
+// 将离线API返回的扁平字段归一化为嵌套 office_supplies 对象（兼容 Supabase join 格式）
+function normalizeOfflineSupplyFields(items: any[]): any[] {
+  if (!items) return [];
+  return items.map(item => {
+    if (item.office_supplies && item.office_supplies.name) return item;
+    if (item.supply_name || item.item_name) {
+      return {
+        ...item,
+        office_supplies: {
+          name: item.supply_name || item.item_name || '',
+          specification: item.specification || null,
+          unit: item.unit || '',
+        },
+      };
+    }
+    return item;
+  });
+}
+
 // 通用离线请求方法
 async function offlineRequest<T>(
   endpoint: string,
