@@ -308,7 +308,9 @@ export async function updateSupplyRequisition(id: string, updates: {
 
 export async function getSupplyRequisitionItems(requisitionId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
