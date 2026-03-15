@@ -1595,16 +1595,23 @@ app.get('/api/purchase-request-items', async (req, res) => {
 
 app.post('/api/purchase-request-items', async (req, res) => {
   try {
-    const id = uuidv4();
-    const { request_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks } = req.body;
+    // Support both single object and array of items
+    const items = Array.isArray(req.body) ? req.body : [req.body];
+    const ids = [];
     
-    await pool.execute(
-      `INSERT INTO purchase_request_items (id, request_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, request_id, supply_id, item_name, specification, unit, quantity || 1, unit_price || 0, amount || 0, category_link, remarks]
-    );
+    for (const item of items) {
+      const id = uuidv4();
+      const { request_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks } = item;
+      
+      await pool.execute(
+        `INSERT INTO purchase_request_items (id, request_id, supply_id, item_name, specification, unit, quantity, unit_price, amount, category_link, remarks)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, request_id, supply_id || null, item_name || null, specification || null, unit || null, quantity || 1, unit_price || 0, amount || 0, category_link || null, remarks || null]
+      );
+      ids.push(id);
+    }
     
-    res.json({ success: true, id });
+    res.json({ success: true, ids });
   } catch (error) {
     console.error('Create purchase request item error:', error);
     res.status(500).json({ error: '创建采购明细失败' });
