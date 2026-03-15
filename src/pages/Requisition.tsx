@@ -425,7 +425,7 @@ const Requisition = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">领用日期</Label>
-                        <div className="text-sm">{selectedRecord.requisition_date}</div>
+                        <div className="text-sm">{normalizeDate(selectedRecord.requisition_date)}</div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">申请时间</Label>
