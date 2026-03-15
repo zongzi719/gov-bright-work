@@ -140,7 +140,7 @@ const ContactTable = ({ contacts, loading, onSelectContact }: ContactTableProps)
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {contact.is_leader ? (
+                  {!!contact.is_leader ? (
                     <Badge className="bg-amber-100 text-amber-700 text-xs px-1.5 py-0">
                       是
                     </Badge>
