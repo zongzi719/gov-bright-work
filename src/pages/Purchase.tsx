@@ -398,7 +398,7 @@ const Purchase = () => {
               </div>
               <div className="space-y-2">
                 <Label>预计采购完成时间</Label>
-                <Popover>
+                <Popover open={expectedDateOpen} onOpenChange={setExpectedDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expectedCompletionDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -409,7 +409,10 @@ const Purchase = () => {
                     <Calendar
                       mode="single"
                       selected={expectedCompletionDate}
-                      onSelect={setExpectedCompletionDate}
+                      onSelect={(date) => {
+                        setExpectedCompletionDate(date);
+                        setExpectedDateOpen(false);
+                      }}
                       locale={zhCN}
                       className="pointer-events-auto"
                     />
