@@ -92,6 +92,7 @@ const SuppliesPurchase = () => {
   const [formItems, setFormItems] = useState<FormItem[]>([
     { supply_id: "", item_name: "", specification: "", unit: "个", quantity: 1, unit_price: 0, amount: 0, remarks: "" }
   ]);
+  const [purchaseDateOpen, setPurchaseDateOpen] = useState(false);
 
   const getCurrentUser = () => {
     try {
