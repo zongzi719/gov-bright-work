@@ -1133,7 +1133,7 @@ const SupplyManagement = () => {
                   </div>
                   <div>
                     <Label className="text-muted-foreground text-xs">总金额</Label>
-                    <div className="font-medium text-primary">¥{(selectedOfficePurchase.total_amount || 0).toFixed(2)}</div>
+                    <div className="font-medium text-primary">¥{Number(selectedOfficePurchase.total_amount || 0).toFixed(2)}</div>
                   </div>
                   {selectedOfficePurchase.reason && (
                     <div className="col-span-2">
