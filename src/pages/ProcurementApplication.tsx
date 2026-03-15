@@ -152,6 +152,7 @@ const RequisitionContent = () => {
   const [submitting, setSubmitting] = useState(false);
   const [requisitionDate, setRequisitionDate] = useState<Date>(new Date());
   const [formItems, setFormItems] = useState<FormItemReq[]>([{ supply_id: "", quantity: 1 }]);
+  const [requisitionDateOpen, setRequisitionDateOpen] = useState(false);
 
   const getCurrentUser = () => {
     try {
