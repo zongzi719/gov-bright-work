@@ -2907,7 +2907,9 @@ export async function getSupplyPurchaseItemsById(purchaseId: string) {
 // 按ID获取领用申请明细
 export async function getSupplyRequisitionItemsById(requisitionId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
