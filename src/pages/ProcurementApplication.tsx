@@ -152,6 +152,7 @@ const RequisitionContent = () => {
   const [submitting, setSubmitting] = useState(false);
   const [requisitionDate, setRequisitionDate] = useState<Date>(new Date());
   const [formItems, setFormItems] = useState<FormItemReq[]>([{ supply_id: "", quantity: 1 }]);
+  const [requisitionDateOpen, setRequisitionDateOpen] = useState(false);
 
   const getCurrentUser = () => {
     try {
@@ -243,7 +244,7 @@ const RequisitionContent = () => {
               <div className="space-y-2"><Label>申请人</Label><Input value={currentUser?.name || ""} disabled className="bg-muted" /></div>
               <div className="space-y-2">
                 <Label>领用日期 *</Label>
-                <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(requisitionDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={requisitionDate} onSelect={(date) => date && setRequisitionDate(date)} locale={zhCN} /></PopoverContent></Popover>
+                <Popover open={requisitionDateOpen} onOpenChange={setRequisitionDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(requisitionDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={requisitionDate} onSelect={(date) => { if (date) { setRequisitionDate(date); setRequisitionDateOpen(false); } }} locale={zhCN} /></PopoverContent></Popover>
               </div>
             </div>
             <div className="space-y-2">
@@ -383,6 +384,8 @@ const PurchaseContent = () => {
   const [expectedCompletionDate, setExpectedCompletionDate] = useState<Date | undefined>(undefined);
   const [purpose, setPurpose] = useState("");
   const [formItems, setFormItems] = useState<FormItemPurchase[]>([createEmptyItem()]);
+  const [purchaseDateOpen, setPurchaseDateOpen] = useState(false);
+  const [expectedDateOpen, setExpectedDateOpen] = useState(false);
 
   function createEmptyItem(): FormItemPurchase { return { item_name: "", specification: "", unit: "个", quantity: 1, unit_price: 0, amount: 0, category_link: "", remarks: "" }; }
 
@@ -471,8 +474,8 @@ const PurchaseContent = () => {
               <div className="space-y-2"><Label>申请部门</Label><Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="请输入申请部门" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>申请日期 *</Label><Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => date && setPurchaseDate(date)} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
-              <div className="space-y-2"><Label>预计采购完成时间</Label><Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expectedCompletionDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd", { locale: zhCN }) : "选择日期"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={expectedCompletionDate} onSelect={setExpectedCompletionDate} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
+              <div className="space-y-2"><Label>申请日期 *</Label><Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => { if (date) { setPurchaseDate(date); setPurchaseDateOpen(false); } }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
+              <div className="space-y-2"><Label>预计采购完成时间</Label><Popover open={expectedDateOpen} onOpenChange={setExpectedDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expectedCompletionDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd", { locale: zhCN }) : "选择日期"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={expectedCompletionDate} onSelect={(date) => { setExpectedCompletionDate(date); setExpectedDateOpen(false); }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
             </div>
             <div className="space-y-2">
               <Label>采购方式 *</Label>
@@ -604,6 +607,7 @@ const SuppliesPurchaseContent = () => {
   const [department, setDepartment] = useState("");
   const [reason, setReason] = useState("");
   const [formItems, setFormItems] = useState<FormItemSupply[]>([{ item_name: "", quantity: 1, unit_price: 0, amount: 0, remarks: "" }]);
+  const [supPurchaseDateOpen, setSupPurchaseDateOpen] = useState(false);
 
   const getCurrentUser = () => { try { const userStr = localStorage.getItem("frontendUser"); if (userStr) return JSON.parse(userStr); } catch (e) { console.error("Failed to parse frontendUser", e); } return null; };
   const currentUser = getCurrentUser();
@@ -677,7 +681,7 @@ const SuppliesPurchaseContent = () => {
           <div className="overflow-y-auto px-6 py-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>申请科室 *</Label><Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="请输入申请科室" /></div>
-              <div className="space-y-2"><Label>申请日期 *</Label><Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => date && setPurchaseDate(date)} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
+              <div className="space-y-2"><Label>申请日期 *</Label><Popover open={supPurchaseDateOpen} onOpenChange={setSupPurchaseDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => { if (date) { setPurchaseDate(date); setSupPurchaseDateOpen(false); } }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
             </div>
             <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>经办人</Label><Input value={currentUser?.name || ""} disabled className="bg-muted" /></div></div>
             <div className="space-y-2">

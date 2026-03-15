@@ -106,6 +106,8 @@ const Purchase = () => {
   const [expectedCompletionDate, setExpectedCompletionDate] = useState<Date | undefined>(undefined);
   const [purpose, setPurpose] = useState("");
   const [formItems, setFormItems] = useState<FormItem[]>([createEmptyItem()]);
+  const [purchaseDateOpen, setPurchaseDateOpen] = useState(false);
+  const [expectedDateOpen, setExpectedDateOpen] = useState(false);
 
   function createEmptyItem(): FormItem {
     return {
@@ -371,7 +373,7 @@ const Purchase = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>申请日期 *</Label>
-                <Popover>
+                <Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -382,7 +384,12 @@ const Purchase = () => {
                     <Calendar
                       mode="single"
                       selected={purchaseDate}
-                      onSelect={(date) => date && setPurchaseDate(date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          setPurchaseDate(date);
+                          setPurchaseDateOpen(false);
+                        }
+                      }}
                       locale={zhCN}
                       className="pointer-events-auto"
                     />
@@ -391,7 +398,7 @@ const Purchase = () => {
               </div>
               <div className="space-y-2">
                 <Label>预计采购完成时间</Label>
-                <Popover>
+                <Popover open={expectedDateOpen} onOpenChange={setExpectedDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expectedCompletionDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -402,7 +409,10 @@ const Purchase = () => {
                     <Calendar
                       mode="single"
                       selected={expectedCompletionDate}
-                      onSelect={setExpectedCompletionDate}
+                      onSelect={(date) => {
+                        setExpectedCompletionDate(date);
+                        setExpectedDateOpen(false);
+                      }}
                       locale={zhCN}
                       className="pointer-events-auto"
                     />
