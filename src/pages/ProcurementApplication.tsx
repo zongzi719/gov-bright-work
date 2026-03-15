@@ -504,7 +504,7 @@ const PurchaseContent = () => {
                         <TableCell className="p-2"><Input value={item.unit} onChange={(e) => handleItemChange(index, "unit", e.target.value)} placeholder="单位" /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleItemChange(index, "quantity", 1); }} /></TableCell>
                         <TableCell className="p-2"><Input type="number" min={0} step="0.01" value={item.unit_price} onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value) || 0)} onBlur={(e) => { if (!e.target.value) handleItemChange(index, "unit_price", 0); }} /></TableCell>
-                        <TableCell className="p-2 text-right font-medium">¥{item.amount.toFixed(2)}</TableCell>
+                        <TableCell className="p-2 text-right font-medium">¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                         <TableCell className="p-2"><Input value={item.category_link} onChange={(e) => handleItemChange(index, "category_link", e.target.value)} placeholder="链接" /></TableCell>
                         <TableCell className="p-2"><Input value={item.remarks} onChange={(e) => handleItemChange(index, "remarks", e.target.value)} placeholder="备注" /></TableCell>
                         <TableCell className="p-2"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
@@ -786,3 +786,4 @@ const SuppliesPurchaseContent = () => {
 };
 
 export default ProcurementApplication;
+Application;
