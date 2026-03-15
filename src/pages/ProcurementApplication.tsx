@@ -244,7 +244,7 @@ const RequisitionContent = () => {
               <div className="space-y-2"><Label>申请人</Label><Input value={currentUser?.name || ""} disabled className="bg-muted" /></div>
               <div className="space-y-2">
                 <Label>领用日期 *</Label>
-                <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(requisitionDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={requisitionDate} onSelect={(date) => date && setRequisitionDate(date)} locale={zhCN} /></PopoverContent></Popover>
+                <Popover open={requisitionDateOpen} onOpenChange={setRequisitionDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(requisitionDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={requisitionDate} onSelect={(date) => { if (date) { setRequisitionDate(date); setRequisitionDateOpen(false); } }} locale={zhCN} /></PopoverContent></Popover>
               </div>
             </div>
             <div className="space-y-2">
