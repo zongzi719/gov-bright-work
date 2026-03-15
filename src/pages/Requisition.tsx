@@ -288,7 +288,7 @@ const Requisition = () => {
               </div>
               <div className="space-y-2">
                 <Label>领用日期 *</Label>
-                <Popover>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -299,7 +299,12 @@ const Requisition = () => {
                     <Calendar
                       mode="single"
                       selected={requisitionDate}
-                      onSelect={(date) => date && setRequisitionDate(date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          setRequisitionDate(date);
+                          setDatePickerOpen(false);
+                        }
+                      }}
                       locale={zhCN}
                     />
                   </PopoverContent>
