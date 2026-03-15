@@ -3515,7 +3515,7 @@ app.post('/api/approval-form-fields', async (req, res) => {
     await pool.execute(
       `INSERT INTO approval_form_fields (id, template_id, field_type, field_name, field_label, placeholder, is_required, sort_order, field_options, col_span, default_value)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, template_id, field_type, field_name, field_label, placeholder, is_required ? 1 : 0, sort_order, field_options ? JSON.stringify(field_options) : null, col_span, default_value]
+      [id, template_id, field_type, field_name, field_label, placeholder || null, is_required ? 1 : 0, sort_order, field_options ? JSON.stringify(field_options) : null, col_span, default_value || null]
     );
     
     res.json({ id });
