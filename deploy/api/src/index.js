@@ -1460,7 +1460,7 @@ app.post('/api/supply-purchases', async (req, res) => {
     await pool.execute(
       `INSERT INTO supply_purchases (id, applicant_id, applicant_name, department, reason, total_amount, purchase_date, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [id, applicant_id, applicant_name, department, reason, total_amount || 0, purchaseDateValue]
+      [id, applicant_id, applicant_name, department, reason || null, total_amount || 0, purchaseDateValue]
     );
     
     res.json({ success: true, id });
@@ -3187,7 +3187,7 @@ app.post('/api/stock-movements', async (req, res) => {
     await pool.execute(
       `INSERT INTO stock_movements (id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type, reference_id, operator_name, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type, reference_id, operator_name, notes]
+      [id, supply_id, movement_type, quantity, before_stock, after_stock, reference_type || null, reference_id || null, operator_name || null, notes || null]
     );
     
     res.json({ id });
@@ -3515,7 +3515,7 @@ app.post('/api/approval-form-fields', async (req, res) => {
     await pool.execute(
       `INSERT INTO approval_form_fields (id, template_id, field_type, field_name, field_label, placeholder, is_required, sort_order, field_options, col_span, default_value)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, template_id, field_type, field_name, field_label, placeholder, is_required ? 1 : 0, sort_order, field_options ? JSON.stringify(field_options) : null, col_span, default_value]
+      [id, template_id, field_type, field_name, field_label, placeholder || null, is_required ? 1 : 0, sort_order, field_options ? JSON.stringify(field_options) : null, col_span, default_value || null]
     );
     
     res.json({ id });
