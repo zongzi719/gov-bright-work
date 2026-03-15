@@ -285,7 +285,7 @@ const RequisitionContent = () => {
                   <div className="px-6 py-4 space-y-4">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请人</Label><div className="text-sm">{selectedRecord.requisition_by}</div></div>
-                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">领用日期</Label><div className="text-sm">{selectedRecord.requisition_date}</div></div>
+                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">领用日期</Label><div className="text-sm">{normalizeDate(selectedRecord.requisition_date)}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请时间</Label><div className="text-sm">{format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN })}</div></div>
                     </div>
                     <div className="space-y-2 pt-2">
