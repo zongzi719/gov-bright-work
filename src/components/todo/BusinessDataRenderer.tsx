@@ -214,9 +214,9 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
                 <TableBody>
                   {items.map((item: any, index: number) => (
                     <TableRow key={item.id || index}>
-                      <TableCell>{item.supply?.name || item.item_name || "-"}</TableCell>
-                      <TableCell>{item.supply?.specification || "-"}</TableCell>
-                      <TableCell>{item.supply?.unit || "-"}</TableCell>
+                      <TableCell>{item.office_supplies?.name || item.supply?.name || item.supply_name || item.item_name || "-"}</TableCell>
+                      <TableCell>{item.office_supplies?.specification || item.supply?.specification || item.specification || "-"}</TableCell>
+                      <TableCell>{item.office_supplies?.unit || item.supply?.unit || item.unit || "-"}</TableCell>
                       <TableCell className="text-center">{item.quantity}</TableCell>
                     </TableRow>
                   ))}
