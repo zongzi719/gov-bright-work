@@ -16,7 +16,7 @@ import { Plus, CalendarIcon, Trash2, FileText, GitBranch } from "lucide-react";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { parseTime } from "@/lib/utils";
+import { parseTime, normalizeDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
@@ -119,11 +119,11 @@ const Requisition = () => {
   const listItems: ApplicationItem[] = filteredRecords.map(record => ({
     id: record.id,
     title: `领用申请`,
-    subtitle: `${record.requisition_by} - ${record.requisition_date}`,
+    subtitle: `${record.requisition_by} - ${normalizeDate(record.requisition_date)}`,
     time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
-      { label: "领用日期", value: record.requisition_date },
+      { label: "领用日期", value: normalizeDate(record.requisition_date) },
     ],
   }));
 
@@ -425,7 +425,7 @@ const Requisition = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">领用日期</Label>
-                        <div className="text-sm">{selectedRecord.requisition_date}</div>
+                        <div className="text-sm">{normalizeDate(selectedRecord.requisition_date)}</div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">申请时间</Label>
