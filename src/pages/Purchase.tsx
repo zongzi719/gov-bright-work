@@ -164,7 +164,7 @@ const Purchase = () => {
     status: record.status,
     meta: [
       { label: "金额", value: `¥${(record.total_amount || 0).toFixed(2)}` },
-      { label: "日期", value: record.purchase_date },
+      { label: "日期", value: normalizeDate(record.purchase_date) },
     ],
   }));
 
