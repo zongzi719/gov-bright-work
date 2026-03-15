@@ -119,11 +119,11 @@ const Requisition = () => {
   const listItems: ApplicationItem[] = filteredRecords.map(record => ({
     id: record.id,
     title: `领用申请`,
-    subtitle: `${record.requisition_by} - ${record.requisition_date}`,
+    subtitle: `${record.requisition_by} - ${normalizeDate(record.requisition_date)}`,
     time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
-      { label: "领用日期", value: record.requisition_date },
+      { label: "领用日期", value: normalizeDate(record.requisition_date) },
     ],
   }));
 
