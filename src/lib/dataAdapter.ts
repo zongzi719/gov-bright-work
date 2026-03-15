@@ -10,6 +10,25 @@ const getApiBaseUrl = (): string => {
   return 'http://localhost:3001';
 };
 
+// 将离线API返回的扁平字段归一化为嵌套 office_supplies 对象（兼容 Supabase join 格式）
+function normalizeOfflineSupplyFields(items: any[]): any[] {
+  if (!items) return [];
+  return items.map(item => {
+    if (item.office_supplies && item.office_supplies.name) return item;
+    if (item.supply_name || item.item_name) {
+      return {
+        ...item,
+        office_supplies: {
+          name: item.supply_name || item.item_name || '',
+          specification: item.specification || null,
+          unit: item.unit || '',
+        },
+      };
+    }
+    return item;
+  });
+}
+
 // 通用离线请求方法
 async function offlineRequest<T>(
   endpoint: string,
@@ -218,7 +237,9 @@ export async function getSupplyRequisitions(params: { requisition_by: string }) 
 
 export async function getAllSupplyRequisitions() {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>('/api/supply-requisitions');
+    const result = await offlineRequest<any[]>('/api/supply-requisitions');
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
@@ -287,7 +308,9 @@ export async function updateSupplyRequisition(id: string, updates: {
 
 export async function getSupplyRequisitionItems(requisitionId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
@@ -365,7 +388,9 @@ export async function createSupplyPurchase(purchase: {
 
 export async function getSupplyPurchaseItems(purchaseId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
@@ -411,7 +436,9 @@ export async function getPurchaseRequests(params: { requested_by: string }) {
 
 export async function getAllPurchaseRequests() {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>('/api/purchase-requests');
+    const result = await offlineRequest<any[]>('/api/purchase-requests');
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
@@ -489,7 +516,9 @@ export async function updatePurchaseRequest(id: string, updates: {
 
 export async function getPurchaseRequestItems(requestId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/purchase-request-items?request_id=${requestId}`);
+    const result = await offlineRequest<any[]>(`/api/purchase-request-items?request_id=${requestId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
@@ -2863,7 +2892,9 @@ export async function checkLeaderSchedulePermission(userId: string) {
 // 按ID获取采购申请明细
 export async function getSupplyPurchaseItemsById(purchaseId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-purchase-items?purchase_id=${purchaseId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
@@ -2876,7 +2907,9 @@ export async function getSupplyPurchaseItemsById(purchaseId: string) {
 // 按ID获取领用申请明细
 export async function getSupplyRequisitionItemsById(requisitionId: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    const result = await offlineRequest<any[]>(`/api/supply-requisition-items?requisition_id=${requisitionId}`);
+    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+    return result;
   }
   
   const { data, error } = await supabase
