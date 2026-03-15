@@ -94,7 +94,7 @@ const ContactTable = ({ contacts, loading, onSelectContact }: ContactTableProps)
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-1">
                     {contact.name}
-                    {contact.is_leader && (
+                    {!!contact.is_leader && (
                       <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                     )}
                   </div>
