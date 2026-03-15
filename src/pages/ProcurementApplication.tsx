@@ -450,7 +450,17 @@ const PurchaseContent = () => {
     setSubmitting(true);
     const { data: record, error } = await dataAdapter.createPurchaseRequest({ requested_by: currentUser?.name || "", department: department.trim() || null, purchase_date: format(purchaseDate, "yyyy-MM-dd"), procurement_method: procurementMethod, funding_source: fundingSource, funding_detail: fundingDetail.trim() || null, budget_amount: budgetAmount || null, expected_completion_date: expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd") : null, purpose: purpose.trim() || null });
     if (error || !record) { toast.error("提交采购申请失败"); setSubmitting(false); return; }
-    const itemsToInsert = validItems.map(item => ({ request_id: record.id, item_name: item.item_name.trim(), specification: item.specification.trim() || null, unit: item.unit || "个", quantity: item.quantity, unit_price: Number(item.unit_price.toFixed(2)), amount: Number(item.amount.toFixed(2)), category_link: item.category_link.trim() || null, remarks: item.remarks.trim() || null }));
+    const itemsToInsert = validItems.map(item => ({
+      request_id: record.id,
+      item_name: item.item_name.trim(),
+      specification: item.specification.trim() || null,
+      unit: item.unit || "个",
+      quantity: item.quantity,
+      unit_price: Number(Number(item.unit_price || 0).toFixed(2)),
+      amount: Number(Number(item.amount || 0).toFixed(2)),
+      category_link: item.category_link.trim() || null,
+      remarks: item.remarks.trim() || null,
+    }));
     const { error: itemsError } = await dataAdapter.createPurchaseRequestItems(itemsToInsert);
     if (itemsError) { toast.error("保存采购明细失败"); setSubmitting(false); return; }
     const itemNames = validItems.map(item => `${item.item_name} x ${item.quantity}`).join(", ");
