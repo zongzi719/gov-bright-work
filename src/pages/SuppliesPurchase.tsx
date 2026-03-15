@@ -143,7 +143,7 @@ const SuppliesPurchase = () => {
     status: record.status,
     meta: [
       { label: "申请日期", value: normalizeDate(record.purchase_date) },
-      { label: "合计金额", value: `¥${(record.total_amount || 0).toFixed(2)}` },
+      { label: "合计金额", value: `¥${Number(record.total_amount || 0).toFixed(2)}` },
     ],
   }));
 
