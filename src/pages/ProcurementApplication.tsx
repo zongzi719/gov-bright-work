@@ -384,6 +384,8 @@ const PurchaseContent = () => {
   const [expectedCompletionDate, setExpectedCompletionDate] = useState<Date | undefined>(undefined);
   const [purpose, setPurpose] = useState("");
   const [formItems, setFormItems] = useState<FormItemPurchase[]>([createEmptyItem()]);
+  const [purchaseDateOpen, setPurchaseDateOpen] = useState(false);
+  const [expectedDateOpen, setExpectedDateOpen] = useState(false);
 
   function createEmptyItem(): FormItemPurchase { return { item_name: "", specification: "", unit: "个", quantity: 1, unit_price: 0, amount: 0, category_link: "", remarks: "" }; }
 
