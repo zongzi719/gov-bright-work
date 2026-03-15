@@ -1073,7 +1073,7 @@ const SupplyManagement = () => {
                           <TableCell className="font-medium">{purchase.department}</TableCell>
                           <TableCell>{purchase.applicant_name}</TableCell>
                           <TableCell>{purchase.purchase_date}</TableCell>
-                          <TableCell>¥{(purchase.total_amount || 0).toFixed(2)}</TableCell>
+                          <TableCell>¥{Number(purchase.total_amount || 0).toFixed(2)}</TableCell>
                           <TableCell>
                             <Badge className={officePurchaseStatusColors[purchase.status] || "bg-gray-100 text-gray-800"}>
                               {officePurchaseStatusLabels[purchase.status] || purchase.status}
