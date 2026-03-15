@@ -607,6 +607,7 @@ const SuppliesPurchaseContent = () => {
   const [department, setDepartment] = useState("");
   const [reason, setReason] = useState("");
   const [formItems, setFormItems] = useState<FormItemSupply[]>([{ item_name: "", quantity: 1, unit_price: 0, amount: 0, remarks: "" }]);
+  const [supPurchaseDateOpen, setSupPurchaseDateOpen] = useState(false);
 
   const getCurrentUser = () => { try { const userStr = localStorage.getItem("frontendUser"); if (userStr) return JSON.parse(userStr); } catch (e) { console.error("Failed to parse frontendUser", e); } return null; };
   const currentUser = getCurrentUser();
