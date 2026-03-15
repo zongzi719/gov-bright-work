@@ -135,22 +135,7 @@ const Requisition = () => {
       const { data } = await dataAdapter.getSupplyRequisitionItems(record.id);
       
       if (data) {
-        // 格式化数据以匹配接口 - 优先使用扁平字段（离线API），再用嵌套对象（Supabase join）
-        const formattedItems = data.map((item: any) => {
-          const hasFlat = item.supply_name || item.unit;
-          const hasNested = item.office_supplies && item.office_supplies.name;
-          return {
-            id: item.id,
-            supply_id: item.supply_id,
-            quantity: item.quantity,
-            office_supplies: hasFlat ? {
-              name: item.supply_name || '',
-              specification: item.specification || null,
-              unit: item.unit || ''
-            } : hasNested ? item.office_supplies : null
-          };
-        });
-        setSelectedItems(formattedItems as RequisitionItem[]);
+        setSelectedItems(data as RequisitionItem[]);
       }
       setDetailOpen(true);
       void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: record.id, target_name: `${record.requisition_by} - ${record.requisition_date}` });
