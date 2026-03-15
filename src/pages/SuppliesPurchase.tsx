@@ -435,7 +435,7 @@ const SuppliesPurchase = () => {
                           />
                         </TableCell>
                         <TableCell className="p-2 text-right font-medium">
-                          ¥{(item.amount || 0).toFixed(2)}
+                          ¥{Number(item.amount || 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="p-2">
                           <Input
