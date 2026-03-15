@@ -567,8 +567,8 @@ const SuppliesPurchase = () => {
                                 <TableRow key={item.id}>
                                   <TableCell>{item.item_name}</TableCell>
                                   <TableCell>{item.quantity} {item.unit || ""}</TableCell>
-                                  <TableCell>¥{(item.unit_price || 0).toFixed(2)}</TableCell>
-                                  <TableCell>¥{(item.amount || 0).toFixed(2)}</TableCell>
+                                  <TableCell>¥{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                                  <TableCell>¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                                 </TableRow>
                               ))
                             )}

@@ -1166,8 +1166,8 @@ const SupplyManagement = () => {
                             <TableRow key={item.id}>
                               <TableCell className="font-medium">{item.item_name}</TableCell>
                               <TableCell>{item.quantity}</TableCell>
-                              <TableCell>¥{(item.unit_price || 0).toFixed(2)}</TableCell>
-                              <TableCell>¥{(item.amount || 0).toFixed(2)}</TableCell>
+                              <TableCell>¥{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                              <TableCell>¥{Number(item.amount || 0).toFixed(2)}</TableCell>
                               <TableCell className="text-muted-foreground">{item.remarks || "-"}</TableCell>
                             </TableRow>
                           ))

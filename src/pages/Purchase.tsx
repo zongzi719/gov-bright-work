@@ -726,8 +726,8 @@ const Purchase = () => {
                                     <TableCell>{item.specification || "-"}</TableCell>
                                     <TableCell>{item.unit || "-"}</TableCell>
                                     <TableCell>{item.quantity}</TableCell>
-                                    <TableCell>{item.unit_price.toFixed(2)}</TableCell>
-                                    <TableCell>{item.amount.toFixed(2)}</TableCell>
+                                    <TableCell>{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                                    <TableCell>{Number(item.amount || 0).toFixed(2)}</TableCell>
                                     <TableCell>
                                       {item.category_link ? (
                                         <a href={item.category_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
