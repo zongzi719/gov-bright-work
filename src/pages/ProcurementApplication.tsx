@@ -537,7 +537,7 @@ const PurchaseContent = () => {
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">采购方式</Label><div className="text-sm">{selectedRecord.procurement_method || "-"}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">资金来源</Label><div className="text-sm">{selectedRecord.funding_source ? getFundingSourceLabel(selectedRecord.funding_source, selectedRecord.funding_detail) : "-"}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">预算金额</Label><div className="text-sm">{selectedRecord.budget_amount ? `¥${selectedRecord.budget_amount}` : "-"}</div></div>
-                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请日期</Label><div className="text-sm">{selectedRecord.purchase_date}</div></div>
+                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请日期</Label><div className="text-sm">{normalizeDate(selectedRecord.purchase_date)}</div></div>
                     </div>
                     {selectedRecord.purpose && <div className="space-y-1.5 pt-2"><Label className="text-xs text-muted-foreground font-normal">采购用途</Label><div className="text-sm">{selectedRecord.purpose}</div></div>}
                     <div className="space-y-2 pt-2">
