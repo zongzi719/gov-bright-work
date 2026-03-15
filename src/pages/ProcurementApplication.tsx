@@ -738,7 +738,7 @@ const SuppliesPurchaseContent = () => {
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请科室</Label><div className="text-sm">{selectedRecord.department}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">经办人</Label><div className="text-sm">{selectedRecord.applicant_name}</div></div>
-                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请日期</Label><div className="text-sm">{selectedRecord.purchase_date}</div></div>
+                      <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请日期</Label><div className="text-sm">{normalizeDate(selectedRecord.purchase_date)}</div></div>
                       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">合计金额</Label><div className="text-sm font-medium text-primary">¥{selectedRecord.total_amount.toFixed(2)}</div></div>
                     </div>
                     {selectedRecord.reason && <div className="space-y-1.5 pt-2"><Label className="text-xs text-muted-foreground font-normal">购置理由</Label><div className="text-sm">{selectedRecord.reason}</div></div>}

@@ -530,7 +530,7 @@ const SuppliesPurchase = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">申请日期</Label>
-                        <div className="text-sm">{selectedRecord.purchase_date}</div>
+                        <div className="text-sm">{normalizeDate(selectedRecord.purchase_date)}</div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground font-normal">合计金额</Label>
