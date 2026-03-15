@@ -142,7 +142,7 @@ const SuppliesPurchase = () => {
     time: format(parseTime(record.created_at), "MM-dd HH:mm", { locale: zhCN }),
     status: record.status,
     meta: [
-      { label: "申请日期", value: record.purchase_date },
+      { label: "申请日期", value: normalizeDate(record.purchase_date) },
       { label: "合计金额", value: `¥${(record.total_amount || 0).toFixed(2)}` },
     ],
   }));
