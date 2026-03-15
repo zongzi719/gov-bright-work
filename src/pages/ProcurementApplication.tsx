@@ -796,4 +796,3 @@ const SuppliesPurchaseContent = () => {
 };
 
 export default ProcurementApplication;
-Application;
