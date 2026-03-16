@@ -730,7 +730,7 @@ const SupplyManagement = () => {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>用品名称 *</Label>
+                      <Label>用品名称 <span className="text-destructive">*</span></Label>
                       <Input
                         value={supplyForm.name}
                         onChange={(e) =>
@@ -934,7 +934,7 @@ const SupplyManagement = () => {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>办公用品 *</Label>
+                      <Label>办公用品 <span className="text-destructive">*</span></Label>
                       <Select
                         value={requisitionForm.supply_id}
                         onValueChange={(value) =>
@@ -964,7 +964,7 @@ const SupplyManagement = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>领用数量 *</Label>
+                        <Label>领用数量 <span className="text-destructive">*</span></Label>
                         <Input
                           type="number"
                           min={1}
@@ -978,7 +978,7 @@ const SupplyManagement = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>领用人 *</Label>
+                        <Label>领用人 <span className="text-destructive">*</span></Label>
                         <Input
                           value={requisitionForm.requisition_by}
                           onChange={(e) =>

@@ -241,7 +241,7 @@ const ApprovalBasicSettings = ({
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label>审批名称 *</Label>
+          <Label>审批名称 <span className="text-destructive">*</span></Label>
           <Input
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}

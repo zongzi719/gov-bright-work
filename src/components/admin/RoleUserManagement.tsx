@@ -449,7 +449,7 @@ const RoleUserManagement = () => {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>选择用户 *</Label>
+                  <Label>选择用户 <span className="text-destructive">*</span></Label>
                   <div className="space-y-2">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

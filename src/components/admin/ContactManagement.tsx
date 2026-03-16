@@ -657,7 +657,7 @@ const ContactManagement = () => {
                     <form onSubmit={handleContactSubmit} className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>所属单位 *</Label>
+                          <Label>所属单位 <span className="text-destructive">*</span></Label>
                           <Select
                             value={contactFormData.organization_id}
                             onValueChange={(value) =>
@@ -680,7 +680,7 @@ const ContactManagement = () => {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>姓名 *</Label>
+                          <Label>姓名 <span className="text-destructive">*</span></Label>
                           <Input
                             value={contactFormData.name}
                             onChange={(e) =>
@@ -901,7 +901,7 @@ const ContactManagement = () => {
                   </DialogHeader>
                   <form onSubmit={handleOrgSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label>单位名称 *</Label>
+                      <Label>单位名称 <span className="text-destructive">*</span></Label>
                       <Input
                         value={orgFormData.name}
                         onChange={(e) =>

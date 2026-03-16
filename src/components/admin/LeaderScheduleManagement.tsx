@@ -526,7 +526,7 @@ const LeaderScheduleManagement = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>领导 *</Label>
+                <Label>领导 <span className="text-destructive">*</span></Label>
                 <Select value={formData.leader_id} onValueChange={(v) => setFormData({ ...formData, leader_id: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="选择领导" />
@@ -541,7 +541,7 @@ const LeaderScheduleManagement = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>日程标题 *</Label>
+                <Label>日程标题 <span className="text-destructive">*</span></Label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -550,7 +550,7 @@ const LeaderScheduleManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>日期 *</Label>
+                  <Label>日期 <span className="text-destructive">*</span></Label>
                   <Input
                     type="date"
                     value={formData.schedule_date}
