@@ -195,6 +195,8 @@ const SupplyManagement = () => {
     reason: "",
     requested_by: "",
   });
+  const [selectedPurchaseRequest, setSelectedPurchaseRequest] = useState<PurchaseRequest | null>(null);
+  const [purchaseDetailOpen, setPurchaseDetailOpen] = useState(false);
 
   // 领用管理
   const [requisitions, setRequisitions] = useState<SupplyRequisition[]>([]);
@@ -206,6 +208,8 @@ const SupplyManagement = () => {
     quantity: 1,
     requisition_by: "",
   });
+  const [selectedRequisition, setSelectedRequisition] = useState<SupplyRequisition | null>(null);
+  const [requisitionDetailOpen, setRequisitionDetailOpen] = useState(false);
 
   // 办公采购管理
   const [officePurchases, setOfficePurchases] = useState<SupplyPurchase[]>([]);
@@ -214,6 +218,22 @@ const SupplyManagement = () => {
   const [selectedOfficePurchase, setSelectedOfficePurchase] = useState<SupplyPurchase | null>(null);
   const [officePurchaseItems, setOfficePurchaseItems] = useState<SupplyPurchaseItem[]>([]);
   const [officePurchaseDetailOpen, setOfficePurchaseDetailOpen] = useState(false);
+
+  // 根据 supply_id 查找用品名称的辅助函数
+  const getSupplyName = (item: any) => {
+    if (item.office_supplies?.name) return item.office_supplies.name;
+    if (item.supply_name) return item.supply_name;
+    if (item.item_name) return item.item_name;
+    // fallback: 从本地 supplies 列表查找
+    const found = supplies.find(s => s.id === item.supply_id);
+    return found?.name || "-";
+  };
+  const getSupplyUnit = (item: any) => {
+    if (item.office_supplies?.unit) return item.office_supplies.unit;
+    if (item.unit) return item.unit;
+    const found = supplies.find(s => s.id === item.supply_id);
+    return found?.unit || "";
+  };
 
   useEffect(() => {
     fetchSupplies();
