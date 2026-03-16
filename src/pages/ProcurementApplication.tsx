@@ -537,7 +537,7 @@ const PurchaseContent = () => {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
-            <div className="flex items-center justify-between"><DialogTitle className="text-lg font-semibold">采购详情</DialogTitle>{selectedRecord && <Badge variant="outline" className={cn("text-xs font-normal border", statusConfig[selectedRecord.status]?.className)}>{statusConfig[selectedRecord.status]?.label || selectedRecord.status}</Badge>}</div>
+            <div className="flex items-center justify-between pr-6"><DialogTitle className="text-lg font-semibold">采购详情</DialogTitle>{selectedRecord && <Badge variant="outline" className={cn("text-xs font-normal border", statusConfig[selectedRecord.status]?.className)}>{statusConfig[selectedRecord.status]?.label || selectedRecord.status}</Badge>}</div>
           </DialogHeader>
           {selectedRecord && (
             <Tabs defaultValue="detail" className="flex-1 flex flex-col min-h-0">
