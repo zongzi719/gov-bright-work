@@ -2459,17 +2459,6 @@ export async function getSupplyPurchaseById(id: string) {
     .maybeSingle();
   return { data, error };
 }
-  if (isOfflineMode()) {
-    return offlineRequest<any>(`/api/supply-purchases/${id}`);
-  }
-  
-  const { data, error } = await supabase
-    .from("supply_purchases")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  return { data, error };
-}
 
 // ==================== Purchase Request By ID ====================
 
