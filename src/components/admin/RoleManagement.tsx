@@ -355,7 +355,7 @@ const RoleManagement = () => {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="label">角色名称 *</Label>
+                <Label htmlFor="label">角色名称 <span className="text-destructive">*</span></Label>
                 <Input
                   id="label"
                   value={formData.label}
