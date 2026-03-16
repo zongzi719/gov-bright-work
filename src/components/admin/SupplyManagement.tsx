@@ -826,10 +826,10 @@ const SupplyManagement = () => {
                     filteredPurchaseRequests.map((request) => (
                       <TableRow key={request.id}>
                         <TableCell className="font-medium">
-                          {request.office_supplies?.name || "-"}
+                          {getSupplyName(request)}
                         </TableCell>
                         <TableCell>
-                          {request.quantity} {request.office_supplies?.unit || ""}
+                          {request.quantity} {getSupplyUnit(request)}
                         </TableCell>
                         <TableCell>{request.requested_by}</TableCell>
                         <TableCell className="max-w-[200px] truncate">
@@ -848,7 +848,10 @@ const SupplyManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="text-primary"
-                            onClick={() => {/* TODO: 查看详情 */}}
+                            onClick={() => {
+                              setSelectedPurchaseRequest(request);
+                              setPurchaseDetailOpen(true);
+                            }}
                           >
                             查看详情
                           </Button>
