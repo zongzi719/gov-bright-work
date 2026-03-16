@@ -2949,6 +2949,7 @@ export const dataAdapter = {
   getSupplyPurchaseItems,
   createSupplyPurchaseItems,
   getSupplyPurchaseById,
+  updateSupplyPurchase,
   // Purchase Requests
   getPurchaseRequests,
   getAllPurchaseRequests,
