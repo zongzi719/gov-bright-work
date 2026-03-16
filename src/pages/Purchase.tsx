@@ -372,7 +372,7 @@ const Purchase = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>申请日期 *</Label>
+                <Label>申请日期 <span className="text-destructive">*</span></Label>
                 <Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
@@ -423,7 +423,7 @@ const Purchase = () => {
 
             {/* 采购方式 */}
             <div className="space-y-2">
-              <Label>采购方式 *</Label>
+              <Label>采购方式 <span className="text-destructive">*</span></Label>
               <RadioGroup value={procurementMethod} onValueChange={setProcurementMethod} className="flex flex-wrap gap-4">
                 {procurementMethods.map((method) => (
                   <div key={method.value} className="flex items-center space-x-2">
@@ -436,7 +436,7 @@ const Purchase = () => {
 
             {/* 资金来源 */}
             <div className="space-y-2">
-              <Label>资金来源 *</Label>
+              <Label>资金来源 <span className="text-destructive">*</span></Label>
               <RadioGroup value={fundingSource} onValueChange={(v) => { setFundingSource(v); setFundingDetail(""); }} className="flex flex-wrap gap-4">
                 {fundingSources.map((source) => (
                   <div key={source.value} className="flex items-center space-x-2">
@@ -487,7 +487,7 @@ const Purchase = () => {
             {/* 采购物品明细 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>采购物品明细 *</Label>
+                <Label>采购物品明细 <span className="text-destructive">*</span></Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
                   <Plus className="h-3 w-3 mr-1" />
                   添加物品

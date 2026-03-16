@@ -445,7 +445,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
           {/* 请假类型 */}
           <div className="space-y-2">
-            <Label>请假类型 *</Label>
+            <Label>请假类型 <span className="text-destructive">*</span></Label>
             <Select value={form.leave_type} onValueChange={(v) => setForm({ ...form, leave_type: v })}>
               <SelectTrigger>
                 <SelectValue placeholder="请选择请假类型" />
@@ -503,7 +503,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
           {/* 请假事由 */}
           <div className="space-y-2">
-            <Label>请假事由 *</Label>
+            <Label>请假事由 <span className="text-destructive">*</span></Label>
             <Textarea
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
@@ -514,7 +514,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
           {/* 开始时间 */}
           <div className="space-y-2">
-            <Label>开始时间 *</Label>
+            <Label>开始时间 <span className="text-destructive">*</span></Label>
             <div className="grid grid-cols-2 gap-2">
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
@@ -561,7 +561,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
           {/* 结束时间 */}
           <div className="space-y-2">
-            <Label>结束时间 *</Label>
+            <Label>结束时间 <span className="text-destructive">*</span></Label>
             <div className="grid grid-cols-2 gap-2">
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>

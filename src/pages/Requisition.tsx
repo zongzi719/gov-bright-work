@@ -281,7 +281,7 @@ const Requisition = () => {
                 <Input value={currentUser?.name || ""} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
-                <Label>领用日期 *</Label>
+                <Label>领用日期 <span className="text-destructive">*</span></Label>
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
@@ -308,7 +308,7 @@ const Requisition = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>物品明细 *</Label>
+                <Label>物品明细 <span className="text-destructive">*</span></Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
                   <Plus className="h-3 w-3 mr-1" />
                   添加物品

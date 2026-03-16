@@ -182,7 +182,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
 
           {/* 外出类型 */}
           <div className="space-y-2">
-            <Label>外出类型 *</Label>
+            <Label>外出类型 <span className="text-destructive">*</span></Label>
             <Select value={form.out_type} onValueChange={(v) => setForm({ ...form, out_type: v })}>
               <SelectTrigger>
                 <SelectValue placeholder="请选择外出类型" />
@@ -199,7 +199,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
 
           {/* 往返地点 */}
           <div className="space-y-2">
-            <Label>往返地点 *</Label>
+            <Label>往返地点 <span className="text-destructive">*</span></Label>
             <Input
               value={form.out_location}
               onChange={(e) => setForm({ ...form, out_location: e.target.value })}
@@ -209,7 +209,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
 
           {/* 外出事由 */}
           <div className="space-y-2">
-            <Label>外出事由 *</Label>
+            <Label>外出事由 <span className="text-destructive">*</span></Label>
             <Textarea
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
@@ -221,7 +221,7 @@ const OutForm = ({ open, onOpenChange, currentUser }: OutFormProps) => {
           {/* 开始时间 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>开始日期 *</Label>
+              <Label>开始日期 <span className="text-destructive">*</span></Label>
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button

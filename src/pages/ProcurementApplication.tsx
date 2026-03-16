@@ -247,12 +247,12 @@ const RequisitionContent = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>申请人</Label><Input value={currentUser?.name || ""} disabled className="bg-muted" /></div>
               <div className="space-y-2">
-                <Label>领用日期 *</Label>
+                <Label>领用日期 <span className="text-destructive">*</span></Label>
                 <Popover open={requisitionDateOpen} onOpenChange={setRequisitionDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(requisitionDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={requisitionDate} onSelect={(date) => { if (date) { setRequisitionDate(date); setRequisitionDateOpen(false); } }} locale={zhCN} /></PopoverContent></Popover>
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between"><Label>物品明细 *</Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
+              <div className="flex items-center justify-between"><Label>物品明细 <span className="text-destructive">*</span></Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader><TableRow className="bg-muted/50"><TableHead className="w-[50%]">办公用品</TableHead><TableHead className="w-[30%]">领用数量</TableHead><TableHead className="w-[20%]">操作</TableHead></TableRow></TableHeader>
@@ -488,11 +488,11 @@ const PurchaseContent = () => {
               <div className="space-y-2"><Label>申请部门</Label><Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="请输入申请部门" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>申请日期 *</Label><Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => { if (date) { setPurchaseDate(date); setPurchaseDateOpen(false); } }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
+              <div className="space-y-2"><Label>申请日期 <span className="text-destructive">*</span></Label><Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => { if (date) { setPurchaseDate(date); setPurchaseDateOpen(false); } }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
               <div className="space-y-2"><Label>预计采购完成时间</Label><Popover open={expectedDateOpen} onOpenChange={setExpectedDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expectedCompletionDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{expectedCompletionDate ? format(expectedCompletionDate, "yyyy-MM-dd", { locale: zhCN }) : "选择日期"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={expectedCompletionDate} onSelect={(date) => { setExpectedCompletionDate(date); setExpectedDateOpen(false); }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
             </div>
             <div className="space-y-2">
-              <Label>采购方式 *</Label>
+              <Label>采购方式 <span className="text-destructive">*</span></Label>
               <RadioGroup value={procurementMethod} onValueChange={setProcurementMethod} className="flex flex-wrap gap-4">
                 {procurementMethods.map((method) => (
                   <div key={method.value} className="flex items-center space-x-2">
@@ -502,11 +502,11 @@ const PurchaseContent = () => {
                 ))}
               </RadioGroup>
             </div>
-            <div className="space-y-2"><Label>资金来源 *</Label><RadioGroup value={fundingSource} onValueChange={(v) => { setFundingSource(v); setFundingDetail(""); }} className="flex flex-wrap gap-4">{fundingSources.map((source) => (<div key={source.value} className="flex items-center space-x-2"><RadioGroupItem value={source.value} id={source.value} /><Label htmlFor={source.value} className="font-normal cursor-pointer">{source.label}</Label></div>))}</RadioGroup>{fundingSource && (<Input value={fundingDetail} onChange={(e) => setFundingDetail(e.target.value)} placeholder={fundingSources.find(s => s.value === fundingSource)?.placeholder || ""} className="mt-2" />)}</div>
+            <div className="space-y-2"><Label>资金来源 <span className="text-destructive">*</span></Label><RadioGroup value={fundingSource} onValueChange={(v) => { setFundingSource(v); setFundingDetail(""); }} className="flex flex-wrap gap-4">{fundingSources.map((source) => (<div key={source.value} className="flex items-center space-x-2"><RadioGroupItem value={source.value} id={source.value} /><Label htmlFor={source.value} className="font-normal cursor-pointer">{source.label}</Label></div>))}</RadioGroup>{fundingSource && (<Input value={fundingDetail} onChange={(e) => setFundingDetail(e.target.value)} placeholder={fundingSources.find(s => s.value === fundingSource)?.placeholder || ""} className="mt-2" />)}</div>
             <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>预算金额（元）</Label><Input type="number" min={0} step={0.01} value={budgetAmount === 0 ? "" : budgetAmount} onChange={(e) => { setBudgetManuallyEdited(true); setBudgetAmount(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0); }} placeholder="请输入预算金额" /></div></div>
             <div className="space-y-2"><Label>采购用途</Label><Textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="请填写采购用途说明" rows={2} /></div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between"><Label>采购物品明细 *</Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
+              <div className="flex items-center justify-between"><Label>采购物品明细 <span className="text-destructive">*</span></Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader><TableRow className="bg-muted/50"><TableHead className="w-[18%]">名称</TableHead><TableHead className="w-[12%]">规格型号</TableHead><TableHead className="w-[8%]">单位</TableHead><TableHead className="w-[8%]">数量</TableHead><TableHead className="w-[10%]">单价(元)</TableHead><TableHead className="w-[10%]">金额</TableHead><TableHead className="w-[16%]">政采云链接</TableHead><TableHead className="w-[12%]">备注</TableHead><TableHead className="w-[6%]">操作</TableHead></TableRow></TableHeader>
@@ -694,12 +694,12 @@ const SuppliesPurchaseContent = () => {
           <DialogHeader className="px-6 py-4 border-b bg-background"><DialogTitle>新建办公用品采购申请</DialogTitle></DialogHeader>
           <div className="overflow-y-auto px-6 py-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>申请科室 *</Label><Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="请输入申请科室" /></div>
-              <div className="space-y-2"><Label>申请日期 *</Label><Popover open={supPurchaseDateOpen} onOpenChange={setSupPurchaseDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => { if (date) { setPurchaseDate(date); setSupPurchaseDateOpen(false); } }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
+              <div className="space-y-2"><Label>申请科室 <span className="text-destructive">*</span></Label><Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="请输入申请科室" /></div>
+              <div className="space-y-2"><Label>申请日期 <span className="text-destructive">*</span></Label><Popover open={supPurchaseDateOpen} onOpenChange={setSupPurchaseDateOpen}><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal")}><CalendarIcon className="mr-2 h-4 w-4" />{format(purchaseDate, "yyyy-MM-dd", { locale: zhCN })}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={purchaseDate} onSelect={(date) => { if (date) { setPurchaseDate(date); setSupPurchaseDateOpen(false); } }} locale={zhCN} className="pointer-events-auto" /></PopoverContent></Popover></div>
             </div>
             <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>经办人</Label><Input value={currentUser?.name || ""} disabled className="bg-muted" /></div></div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between"><Label>采购物品明细 *</Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
+              <div className="flex items-center justify-between"><Label>采购物品明细 <span className="text-destructive">*</span></Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
               <div className="border rounded-md overflow-x-auto">
                 <Table className="min-w-[700px]">
                   <TableHeader>

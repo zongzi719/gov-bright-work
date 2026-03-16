@@ -314,7 +314,7 @@ const SuppliesPurchase = () => {
             {/* 基本信息 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>申请科室 *</Label>
+                <Label>申请科室 <span className="text-destructive">*</span></Label>
                 <Input
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
@@ -322,7 +322,7 @@ const SuppliesPurchase = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>申请日期 *</Label>
+                <Label>申请日期 <span className="text-destructive">*</span></Label>
                 <Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
@@ -358,7 +358,7 @@ const SuppliesPurchase = () => {
             {/* 物品明细 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>采购物品明细 *</Label>
+                <Label>采购物品明细 <span className="text-destructive">*</span></Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
                   <Plus className="h-3 w-3 mr-1" />
                   添加物品
