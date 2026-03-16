@@ -1314,7 +1314,7 @@ const SupplyManagement = () => {
         <Dialog open={requisitionDetailOpen} onOpenChange={setRequisitionDetailOpen}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
+              <DialogTitle className="flex items-center justify-between pr-6">
                 <span>领用详情</span>
                 {selectedRequisition && (
                   <Badge className={requisitionStatusColors[selectedRequisition.status]}>
