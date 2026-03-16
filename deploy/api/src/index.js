@@ -1565,6 +1565,29 @@ app.get('/api/purchase-requests', async (req, res) => {
   }
 });
 
+// 按ID获取单个采购申请
+app.get('/api/purchase-requests/:id', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT pr.*, c.name as requested_by_name
+       FROM purchase_requests pr
+       LEFT JOIN contacts c ON pr.requested_by = c.id
+       WHERE pr.id = ?`, [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: '未找到该采购申请' });
+    const row = rows[0];
+    row.purchase_date = safeDateStr(row.purchase_date);
+    row.expected_completion_date = safeDateStr(row.expected_completion_date);
+    // 如果requested_by是UUID，用联表查到的名称替换
+    if (row.requested_by_name) {
+      row.requested_by = row.requested_by_name;
+    }
+    res.json(row);
+  } catch (error) {
+    console.error('Get purchase request by id error:', error);
+    res.status(500).json({ error: '获取采购申请详情失败' });
+  }
+});
+
 app.post('/api/purchase-requests', async (req, res) => {
   try {
     const id = uuidv4();
