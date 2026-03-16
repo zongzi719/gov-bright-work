@@ -2468,16 +2468,28 @@ export async function updateOfficeSupplyStock(id: string, currentStock: number) 
 // ==================== Supply Requisition By ID ====================
 
 export async function getSupplyRequisitionById(id: string) {
-  if (isOfflineMode()) {
-    return offlineRequest<any>(`/api/supply-requisitions/${id}`);
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any>(`/api/supply-requisitions/${id}`)
+    : await supabase
+        .from("supply_requisitions")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+  if (sourceResult.error || !sourceResult.data) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_requisitions")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  return { data, error };
+
+  const approvalResult = await getApprovalInstanceByBusinessId(id, "supply_requisition");
+
+  return {
+    data: {
+      ...sourceResult.data,
+      status: approvalResult.data?.status || sourceResult.data.status,
+      _original_status: sourceResult.data.status,
+    },
+    error: sourceResult.error,
+  };
 }
 
 // ==================== Supply Purchase By ID ====================
