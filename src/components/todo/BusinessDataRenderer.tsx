@@ -149,7 +149,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {renderField("申请科室", data.department)}
           {renderField("申请日期", formatDate(data.purchase_date))}
-          {renderField("经办人", data.applicant_name)}
+          {renderField("经办人", data.applicant_name || initiatorName)}
           {renderField("合计金额", formatMoney(data.total_amount))}
         </div>
 
