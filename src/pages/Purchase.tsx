@@ -65,7 +65,7 @@ interface FormItem {
   remarks: string;
 }
 
-// Use default status config from ApplicationList (allStatusConfig)
+import { allStatusConfig as statusConfig } from "@/lib/statusLabels";
 
 const procurementMethods = [
   { value: "政采云平台采购", label: "政采云平台采购" },

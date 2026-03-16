@@ -66,7 +66,7 @@ interface OfficeSupply {
   current_stock: number;
 }
 
-// Use default status config from ApplicationList (allStatusConfig)
+import { allStatusConfig as statusConfig } from "@/lib/statusLabels";
 
 const SuppliesPurchase = () => {
   const { startApproval } = useApprovalWorkflow();

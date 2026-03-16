@@ -59,7 +59,7 @@ interface FormItem {
   quantity: number;
 }
 
-// Use default status config from ApplicationList (allStatusConfig)
+import { allStatusConfig as statusConfig } from "@/lib/statusLabels";
 
 const Requisition = () => {
   const { startApproval } = useApprovalWorkflow();
