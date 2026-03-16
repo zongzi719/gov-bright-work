@@ -1162,7 +1162,7 @@ const SupplyManagement = () => {
               </div>
             </DialogHeader>
             {selectedOfficePurchase && (
-              <div className="space-y-4">
+              <div className="px-6 py-4 space-y-4 overflow-y-auto max-h-[calc(85vh-80px)]">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground text-xs">部门</Label>
