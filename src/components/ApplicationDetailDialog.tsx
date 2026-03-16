@@ -59,7 +59,7 @@ const ApplicationDetailDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pr-6">
             <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
             {config && (
               <Badge
