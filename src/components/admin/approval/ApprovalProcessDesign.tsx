@@ -1609,7 +1609,7 @@ const ApprovalProcessDesign = ({ templateId }: ApprovalProcessDesignProps) => {
               </div>
 
               <div>
-                <Label>节点名称 *</Label>
+                <Label>节点名称 <span className="text-destructive">*</span></Label>
                 <Input
                   className="mt-2"
                   value={nodeForm.node_name}

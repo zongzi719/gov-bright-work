@@ -140,7 +140,7 @@ const FieldEditDialog = ({ open, onOpenChange, field, initialType, onSave }: Fie
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>字段标题 *</Label>
+              <Label>字段标题 <span className="text-destructive">*</span></Label>
               <Input
                 value={fieldForm.field_label}
                 onChange={(e) => setFieldForm({ ...fieldForm, field_label: e.target.value })}
