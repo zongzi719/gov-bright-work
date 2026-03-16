@@ -29,7 +29,17 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
     }
   };
 
-  // 格式化日期
+  // 格式化日期 + 上午/下午（出差专用）
+  const formatDateAmPm = (value: string | null | undefined) => {
+    if (!value) return "-";
+    try {
+      const d = parseTime(value);
+      return `${format(d, "yyyy-MM-dd")} ${d.getHours() < 12 ? "上午" : "下午"}`;
+    } catch {
+      return value;
+    }
+  };
+
   const formatDate = (value: string | null | undefined) => {
     if (!value) return "-";
     try {
