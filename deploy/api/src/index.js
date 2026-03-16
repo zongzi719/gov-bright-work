@@ -1559,6 +1559,24 @@ app.get('/api/supply-purchases/:id', async (req, res) => {
   }
 });
 
+// 更新办公用品采购状态
+app.put('/api/supply-purchases/:id', async (req, res) => {
+  try {
+    const { status, approved_at } = req.body;
+    const setClauses = [];
+    const params = [];
+    if (status) { setClauses.push('status = ?'); params.push(status); }
+    if (approved_at) { setClauses.push('approved_at = ?'); params.push(approved_at); }
+    setClauses.push('updated_at = NOW()');
+    params.push(req.params.id);
+    await pool.execute(`UPDATE supply_purchases SET ${setClauses.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update supply purchase error:', error);
+    res.status(500).json({ error: '更新采购状态失败' });
+  }
+});
+
 // ==================== 采购申请 ====================
 
 app.get('/api/purchase-requests', async (req, res) => {
