@@ -1227,10 +1227,10 @@ const SupplyManagement = () => {
 
         {/* 采购需求详情对话框 */}
         <Dialog open={purchaseDetailOpen} onOpenChange={setPurchaseDetailOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
+          <DialogContent className="max-w-3xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+            <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
               <DialogTitle className="flex items-center justify-between">
-                <span>采购需求详情</span>
+                <span className="text-lg font-semibold">采购详情</span>
                 {selectedPurchaseRequest && (
                   <Badge className={purchaseStatusColors[selectedPurchaseRequest.status]}>
                     {purchaseStatusLabels[selectedPurchaseRequest.status]}
@@ -1239,61 +1239,58 @@ const SupplyManagement = () => {
               </DialogTitle>
             </DialogHeader>
             {selectedPurchaseRequest && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">办公用品</Label>
-                    <div className="font-medium">{getSupplyName(selectedPurchaseRequest)}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">采购数量</Label>
-                    <div className="font-medium">{selectedPurchaseRequest.quantity} {getSupplyUnit(selectedPurchaseRequest)}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">申请人</Label>
-                    <div className="font-medium">{selectedPurchaseRequest.requested_by}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">申请时间</Label>
-                    <div className="font-medium">{format(parseTime(selectedPurchaseRequest.created_at), "yyyy-MM-dd HH:mm")}</div>
-                  </div>
-                  {selectedPurchaseRequest.reason && (
-                    <div className="col-span-2">
-                      <Label className="text-muted-foreground text-xs">采购原因</Label>
-                      <div className="font-medium">{selectedPurchaseRequest.reason}</div>
+              <Tabs defaultValue="detail" className="flex-1 flex flex-col min-h-0">
+                <TabsList className="mx-6 mt-4 mb-2 grid w-fit grid-cols-2 bg-muted/50">
+                  <TabsTrigger value="detail" className="gap-2 px-4"><FileText className="w-4 h-4" />申请详情</TabsTrigger>
+                  <TabsTrigger value="approval" className="gap-2 px-4"><GitBranch className="w-4 h-4" />审批流程</TabsTrigger>
+                </TabsList>
+                <TabsContent value="detail" className="flex-1 m-0 overflow-hidden">
+                  <ScrollArea className="h-[calc(85vh-180px)]">
+                    <div className="px-6 py-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请人</Label><div className="text-sm">{selectedPurchaseRequest.requested_by}</div></div>
+                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请部门</Label><div className="text-sm">{selectedPurchaseRequest.department || "-"}</div></div>
+                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">采购方式</Label><div className="text-sm">{selectedPurchaseRequest.procurement_method || "-"}</div></div>
+                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">资金来源</Label><div className="text-sm">{selectedPurchaseRequest.funding_source ? getFundingSourceLabel(selectedPurchaseRequest.funding_source, selectedPurchaseRequest.funding_detail) : "-"}</div></div>
+                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">预算金额</Label><div className="text-sm">{selectedPurchaseRequest.budget_amount ? `¥${Number(selectedPurchaseRequest.budget_amount).toFixed(2)}` : "-"}</div></div>
+                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请日期</Label><div className="text-sm">{normalizeDate(selectedPurchaseRequest.purchase_date)}</div></div>
+                      </div>
+                      {selectedPurchaseRequest.purpose && <div className="space-y-1.5 pt-2"><Label className="text-xs text-muted-foreground font-normal">采购用途</Label><div className="text-sm">{selectedPurchaseRequest.purpose}</div></div>}
+                      <div className="space-y-2 pt-2">
+                        <Label className="text-xs text-muted-foreground font-normal">采购明细</Label>
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader><TableRow className="bg-muted/30"><TableHead>名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead><TableHead>单价</TableHead><TableHead>金额</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                              {purchaseDetailItems.length === 0 ? (
+                                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>
+                              ) : (
+                                purchaseDetailItems.map((item: any) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell>{item.office_supplies?.name || item.item_name || "-"}</TableCell>
+                                    <TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell>¥{Number(item.unit_price || 0).toFixed(2)}</TableCell>
+                                    <TableCell>¥{Number(item.amount || 0).toFixed(2)}</TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                              {purchaseDetailItems.length > 0 && (
+                                <TableRow className="bg-muted/30"><TableCell colSpan={4} className="text-right font-medium">合计</TableCell><TableCell className="font-bold text-primary">¥{Number(selectedPurchaseRequest.total_amount || 0).toFixed(2)}</TableCell></TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  {selectedPurchaseRequest.approved_at && (
-                    <div>
-                      <Label className="text-muted-foreground text-xs">审批时间</Label>
-                      <div className="font-medium">{format(parseTime(selectedPurchaseRequest.approved_at), "yyyy-MM-dd HH:mm")}</div>
-                    </div>
-                  )}
-                  {selectedPurchaseRequest.completed_at && (
-                    <div>
-                      <Label className="text-muted-foreground text-xs">入库时间</Label>
-                      <div className="font-medium">{format(parseTime(selectedPurchaseRequest.completed_at), "yyyy-MM-dd HH:mm")}</div>
-                    </div>
-                  )}
-                </div>
-                {selectedPurchaseRequest.status === "pending" && (
-                  <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="outline" size="sm" onClick={() => { handleRejectPurchase(selectedPurchaseRequest.id); setPurchaseDetailOpen(false); }}>
-                      <X className="w-4 h-4 mr-1" /> 拒绝
-                    </Button>
-                    <Button size="sm" onClick={() => { handleApprovePurchase(selectedPurchaseRequest.id); setPurchaseDetailOpen(false); }}>
-                      <Check className="w-4 h-4 mr-1" /> 批准
-                    </Button>
-                  </div>
-                )}
-                {selectedPurchaseRequest.status === "approved" && (
-                  <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button size="sm" onClick={() => { handleCompletePurchase(selectedPurchaseRequest); setPurchaseDetailOpen(false); }}>
-                      <CheckCircle className="w-4 h-4 mr-1" /> 确认入库
-                    </Button>
-                  </div>
-                )}
-              </div>
+                  </ScrollArea>
+                </TabsContent>
+                <TabsContent value="approval" className="flex-1 m-0 overflow-hidden">
+                  <ScrollArea className="h-[calc(85vh-180px)]">
+                    <div className="px-6 py-4"><ApprovalTimeline businessId={selectedPurchaseRequest.id} businessType="purchase_request" /></div>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
             )}
           </DialogContent>
         </Dialog>
