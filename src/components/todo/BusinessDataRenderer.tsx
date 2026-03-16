@@ -15,7 +15,7 @@ interface BusinessDataRendererProps {
  * 业务数据渲染组件 - 根据业务类型渲染对应的表单数据
  * 确保提交表单和审批详情展示一致
  */
-const BusinessDataRenderer = ({ businessType, businessData, formData }: BusinessDataRendererProps) => {
+const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorName }: BusinessDataRendererProps) => {
   // 合并业务数据和表单数据（表单数据优先）
   const data = { ...businessData, ...formData };
 
