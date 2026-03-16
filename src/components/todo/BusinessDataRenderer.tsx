@@ -8,6 +8,7 @@ interface BusinessDataRendererProps {
   businessType: string;
   businessData: Record<string, any>;
   formData?: Record<string, any> | null;
+  initiatorName?: string | null;
 }
 
 /**
