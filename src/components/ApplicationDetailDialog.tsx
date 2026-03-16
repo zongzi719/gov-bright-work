@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, GitBranch } from "lucide-react";
 import ApprovalTimeline from "@/components/admin/ApprovalTimeline";
 import { cn } from "@/lib/utils";
+import { allStatusConfig } from "@/lib/statusLabels";
 
 interface DetailField {
   label: string;
@@ -30,13 +31,7 @@ interface ApplicationDetailDialogProps {
   showApproval?: boolean;
 }
 
-const defaultStatusConfig: Record<string, StatusConfig> = {
-  pending: { label: "待审批", className: "bg-amber-50 text-amber-700 border-amber-200" },
-  approved: { label: "已通过", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  rejected: { label: "已拒绝", className: "bg-red-50 text-red-700 border-red-200" },
-  completed: { label: "已完成", className: "bg-slate-50 text-slate-600 border-slate-200" },
-  cancelled: { label: "已取消", className: "bg-slate-50 text-slate-400 border-slate-200" },
-};
+const defaultStatusConfig: Record<string, StatusConfig> = allStatusConfig;
 
 const ApplicationDetailDialog = ({
   open,

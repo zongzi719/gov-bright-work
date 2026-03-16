@@ -65,12 +65,7 @@ interface FormItem {
   remarks: string;
 }
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
-  pending: { label: "待审批", variant: "secondary", className: "bg-amber-50 text-amber-700 border-amber-200" },
-  approved: { label: "已通过", variant: "default", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  rejected: { label: "已拒绝", variant: "destructive", className: "bg-red-50 text-red-700 border-red-200" },
-  completed: { label: "已完成", variant: "outline", className: "bg-slate-50 text-slate-600 border-slate-200" },
-};
+import { allStatusConfig as statusConfig } from "@/lib/statusLabels";
 
 const procurementMethods = [
   { value: "政采云平台采购", label: "政采云平台采购" },
@@ -344,7 +339,7 @@ const Purchase = () => {
         onItemClick={handleItemClick}
         searchPlaceholder="搜索申请人、部门或用途..."
         emptyText="暂无采购记录"
-        statusConfig={statusConfig}
+        
       />
 
       {/* 新增对话框 */}
