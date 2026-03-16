@@ -239,15 +239,15 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {renderField("申请人", contactName)}
           {renderField("所属部门", contactDept)}
-          {renderField("开始时间", formatDateTime(data.start_time))}
-          {renderField("结束时间", formatDateTime(data.end_time))}
+          {renderField("开始时间", businessType === "business_trip" ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time))}
+          {renderField("结束时间", businessType === "business_trip" ? formatDateAmPm(data.end_time) : formatDateTime(data.end_time))}
           
           {/* 请假类型 - 仅请假显示 */}
           {data.leave_type && renderField("请假类型", getLeaveTypeLabel(data.leave_type))}
           
           {/* 出差相关字段 */}
           {data.destination && renderField("出差目的地", data.destination)}
-          {data.transport_type && renderField("交通方式", data.transport_type)}
+          {data.transport_type && renderField("交通方式", getTransportTypeLabel(data.transport_type))}
           {data.duration_days != null && !data.leave_type && renderField("出差天数", `${data.duration_days} 天`)}
           {data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
           
