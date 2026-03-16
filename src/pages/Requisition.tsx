@@ -35,6 +35,10 @@ interface RequisitionItem {
   id: string;
   supply_id: string;
   quantity: number;
+  supply_name?: string;
+  item_name?: string;
+  specification?: string | null;
+  unit?: string;
   office_supplies: {
     name: string;
     specification: string | null;
@@ -441,9 +445,9 @@ const Requisition = () => {
                             ) : (
                               selectedItems.map((item) => (
                                 <TableRow key={item.id}>
-                                  <TableCell>{item.office_supplies?.name || "-"}</TableCell>
-                                  <TableCell>{item.office_supplies?.specification || "-"}</TableCell>
-                                  <TableCell>{item.quantity} {item.office_supplies?.unit || ""}</TableCell>
+                                  <TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell>
+                                  <TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell>
+                                  <TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell>
                                 </TableRow>
                               ))
                             )}

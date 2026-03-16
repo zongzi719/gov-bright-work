@@ -116,6 +116,10 @@ interface RequisitionItem {
   id: string;
   supply_id: string;
   quantity: number;
+  supply_name?: string;
+  item_name?: string;
+  specification?: string | null;
+  unit?: string;
   office_supplies: { name: string; specification: string | null; unit: string } | null;
 }
 
@@ -294,7 +298,7 @@ const RequisitionContent = () => {
                         <Table>
                           <TableHeader><TableRow className="bg-muted/30"><TableHead>物品名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead></TableRow></TableHeader>
                           <TableBody>
-                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.office_supplies?.name || "-"}</TableCell><TableCell>{item.office_supplies?.specification || "-"}</TableCell><TableCell>{item.quantity} {item.office_supplies?.unit || ""}</TableCell></TableRow>)))}
+                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell><TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell><TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell></TableRow>)))}
                           </TableBody>
                         </Table>
                       </div>
