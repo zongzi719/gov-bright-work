@@ -90,6 +90,15 @@ interface PurchaseRequest {
   reason: string | null;
   status: PurchaseStatus;
   requested_by: string;
+  department: string | null;
+  purchase_date: string;
+  procurement_method: string | null;
+  funding_source: string | null;
+  funding_detail: string | null;
+  budget_amount: number | null;
+  total_amount: number | null;
+  purpose: string | null;
+  expected_completion_date: string | null;
   approved_at: string | null;
   completed_at: string | null;
   created_at: string;
@@ -101,6 +110,7 @@ interface SupplyRequisition {
   supply_id: string;
   quantity: number;
   requisition_by: string;
+  requisition_date: string;
   status: RequisitionStatus;
   approved_at: string | null;
   created_at: string;
