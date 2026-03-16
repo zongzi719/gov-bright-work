@@ -490,9 +490,13 @@ app.get('/api/notices', async (req, res) => {
 
 app.get('/api/notice-images', async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT id, image_url, title FROM notice_images WHERE is_active = 1 ORDER BY sort_order'
-    );
+    const { all } = req.query;
+    let sql = 'SELECT * FROM notice_images';
+    if (all !== 'true') {
+      sql = 'SELECT id, image_url, title FROM notice_images WHERE is_active = 1';
+    }
+    sql += ' ORDER BY sort_order';
+    const [rows] = await pool.execute(sql);
     res.json(rows);
   } catch (error) {
     console.error('Get notice images error:', error);
@@ -1411,6 +1415,25 @@ app.post('/api/supply-requisitions', async (req, res) => {
   }
 });
 
+// 更新领用申请状态
+app.put('/api/supply-requisitions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, approved_at } = req.body;
+    const setClauses = [];
+    const params = [];
+    if (status) { setClauses.push('status = ?'); params.push(status); }
+    if (approved_at) { setClauses.push('approved_at = ?'); params.push(formatDateForMySQL(approved_at)); }
+    setClauses.push('updated_at = NOW()');
+    params.push(id);
+    await pool.execute(`UPDATE supply_requisitions SET ${setClauses.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update supply requisition error:', error);
+    res.status(500).json({ error: '更新领用申请失败' });
+  }
+});
+
 // 领用明细
 app.get('/api/supply-requisition-items', async (req, res) => {
   try {
@@ -1461,13 +1484,17 @@ app.post('/api/supply-requisition-items', async (req, res) => {
 
 app.get('/api/supply-purchases', async (req, res) => {
   try {
-    const { applicant_id, status } = req.query;
+    const { applicant_id, applicant_name, status } = req.query;
     let sql = 'SELECT * FROM supply_purchases WHERE 1=1';
     const params = [];
     
     if (applicant_id) {
       sql += ' AND applicant_id = ?';
       params.push(applicant_id);
+    }
+    if (applicant_name) {
+      sql += ' AND applicant_name = ?';
+      params.push(applicant_name);
     }
     if (status) {
       sql += ' AND status = ?';
@@ -1678,7 +1705,27 @@ app.post('/api/purchase-requests', async (req, res) => {
   }
 });
 
-app.get('/api/purchase-request-items', async (req, res) => {
+// 更新采购申请状态
+app.put('/api/purchase-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, approved_at, completed_at } = req.body;
+    const setClauses = [];
+    const params = [];
+    if (status) { setClauses.push('status = ?'); params.push(status); }
+    if (approved_at) { setClauses.push('approved_at = ?'); params.push(formatDateForMySQL(approved_at)); }
+    if (completed_at) { setClauses.push('completed_at = ?'); params.push(formatDateForMySQL(completed_at)); }
+    setClauses.push('updated_at = NOW()');
+    params.push(id);
+    await pool.execute(`UPDATE purchase_requests SET ${setClauses.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update purchase request error:', error);
+    res.status(500).json({ error: '更新采购申请失败' });
+  }
+});
+
+
   try {
     const { request_id } = req.query;
     let sql = `SELECT pri.*, os.name as supply_name
