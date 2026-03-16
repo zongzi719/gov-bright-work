@@ -1725,7 +1725,7 @@ app.put('/api/purchase-requests/:id', async (req, res) => {
   }
 });
 
-
+app.get('/api/purchase-request-items', async (req, res) => {
   try {
     const { request_id } = req.query;
     let sql = `SELECT pri.*, os.name as supply_name
