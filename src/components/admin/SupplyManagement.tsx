@@ -1152,7 +1152,7 @@ const SupplyManagement = () => {
         <Dialog open={officePurchaseDetailOpen} onOpenChange={setOfficePurchaseDetailOpen}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between pr-6">
+              <DialogTitle className="flex items-center justify-between pr-8">
                 <span>办公采购详情</span>
                 {selectedOfficePurchase && (
                   <Badge className={officePurchaseStatusColors[selectedOfficePurchase.status] || "bg-gray-100 text-gray-800"}>
@@ -1233,7 +1233,7 @@ const SupplyManagement = () => {
         <Dialog open={purchaseDetailOpen} onOpenChange={setPurchaseDetailOpen}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between pr-6">
+              <DialogTitle className="flex items-center justify-between pr-8">
                 <span>采购详情</span>
                 {selectedPurchaseRequest && (
                   <Badge className={purchaseStatusColors[selectedPurchaseRequest.status]}>
@@ -1314,7 +1314,7 @@ const SupplyManagement = () => {
         <Dialog open={requisitionDetailOpen} onOpenChange={setRequisitionDetailOpen}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between pr-6">
+              <DialogTitle className="flex items-center justify-between pr-8">
                 <span>领用详情</span>
                 {selectedRequisition && (
                   <Badge className={requisitionStatusColors[selectedRequisition.status]}>
