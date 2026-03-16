@@ -1231,19 +1231,19 @@ const SupplyManagement = () => {
 
         {/* 采购需求详情对话框 */}
         <Dialog open={purchaseDetailOpen} onOpenChange={setPurchaseDetailOpen}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader className="border-b pb-4">
-              <DialogTitle className="flex items-center justify-between pr-8">
-                <span>采购详情</span>
+          <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+            <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
+              <div className="flex items-center justify-between pr-8">
+                <DialogTitle className="text-lg font-semibold">采购详情</DialogTitle>
                 {selectedPurchaseRequest && (
                   <Badge className={purchaseStatusColors[selectedPurchaseRequest.status]}>
                     {purchaseStatusLabels[selectedPurchaseRequest.status]}
                   </Badge>
                 )}
-              </DialogTitle>
+              </div>
             </DialogHeader>
             {selectedPurchaseRequest && (
-              <div className="space-y-4">
+              <div className="px-6 py-4 space-y-4 overflow-y-auto max-h-[calc(85vh-80px)]">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground text-xs">申请人</Label>
