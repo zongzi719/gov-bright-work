@@ -1233,7 +1233,7 @@ const SupplyManagement = () => {
         <Dialog open={purchaseDetailOpen} onOpenChange={setPurchaseDetailOpen}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
+              <DialogTitle className="flex items-center justify-between pr-6">
                 <span>采购详情</span>
                 {selectedPurchaseRequest && (
                   <Badge className={purchaseStatusColors[selectedPurchaseRequest.status]}>
