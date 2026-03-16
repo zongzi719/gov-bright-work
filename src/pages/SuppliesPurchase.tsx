@@ -296,7 +296,7 @@ const SuppliesPurchase = () => {
         onItemClick={handleItemClick}
         searchPlaceholder="搜索科室或日期..."
         emptyText="暂无采购记录"
-        statusConfig={statusConfig}
+        
       />
 
       {/* 新增对话框 */}

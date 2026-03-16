@@ -339,7 +339,7 @@ const Purchase = () => {
         onItemClick={handleItemClick}
         searchPlaceholder="搜索申请人、部门或用途..."
         emptyText="暂无采购记录"
-        statusConfig={statusConfig}
+        
       />
 
       {/* 新增对话框 */}

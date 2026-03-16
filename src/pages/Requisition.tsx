@@ -260,7 +260,7 @@ const Requisition = () => {
         onItemClick={handleItemClick}
         searchPlaceholder="搜索申请人或日期..."
         emptyText="暂无领用记录"
-        statusConfig={statusConfig}
+        
       />
 
       {/* 新增对话框 */}
