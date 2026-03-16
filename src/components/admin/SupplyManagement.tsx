@@ -1311,10 +1311,10 @@ const SupplyManagement = () => {
 
         {/* 领用详情对话框 */}
         <Dialog open={requisitionDetailOpen} onOpenChange={setRequisitionDetailOpen}>
-          <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden">
-            <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
-                <span className="text-lg font-semibold">领用详情</span>
+                <span>领用详情</span>
                 {selectedRequisition && (
                   <Badge className={requisitionStatusColors[selectedRequisition.status]}>
                     {requisitionStatusLabels[selectedRequisition.status]}
@@ -1323,49 +1323,46 @@ const SupplyManagement = () => {
               </DialogTitle>
             </DialogHeader>
             {selectedRequisition && (
-              <Tabs defaultValue="detail" className="flex-1 flex flex-col min-h-0">
-                <TabsList className="mx-6 mt-4 mb-2 grid w-fit grid-cols-2 bg-muted/50">
-                  <TabsTrigger value="detail" className="gap-2 px-4"><FileText className="w-4 h-4" />申请详情</TabsTrigger>
-                  <TabsTrigger value="approval" className="gap-2 px-4"><GitBranch className="w-4 h-4" />审批流程</TabsTrigger>
-                </TabsList>
-                <TabsContent value="detail" className="flex-1 m-0 overflow-hidden">
-                  <ScrollArea className="h-[calc(85vh-180px)]">
-                    <div className="px-6 py-4 space-y-4">
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请人</Label><div className="text-sm">{selectedRequisition.requisition_by}</div></div>
-                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">领用日期</Label><div className="text-sm">{normalizeDate(selectedRequisition.requisition_date) || "-"}</div></div>
-                        <div className="space-y-1.5"><Label className="text-xs text-muted-foreground font-normal">申请时间</Label><div className="text-sm">{format(parseTime(selectedRequisition.created_at), "yyyy-MM-dd HH:mm")}</div></div>
-                      </div>
-                      <div className="space-y-2 pt-2">
-                        <Label className="text-xs text-muted-foreground font-normal">物品明细</Label>
-                        <div className="border rounded-lg overflow-hidden">
-                          <Table>
-                            <TableHeader><TableRow className="bg-muted/30"><TableHead>物品名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                              {requisitionDetailItems.length === 0 ? (
-                                <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>
-                              ) : (
-                                requisitionDetailItems.map((item: any) => (
-                                  <TableRow key={item.id}>
-                                    <TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell>
-                                    <TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell>
-                                    <TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell>
-                                  </TableRow>
-                                ))
-                              )}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-                <TabsContent value="approval" className="flex-1 m-0 overflow-hidden">
-                  <ScrollArea className="h-[calc(85vh-180px)]">
-                    <div className="px-6 py-4"><ApprovalTimeline businessId={selectedRequisition.id} businessType="supply_requisition" /></div>
-                  </ScrollArea>
-                </TabsContent>
-              </Tabs>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">申请人</Label>
+                    <div className="font-medium">{selectedRequisition.requisition_by}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">领用日期</Label>
+                    <div className="font-medium">{normalizeDate(selectedRequisition.requisition_date) || "-"}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">申请时间</Label>
+                    <div className="font-medium">{format(parseTime(selectedRequisition.created_at), "yyyy-MM-dd HH:mm")}</div>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs mb-2 block">物品明细</Label>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader><TableRow className="bg-muted/30"><TableHead>物品名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {requisitionDetailItems.length === 0 ? (
+                          <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>
+                        ) : (
+                          requisitionDetailItems.map((item: any) => (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell>
+                              <TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell>
+                              <TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                <Separator />
+                <ApprovalTimeline businessId={selectedRequisition.id} businessType="supply_requisition" />
+              </div>
             )}
           </DialogContent>
         </Dialog>
