@@ -847,10 +847,9 @@ const SupplyManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>办公用品</TableHead>
-                    <TableHead>采购数量</TableHead>
                     <TableHead>申请人</TableHead>
-                    <TableHead>采购原因</TableHead>
+                    <TableHead>申请部门</TableHead>
+                    <TableHead>预算金额</TableHead>
                     <TableHead>申请时间</TableHead>
                     <TableHead>状态</TableHead>
                     <TableHead className="text-right">操作</TableHead>
@@ -859,23 +858,16 @@ const SupplyManagement = () => {
                 <TableBody>
                   {filteredPurchaseRequests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         暂无采购申请
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredPurchaseRequests.map((request) => (
                       <TableRow key={request.id}>
-                        <TableCell className="font-medium">
-                          {getSupplyName(request)}
-                        </TableCell>
-                        <TableCell>
-                          {request.quantity} {getSupplyUnit(request)}
-                        </TableCell>
-                        <TableCell>{request.requested_by}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">
-                          {request.reason || "-"}
-                        </TableCell>
+                        <TableCell className="font-medium">{request.requested_by}</TableCell>
+                        <TableCell>{request.department || "-"}</TableCell>
+                        <TableCell>¥{Number(request.budget_amount || 0).toFixed(2)}</TableCell>
                         <TableCell>
                           {format(parseTime(request.created_at), "MM-dd HH:mm")}
                         </TableCell>
@@ -889,10 +881,7 @@ const SupplyManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="text-primary"
-                            onClick={() => {
-                              setSelectedPurchaseRequest(request);
-                              setPurchaseDetailOpen(true);
-                            }}
+                            onClick={() => handleViewPurchaseDetail(request)}
                           >
                             查看详情
                           </Button>
