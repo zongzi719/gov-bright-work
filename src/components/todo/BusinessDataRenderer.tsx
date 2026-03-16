@@ -205,7 +205,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {renderField("申请人", data.requisition_by)}
+          {renderField("申请人", data.requisition_by || initiatorName)}
           {renderField("申请日期", formatDate(data.requisition_date))}
         </div>
 
