@@ -339,16 +339,46 @@ export async function createSupplyRequisitionItems(items: Array<{
 // ==================== Supply Purchases ====================
 
 export async function getSupplyPurchases(params: { applicant_name: string }) {
-  if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-purchases?applicant_name=${encodeURIComponent(params.applicant_name)}`);
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any[]>(`/api/supply-purchases?applicant_name=${encodeURIComponent(params.applicant_name)}`)
+    : await supabase
+        .from("supply_purchases")
+        .select("*")
+        .eq("applicant_name", params.applicant_name)
+        .order("created_at", { ascending: false });
+
+  if (sourceResult.error || !sourceResult.data?.length) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_purchases")
-    .select("*")
-    .eq("applicant_name", params.applicant_name)
-    .order("created_at", { ascending: false });
-  return { data, error };
+
+  const businessIds = sourceResult.data.map((item) => item.id).filter(Boolean);
+  if (businessIds.length === 0) {
+    return sourceResult;
+  }
+
+  const approvalInstancesResult = isOfflineMode()
+    ? await offlineRequest<any[]>(`/api/admin/approval-instances?business_type=supply_purchase&business_ids=${businessIds.join(',')}`)
+    : await supabase
+        .from("approval_instances")
+        .select("business_id, status")
+        .eq("business_type", "supply_purchase")
+        .in("business_id", businessIds);
+
+  const instanceStatusMap = new Map<string, string>();
+  approvalInstancesResult.data?.forEach((instance) => {
+    if (instance?.business_id && instance?.status) {
+      instanceStatusMap.set(instance.business_id, instance.status);
+    }
+  });
+
+  return {
+    data: sourceResult.data.map((item) => ({
+      ...item,
+      status: instanceStatusMap.get(item.id) || item.status,
+      _original_status: item.status,
+    })),
+    error: sourceResult.error,
+  };
 }
 
 export async function getAllSupplyPurchases() {
@@ -2448,16 +2478,28 @@ export async function updateSupplyPurchase(id: string, updates: {
 }
 
 export async function getSupplyPurchaseById(id: string) {
-  if (isOfflineMode()) {
-    return offlineRequest<any>(`/api/supply-purchases/${id}`);
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any>(`/api/supply-purchases/${id}`)
+    : await supabase
+        .from("supply_purchases")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+  if (sourceResult.error || !sourceResult.data) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_purchases")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  return { data, error };
+
+  const approvalResult = await getApprovalInstanceByBusinessId(id, "supply_purchase");
+
+  return {
+    data: {
+      ...sourceResult.data,
+      status: approvalResult.data?.status || sourceResult.data.status,
+      _original_status: sourceResult.data.status,
+    },
+    error: sourceResult.error,
+  };
 }
 
 // ==================== Purchase Request By ID ====================
