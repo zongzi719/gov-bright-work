@@ -1540,10 +1540,18 @@ app.post('/api/supply-purchase-items', async (req, res) => {
 // 按ID获取单个办公用品采购
 app.get('/api/supply-purchases/:id', async (req, res) => {
   try {
-    const [rows] = await pool.execute('SELECT * FROM supply_purchases WHERE id = ?', [req.params.id]);
+    const [rows] = await pool.execute(
+      `SELECT sp.*, c.name as applicant_name_resolved
+       FROM supply_purchases sp
+       LEFT JOIN contacts c ON sp.applicant_id = c.id
+       WHERE sp.id = ?`, [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: '未找到该采购记录' });
     const row = rows[0];
     row.purchase_date = safeDateStr(row.purchase_date);
+    // 用联表名称补充applicant_name
+    if (row.applicant_name_resolved && !row.applicant_name) {
+      row.applicant_name = row.applicant_name_resolved;
+    }
     res.json(row);
   } catch (error) {
     console.error('Get supply purchase by id error:', error);
