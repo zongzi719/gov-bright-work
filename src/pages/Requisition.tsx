@@ -35,6 +35,10 @@ interface RequisitionItem {
   id: string;
   supply_id: string;
   quantity: number;
+  supply_name?: string;
+  item_name?: string;
+  specification?: string | null;
+  unit?: string;
   office_supplies: {
     name: string;
     specification: string | null;
