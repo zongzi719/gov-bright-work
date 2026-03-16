@@ -426,7 +426,7 @@ const SchedulePanel = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>日期 <span className="text-destructive">*</span></Label>
+                <Label>日期 <span className="text-destructive" style={{ color: 'hsl(0, 84%, 60%)' }}>*</span></Label>
                 <Input
                   type="date"
                   value={formData.schedule_date}
