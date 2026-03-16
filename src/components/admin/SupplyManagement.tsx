@@ -60,6 +60,8 @@ import {
   X,
   CheckCircle,
   AlertTriangle,
+  FileText,
+  GitBranch,
 } from "lucide-react";
 import { format } from "date-fns";
 import { parseTime } from "@/lib/utils";
