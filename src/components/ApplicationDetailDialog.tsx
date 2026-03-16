@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, GitBranch } from "lucide-react";
 import ApprovalTimeline from "@/components/admin/ApprovalTimeline";
 import { cn } from "@/lib/utils";
+import { allStatusConfig } from "@/lib/statusLabels";
 
 interface DetailField {
   label: string;
