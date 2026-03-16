@@ -1353,6 +1353,28 @@ app.get('/api/supply-requisitions', async (req, res) => {
   }
 });
 
+// 按ID获取单个领用申请
+app.get('/api/supply-requisitions/:id', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT sr.*, c.name as requisition_by_name
+       FROM supply_requisitions sr
+       LEFT JOIN contacts c ON sr.requisition_by = c.id
+       WHERE sr.id = ?`, [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: '未找到该领用申请' });
+    const row = rows[0];
+    row.requisition_date = safeDateStr(row.requisition_date);
+    // 用联表名称替换UUID
+    if (row.requisition_by_name) {
+      row.requisition_by = row.requisition_by_name;
+    }
+    res.json(row);
+  } catch (error) {
+    console.error('Get supply requisition by id error:', error);
+    res.status(500).json({ error: '获取领用申请详情失败' });
+  }
+});
+
 app.post('/api/supply-requisitions', async (req, res) => {
   try {
     const id = uuidv4();
