@@ -1411,6 +1411,25 @@ app.post('/api/supply-requisitions', async (req, res) => {
   }
 });
 
+// 更新领用申请状态
+app.put('/api/supply-requisitions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, approved_at } = req.body;
+    const setClauses = [];
+    const params = [];
+    if (status) { setClauses.push('status = ?'); params.push(status); }
+    if (approved_at) { setClauses.push('approved_at = ?'); params.push(formatDateForMySQL(approved_at)); }
+    setClauses.push('updated_at = NOW()');
+    params.push(id);
+    await pool.execute(`UPDATE supply_requisitions SET ${setClauses.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update supply requisition error:', error);
+    res.status(500).json({ error: '更新领用申请失败' });
+  }
+});
+
 // 领用明细
 app.get('/api/supply-requisition-items', async (req, res) => {
   try {
