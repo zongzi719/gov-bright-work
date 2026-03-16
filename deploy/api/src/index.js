@@ -1697,7 +1697,27 @@ app.post('/api/purchase-requests', async (req, res) => {
   }
 });
 
-app.get('/api/purchase-request-items', async (req, res) => {
+// 更新采购申请状态
+app.put('/api/purchase-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, approved_at, completed_at } = req.body;
+    const setClauses = [];
+    const params = [];
+    if (status) { setClauses.push('status = ?'); params.push(status); }
+    if (approved_at) { setClauses.push('approved_at = ?'); params.push(formatDateForMySQL(approved_at)); }
+    if (completed_at) { setClauses.push('completed_at = ?'); params.push(formatDateForMySQL(completed_at)); }
+    setClauses.push('updated_at = NOW()');
+    params.push(id);
+    await pool.execute(`UPDATE purchase_requests SET ${setClauses.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update purchase request error:', error);
+    res.status(500).json({ error: '更新采购申请失败' });
+  }
+});
+
+
   try {
     const { request_id } = req.query;
     let sql = `SELECT pri.*, os.name as supply_name
