@@ -222,17 +222,58 @@ export async function deleteSchedule(id: string) {
 
 // ==================== Supply Requisitions ====================
 
-export async function getSupplyRequisitions(params: { requisition_by: string }) {
-  if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/supply-requisitions?requisition_by=${encodeURIComponent(params.requisition_by)}`);
+async function mergeApprovalStatuses<T extends { id: string; status: string }>(
+  items: T[],
+  businessType: string,
+) {
+  if (!items.length) {
+    return items;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_requisitions")
-    .select("id, requisition_by, requisition_date, status, created_at")
-    .eq("requisition_by", params.requisition_by)
-    .order("created_at", { ascending: false });
-  return { data, error };
+
+  const businessIds = items.map((item) => item.id).filter(Boolean);
+  if (businessIds.length === 0) {
+    return items;
+  }
+
+  const approvalInstancesResult = isOfflineMode()
+    ? await offlineRequest<any[]>(`/api/admin/approval-instances?business_type=${businessType}&business_ids=${businessIds.join(',')}`)
+    : await supabase
+        .from("approval_instances")
+        .select("business_id, status")
+        .eq("business_type", businessType)
+        .in("business_id", businessIds);
+
+  const instanceStatusMap = new Map<string, string>();
+  approvalInstancesResult.data?.forEach((instance) => {
+    if (instance?.business_id && instance?.status) {
+      instanceStatusMap.set(instance.business_id, instance.status);
+    }
+  });
+
+  return items.map((item) => ({
+    ...item,
+    status: instanceStatusMap.get(item.id) || item.status,
+    _original_status: item.status,
+  }));
+}
+
+export async function getSupplyRequisitions(params: { requisition_by: string }) {
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any[]>(`/api/supply-requisitions?requisition_by=${encodeURIComponent(params.requisition_by)}`)
+    : await supabase
+        .from("supply_requisitions")
+        .select("id, requisition_by, requisition_date, status, created_at")
+        .eq("requisition_by", params.requisition_by)
+        .order("created_at", { ascending: false });
+
+  if (sourceResult.error || !sourceResult.data?.length) {
+    return sourceResult;
+  }
+
+  return {
+    data: await mergeApprovalStatuses(sourceResult.data, "supply_requisition"),
+    error: sourceResult.error,
+  };
 }
 
 export async function getAllSupplyRequisitions() {
