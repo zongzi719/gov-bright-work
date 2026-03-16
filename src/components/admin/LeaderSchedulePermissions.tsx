@@ -291,7 +291,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>用户 *</Label>
+                  <Label>用户 <span className="text-destructive">*</span></Label>
                   {editMode ? (
                     <div className="p-2 bg-muted rounded-md text-sm font-medium">{selectedContactName}</div>
                   ) : (

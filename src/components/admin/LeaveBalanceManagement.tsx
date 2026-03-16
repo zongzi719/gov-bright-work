@@ -378,7 +378,7 @@ const LeaveBalanceManagement = () => {
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>人员 *</Label>
+                    <Label>人员 <span className="text-destructive">*</span></Label>
                     <Select
                       value={formData.contact_id}
                       onValueChange={handleContactSelect}
@@ -399,7 +399,7 @@ const LeaveBalanceManagement = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>年份 *</Label>
+                    <Label>年份 <span className="text-destructive">*</span></Label>
                     <Select
                       value={formData.year.toString()}
                       onValueChange={(value) =>

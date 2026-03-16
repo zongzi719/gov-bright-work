@@ -215,7 +215,7 @@ const ScheduleManagement = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>人员 *</Label>
+                <Label>人员 <span className="text-destructive">*</span></Label>
                 <Select
                   value={formData.contact_id}
                   onValueChange={(v) => setFormData({ ...formData, contact_id: v })}
@@ -234,7 +234,7 @@ const ScheduleManagement = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>日程标题 *</Label>
+                <Label>日程标题 <span className="text-destructive">*</span></Label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -243,7 +243,7 @@ const ScheduleManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>日期 *</Label>
+                  <Label>日期 <span className="text-destructive">*</span></Label>
                   <Input
                     type="date"
                     value={formData.schedule_date}
