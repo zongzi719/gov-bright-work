@@ -266,7 +266,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
 
           {/* 出差目的地 */}
           <div className="space-y-2">
-            <Label>出差目的地 *</Label>
+            <Label>出差目的地 <span className="text-destructive">*</span></Label>
             <Input
               value={form.destination}
               onChange={(e) => setForm({ ...form, destination: e.target.value })}
@@ -276,7 +276,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
 
           {/* 出差事由 */}
           <div className="space-y-2">
-            <Label>出差事由 *</Label>
+            <Label>出差事由 <span className="text-destructive">*</span></Label>
             <Textarea
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
@@ -287,7 +287,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
 
           {/* 开始时间选择 */}
           <div className="space-y-2">
-            <Label>开始时间 *</Label>
+            <Label>开始时间 <span className="text-destructive">*</span></Label>
             <div className="flex gap-2">
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
@@ -356,7 +356,7 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
 
           {/* 结束时间选择 */}
           <div className="space-y-2">
-            <Label>结束时间 *</Label>
+            <Label>结束时间 <span className="text-destructive">*</span></Label>
             <div className="flex gap-2">
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>

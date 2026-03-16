@@ -342,12 +342,12 @@ const ScheduleList = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>日程标题 *</Label>
+              <Label>日程标题 <span className="text-destructive">*</span></Label>
               <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="输入日程标题" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>日期 *</Label>
+                <Label>日期 <span className="text-destructive">*</span></Label>
                 <Input type="date" value={formData.schedule_date} onChange={(e) => setFormData({ ...formData, schedule_date: e.target.value })} />
               </div>
               <div className="space-y-2">
