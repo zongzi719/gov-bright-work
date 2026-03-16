@@ -417,7 +417,7 @@ const SchedulePanel = () => {
               <Input value={currentUser?.name || ""} disabled className="bg-muted" />
             </div>
             <div className="space-y-2">
-              <Label>日程标题 <span className="text-destructive">*</span></Label>
+              <Label>日程标题 <span className="text-destructive" style={{ color: 'hsl(0, 84%, 60%)' }}>*</span></Label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
