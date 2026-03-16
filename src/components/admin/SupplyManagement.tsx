@@ -321,6 +321,31 @@ const SupplyManagement = () => {
     void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '办公用品采购', target_id: purchase.id, target_name: `${purchase.department} - ${purchase.applicant_name}` });
   };
 
+  // 查看采购需求详情
+  const handleViewPurchaseDetail = async (request: PurchaseRequest) => {
+    setSelectedPurchaseRequest(request);
+    const { data } = await dataAdapter.getPurchaseRequestItems(request.id);
+    setPurchaseDetailItems(data || []);
+    setPurchaseDetailOpen(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '采购需求', target_id: request.id, target_name: request.purpose || request.requested_by });
+  };
+
+  // 查看领用详情
+  const handleViewRequisitionDetail = async (requisition: SupplyRequisition) => {
+    setSelectedRequisition(requisition);
+    const { data } = await dataAdapter.getSupplyRequisitionItems(requisition.id);
+    setRequisitionDetailItems(data || []);
+    setRequisitionDetailOpen(true);
+    void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.SUPPLY, target_type: '领用申请', target_id: requisition.id, target_name: requisition.requisition_by });
+  };
+
+  const getFundingSourceLabel = (source: string, detail: string | null) => {
+    const labels: Record<string, string> = { '财政拨款': '财政拨款', '专项经费': '专项经费', '其他': '其他' };
+    const placeholders: Record<string, string> = { '财政拨款': '项目名称', '专项经费': '经费编号', '其他': '请说明' };
+    const label = labels[source] || source;
+    return detail ? `${label}（${placeholders[source] || ''}：${detail}）` : label;
+  };
+
   // =============== 库存管理 ===============
   const handleAddSupply = () => {
     setEditingSupply(null);
