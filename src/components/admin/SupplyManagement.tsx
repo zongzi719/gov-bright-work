@@ -1150,16 +1150,16 @@ const SupplyManagement = () => {
 
         {/* 办公采购详情对话框 */}
         <Dialog open={officePurchaseDetailOpen} onOpenChange={setOfficePurchaseDetailOpen}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader className="border-b pb-4">
-              <DialogTitle className="flex items-center justify-between pr-8">
-                <span>办公采购详情</span>
+          <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden">
+            <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-background to-muted/30">
+              <div className="flex items-center justify-between pr-8">
+                <DialogTitle className="text-lg font-semibold">办公采购详情</DialogTitle>
                 {selectedOfficePurchase && (
                   <Badge className={officePurchaseStatusColors[selectedOfficePurchase.status] || "bg-gray-100 text-gray-800"}>
                     {officePurchaseStatusLabels[selectedOfficePurchase.status] || selectedOfficePurchase.status}
                   </Badge>
                 )}
-              </DialogTitle>
+              </div>
             </DialogHeader>
             {selectedOfficePurchase && (
               <div className="space-y-4">
