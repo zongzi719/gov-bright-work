@@ -493,7 +493,7 @@ const RoleUserManagement = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">分配角色 *</Label>
+                  <Label htmlFor="role">分配角色 <span className="text-destructive">*</span></Label>
                   <Select value={selectedRole} onValueChange={setSelectedRole}>
                     <SelectTrigger>
                       <SelectValue placeholder="选择角色" />
