@@ -195,6 +195,8 @@ const SupplyManagement = () => {
     reason: "",
     requested_by: "",
   });
+  const [selectedPurchaseRequest, setSelectedPurchaseRequest] = useState<PurchaseRequest | null>(null);
+  const [purchaseDetailOpen, setPurchaseDetailOpen] = useState(false);
 
   // 领用管理
   const [requisitions, setRequisitions] = useState<SupplyRequisition[]>([]);
@@ -206,6 +208,8 @@ const SupplyManagement = () => {
     quantity: 1,
     requisition_by: "",
   });
+  const [selectedRequisition, setSelectedRequisition] = useState<SupplyRequisition | null>(null);
+  const [requisitionDetailOpen, setRequisitionDetailOpen] = useState(false);
 
   // 办公采购管理
   const [officePurchases, setOfficePurchases] = useState<SupplyPurchase[]>([]);
@@ -214,6 +218,22 @@ const SupplyManagement = () => {
   const [selectedOfficePurchase, setSelectedOfficePurchase] = useState<SupplyPurchase | null>(null);
   const [officePurchaseItems, setOfficePurchaseItems] = useState<SupplyPurchaseItem[]>([]);
   const [officePurchaseDetailOpen, setOfficePurchaseDetailOpen] = useState(false);
+
+  // 根据 supply_id 查找用品名称的辅助函数
+  const getSupplyName = (item: any) => {
+    if (item.office_supplies?.name) return item.office_supplies.name;
+    if (item.supply_name) return item.supply_name;
+    if (item.item_name) return item.item_name;
+    // fallback: 从本地 supplies 列表查找
+    const found = supplies.find(s => s.id === item.supply_id);
+    return found?.name || "-";
+  };
+  const getSupplyUnit = (item: any) => {
+    if (item.office_supplies?.unit) return item.office_supplies.unit;
+    if (item.unit) return item.unit;
+    const found = supplies.find(s => s.id === item.supply_id);
+    return found?.unit || "";
+  };
 
   useEffect(() => {
     fetchSupplies();
@@ -806,10 +826,10 @@ const SupplyManagement = () => {
                     filteredPurchaseRequests.map((request) => (
                       <TableRow key={request.id}>
                         <TableCell className="font-medium">
-                          {request.office_supplies?.name || "-"}
+                          {getSupplyName(request)}
                         </TableCell>
                         <TableCell>
-                          {request.quantity} {request.office_supplies?.unit || ""}
+                          {request.quantity} {getSupplyUnit(request)}
                         </TableCell>
                         <TableCell>{request.requested_by}</TableCell>
                         <TableCell className="max-w-[200px] truncate">
@@ -828,7 +848,10 @@ const SupplyManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="text-primary"
-                            onClick={() => {/* TODO: 查看详情 */}}
+                            onClick={() => {
+                              setSelectedPurchaseRequest(request);
+                              setPurchaseDetailOpen(true);
+                            }}
                           >
                             查看详情
                           </Button>
@@ -974,11 +997,11 @@ const SupplyManagement = () => {
                     filteredRequisitions.map((requisition) => (
                       <TableRow key={requisition.id}>
                         <TableCell className="font-medium">
-                          {requisition.office_supplies?.name || "-"}
+                          {getSupplyName(requisition)}
                         </TableCell>
                         <TableCell>
                           {requisition.quantity}{" "}
-                          {requisition.office_supplies?.unit || ""}
+                          {getSupplyUnit(requisition)}
                         </TableCell>
                         <TableCell>{requisition.requisition_by}</TableCell>
                         <TableCell>
@@ -996,7 +1019,10 @@ const SupplyManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="text-primary"
-                            onClick={() => {/* TODO: 查看详情 */}}
+                            onClick={() => {
+                              setSelectedRequisition(requisition);
+                              setRequisitionDetailOpen(true);
+                            }}
                           >
                             查看详情
                           </Button>
@@ -1176,6 +1202,140 @@ const SupplyManagement = () => {
                     </Table>
                   </div>
                 </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* 采购需求详情对话框 */}
+        <Dialog open={purchaseDetailOpen} onOpenChange={setPurchaseDetailOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>采购需求详情</span>
+                {selectedPurchaseRequest && (
+                  <Badge className={purchaseStatusColors[selectedPurchaseRequest.status]}>
+                    {purchaseStatusLabels[selectedPurchaseRequest.status]}
+                  </Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedPurchaseRequest && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">办公用品</Label>
+                    <div className="font-medium">{getSupplyName(selectedPurchaseRequest)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">采购数量</Label>
+                    <div className="font-medium">{selectedPurchaseRequest.quantity} {getSupplyUnit(selectedPurchaseRequest)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">申请人</Label>
+                    <div className="font-medium">{selectedPurchaseRequest.requested_by}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">申请时间</Label>
+                    <div className="font-medium">{format(parseTime(selectedPurchaseRequest.created_at), "yyyy-MM-dd HH:mm")}</div>
+                  </div>
+                  {selectedPurchaseRequest.reason && (
+                    <div className="col-span-2">
+                      <Label className="text-muted-foreground text-xs">采购原因</Label>
+                      <div className="font-medium">{selectedPurchaseRequest.reason}</div>
+                    </div>
+                  )}
+                  {selectedPurchaseRequest.approved_at && (
+                    <div>
+                      <Label className="text-muted-foreground text-xs">审批时间</Label>
+                      <div className="font-medium">{format(parseTime(selectedPurchaseRequest.approved_at), "yyyy-MM-dd HH:mm")}</div>
+                    </div>
+                  )}
+                  {selectedPurchaseRequest.completed_at && (
+                    <div>
+                      <Label className="text-muted-foreground text-xs">入库时间</Label>
+                      <div className="font-medium">{format(parseTime(selectedPurchaseRequest.completed_at), "yyyy-MM-dd HH:mm")}</div>
+                    </div>
+                  )}
+                </div>
+                {selectedPurchaseRequest.status === "pending" && (
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="outline" size="sm" onClick={() => { handleRejectPurchase(selectedPurchaseRequest.id); setPurchaseDetailOpen(false); }}>
+                      <X className="w-4 h-4 mr-1" /> 拒绝
+                    </Button>
+                    <Button size="sm" onClick={() => { handleApprovePurchase(selectedPurchaseRequest.id); setPurchaseDetailOpen(false); }}>
+                      <Check className="w-4 h-4 mr-1" /> 批准
+                    </Button>
+                  </div>
+                )}
+                {selectedPurchaseRequest.status === "approved" && (
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button size="sm" onClick={() => { handleCompletePurchase(selectedPurchaseRequest); setPurchaseDetailOpen(false); }}>
+                      <CheckCircle className="w-4 h-4 mr-1" /> 确认入库
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* 领用详情对话框 */}
+        <Dialog open={requisitionDetailOpen} onOpenChange={setRequisitionDetailOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>领用详情</span>
+                {selectedRequisition && (
+                  <Badge className={requisitionStatusColors[selectedRequisition.status]}>
+                    {requisitionStatusLabels[selectedRequisition.status]}
+                  </Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedRequisition && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">办公用品</Label>
+                    <div className="font-medium">{getSupplyName(selectedRequisition)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">领用数量</Label>
+                    <div className="font-medium">{selectedRequisition.quantity} {getSupplyUnit(selectedRequisition)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">领用人</Label>
+                    <div className="font-medium">{selectedRequisition.requisition_by}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">申请时间</Label>
+                    <div className="font-medium">{format(parseTime(selectedRequisition.created_at), "yyyy-MM-dd HH:mm")}</div>
+                  </div>
+                  {selectedRequisition.approved_at && (
+                    <div>
+                      <Label className="text-muted-foreground text-xs">审批时间</Label>
+                      <div className="font-medium">{format(parseTime(selectedRequisition.approved_at), "yyyy-MM-dd HH:mm")}</div>
+                    </div>
+                  )}
+                </div>
+                {selectedRequisition.status === "pending" && (
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="outline" size="sm" onClick={() => { handleRejectRequisition(selectedRequisition.id); setRequisitionDetailOpen(false); }}>
+                      <X className="w-4 h-4 mr-1" /> 拒绝
+                    </Button>
+                    <Button size="sm" onClick={() => { handleApproveRequisition(selectedRequisition.id); setRequisitionDetailOpen(false); }}>
+                      <Check className="w-4 h-4 mr-1" /> 批准
+                    </Button>
+                  </div>
+                )}
+                {selectedRequisition.status === "approved" && (
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button size="sm" onClick={() => { handleCompleteRequisition(selectedRequisition); setRequisitionDetailOpen(false); }}>
+                      <CheckCircle className="w-4 h-4 mr-1" /> 确认领取
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
