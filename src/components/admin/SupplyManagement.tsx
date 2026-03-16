@@ -1151,7 +1151,7 @@ const SupplyManagement = () => {
         {/* 办公采购详情对话框 */}
         <Dialog open={officePurchaseDetailOpen} onOpenChange={setOfficePurchaseDetailOpen}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
+            <DialogHeader className="border-b pb-4">
               <DialogTitle className="flex items-center justify-between pr-8">
                 <span>办公采购详情</span>
                 {selectedOfficePurchase && (
