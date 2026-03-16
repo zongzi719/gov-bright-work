@@ -1480,13 +1480,17 @@ app.post('/api/supply-requisition-items', async (req, res) => {
 
 app.get('/api/supply-purchases', async (req, res) => {
   try {
-    const { applicant_id, status } = req.query;
+    const { applicant_id, applicant_name, status } = req.query;
     let sql = 'SELECT * FROM supply_purchases WHERE 1=1';
     const params = [];
     
     if (applicant_id) {
       sql += ' AND applicant_id = ?';
       params.push(applicant_id);
+    }
+    if (applicant_name) {
+      sql += ' AND applicant_name = ?';
+      params.push(applicant_name);
     }
     if (status) {
       sql += ' AND status = ?';
