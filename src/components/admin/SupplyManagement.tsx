@@ -1008,9 +1008,8 @@ const SupplyManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>办公用品</TableHead>
-                    <TableHead>领用数量</TableHead>
                     <TableHead>领用人</TableHead>
+                    <TableHead>领用日期</TableHead>
                     <TableHead>申请时间</TableHead>
                     <TableHead>状态</TableHead>
                     <TableHead className="text-right">操作</TableHead>
@@ -1019,28 +1018,20 @@ const SupplyManagement = () => {
                 <TableBody>
                   {filteredRequisitions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         暂无领用记录
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredRequisitions.map((requisition) => (
                       <TableRow key={requisition.id}>
-                        <TableCell className="font-medium">
-                          {getSupplyName(requisition)}
-                        </TableCell>
-                        <TableCell>
-                          {requisition.quantity}{" "}
-                          {getSupplyUnit(requisition)}
-                        </TableCell>
-                        <TableCell>{requisition.requisition_by}</TableCell>
+                        <TableCell className="font-medium">{requisition.requisition_by}</TableCell>
+                        <TableCell>{normalizeDate(requisition.requisition_date) || "-"}</TableCell>
                         <TableCell>
                           {format(parseTime(requisition.created_at), "MM-dd HH:mm")}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className={requisitionStatusColors[requisition.status]}
-                          >
+                          <Badge className={requisitionStatusColors[requisition.status]}>
                             {requisitionStatusLabels[requisition.status]}
                           </Badge>
                         </TableCell>
@@ -1049,10 +1040,7 @@ const SupplyManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="text-primary"
-                            onClick={() => {
-                              setSelectedRequisition(requisition);
-                              setRequisitionDetailOpen(true);
-                            }}
+                            onClick={() => handleViewRequisitionDetail(requisition)}
                           >
                             查看详情
                           </Button>
