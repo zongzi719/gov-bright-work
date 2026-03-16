@@ -66,6 +66,7 @@ import {
 import { format } from "date-fns";
 import { parseTime, normalizeDate } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import ApprovalTimeline from "@/components/admin/ApprovalTimeline";
 import StockMovementHistory from "./StockMovementHistory";
 
