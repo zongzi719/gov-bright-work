@@ -2478,16 +2478,28 @@ export async function updateSupplyPurchase(id: string, updates: {
 }
 
 export async function getSupplyPurchaseById(id: string) {
-  if (isOfflineMode()) {
-    return offlineRequest<any>(`/api/supply-purchases/${id}`);
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any>(`/api/supply-purchases/${id}`)
+    : await supabase
+        .from("supply_purchases")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+  if (sourceResult.error || !sourceResult.data) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_purchases")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  return { data, error };
+
+  const approvalResult = await getApprovalInstanceByBusinessId(id, "supply_purchase");
+
+  return {
+    data: {
+      ...sourceResult.data,
+      status: approvalResult.data?.status || sourceResult.data.status,
+      _original_status: sourceResult.data.status,
+    },
+    error: sourceResult.error,
+  };
 }
 
 // ==================== Purchase Request By ID ====================
