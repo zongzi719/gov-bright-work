@@ -341,4 +341,16 @@ const getOutTypeLabel = (type: string | null | undefined) => {
   return labels[type] || type;
 };
 
+// 辅助函数 - 交通方式标签
+const getTransportTypeLabel = (type: string | null | undefined) => {
+  if (!type) return "-";
+  const labels: Record<string, string> = {
+    plane: "飞机",
+    train: "火车/高铁",
+    car: "汽车/自驾",
+    other: "其他",
+  };
+  return labels[type] || type;
+};
+
 export default BusinessDataRenderer;
