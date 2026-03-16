@@ -1313,7 +1313,7 @@ const SupplyManagement = () => {
         {/* 领用详情对话框 */}
         <Dialog open={requisitionDetailOpen} onOpenChange={setRequisitionDetailOpen}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
+            <DialogHeader className="border-b pb-4">
               <DialogTitle className="flex items-center justify-between pr-8">
                 <span>领用详情</span>
                 {selectedRequisition && (
