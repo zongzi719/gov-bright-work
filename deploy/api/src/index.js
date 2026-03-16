@@ -3354,16 +3354,33 @@ app.post('/api/stock-movements', async (req, res) => {
   }
 });
 
-// ==================== 办公用品库存更新 ====================
+// ==================== 办公用品更新 ====================
 
 app.put('/api/office-supplies/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { current_stock } = req.body;
+    const { name, specification, unit, current_stock, min_stock, is_active } = req.body;
+    
+    const fields = [];
+    const params = [];
+    
+    if (name !== undefined) { fields.push('name = ?'); params.push(name); }
+    if (specification !== undefined) { fields.push('specification = ?'); params.push(specification || null); }
+    if (unit !== undefined) { fields.push('unit = ?'); params.push(unit || '个'); }
+    if (current_stock !== undefined) { fields.push('current_stock = ?'); params.push(current_stock); }
+    if (min_stock !== undefined) { fields.push('min_stock = ?'); params.push(min_stock); }
+    if (is_active !== undefined) { fields.push('is_active = ?'); params.push(is_active ? 1 : 0); }
+    
+    if (fields.length === 0) {
+      return res.status(400).json({ error: '没有需要更新的字段' });
+    }
+    
+    fields.push('updated_at = NOW()');
+    params.push(id);
     
     await pool.execute(
-      'UPDATE office_supplies SET current_stock = ?, updated_at = NOW() WHERE id = ?',
-      [current_stock, id]
+      `UPDATE office_supplies SET ${fields.join(', ')} WHERE id = ?`,
+      params
     );
     
     res.json({ success: true });
