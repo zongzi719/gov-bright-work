@@ -1241,6 +1241,23 @@ app.get('/api/office-supplies', async (req, res) => {
   }
 });
 
+// 添加办公用品
+app.post('/api/office-supplies', async (req, res) => {
+  try {
+    const { name, specification, unit, current_stock, min_stock } = req.body;
+    const id = uuidv4();
+    await pool.execute(
+      `INSERT INTO office_supplies (id, name, specification, unit, current_stock, min_stock, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+      [id, name, specification || null, unit || '个', current_stock || 0, min_stock || 0]
+    );
+    res.json({ id });
+  } catch (error) {
+    console.error('Create office supply error:', error);
+    res.status(500).json({ error: '添加办公用品失败' });
+  }
+});
+
 // 获取单个办公用品
 app.get('/api/office-supplies/:id', async (req, res) => {
   try {
