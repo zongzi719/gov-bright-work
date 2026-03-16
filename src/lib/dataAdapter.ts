@@ -392,32 +392,8 @@ export async function getSupplyPurchases(params: { applicant_name: string }) {
     return sourceResult;
   }
 
-  const businessIds = sourceResult.data.map((item) => item.id).filter(Boolean);
-  if (businessIds.length === 0) {
-    return sourceResult;
-  }
-
-  const approvalInstancesResult = isOfflineMode()
-    ? await offlineRequest<any[]>(`/api/admin/approval-instances?business_type=supply_purchase&business_ids=${businessIds.join(',')}`)
-    : await supabase
-        .from("approval_instances")
-        .select("business_id, status")
-        .eq("business_type", "supply_purchase")
-        .in("business_id", businessIds);
-
-  const instanceStatusMap = new Map<string, string>();
-  approvalInstancesResult.data?.forEach((instance) => {
-    if (instance?.business_id && instance?.status) {
-      instanceStatusMap.set(instance.business_id, instance.status);
-    }
-  });
-
   return {
-    data: sourceResult.data.map((item) => ({
-      ...item,
-      status: instanceStatusMap.get(item.id) || item.status,
-      _original_status: item.status,
-    })),
+    data: await mergeApprovalStatuses(sourceResult.data, "supply_purchase"),
     error: sourceResult.error,
   };
 }
