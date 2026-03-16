@@ -71,7 +71,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {renderField("申请人", data.requested_by)}
+          {renderField("申请人", data.requested_by || initiatorName)}
           {renderField("申请部门", data.department)}
           {renderField("申请日期", formatDate(data.purchase_date))}
           {renderField("预计完成时间", formatDate(data.expected_completion_date))}
