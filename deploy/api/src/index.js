@@ -490,9 +490,13 @@ app.get('/api/notices', async (req, res) => {
 
 app.get('/api/notice-images', async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT id, image_url, title FROM notice_images WHERE is_active = 1 ORDER BY sort_order'
-    );
+    const { all } = req.query;
+    let sql = 'SELECT * FROM notice_images';
+    if (all !== 'true') {
+      sql = 'SELECT id, image_url, title FROM notice_images WHERE is_active = 1';
+    }
+    sql += ' ORDER BY sort_order';
+    const [rows] = await pool.execute(sql);
     res.json(rows);
   } catch (error) {
     console.error('Get notice images error:', error);
