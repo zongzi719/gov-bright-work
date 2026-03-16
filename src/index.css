@@ -133,6 +133,25 @@
 }
 
 @layer components {
+  /* 前台表单输入框样式增强 */
+  input:not([type="checkbox"]):not([type="radio"]):not([disabled]),
+  textarea:not([disabled]),
+  [role="combobox"]:not([disabled]) {
+    border-color: hsl(var(--border)) !important;
+    border-width: 1px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([disabled]):focus,
+  textarea:not([disabled]):focus {
+    border-color: hsl(var(--ring)) !important;
+  }
+
+  /* placeholder 颜色更淡 */
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(0 0% 70%) !important;
+    opacity: 1;
+  }
+
   /* 政务卡片样式 */
   .gov-card {
     @apply bg-card rounded-md shadow-[var(--shadow-card)] transition-all duration-300;
