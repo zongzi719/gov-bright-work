@@ -211,6 +211,7 @@ const SupplyManagement = () => {
   });
   const [selectedPurchaseRequest, setSelectedPurchaseRequest] = useState<PurchaseRequest | null>(null);
   const [purchaseDetailOpen, setPurchaseDetailOpen] = useState(false);
+  const [purchaseDetailItems, setPurchaseDetailItems] = useState<any[]>([]);
 
   // 领用管理
   const [requisitions, setRequisitions] = useState<SupplyRequisition[]>([]);
@@ -224,6 +225,7 @@ const SupplyManagement = () => {
   });
   const [selectedRequisition, setSelectedRequisition] = useState<SupplyRequisition | null>(null);
   const [requisitionDetailOpen, setRequisitionDetailOpen] = useState(false);
+  const [requisitionDetailItems, setRequisitionDetailItems] = useState<any[]>([]);
 
   // 办公采购管理
   const [officePurchases, setOfficePurchases] = useState<SupplyPurchase[]>([]);
