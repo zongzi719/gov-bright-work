@@ -112,8 +112,8 @@ const BusinessTrip = () => {
   const detailFields = selectedRecord ? [
     { label: "目的地", value: selectedRecord.destination },
     { label: "出差天数", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
-    { label: "开始时间", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
-    { label: "结束时间", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd HH:mm", { locale: zhCN }) : null },
+    { label: "开始时间", value: (() => { const d = parseTime(selectedRecord.start_time); return `${format(d, "yyyy-MM-dd", { locale: zhCN })} ${d.getHours() < 12 ? "上午" : "下午"}`; })() },
+    { label: "结束时间", value: selectedRecord.end_time ? (() => { const d = parseTime(selectedRecord.end_time); return `${format(d, "yyyy-MM-dd", { locale: zhCN })} ${d.getHours() < 12 ? "上午" : "下午"}`; })() : null },
     { label: "交通方式", value: selectedRecord.transport_type ? transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type : null },
     { label: "预计费用", value: selectedRecord.estimated_cost ? `¥${selectedRecord.estimated_cost}` : null },
     { label: "出差事由", value: selectedRecord.reason, fullWidth: true },
