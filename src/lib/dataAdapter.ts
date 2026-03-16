@@ -469,16 +469,22 @@ export async function createSupplyPurchaseItems(items: Array<{
 // ==================== Purchase Requests (采购申请) ====================
 
 export async function getPurchaseRequests(params: { requested_by: string }) {
-  if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/purchase-requests?requested_by=${encodeURIComponent(params.requested_by)}`);
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any[]>(`/api/purchase-requests?requested_by=${encodeURIComponent(params.requested_by)}`)
+    : await supabase
+        .from("purchase_requests")
+        .select("*, purchase_request_items(*)")
+        .eq("requested_by", params.requested_by)
+        .order("created_at", { ascending: false });
+
+  if (sourceResult.error || !sourceResult.data?.length) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("purchase_requests")
-    .select("*, purchase_request_items(*)")
-    .eq("requested_by", params.requested_by)
-    .order("created_at", { ascending: false });
-  return { data, error };
+
+  return {
+    data: await mergeApprovalStatuses(sourceResult.data, "purchase_request"),
+    error: sourceResult.error,
+  };
 }
 
 export async function getAllPurchaseRequests() {
