@@ -654,7 +654,8 @@ const SupplyManagement = () => {
   const filteredPurchaseRequests = purchaseRequests.filter((r) => {
     const matchSearch =
       r.requested_by.includes(purchaseSearch) ||
-      (r.office_supplies && r.office_supplies.name.includes(purchaseSearch));
+      (r.department && r.department.includes(purchaseSearch)) ||
+      (r.purpose && r.purpose.includes(purchaseSearch));
     const matchStatus =
       purchaseStatusFilter === "all" || r.status === purchaseStatusFilter;
     return matchSearch && matchStatus;
@@ -662,8 +663,7 @@ const SupplyManagement = () => {
 
   const filteredRequisitions = requisitions.filter((r) => {
     const matchSearch =
-      r.requisition_by.includes(requisitionSearch) ||
-      (r.office_supplies && r.office_supplies.name.includes(requisitionSearch));
+      r.requisition_by.includes(requisitionSearch);
     const matchStatus =
       requisitionStatusFilter === "all" || r.status === requisitionStatusFilter;
     return matchSearch && matchStatus;
