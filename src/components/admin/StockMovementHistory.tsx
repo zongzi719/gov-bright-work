@@ -80,8 +80,23 @@ const StockMovementHistory = () => {
     try {
       if (isOfflineMode()) {
         const response = await fetch(`${getApiBaseUrl()}/api/stock-movements`);
-        const data = await response.json();
-        setMovements(data || []);
+        const rawData = await response.json();
+        // 归一化: 离线后端返回扁平字段，构造嵌套 office_supplies 对象
+        const normalized = (rawData || []).map((item: any) => {
+          if (item.office_supplies?.name) return item;
+          if (item.supply_name || item.item_name) {
+            return {
+              ...item,
+              office_supplies: {
+                name: item.supply_name || item.item_name || '',
+                specification: item.specification || null,
+                unit: item.unit || '',
+              },
+            };
+          }
+          return item;
+        });
+        setMovements(normalized);
         setLoading(false);
         return;
       }
