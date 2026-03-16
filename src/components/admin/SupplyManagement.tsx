@@ -997,11 +997,11 @@ const SupplyManagement = () => {
                     filteredRequisitions.map((requisition) => (
                       <TableRow key={requisition.id}>
                         <TableCell className="font-medium">
-                          {requisition.office_supplies?.name || "-"}
+                          {getSupplyName(requisition)}
                         </TableCell>
                         <TableCell>
                           {requisition.quantity}{" "}
-                          {requisition.office_supplies?.unit || ""}
+                          {getSupplyUnit(requisition)}
                         </TableCell>
                         <TableCell>{requisition.requisition_by}</TableCell>
                         <TableCell>
@@ -1019,7 +1019,10 @@ const SupplyManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="text-primary"
-                            onClick={() => {/* TODO: 查看详情 */}}
+                            onClick={() => {
+                              setSelectedRequisition(requisition);
+                              setRequisitionDetailOpen(true);
+                            }}
                           >
                             查看详情
                           </Button>
