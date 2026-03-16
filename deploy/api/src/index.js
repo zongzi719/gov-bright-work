@@ -1515,6 +1515,19 @@ app.post('/api/supply-purchase-items', async (req, res) => {
     res.status(500).json({ error: '创建采购明细失败' });
   }
 });
+// 按ID获取单个办公用品采购
+app.get('/api/supply-purchases/:id', async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM supply_purchases WHERE id = ?', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: '未找到该采购记录' });
+    const row = rows[0];
+    row.purchase_date = safeDateStr(row.purchase_date);
+    res.json(row);
+  } catch (error) {
+    console.error('Get supply purchase by id error:', error);
+    res.status(500).json({ error: '获取采购详情失败' });
+  }
+});
 
 // ==================== 采购申请 ====================
 
@@ -1549,6 +1562,29 @@ app.get('/api/purchase-requests', async (req, res) => {
   } catch (error) {
     console.error('Get purchase requests error:', error);
     res.status(500).json({ error: '获取采购申请失败' });
+  }
+});
+
+// 按ID获取单个采购申请
+app.get('/api/purchase-requests/:id', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT pr.*, c.name as requested_by_name
+       FROM purchase_requests pr
+       LEFT JOIN contacts c ON pr.requested_by = c.id
+       WHERE pr.id = ?`, [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: '未找到该采购申请' });
+    const row = rows[0];
+    row.purchase_date = safeDateStr(row.purchase_date);
+    row.expected_completion_date = safeDateStr(row.expected_completion_date);
+    // 如果requested_by是UUID，用联表查到的名称替换
+    if (row.requested_by_name) {
+      row.requested_by = row.requested_by_name;
+    }
+    res.json(row);
+  } catch (error) {
+    console.error('Get purchase request by id error:', error);
+    res.status(500).json({ error: '获取采购申请详情失败' });
   }
 });
 

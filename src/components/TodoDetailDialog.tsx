@@ -1445,6 +1445,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   businessType={todoItem.business_type}
                   businessData={businessData}
                   formData={instance?.form_data}
+                  initiatorName={instance?.initiator?.name}
                 />
               )}
               {/* 如果有表单字段配置，作为补充渲染（用于审批设计器配置的额外字段） */}

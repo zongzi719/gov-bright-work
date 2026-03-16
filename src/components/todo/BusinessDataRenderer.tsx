@@ -8,13 +8,14 @@ interface BusinessDataRendererProps {
   businessType: string;
   businessData: Record<string, any>;
   formData?: Record<string, any> | null;
+  initiatorName?: string | null;
 }
 
 /**
  * 业务数据渲染组件 - 根据业务类型渲染对应的表单数据
  * 确保提交表单和审批详情展示一致
  */
-const BusinessDataRenderer = ({ businessType, businessData, formData }: BusinessDataRendererProps) => {
+const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorName }: BusinessDataRendererProps) => {
   // 合并业务数据和表单数据（表单数据优先）
   const data = { ...businessData, ...formData };
 
@@ -70,7 +71,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {renderField("申请人", data.requested_by)}
+          {renderField("申请人", data.requested_by || initiatorName)}
           {renderField("申请部门", data.department)}
           {renderField("申请日期", formatDate(data.purchase_date))}
           {renderField("预计完成时间", formatDate(data.expected_completion_date))}
@@ -148,7 +149,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {renderField("申请科室", data.department)}
           {renderField("申请日期", formatDate(data.purchase_date))}
-          {renderField("经办人", data.applicant_name)}
+          {renderField("经办人", data.applicant_name || initiatorName)}
           {renderField("合计金额", formatMoney(data.total_amount))}
         </div>
 
