@@ -2540,16 +2540,28 @@ export async function getSupplyPurchaseById(id: string) {
 // ==================== Purchase Request By ID ====================
 
 export async function getPurchaseRequestById(id: string) {
-  if (isOfflineMode()) {
-    return offlineRequest<any>(`/api/purchase-requests/${id}`);
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any>(`/api/purchase-requests/${id}`)
+    : await supabase
+        .from("purchase_requests")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+  if (sourceResult.error || !sourceResult.data) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("purchase_requests")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  return { data, error };
+
+  const approvalResult = await getApprovalInstanceByBusinessId(id, "purchase_request");
+
+  return {
+    data: {
+      ...sourceResult.data,
+      status: approvalResult.data?.status || sourceResult.data.status,
+      _original_status: sourceResult.data.status,
+    },
+    error: sourceResult.error,
+  };
 }
 
 // ==================== Approval Progression 专用函数 ====================
