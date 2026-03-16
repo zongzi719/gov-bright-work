@@ -2429,7 +2429,36 @@ export async function getSupplyRequisitionById(id: string) {
 
 // ==================== Supply Purchase By ID ====================
 
+export async function updateSupplyPurchase(id: string, updates: {
+  status?: string;
+  approved_at?: string;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/supply-purchases/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("supply_purchases")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
 export async function getSupplyPurchaseById(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any>(`/api/supply-purchases/${id}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("supply_purchases")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return { data, error };
+}
   if (isOfflineMode()) {
     return offlineRequest<any>(`/api/supply-purchases/${id}`);
   }

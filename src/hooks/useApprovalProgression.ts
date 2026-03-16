@@ -244,6 +244,36 @@ const updateBusinessAndContactStatus = async (
           console.log(`Updated contact ${record.contact_id} status to ${contactStatus}`);
         }
       }
+    } else if (businessType === "supply_purchase") {
+      const { error } = await dataAdapter.updateSupplyPurchase(businessId, {
+        status: newStatus,
+        approved_at: formatLocalNow(),
+      });
+      if (error) {
+        console.error("Failed to update supply_purchase status:", error);
+      } else {
+        console.log(`Updated supply_purchase ${businessId} status to ${newStatus}`);
+      }
+    } else if (businessType === "purchase_request") {
+      const { error } = await dataAdapter.updatePurchaseRequest(businessId, {
+        status: newStatus,
+        approved_at: formatLocalNow(),
+      });
+      if (error) {
+        console.error("Failed to update purchase_request status:", error);
+      } else {
+        console.log(`Updated purchase_request ${businessId} status to ${newStatus}`);
+      }
+    } else if (businessType === "supply_requisition") {
+      const { error } = await dataAdapter.updateSupplyRequisition(businessId, {
+        status: newStatus,
+        approved_at: formatLocalNow(),
+      });
+      if (error) {
+        console.error("Failed to update supply_requisition status:", error);
+      } else {
+        console.log(`Updated supply_requisition ${businessId} status to ${newStatus}`);
+      }
     }
   } catch (error) {
     console.error("Failed to update business/contact status:", error);
