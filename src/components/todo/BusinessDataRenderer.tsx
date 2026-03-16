@@ -29,7 +29,17 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
     }
   };
 
-  // 格式化日期
+  // 格式化日期 + 上午/下午（出差专用）
+  const formatDateAmPm = (value: string | null | undefined) => {
+    if (!value) return "-";
+    try {
+      const d = parseTime(value);
+      return `${format(d, "yyyy-MM-dd")} ${d.getHours() < 12 ? "上午" : "下午"}`;
+    } catch {
+      return value;
+    }
+  };
+
   const formatDate = (value: string | null | undefined) => {
     if (!value) return "-";
     try {
@@ -239,15 +249,15 @@ const BusinessDataRenderer = ({ businessType, businessData, formData }: Business
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {renderField("申请人", contactName)}
           {renderField("所属部门", contactDept)}
-          {renderField("开始时间", formatDateTime(data.start_time))}
-          {renderField("结束时间", formatDateTime(data.end_time))}
+          {renderField("开始时间", businessType === "business_trip" ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time))}
+          {renderField("结束时间", businessType === "business_trip" ? formatDateAmPm(data.end_time) : formatDateTime(data.end_time))}
           
           {/* 请假类型 - 仅请假显示 */}
           {data.leave_type && renderField("请假类型", getLeaveTypeLabel(data.leave_type))}
           
           {/* 出差相关字段 */}
           {data.destination && renderField("出差目的地", data.destination)}
-          {data.transport_type && renderField("交通方式", data.transport_type)}
+          {data.transport_type && renderField("交通方式", getTransportTypeLabel(data.transport_type))}
           {data.duration_days != null && !data.leave_type && renderField("出差天数", `${data.duration_days} 天`)}
           {data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
           
@@ -326,6 +336,18 @@ const getOutTypeLabel = (type: string | null | undefined) => {
     meeting: "外出开会",
     client: "拜访客户",
     errand: "外出办事",
+    other: "其他",
+  };
+  return labels[type] || type;
+};
+
+// 辅助函数 - 交通方式标签
+const getTransportTypeLabel = (type: string | null | undefined) => {
+  if (!type) return "-";
+  const labels: Record<string, string> = {
+    plane: "飞机",
+    train: "火车/高铁",
+    car: "汽车/自驾",
     other: "其他",
   };
   return labels[type] || type;
