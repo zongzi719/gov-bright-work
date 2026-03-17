@@ -1199,6 +1199,7 @@ export async function updateApprovalTemplate(id: string, updates: {
   icon?: string;
   business_type?: string;
   is_active?: boolean;
+  show_in_nav?: boolean;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ success: boolean }>(`/api/approval-templates/${id}`, {
@@ -1212,6 +1213,22 @@ export async function updateApprovalTemplate(id: string, updates: {
     .update(updates as any)
     .eq("id", id);
   return { data: null, error };
+}
+
+export async function getApprovalTemplatesByBusinessTypes(businessTypes: string[]) {
+  if (isOfflineMode()) {
+    const params = new URLSearchParams();
+    businessTypes.forEach(t => params.append('business_type', t));
+    return offlineRequest<any[]>(`/api/approval-templates?${params.toString()}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_templates")
+    .select("*")
+    .in("business_type", businessTypes)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  return { data, error };
 }
 
 export async function seedApprovalTemplates() {

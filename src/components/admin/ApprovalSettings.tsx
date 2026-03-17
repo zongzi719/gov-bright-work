@@ -329,6 +329,7 @@ const ApprovalSettings = () => {
                   <TableHead>流程编码</TableHead>
                   <TableHead>业务类型</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead>首页导航</TableHead>
                   <TableHead>创建时间</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
