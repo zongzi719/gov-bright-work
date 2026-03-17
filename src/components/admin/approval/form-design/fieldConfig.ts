@@ -37,6 +37,7 @@ export const businessTypeTableMapping: Record<string, string> = {
   out: "absence_records",
   supply_requisition: "supply_requisitions",
   purchase_request: "purchase_requests",
+  supply_purchase: "supply_purchases",
 };
 
 /**
