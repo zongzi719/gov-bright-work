@@ -1199,6 +1199,7 @@ export async function updateApprovalTemplate(id: string, updates: {
   icon?: string;
   business_type?: string;
   is_active?: boolean;
+  show_in_nav?: boolean;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ success: boolean }>(`/api/approval-templates/${id}`, {
@@ -1212,6 +1213,22 @@ export async function updateApprovalTemplate(id: string, updates: {
     .update(updates as any)
     .eq("id", id);
   return { data: null, error };
+}
+
+export async function getApprovalTemplatesByBusinessTypes(businessTypes: string[]) {
+  if (isOfflineMode()) {
+    const params = new URLSearchParams();
+    businessTypes.forEach(t => params.append('business_type', t));
+    return offlineRequest<any[]>(`/api/approval-templates?${params.toString()}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_templates")
+    .select("*")
+    .in("business_type", businessTypes)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  return { data, error };
 }
 
 export async function seedApprovalTemplates() {
@@ -1242,17 +1259,21 @@ export async function getApprovalInstances(params: { business_id: string; busine
 }
 
 // 按模板ID和发起人获取审批实例列表（用于自定义审批表单的历史记录）
-export async function getApprovalInstancesByTemplate(templateId: string, initiatorId: string) {
+export async function getApprovalInstancesByTemplate(templateId: string, initiatorId?: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/approval-instances?template_id=${templateId}&initiator_id=${initiatorId}`);
+    const params = new URLSearchParams({ template_id: templateId });
+    if (initiatorId) params.set('initiator_id', initiatorId);
+    return offlineRequest<any[]>(`/api/approval-instances?${params.toString()}`);
   }
   
-  const { data, error } = await supabase
+  let query = supabase
     .from("approval_instances")
-    .select("*")
-    .eq("template_id", templateId)
-    .eq("initiator_id", initiatorId)
-    .order("created_at", { ascending: false });
+    .select("*, contacts:initiator_id(name, department)")
+    .eq("template_id", templateId);
+  if (initiatorId) {
+    query = query.eq("initiator_id", initiatorId);
+  }
+  const { data, error } = await query.order("created_at", { ascending: false });
   return { data, error };
 }
 

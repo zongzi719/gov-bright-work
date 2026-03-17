@@ -431,6 +431,7 @@ export type Database = {
           name: string
           notify_approver: boolean
           notify_initiator: boolean
+          show_in_nav: boolean
           updated_at: string
         }
         Insert: {
@@ -451,6 +452,7 @@ export type Database = {
           name: string
           notify_approver?: boolean
           notify_initiator?: boolean
+          show_in_nav?: boolean
           updated_at?: string
         }
         Update: {
@@ -471,6 +473,7 @@ export type Database = {
           name?: string
           notify_approver?: boolean
           notify_initiator?: boolean
+          show_in_nav?: boolean
           updated_at?: string
         }
         Relationships: [

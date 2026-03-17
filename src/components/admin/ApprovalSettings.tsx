@@ -32,6 +32,7 @@ interface ApprovalTemplate {
   business_type: string;
   category: string;
   is_active: boolean;
+  show_in_nav: boolean;
   created_at: string;
 }
 
@@ -144,6 +145,20 @@ const ApprovalSettings = () => {
     }
     toast.success(template.is_active ? "已停用" : "已启用");
     await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: template.name, detail: { is_active: !template.is_active } });
+    fetchTemplates();
+  };
+
+  const handleToggleShowInNav = async (template: ApprovalTemplate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { error } = await dataAdapter.updateApprovalTemplate(template.id, { 
+      show_in_nav: !template.show_in_nav 
+    });
+
+    if (error) {
+      toast.error("更新失败");
+      return;
+    }
+    toast.success(template.show_in_nav ? "已从首页导航移除" : "已添加到首页导航");
     fetchTemplates();
   };
 
@@ -260,7 +275,7 @@ const ApprovalSettings = () => {
               template={selectedTemplate} 
               isCreating={isCreating}
               onTemplateCreated={handleTemplateCreated}
-              onTemplateUpdated={(updated) => setSelectedTemplate(updated)}
+              onTemplateUpdated={(updated) => setSelectedTemplate({ ...selectedTemplate!, ...updated } as ApprovalTemplate)}
             />
           </TabsContent>
 
@@ -328,6 +343,7 @@ const ApprovalSettings = () => {
                   <TableHead>流程编码</TableHead>
                   <TableHead>业务类型</TableHead>
                   <TableHead>状态</TableHead>
+                  <TableHead>首页导航</TableHead>
                   <TableHead>创建时间</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
@@ -366,6 +382,13 @@ const ApprovalSettings = () => {
                         checked={template.is_active}
                         onCheckedChange={() => {}}
                         onClick={(e) => handleToggleActive(template, e)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={template.show_in_nav}
+                        onCheckedChange={() => {}}
+                        onClick={(e) => handleToggleShowInNav(template, e)}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
