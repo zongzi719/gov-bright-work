@@ -82,6 +82,7 @@ const applicantFieldMapping: Record<string, string> = {
   absence_records: "contact_id",
   supply_requisitions: "requisition_by",
   purchase_requests: "requested_by",
+  supply_purchases: "applicant_name",
 };
 
 /**
