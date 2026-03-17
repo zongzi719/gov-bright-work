@@ -173,13 +173,17 @@ const QuickLinks = () => {
           {allModules.map((module) => (
             <div key={module.id} className="w-1/4 px-1.5 md:px-2 mb-3 md:mb-4">
               <div className="app-icon cursor-pointer group h-full" onClick={() => navigate(module.path)}>
-                {'emoji' in module && module.emoji ? (
+                {'emoji' in module && (module as any).emoji ? (
                   <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-10 h-10 md:w-14 md:h-14 text-lg md:text-2xl`}>
-                    {module.emoji}
+                    {String((module as any).emoji)}
+                  </div>
+                ) : 'icon' in module && module.icon ? (
+                  <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-10 h-10 md:w-14 md:h-14`}>
+                    <module.icon className="w-5 h-5 md:w-7 md:h-7" />
                   </div>
                 ) : (
                   <div className={`app-icon-box ${module.color} group-hover:scale-105 transition-transform w-10 h-10 md:w-14 md:h-14`}>
-                    <module.icon className="w-5 h-5 md:w-7 md:h-7" />
+                    <FileText className="w-5 h-5 md:w-7 md:h-7" />
                   </div>
                 )}
                 <span className="text-xs md:text-base text-muted-foreground text-center leading-tight">{module.name}</span>
