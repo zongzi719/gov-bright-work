@@ -298,7 +298,7 @@ export const useApprovalWorkflow = () => {
     firstApproverIndex: number
   ): Promise<void> => {
     const flatNodes = flattenNodesForExecution(nodes, formData);
-    const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+    const todoBusinessType = resolveTodoBusinessType(businessType);
     
     // 处理第一个审批节点之前的所有CC节点
     for (let i = 0; i < firstApproverIndex; i++) {
