@@ -889,7 +889,7 @@ export const useApprovalProgression = () => {
         return { success: false, error: "找不到上一节点" };
       }
 
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
 
       await dataAdapter.updateApprovalInstance(instanceId, { 
         status: "pending",
