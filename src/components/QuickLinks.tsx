@@ -79,8 +79,8 @@ const QuickLinks = () => {
       if (error || !data) return;
 
       // Filter to only custom templates (not built-in types)
-      const custom = (data as CustomTemplate[]).filter(
-        t => t.is_active && !BUILTIN_BUSINESS_TYPES.includes(t.business_type)
+      const custom = (data as (CustomTemplate & { code: string })[]).filter(
+        t => t.is_active && !BUILTIN_TEMPLATE_CODES.includes(t.code)
       );
       setCustomTemplates(custom);
     } catch (e) {
