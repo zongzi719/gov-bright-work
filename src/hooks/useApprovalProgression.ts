@@ -805,7 +805,7 @@ export const useApprovalProgression = () => {
     comment: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
 
       const { data: currentInstance } = await dataAdapter.getApprovalInstanceById(instanceId);
 
