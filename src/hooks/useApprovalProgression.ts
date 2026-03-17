@@ -34,6 +34,23 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
   supply_requisition: "supply_requisition",
   purchase_request: "purchase_request",
   supply_purchase: "supply_purchase",
+  custom_approval: "custom_approval",
+};
+
+// 内置业务类型
+const BUILTIN_BUSINESS_TYPES = [
+  "business_trip", "leave", "out",
+  "supply_requisition", "purchase_request", "supply_purchase",
+  "absence", "external_approval",
+];
+
+// 解析业务类型到待办类型（自定义类型使用 custom_approval）
+const resolveTodoBusinessType = (businessType: string): TodoBusinessType => {
+  if (businessTypeToTodoType[businessType]) {
+    return businessTypeToTodoType[businessType];
+  }
+  // Non-built-in types are custom approvals
+  return "custom_approval";
 };
 
 // 业务类型到联系人状态的映射
