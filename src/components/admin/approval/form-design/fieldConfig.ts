@@ -194,6 +194,8 @@ const businessTypeFieldFilter: Record<string, string[]> = {
   supply_requisition: ["requisition_by", "supply_id", "quantity"],
   // 采购申请：申请人、采购物品、采购数量、采购原因
   purchase_request: ["requested_by", "supply_id", "quantity", "reason"],
+  // 办公采购：申请人、申请科室、申请日期、购置理由、合计金额
+  supply_purchase: ["applicant_name", "department", "purchase_date", "reason", "total_amount"],
 };
 
 /**
