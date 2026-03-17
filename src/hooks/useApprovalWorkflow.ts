@@ -48,6 +48,22 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
   supply_requisition: "supply_requisition",
   purchase_request: "purchase_request",
   supply_purchase: "supply_purchase",
+  custom_approval: "custom_approval",
+};
+
+// 内置业务类型
+const BUILTIN_BUSINESS_TYPES = [
+  "business_trip", "leave", "out",
+  "supply_requisition", "purchase_request", "supply_purchase",
+  "absence", "external_approval",
+];
+
+// 解析业务类型到待办类型（自定义类型使用 custom_approval）
+const resolveTodoBusinessType = (businessType: string): TodoBusinessType => {
+  if (businessTypeToTodoType[businessType]) {
+    return businessTypeToTodoType[businessType];
+  }
+  return "custom_approval";
 };
 
 /**
@@ -282,7 +298,7 @@ export const useApprovalWorkflow = () => {
     firstApproverIndex: number
   ): Promise<void> => {
     const flatNodes = flattenNodesForExecution(nodes, formData);
-    const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+    const todoBusinessType = resolveTodoBusinessType(businessType);
     
     // 处理第一个审批节点之前的所有CC节点
     for (let i = 0; i < firstApproverIndex; i++) {
@@ -393,7 +409,7 @@ export const useApprovalWorkflow = () => {
       // 6. 为第一个审批节点的所有审批人创建审批记录和待办
       // 使用动态解析审批人（支持直接主管、部门负责人等）
       const approverIds = await resolveNodeApproverIds(firstNode, initiatorId);
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
       
       console.log("First approver node:", firstNode.node_name, "approver_type:", firstNode.approver_type, "resolved approver_ids:", approverIds);
       

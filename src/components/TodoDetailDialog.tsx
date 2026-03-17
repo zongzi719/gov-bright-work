@@ -364,6 +364,11 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         }
       }
 
+      // 对于自定义审批表单，使用 approval_instances.form_data 作为业务数据
+      if (!data && instance?.form_data) {
+        data = instance.form_data as Record<string, any>;
+      }
+
       if (data) {
         setBusinessData(data);
       }

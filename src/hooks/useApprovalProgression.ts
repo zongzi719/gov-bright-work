@@ -34,6 +34,23 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
   supply_requisition: "supply_requisition",
   purchase_request: "purchase_request",
   supply_purchase: "supply_purchase",
+  custom_approval: "custom_approval",
+};
+
+// 内置业务类型
+const BUILTIN_BUSINESS_TYPES = [
+  "business_trip", "leave", "out",
+  "supply_requisition", "purchase_request", "supply_purchase",
+  "absence", "external_approval",
+];
+
+// 解析业务类型到待办类型（自定义类型使用 custom_approval）
+const resolveTodoBusinessType = (businessType: string): TodoBusinessType => {
+  if (businessTypeToTodoType[businessType]) {
+    return businessTypeToTodoType[businessType];
+  }
+  // Non-built-in types are custom approvals
+  return "custom_approval";
 };
 
 // 业务类型到联系人状态的映射
@@ -506,7 +523,7 @@ export const useApprovalProgression = () => {
     node: ApprovalNode,
     versionNumber: number
   ): Promise<void> => {
-    const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+    const todoBusinessType = resolveTodoBusinessType(businessType);
     const ccRecipientIds = node.approver_ids || [];
     
     console.log(`Processing CC node "${node.node_name}" for recipients:`, ccRecipientIds);
@@ -654,7 +671,7 @@ export const useApprovalProgression = () => {
 
       // 使用动态解析审批人（支持直接主管、部门负责人等）
       const approverIds = await resolveNodeApproverIds(nextNode, initiatorId);
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
 
       console.log("Creating todos for approvers:", approverIds, "approver_type:", nextNode.approver_type);
 
@@ -730,7 +747,7 @@ export const useApprovalProgression = () => {
     comment: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
 
       const { data: currentInstance } = await dataAdapter.getApprovalInstanceById(instanceId);
 
@@ -788,7 +805,7 @@ export const useApprovalProgression = () => {
     comment: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
 
       const { data: currentInstance } = await dataAdapter.getApprovalInstanceById(instanceId);
 
@@ -872,7 +889,7 @@ export const useApprovalProgression = () => {
         return { success: false, error: "找不到上一节点" };
       }
 
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
 
       await dataAdapter.updateApprovalInstance(instanceId, { 
         status: "pending",
@@ -1043,7 +1060,7 @@ export const useApprovalProgression = () => {
         return { success: false, error: "找不到退回信息" };
       }
 
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
       const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
 
       let startNodeIndex: number;

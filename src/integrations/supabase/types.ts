@@ -1866,6 +1866,7 @@ export type Database = {
         | "external_approval"
         | "business_trip"
         | "supply_purchase"
+        | "custom_approval"
       todo_priority: "urgent" | "normal" | "low"
       todo_source: "internal" | "external"
       todo_status:
@@ -2046,6 +2047,7 @@ export const Constants = {
         "external_approval",
         "business_trip",
         "supply_purchase",
+        "custom_approval",
       ],
       todo_priority: ["urgent", "normal", "low"],
       todo_source: ["internal", "external"],
