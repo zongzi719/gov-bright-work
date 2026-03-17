@@ -209,6 +209,7 @@ const fieldOptionsMapping: Record<string, Record<string, string[] | null>> = {
   },
   supply_requisitions: {},
   purchase_requests: {},
+  supply_purchases: {},
 };
 
 /**
