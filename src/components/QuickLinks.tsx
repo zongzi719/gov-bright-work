@@ -19,6 +19,8 @@ interface CustomTemplate {
   icon: string;
   business_type: string;
   is_active: boolean;
+  show_in_nav: boolean;
+  code: string;
 }
 
 const QuickLinks = () => {
