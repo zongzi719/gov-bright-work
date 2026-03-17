@@ -1060,7 +1060,7 @@ export const useApprovalProgression = () => {
         return { success: false, error: "找不到退回信息" };
       }
 
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
       const flatNodes = flattenNodesForExecution(nodesSnapshot, formData);
 
       let startNodeIndex: number;
