@@ -79,9 +79,9 @@ const QuickLinks = () => {
       const { data, error } = await dataAdapter.getApprovalTemplates();
       if (error || !data) return;
 
-      // Filter to only custom templates (not built-in types)
-      const custom = (data as (CustomTemplate & { code: string })[]).filter(
-        t => t.is_active && !BUILTIN_TEMPLATE_CODES.includes(t.code)
+      // 只显示启用了"显示在首页导航"且非内置模板的自定义流程
+      const custom = (data as CustomTemplate[]).filter(
+        t => t.is_active && t.show_in_nav && !BUILTIN_TEMPLATE_CODES.includes(t.code)
       );
       setCustomTemplates(custom);
     } catch (e) {
