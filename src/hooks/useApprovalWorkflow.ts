@@ -58,6 +58,14 @@ const BUILTIN_BUSINESS_TYPES = [
   "absence", "external_approval",
 ];
 
+// 解析业务类型到待办类型（自定义类型使用 custom_approval）
+const resolveTodoBusinessType = (businessType: string): TodoBusinessType => {
+  if (businessTypeToTodoType[businessType]) {
+    return businessTypeToTodoType[businessType];
+  }
+  return "custom_approval";
+};
+
 /**
  * 审批工作流服务
  * 负责启动审批流程、创建审批实例、生成待办事项
