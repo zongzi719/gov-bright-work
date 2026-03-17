@@ -37,6 +37,7 @@ export const businessTypeTableMapping: Record<string, string> = {
   out: "absence_records",
   supply_requisition: "supply_requisitions",
   purchase_request: "purchase_requests",
+  supply_purchase: "supply_purchases",
 };
 
 /**
@@ -81,6 +82,7 @@ const applicantFieldMapping: Record<string, string> = {
   absence_records: "contact_id",
   supply_requisitions: "requisition_by",
   purchase_requests: "requested_by",
+  supply_purchases: "applicant_name",
 };
 
 /**
@@ -120,6 +122,13 @@ const fieldLabelMapping: Record<string, Record<string, string>> = {
     supply_id: "采购物品",
     quantity: "采购数量",
     reason: "采购原因",
+  },
+  supply_purchases: {
+    applicant_name: "申请人",
+    department: "申请科室",
+    purchase_date: "申请日期",
+    reason: "购置理由",
+    total_amount: "合计金额",
   },
 };
 
@@ -161,6 +170,13 @@ const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
     quantity: true,
     reason: false,
   },
+  supply_purchases: {
+    applicant_name: true,
+    department: true,
+    purchase_date: true,
+    reason: false,
+    total_amount: false,
+  },
 };
 
 /**
@@ -178,6 +194,8 @@ const businessTypeFieldFilter: Record<string, string[]> = {
   supply_requisition: ["requisition_by", "supply_id", "quantity"],
   // 采购申请：申请人、采购物品、采购数量、采购原因
   purchase_request: ["requested_by", "supply_id", "quantity", "reason"],
+  // 办公采购：申请人、申请科室、申请日期、购置理由、合计金额
+  supply_purchase: ["applicant_name", "department", "purchase_date", "reason", "total_amount"],
 };
 
 /**
@@ -191,6 +209,7 @@ const fieldOptionsMapping: Record<string, Record<string, string[] | null>> = {
   },
   supply_requisitions: {},
   purchase_requests: {},
+  supply_purchases: {},
 };
 
 /**
@@ -256,6 +275,18 @@ const tableSchemas: Record<string, TableColumn[]> = {
     { column_name: "approved_by", data_type: "uuid", is_nullable: true },
     { column_name: "approved_at", data_type: "timestamp with time zone", is_nullable: true },
     { column_name: "completed_at", data_type: "timestamp with time zone", is_nullable: true },
+    { column_name: "created_at", data_type: "timestamp with time zone", is_nullable: false },
+    { column_name: "updated_at", data_type: "timestamp with time zone", is_nullable: false },
+  ],
+  supply_purchases: [
+    { column_name: "id", data_type: "uuid", is_nullable: false },
+    { column_name: "applicant_id", data_type: "text", is_nullable: false },
+    { column_name: "applicant_name", data_type: "text", is_nullable: false },
+    { column_name: "department", data_type: "text", is_nullable: false },
+    { column_name: "purchase_date", data_type: "date", is_nullable: false },
+    { column_name: "reason", data_type: "text", is_nullable: true },
+    { column_name: "total_amount", data_type: "numeric", is_nullable: true },
+    { column_name: "status", data_type: "text", is_nullable: false },
     { column_name: "created_at", data_type: "timestamp with time zone", is_nullable: false },
     { column_name: "updated_at", data_type: "timestamp with time zone", is_nullable: false },
   ],
