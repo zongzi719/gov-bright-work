@@ -390,6 +390,7 @@ const ApprovalSettings = () => {
                         onCheckedChange={() => {}}
                         onClick={(e) => handleToggleShowInNav(template, e)}
                       />
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(template.created_at).toLocaleDateString()}
                     </TableCell>
