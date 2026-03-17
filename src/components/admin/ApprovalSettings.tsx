@@ -41,6 +41,7 @@ const businessTypeLabels: Record<string, string> = {
   out: "外出申请",
   supply_requisition: "物品领用",
   purchase_request: "采购申请",
+  supply_purchase: "办公采购",
   external_approval: "外部审批",
 };
 
