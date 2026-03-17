@@ -3122,6 +3122,7 @@ export const dataAdapter = {
   updateApprovalTemplate,
   seedApprovalTemplates,
   getApprovalInstances,
+  getApprovalInstancesByTemplate,
   getApprovalInstanceByBusinessId,
   getApprovalInstanceById,
   getApprovalRecords,

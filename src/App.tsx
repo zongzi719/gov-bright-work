@@ -24,6 +24,7 @@ import AbsenceApplication from "./pages/AbsenceApplication";
 import ProcurementApplication from "./pages/ProcurementApplication";
 import ScheduleList from "./pages/ScheduleList";
 import MissLogin from "./pages/UKeyRequired";
+import DynamicApprovalForm from "./pages/DynamicApprovalForm";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/procurement" element={<ProcurementApplication />} />
           <Route path="/schedule-list" element={<ScheduleList />} />
           <Route path="/ukey-required" element={<MissLogin />} />
+          <Route path="/approval/:templateId" element={<DynamicApprovalForm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
