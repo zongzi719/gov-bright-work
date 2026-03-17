@@ -3,11 +3,15 @@ import { Briefcase, CalendarOff, LogOut as LogOutIcon, Package, Star, ShoppingCa
 import { useNavigate } from "react-router-dom";
 import * as dataAdapter from "@/lib/dataAdapter";
 
-// 内置业务类型（已有硬编码页面的）
-const BUILTIN_BUSINESS_TYPES = [
-  "business_trip", "leave", "out", 
-  "supply_requisition", "purchase_request", "supply_purchase",
-  "absence", "external_approval",
+// 已有硬编码页面的内置模板编码前缀列表
+// 通过模板code匹配，而不是business_type，因为用户可能用内置business_type创建自定义流程
+const BUILTIN_TEMPLATE_CODES = [
+  "PROC_MKSAQYT6", // 出差申请
+  "PROC_MKTO1ET3", // 请假申请
+  "PROC_MKUK42R1", // 外出申请
+  "PROC_MKXWIEG6", // 物品领用
+  "PROC_MKXVX9VE", // 政府采购申请
+  "PROC_MKYO60ON", // 办公采购
 ];
 
 interface CustomTemplate {
@@ -75,8 +79,8 @@ const QuickLinks = () => {
       if (error || !data) return;
 
       // Filter to only custom templates (not built-in types)
-      const custom = (data as CustomTemplate[]).filter(
-        t => t.is_active && !BUILTIN_BUSINESS_TYPES.includes(t.business_type)
+      const custom = (data as (CustomTemplate & { code: string })[]).filter(
+        t => t.is_active && !BUILTIN_TEMPLATE_CODES.includes(t.code)
       );
       setCustomTemplates(custom);
     } catch (e) {
