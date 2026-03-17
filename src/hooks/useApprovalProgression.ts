@@ -671,7 +671,7 @@ export const useApprovalProgression = () => {
 
       // 使用动态解析审批人（支持直接主管、部门负责人等）
       const approverIds = await resolveNodeApproverIds(nextNode, initiatorId);
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
 
       console.log("Creating todos for approvers:", approverIds, "approver_type:", nextNode.approver_type);
 
