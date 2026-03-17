@@ -32,6 +32,7 @@ interface ApprovalTemplate {
   business_type: string;
   category: string;
   is_active: boolean;
+  show_in_nav: boolean;
   created_at: string;
 }
 
