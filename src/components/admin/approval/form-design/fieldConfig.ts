@@ -278,6 +278,18 @@ const tableSchemas: Record<string, TableColumn[]> = {
     { column_name: "created_at", data_type: "timestamp with time zone", is_nullable: false },
     { column_name: "updated_at", data_type: "timestamp with time zone", is_nullable: false },
   ],
+  supply_purchases: [
+    { column_name: "id", data_type: "uuid", is_nullable: false },
+    { column_name: "applicant_id", data_type: "text", is_nullable: false },
+    { column_name: "applicant_name", data_type: "text", is_nullable: false },
+    { column_name: "department", data_type: "text", is_nullable: false },
+    { column_name: "purchase_date", data_type: "date", is_nullable: false },
+    { column_name: "reason", data_type: "text", is_nullable: true },
+    { column_name: "total_amount", data_type: "numeric", is_nullable: true },
+    { column_name: "status", data_type: "text", is_nullable: false },
+    { column_name: "created_at", data_type: "timestamp with time zone", is_nullable: false },
+    { column_name: "updated_at", data_type: "timestamp with time zone", is_nullable: false },
+  ],
 };
 
 /**
