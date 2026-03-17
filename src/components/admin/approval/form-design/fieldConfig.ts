@@ -122,6 +122,13 @@ const fieldLabelMapping: Record<string, Record<string, string>> = {
     quantity: "采购数量",
     reason: "采购原因",
   },
+  supply_purchases: {
+    applicant_name: "申请人",
+    department: "申请科室",
+    purchase_date: "申请日期",
+    reason: "购置理由",
+    total_amount: "合计金额",
+  },
 };
 
 /**
