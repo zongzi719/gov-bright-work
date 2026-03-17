@@ -523,7 +523,7 @@ export const useApprovalProgression = () => {
     node: ApprovalNode,
     versionNumber: number
   ): Promise<void> => {
-    const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+    const todoBusinessType = resolveTodoBusinessType(businessType);
     const ccRecipientIds = node.approver_ids || [];
     
     console.log(`Processing CC node "${node.node_name}" for recipients:`, ccRecipientIds);
