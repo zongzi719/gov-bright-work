@@ -148,6 +148,20 @@ const ApprovalSettings = () => {
     fetchTemplates();
   };
 
+  const handleToggleShowInNav = async (template: ApprovalTemplate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { error } = await dataAdapter.updateApprovalTemplate(template.id, { 
+      show_in_nav: !template.show_in_nav 
+    });
+
+    if (error) {
+      toast.error("更新失败");
+      return;
+    }
+    toast.success(template.show_in_nav ? "已从首页导航移除" : "已添加到首页导航");
+    fetchTemplates();
+  };
+
   const handleCopyCode = (code: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(code);
