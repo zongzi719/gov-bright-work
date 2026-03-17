@@ -170,6 +170,13 @@ const fieldRequiredMapping: Record<string, Record<string, boolean>> = {
     quantity: true,
     reason: false,
   },
+  supply_purchases: {
+    applicant_name: true,
+    department: true,
+    purchase_date: true,
+    reason: false,
+    total_amount: false,
+  },
 };
 
 /**
