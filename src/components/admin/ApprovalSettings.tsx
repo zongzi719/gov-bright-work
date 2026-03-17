@@ -275,7 +275,7 @@ const ApprovalSettings = () => {
               template={selectedTemplate} 
               isCreating={isCreating}
               onTemplateCreated={handleTemplateCreated}
-              onTemplateUpdated={(updated) => setSelectedTemplate(updated)}
+              onTemplateUpdated={(updated) => setSelectedTemplate({ ...selectedTemplate!, ...updated } as ApprovalTemplate)}
             />
           </TabsContent>
 
