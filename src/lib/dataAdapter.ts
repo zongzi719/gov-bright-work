@@ -1241,6 +1241,21 @@ export async function getApprovalInstances(params: { business_id: string; busine
   return { data, error };
 }
 
+// 按模板ID和发起人获取审批实例列表（用于自定义审批表单的历史记录）
+export async function getApprovalInstancesByTemplate(templateId: string, initiatorId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/approval-instances?template_id=${templateId}&initiator_id=${initiatorId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("approval_instances")
+    .select("*")
+    .eq("template_id", templateId)
+    .eq("initiator_id", initiatorId)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
 // 按 business_id 和 business_type 获取单条审批实例（含发起人信息）
 export async function getApprovalInstanceByBusinessId(businessId: string, businessType: string) {
   if (isOfflineMode()) {
