@@ -1259,17 +1259,21 @@ export async function getApprovalInstances(params: { business_id: string; busine
 }
 
 // 按模板ID和发起人获取审批实例列表（用于自定义审批表单的历史记录）
-export async function getApprovalInstancesByTemplate(templateId: string, initiatorId: string) {
+export async function getApprovalInstancesByTemplate(templateId: string, initiatorId?: string) {
   if (isOfflineMode()) {
-    return offlineRequest<any[]>(`/api/approval-instances?template_id=${templateId}&initiator_id=${initiatorId}`);
+    const params = new URLSearchParams({ template_id: templateId });
+    if (initiatorId) params.set('initiator_id', initiatorId);
+    return offlineRequest<any[]>(`/api/approval-instances?${params.toString()}`);
   }
   
-  const { data, error } = await supabase
+  let query = supabase
     .from("approval_instances")
-    .select("*")
-    .eq("template_id", templateId)
-    .eq("initiator_id", initiatorId)
-    .order("created_at", { ascending: false });
+    .select("*, contacts:initiator_id(name, department)")
+    .eq("template_id", templateId);
+  if (initiatorId) {
+    query = query.eq("initiator_id", initiatorId);
+  }
+  const { data, error } = await query.order("created_at", { ascending: false });
   return { data, error };
 }
 
