@@ -409,7 +409,7 @@ export const useApprovalWorkflow = () => {
       // 6. 为第一个审批节点的所有审批人创建审批记录和待办
       // 使用动态解析审批人（支持直接主管、部门负责人等）
       const approverIds = await resolveNodeApproverIds(firstNode, initiatorId);
-      const todoBusinessType = businessTypeToTodoType[businessType] || "absence";
+      const todoBusinessType = resolveTodoBusinessType(businessType);
       
       console.log("First approver node:", firstNode.node_name, "approver_type:", firstNode.approver_type, "resolved approver_ids:", approverIds);
       
