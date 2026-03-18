@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ExternalLink, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Upload } from "lucide-react";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
+import { isOfflineMode } from "@/lib/offlineApi";
 
 interface ExternalLinkItem {
   id: string;
