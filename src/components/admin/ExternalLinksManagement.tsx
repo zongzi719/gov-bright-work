@@ -233,14 +233,10 @@ const ExternalLinksManagement = () => {
               <Label>图标（可选）</Label>
               <div className="flex gap-2 items-center">
                 <Input value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="图标URL或上传图片，留空使用默认" className="flex-1" />
-                {isOfflineMode() && (
-                  <>
-                    <input ref={iconFileRef} type="file" accept="image/*" className="hidden" onChange={handleIconUpload} />
-                    <Button type="button" variant="outline" size="icon" onClick={() => iconFileRef.current?.click()} title="上传图标">
-                      <Upload className="w-4 h-4" />
-                    </Button>
-                  </>
-                )}
+                <input ref={iconFileRef} type="file" accept="image/*" className="hidden" onChange={handleIconUpload} />
+                <Button type="button" variant="outline" size="icon" onClick={() => iconFileRef.current?.click()} title="上传图标">
+                  <Upload className="w-4 h-4" />
+                </Button>
               </div>
               {form.icon_url && (
                 <div className="flex items-center gap-2 mt-1">
