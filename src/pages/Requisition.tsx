@@ -312,10 +312,11 @@ const Requisition = () => {
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[40%]">办公用品</TableHead>
-                      <TableHead className="w-[20%]">规格</TableHead>
-                      <TableHead className="w-[20%]">领用数量</TableHead>
+                     <TableRow className="bg-muted/50">
+                      <TableHead className="w-[35%]">办公用品</TableHead>
+                      <TableHead className="w-[15%]">规格</TableHead>
+                      <TableHead className="w-[15%]">单位</TableHead>
+                      <TableHead className="w-[15%]">领用数量</TableHead>
                       <TableHead className="w-[20%]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -343,6 +344,9 @@ const Requisition = () => {
                           </TableCell>
                           <TableCell className="p-2 text-sm text-muted-foreground">
                             {selectedSupply?.specification || "-"}
+                          </TableCell>
+                          <TableCell className="p-2 text-sm text-muted-foreground">
+                            {selectedSupply?.unit || "-"}
                           </TableCell>
                           <TableCell className="p-2">
                             <Input
@@ -436,20 +440,22 @@ const Requisition = () => {
                             <TableRow className="bg-muted/30">
                               <TableHead>物品名称</TableHead>
                               <TableHead>规格</TableHead>
+                              <TableHead>单位</TableHead>
                               <TableHead>数量</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {selectedItems.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">暂无明细</TableCell>
                               </TableRow>
                             ) : (
                               selectedItems.map((item) => (
                                 <TableRow key={item.id}>
                                   <TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell>
                                   <TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell>
-                                  <TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell>
+                                  <TableCell>{item.office_supplies?.unit || item.unit || "-"}</TableCell>
+                                  <TableCell>{item.quantity}</TableCell>
                                 </TableRow>
                               ))
                             )}

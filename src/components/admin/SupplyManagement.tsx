@@ -1343,16 +1343,17 @@ const SupplyManagement = () => {
                   <Label className="text-muted-foreground text-xs mb-2 block">物品明细</Label>
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader><TableRow className="bg-muted/30"><TableHead>物品名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead></TableRow></TableHeader>
+                      <TableHeader><TableRow className="bg-muted/30"><TableHead>物品名称</TableHead><TableHead>规格</TableHead><TableHead>单位</TableHead><TableHead>数量</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {requisitionDetailItems.length === 0 ? (
-                          <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>
                         ) : (
                           requisitionDetailItems.map((item: any) => (
                             <TableRow key={item.id}>
                               <TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell>
                               <TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell>
-                              <TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell>
+                              <TableCell>{item.office_supplies?.unit || item.unit || "-"}</TableCell>
+                              <TableCell>{item.quantity}</TableCell>
                             </TableRow>
                           ))
                         )}
