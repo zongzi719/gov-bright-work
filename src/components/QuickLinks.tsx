@@ -33,6 +33,8 @@ interface CustomTemplate {
   code: string;
   nav_visible_scope?: string;
   nav_visible_org_ids?: string[];
+  nav_visible_role_names?: string[];
+  nav_visible_user_ids?: string[];
 }
 
 const QuickLinks = () => {
