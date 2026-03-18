@@ -47,6 +47,7 @@ const QuickLinks = () => {
   useEffect(() => {
     checkLeaderSchedulePermission();
     loadTemplates();
+    loadUserRoles();
   }, []);
 
   const getCurrentUser = () => {
