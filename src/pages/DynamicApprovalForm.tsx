@@ -260,7 +260,7 @@ const DynamicApprovalForm = () => {
 
       case "text":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -271,7 +271,7 @@ const DynamicApprovalForm = () => {
               placeholder={field.placeholder || `请输入${field.field_label}`}
               className="mt-1"
             />
-          </div>
+          </>
         );
 
       case "textarea":
