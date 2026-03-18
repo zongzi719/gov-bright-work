@@ -271,6 +271,10 @@ export const useApprovalWorkflow = () => {
    * 解析审批节点的实际审批人ID列表
    */
   const resolveNodeApproverIds = async (node: ApprovalNode, initiatorId: string): Promise<string[]> => {
+    if (isSelfApproverType(node.approver_type)) {
+      return initiatorId ? [initiatorId] : [];
+    }
+
     // 如果是动态审批人类型，先尝试解析（支持 supervisor 作为 direct_supervisor 的别名）
     const isDynamicType = isDirectSupervisorType(node.approver_type) || node.approver_type === 'department_head';
     
