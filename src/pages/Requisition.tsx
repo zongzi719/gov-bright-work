@@ -345,6 +345,9 @@ const Requisition = () => {
                           <TableCell className="p-2 text-sm text-muted-foreground">
                             {selectedSupply?.specification || "-"}
                           </TableCell>
+                          <TableCell className="p-2 text-sm text-muted-foreground">
+                            {selectedSupply?.unit || "-"}
+                          </TableCell>
                           <TableCell className="p-2">
                             <Input
                               type="number"
