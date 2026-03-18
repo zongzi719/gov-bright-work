@@ -1995,11 +1995,15 @@ app.get('/api/approval-templates/:id', async (req, res) => {
     const row = rows[0];
     res.json({
       ...row,
-      is_active: row.is_active === 1 || row.is_active === true,
-      allow_withdraw: row.allow_withdraw === 1 || row.allow_withdraw === true,
-      allow_transfer: row.allow_transfer === 1 || row.allow_transfer === true,
-      notify_initiator: row.notify_initiator === 1 || row.notify_initiator === true,
-      notify_approver: row.notify_approver === 1 || row.notify_approver === true,
+      is_active: !!row.is_active,
+      show_in_nav: !!row.show_in_nav,
+      allow_withdraw: !!row.allow_withdraw,
+      allow_transfer: !!row.allow_transfer,
+      notify_initiator: !!row.notify_initiator,
+      notify_approver: !!row.notify_approver,
+      nav_visible_org_ids: safeJsonParse(row.nav_visible_org_ids, []),
+      nav_visible_role_names: safeJsonParse(row.nav_visible_role_names, []),
+      nav_visible_user_ids: safeJsonParse(row.nav_visible_user_ids, []),
     });
   } catch (error) {
     console.error('获取审批模板详情失败:', error.message);
