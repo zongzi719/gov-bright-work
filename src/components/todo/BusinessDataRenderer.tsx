@@ -16,8 +16,11 @@ interface BusinessDataRendererProps {
  * 确保提交表单和审批详情展示一致
  */
 const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorName }: BusinessDataRendererProps) => {
-  // 合并业务数据和表单数据（表单数据优先）
+  // 合并业务数据和表单数据（表单数据优先，但 items 优先用 businessData 中经过 JOIN 的数据）
   const data = { ...businessData, ...formData };
+  if (businessData?.items?.length) {
+    data.items = businessData.items;
+  }
 
   // 格式化日期时间 - 使用共享的 parseTime
 
