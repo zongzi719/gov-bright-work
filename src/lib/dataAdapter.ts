@@ -407,15 +407,21 @@ export async function getSupplyPurchases(params: { applicant_name: string }) {
 }
 
 export async function getAllSupplyPurchases() {
-  if (isOfflineMode()) {
-    return offlineRequest<any[]>('/api/supply-purchases');
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any[]>('/api/supply-purchases')
+    : await supabase
+        .from("supply_purchases")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+  if (sourceResult.error || !sourceResult.data?.length) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_purchases")
-    .select("*")
-    .order("created_at", { ascending: false });
-  return { data, error };
+
+  return {
+    data: await mergeApprovalStatuses(sourceResult.data, "supply_purchase"),
+    error: sourceResult.error,
+  };
 }
 
 export async function createSupplyPurchase(purchase: {
@@ -499,14 +505,23 @@ export async function getAllPurchaseRequests() {
   if (isOfflineMode()) {
     const result = await offlineRequest<any[]>('/api/purchase-requests');
     if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
-    return result;
+    if (result.error || !result.data?.length) return result;
+    return {
+      data: await mergeApprovalStatuses(result.data, "purchase_request"),
+      error: result.error,
+    };
   }
   
   const { data, error } = await supabase
     .from("purchase_requests")
     .select("*, office_supplies(*)")
     .order("created_at", { ascending: false });
-  return { data, error };
+  
+  if (error || !data?.length) return { data, error };
+  return {
+    data: await mergeApprovalStatuses(data, "purchase_request"),
+    error,
+  };
 }
 
 export async function createPurchaseRequest(request: {
