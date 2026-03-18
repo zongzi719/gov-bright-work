@@ -3161,6 +3161,18 @@ export async function getRoles() {
   return { data, error };
 }
 
+export async function getUserRoles(userId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/user-roles?user_id=${userId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  return { data, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
