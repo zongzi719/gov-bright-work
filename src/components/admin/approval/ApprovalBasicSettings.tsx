@@ -243,9 +243,10 @@ const ApprovalBasicSettings = ({
       onTemplateUpdated(data as unknown as ApprovalTemplate);
     } else {
       const code = generateCode();
+      const createPayload = { ...updatePayload, code, business_type: 'absence' };
       const { data, error } = await supabase
         .from("approval_templates" as any)
-        .insert({ ...updatePayload, code })
+        .insert(createPayload)
         .select()
         .single();
 
