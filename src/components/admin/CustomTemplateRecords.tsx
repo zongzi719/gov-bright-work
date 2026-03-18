@@ -106,7 +106,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
             <TableBody>
               {records.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell>{(record as any).contacts?.name || (record as any).initiator?.name || (record as any).initiator_name || record.initiator_id}</TableCell>
+                  <TableCell>{getInitiatorName(record)}</TableCell>
                   <TableCell>{getStatusBadge(record.status)}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(record.created_at).toLocaleString()}
