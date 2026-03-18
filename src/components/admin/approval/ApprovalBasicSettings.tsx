@@ -206,10 +206,11 @@ const ApprovalBasicSettings = ({
           onTemplateUpdated(data as ApprovalTemplate);
         } else {
           const code = generateCode();
+          const createPayload = { ...updatePayload, code, business_type: 'absence' };
           const response = await fetch(`${baseUrl}/api/approval-templates`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...updatePayload, code }),
+            body: JSON.stringify(createPayload),
           });
           if (!response.ok) throw new Error('创建失败');
           const data = await response.json();
