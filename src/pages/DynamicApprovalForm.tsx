@@ -52,6 +52,8 @@ interface ApprovalTemplate {
 
 interface SubmissionRecord {
   id: string;
+  business_id: string;
+  business_type: string;
   status: string;
   form_data: Record<string, any>;
   created_at: string;
@@ -550,8 +552,8 @@ const DynamicApprovalForm = () => {
                 <div>
                   <h4 className="font-medium mb-3">审批流程</h4>
                   <ApprovalTimeline
-                    businessId={selectedRecord.id}
-                    businessType={template.business_type}
+                    businessId={selectedRecord.business_id}
+                    businessType={selectedRecord.business_type || template.business_type}
                   />
                 </div>
               </div>
