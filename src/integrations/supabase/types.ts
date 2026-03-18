@@ -430,7 +430,9 @@ export type Database = {
           last_process_saved_at: string | null
           name: string
           nav_visible_org_ids: string[]
+          nav_visible_role_names: string[]
           nav_visible_scope: string
+          nav_visible_user_ids: string[]
           notify_approver: boolean
           notify_initiator: boolean
           show_in_nav: boolean
@@ -453,7 +455,9 @@ export type Database = {
           last_process_saved_at?: string | null
           name: string
           nav_visible_org_ids?: string[]
+          nav_visible_role_names?: string[]
           nav_visible_scope?: string
+          nav_visible_user_ids?: string[]
           notify_approver?: boolean
           notify_initiator?: boolean
           show_in_nav?: boolean
@@ -476,7 +480,9 @@ export type Database = {
           last_process_saved_at?: string | null
           name?: string
           nav_visible_org_ids?: string[]
+          nav_visible_role_names?: string[]
           nav_visible_scope?: string
+          nav_visible_user_ids?: string[]
           notify_approver?: boolean
           notify_initiator?: boolean
           show_in_nav?: boolean
