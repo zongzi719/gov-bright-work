@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck, FileSearch, KeyRound, User } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck, FileSearch, KeyRound, User, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
