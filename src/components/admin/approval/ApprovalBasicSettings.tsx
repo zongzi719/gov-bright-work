@@ -308,6 +308,28 @@ const ApprovalBasicSettings = ({
     }));
   };
 
+  const toggleRoleName = (roleName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      nav_visible_role_names: prev.nav_visible_role_names.includes(roleName)
+        ? prev.nav_visible_role_names.filter(r => r !== roleName)
+        : [...prev.nav_visible_role_names, roleName],
+    }));
+  };
+
+  const toggleUserId = (userId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      nav_visible_user_ids: prev.nav_visible_user_ids.includes(userId)
+        ? prev.nav_visible_user_ids.filter(id => id !== userId)
+        : [...prev.nav_visible_user_ids, userId],
+    }));
+  };
+
+  const filteredContacts = contactSearch
+    ? contacts.filter(c => c.name.includes(contactSearch) || (c.department && c.department.includes(contactSearch)))
+    : contacts;
+
   return (
     <Card>
       <CardHeader>
@@ -432,6 +454,83 @@ const ApprovalBasicSettings = ({
                 )}
               </div>
             </div>
+          )}
+
+          {formData.nav_visible_scope === "specific_roles" && (
+            <div className="space-y-2">
+              <Label>选择可见角色</Label>
+              <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-1">
+                {roles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">暂无角色数据</p>
+                ) : (
+                  roles.map(role => (
+                    <label key={role.name} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.nav_visible_role_names.includes(role.name)}
+                        onChange={() => toggleRoleName(role.name)}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{role.label}</span>
+                      <span className="text-xs text-muted-foreground">({role.name})</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {formData.nav_visible_scope === "specific_users" && (
+            <div className="space-y-2">
+              <Label>选择可见人员</Label>
+              <Input
+                placeholder="搜索姓名或部门..."
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                className="mb-2"
+              />
+              {formData.nav_visible_user_ids.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {formData.nav_visible_user_ids.map(uid => {
+                    const c = contacts.find(ct => ct.id === uid);
+                    return (
+                      <span key={uid} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded">
+                        {c?.name || uid}
+                        <button
+                          type="button"
+                          className="hover:text-destructive"
+                          onClick={() => toggleUserId(uid)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-1">
+                {filteredContacts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">暂无匹配人员</p>
+                ) : (
+                  filteredContacts.map(contact => (
+                    <label key={contact.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.nav_visible_user_ids.includes(contact.id)}
+                        onChange={() => toggleUserId(contact.id)}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{contact.name}</span>
+                      {contact.department && (
+                        <span className="text-xs text-muted-foreground">{contact.department}</span>
+                      )}
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
           )}
         </div>
 
