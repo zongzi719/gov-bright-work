@@ -13,6 +13,8 @@ interface CustomTemplate {
   icon: string;
   business_type: string;
   code: string;
+  category?: string;
+  is_active?: boolean;
 }
 
 // 内置模板编码
@@ -20,6 +22,8 @@ const BUILTIN_CODES = [
   "PROC_MKSAQYT6", "PROC_MKTO1ET3", "PROC_MKUK42R1",
   "PROC_MKXWIEG6", "PROC_MKXVX9VE", "PROC_MKYO60ON",
 ];
+
+const ABSENCE_GROUP_BUSINESS_TYPES = ["business_trip", "leave", "out", "absence"];
 
 const AbsenceManagement = () => {
   const [activeTab, setActiveTab] = useState("business-trip");
@@ -31,13 +35,20 @@ const AbsenceManagement = () => {
 
   const loadCustomTemplates = async () => {
     try {
-      const { data, error } = await dataAdapter.getApprovalTemplatesByBusinessTypes([
-        "business_trip", "leave", "out", "absence"
-      ]);
+      const { data, error } = await dataAdapter.getAllApprovalTemplates();
       if (error || !data) return;
-      const custom = (data as (CustomTemplate & { is_active: boolean })[]).filter(
-        t => !BUILTIN_CODES.includes(t.code)
-      );
+
+      const custom = (data as CustomTemplate[])
+        .filter((template) => {
+          if (!template.is_active || BUILTIN_CODES.includes(template.code)) return false;
+          return template.category === "外出管理" || ABSENCE_GROUP_BUSINESS_TYPES.includes(template.business_type);
+        })
+        .map((template) => ({
+          ...template,
+          name: template.name?.trim() || template.code || "未命名流程",
+          icon: template.icon || "📋",
+        }));
+
       setCustomTemplates(custom);
     } catch (e) {
       console.error("加载自定义模板失败:", e);

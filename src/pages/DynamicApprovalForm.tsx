@@ -60,8 +60,28 @@ interface SubmissionRecord {
   template_id: string;
 }
 
+const buildInitialFormData = (loadedFields: FormField[], currentUser: any) => {
+  const initialData: Record<string, any> = {};
+
+  loadedFields.forEach((field) => {
+    if (field.field_type === "user") {
+      initialData[field.field_name] = currentUser?.name || "";
+    } else if (field.field_type === "date") {
+      initialData[field.field_name] = format(new Date(), "yyyy-MM-dd");
+    } else if (field.field_type === "number" || field.field_type === "money") {
+      initialData[field.field_name] = "";
+    } else if (field.field_type === "checkbox") {
+      initialData[field.field_name] = [];
+    } else {
+      initialData[field.field_name] = "";
+    }
+  });
+
+  return initialData;
+};
+
 const DynamicApprovalForm = () => {
-  const { templateId } = useParams<{ templateId: string }>();
+  const { templateId: routeId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
   const { startApproval } = useApprovalWorkflow();
 
@@ -90,53 +110,58 @@ const DynamicApprovalForm = () => {
   const currentUser = getCurrentUser();
 
   useEffect(() => {
-    if (templateId) {
-      loadTemplate();
+    if (routeId) {
+      void loadRouteData(routeId);
     }
-  }, [templateId]);
+  }, [routeId]);
 
   useEffect(() => {
-    if (template) {
-      fetchRecords();
+    if (template?.id && currentUser?.id) {
+      void fetchRecords();
     }
-  }, [template]);
+  }, [template?.id, currentUser?.id]);
 
-  const loadTemplate = async () => {
-    setLoading(true);
-    // Load template info
-    const { data: templates } = await dataAdapter.getAllApprovalTemplates();
-    const found = (templates as any[])?.find((t: any) => t.id === templateId);
-    
-    if (!found) {
-      toast.error("审批模板不存在");
-      navigate("/");
-      return;
-    }
+  const applyTemplateContext = async (loadedTemplate: ApprovalTemplate, preselectedRecord?: SubmissionRecord | null) => {
+    setTemplate(loadedTemplate);
 
-    setTemplate(found);
-
-    // Load form fields
-    const { data: fieldsData } = await dataAdapter.getApprovalFormFields(templateId!);
+    const { data: fieldsData } = await dataAdapter.getApprovalFormFields(loadedTemplate.id);
     const loadedFields = ((fieldsData as unknown as FormField[]) || []).sort((a, b) => a.sort_order - b.sort_order);
     setFields(loadedFields);
+    setFormData(buildInitialFormData(loadedFields, currentUser));
 
-    // Initialize form data with defaults
-    const initialData: Record<string, any> = {};
-    loadedFields.forEach(field => {
-      if (field.field_type === "user") {
-        initialData[field.field_name] = currentUser?.name || "";
-      } else if (field.field_type === "date") {
-        initialData[field.field_name] = format(new Date(), "yyyy-MM-dd");
-      } else if (field.field_type === "number" || field.field_type === "money") {
-        initialData[field.field_name] = "";
-      } else if (field.field_type === "checkbox") {
-        initialData[field.field_name] = [];
-      } else {
-        initialData[field.field_name] = "";
+    if (preselectedRecord) {
+      setSelectedRecord(preselectedRecord);
+      setDetailOpen(true);
+    }
+  };
+
+  const loadRouteData = async (id: string) => {
+    setLoading(true);
+
+    try {
+      const { data: templates } = await dataAdapter.getAllApprovalTemplates();
+      const templateList = (templates as ApprovalTemplate[]) || [];
+      const foundTemplate = templateList.find((item) => item.id === id);
+
+      if (foundTemplate) {
+        await applyTemplateContext(foundTemplate);
+        return;
       }
-    });
-    setFormData(initialData);
-    setLoading(false);
+
+      const { data: instanceData, error: instanceError } = await dataAdapter.getApprovalInstanceById(id);
+      if (!instanceError && instanceData) {
+        const relatedTemplate = templateList.find((item) => item.id === (instanceData as SubmissionRecord).template_id);
+        if (relatedTemplate) {
+          await applyTemplateContext(relatedTemplate, instanceData as SubmissionRecord);
+          return;
+        }
+      }
+
+      toast.error("审批记录或模板不存在");
+      navigate("/");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchRecords = async () => {
@@ -201,29 +226,14 @@ const DynamicApprovalForm = () => {
       });
       toast.success("申请已提交，审批流程已启动");
       setFormOpen(false);
-      fetchRecords();
+      void fetchRecords();
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
     }
   };
 
   const handleOpenForm = () => {
-    // Reset form data
-    const initialData: Record<string, any> = {};
-    fields.forEach(field => {
-      if (field.field_type === "user") {
-        initialData[field.field_name] = currentUser?.name || "";
-      } else if (field.field_type === "date") {
-        initialData[field.field_name] = format(new Date(), "yyyy-MM-dd");
-      } else if (field.field_type === "number" || field.field_type === "money") {
-        initialData[field.field_name] = "";
-      } else if (field.field_type === "checkbox") {
-        initialData[field.field_name] = [];
-      } else {
-        initialData[field.field_name] = "";
-      }
-    });
-    setFormData(initialData);
+    setFormData(buildInitialFormData(fields, currentUser));
     setFormOpen(true);
   };
 
