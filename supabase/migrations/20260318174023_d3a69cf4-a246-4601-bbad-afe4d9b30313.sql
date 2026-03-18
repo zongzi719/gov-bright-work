@@ -1,0 +1,1 @@
+CREATE POLICY "Allow public read access to organizations" ON public.organizations FOR SELECT USING (true);
