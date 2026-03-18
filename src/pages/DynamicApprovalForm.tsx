@@ -554,6 +554,7 @@ const DynamicApprovalForm = () => {
                   <ApprovalTimeline
                     businessId={selectedRecord.business_id}
                     businessType={selectedRecord.business_type || template.business_type}
+                    instanceId={selectedRecord.id}
                   />
                 </div>
               </div>
