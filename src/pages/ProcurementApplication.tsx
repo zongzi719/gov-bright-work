@@ -219,21 +219,82 @@ const RequisitionContent = () => {
 
   const handleSubmit = async () => {
     const validItems = formItems.filter(item => item.supply_id && item.quantity > 0);
-    if (validItems.length === 0) { toast.error("请至少添加一条物品明细"); return; }
+    if (validItems.length === 0) {
+      toast.error("请至少添加一条物品明细");
+      return;
+    }
+
     for (const item of validItems) {
       const supply = supplies.find(s => s.id === item.supply_id);
-      if (supply && item.quantity > supply.current_stock) { toast.error(`${supply.name} 库存不足，当前库存: ${supply.current_stock}`); return; }
+      if (supply && item.quantity > supply.current_stock) {
+        toast.error(`${supply.name} 库存不足，当前库存: ${supply.current_stock}`);
+        return;
+      }
     }
+
     setSubmitting(true);
-    const { data: record, error } = await dataAdapter.createSupplyRequisition({ requisition_by: currentUser?.name || "", requisition_date: format(requisitionDate, "yyyy-MM-dd") });
-    if (error || !record) { toast.error("提交领用申请失败"); setSubmitting(false); return; }
-    const itemsToInsert = validItems.map(item => ({ requisition_id: record.id, supply_id: item.supply_id, quantity: item.quantity }));
+
+    const { data: record, error } = await dataAdapter.createSupplyRequisition({
+      requisition_by: currentUser?.name || "",
+      requisition_date: format(requisitionDate, "yyyy-MM-dd"),
+    });
+
+    if (error || !record) {
+      toast.error("提交领用申请失败");
+      setSubmitting(false);
+      return;
+    }
+
+    const itemsToInsert = validItems.map(item => ({
+      requisition_id: record.id,
+      supply_id: item.supply_id,
+      quantity: item.quantity,
+    }));
+
     const { error: itemsError } = await dataAdapter.createSupplyRequisitionItems(itemsToInsert);
-    if (itemsError) { toast.error("保存物品明细失败"); setSubmitting(false); return; }
-    const itemNames = validItems.map(item => { const supply = supplies.find(s => s.id === item.supply_id); return `${supply?.name || "物品"} x ${item.quantity}`; }).join(", ");
-    const approvalResult = await startApproval({ businessType: "supply_requisition", businessId: record.id, initiatorId: currentUser?.id || "", initiatorName: currentUser?.name || "未知用户", title: `领用申请 - ${itemNames.substring(0, 50)}${itemNames.length > 50 ? "..." : ""}`, formData: { items: validItems.map(item => { const supply = supplies.find(s => s.id === item.supply_id); return { supply_id: item.supply_id, supply_name: supply?.name, quantity: item.quantity }; }), requisition_date: format(requisitionDate, "yyyy-MM-dd") } });
+
+    if (itemsError) {
+      toast.error("保存物品明细失败");
+      setSubmitting(false);
+      return;
+    }
+
+    const itemNames = validItems.map(item => {
+      const supply = supplies.find(s => s.id === item.supply_id);
+      return `${supply?.name || "物品"} x ${item.quantity}`;
+    }).join(", ");
+
+    const approvalResult = await startApproval({
+      businessType: "supply_requisition",
+      businessId: record.id,
+      initiatorId: currentUser?.id || "",
+      initiatorName: currentUser?.name || "未知用户",
+      title: `领用申请 - ${itemNames.substring(0, 50)}${itemNames.length > 50 ? "..." : ""}`,
+      formData: {
+        items: validItems.map(item => {
+          const supply = supplies.find(s => s.id === item.supply_id);
+          return {
+            supply_id: item.supply_id,
+            supply_name: supply?.name,
+            specification: supply?.specification || null,
+            unit: supply?.unit || "",
+            quantity: item.quantity,
+          };
+        }),
+        requisition_date: format(requisitionDate, "yyyy-MM-dd"),
+      },
+    });
+
     setSubmitting(false);
-    if (approvalResult.success) { toast.success("领用申请已提交"); setFormOpen(false); setFormItems([{ supply_id: "", quantity: 1 }]); fetchRecords(); } else { toast.error(approvalResult.error || "启动审批流程失败"); }
+
+    if (approvalResult.success) {
+      toast.success("领用申请已提交");
+      setFormOpen(false);
+      setFormItems([{ supply_id: "", quantity: 1 }]);
+      fetchRecords();
+    } else {
+      toast.error(approvalResult.error || "启动审批流程失败");
+    }
   };
 
   return (
@@ -255,15 +316,20 @@ const RequisitionContent = () => {
               <div className="flex items-center justify-between"><Label>物品明细 <span className="text-destructive">*</span></Label><Button type="button" variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-3 w-3 mr-1" />添加物品</Button></div>
               <div className="border rounded-md overflow-hidden">
                 <Table>
-                  <TableHeader><TableRow className="bg-muted/50"><TableHead className="w-[50%]">办公用品</TableHead><TableHead className="w-[30%]">领用数量</TableHead><TableHead className="w-[20%]">操作</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow className="bg-muted/50"><TableHead className="w-[35%]">办公用品</TableHead><TableHead className="w-[15%]">规格</TableHead><TableHead className="w-[15%]">单位</TableHead><TableHead className="w-[15%]">领用数量</TableHead><TableHead className="w-[20%]">操作</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {formItems.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="p-2"><Select value={item.supply_id} onValueChange={(v) => handleItemChange(index, "supply_id", v)}><SelectTrigger><SelectValue placeholder="选择办公用品" /></SelectTrigger><SelectContent>{supplies.filter(s => s.current_stock > 0).map((supply) => (<SelectItem key={supply.id} value={supply.id}>{supply.name}{supply.specification ? ` (${supply.specification})` : ""} - 库存: {supply.current_stock}</SelectItem>))}</SelectContent></Select></TableCell>
-                        <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} /></TableCell>
-                        <TableCell className="p-2"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
-                      </TableRow>
-                    ))}
+                    {formItems.map((item, index) => {
+                      const selectedSupply = supplies.find(s => s.id === item.supply_id);
+                      return (
+                        <TableRow key={index}>
+                          <TableCell className="p-2"><Select value={item.supply_id} onValueChange={(v) => handleItemChange(index, "supply_id", v)}><SelectTrigger><SelectValue placeholder="选择办公用品" /></SelectTrigger><SelectContent>{supplies.filter(s => s.current_stock > 0).map((supply) => (<SelectItem key={supply.id} value={supply.id}>{supply.name}{supply.specification ? ` (${supply.specification})` : ""} - 库存: {supply.current_stock}</SelectItem>))}</SelectContent></Select></TableCell>
+                          <TableCell className="p-2 text-sm text-muted-foreground">{selectedSupply?.specification || "-"}</TableCell>
+                          <TableCell className="p-2 text-sm text-muted-foreground">{selectedSupply?.unit || "-"}</TableCell>
+                          <TableCell className="p-2"><Input type="number" min={1} value={item.quantity} onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)} /></TableCell>
+                          <TableCell className="p-2"><Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(index)} disabled={formItems.length === 1}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -296,9 +362,9 @@ const RequisitionContent = () => {
                       <Label className="text-xs text-muted-foreground font-normal">物品明细</Label>
                       <div className="border rounded-lg overflow-hidden">
                         <Table>
-                          <TableHeader><TableRow className="bg-muted/30"><TableHead>物品名称</TableHead><TableHead>规格</TableHead><TableHead>数量</TableHead></TableRow></TableHeader>
+                          <TableHeader><TableRow className="bg-muted/30"><TableHead>物品名称</TableHead><TableHead>规格</TableHead><TableHead>单位</TableHead><TableHead>数量</TableHead></TableRow></TableHeader>
                           <TableBody>
-                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell><TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell><TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell></TableRow>)))}
+                            {selectedItems.length === 0 ? (<TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">暂无明细</TableCell></TableRow>) : (selectedItems.map((item) => (<TableRow key={item.id}><TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell><TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell><TableCell>{item.office_supplies?.unit || item.unit || "-"}</TableCell><TableCell>{item.quantity}</TableCell></TableRow>)))}
                           </TableBody>
                         </Table>
                       </div>
