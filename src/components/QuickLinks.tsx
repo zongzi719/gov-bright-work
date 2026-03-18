@@ -59,6 +59,18 @@ const QuickLinks = () => {
       return null;
     }
   };
+  const loadUserRoles = async () => {
+    const user = getCurrentUser();
+    if (!user?.id) return;
+    try {
+      const { data } = await dataAdapter.getUserRoles(user.id);
+      if (data) {
+        setUserRoleNames((data as any[]).map(r => r.role));
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const checkLeaderSchedulePermission = async () => {
     try {
