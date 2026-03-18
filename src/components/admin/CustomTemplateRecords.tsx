@@ -93,12 +93,12 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
           </Table>
         )}
 
-        <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>{templateName} - 申请详情</DialogTitle>
-            </DialogHeader>
-            {selectedRecord && (
+        {selectedRecord ? (
+          <Dialog open={!!selectedRecord} onOpenChange={(open) => !open && setSelectedRecord(null)}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>{templateName} - 申请详情</DialogTitle>
+              </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -131,9 +131,9 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
                 <Separator />
                 <ApprovalTimeline businessId={selectedRecord.business_id} businessType={selectedRecord.business_type} />
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        ) : null}
       </CardContent>
     </Card>
   );
