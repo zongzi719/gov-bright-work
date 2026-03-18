@@ -3339,6 +3339,7 @@ export const dataAdapter = {
   deleteExternalLink,
   // Roles
   getRoles,
+  getUserRoles,
   // Utilities
   isOfflineMode,
 };
