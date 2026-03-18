@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PersonPickerDialog from "@/components/PersonPickerDialog";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
