@@ -26,14 +26,32 @@ interface Instance {
   contacts?: { name: string; department?: string } | null;
 }
 
+interface FieldMeta {
+  field_name: string;
+  field_label: string;
+}
+
 const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecordsProps) => {
   const [records, setRecords] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState<Instance | null>(null);
+  const [fieldLabelMap, setFieldLabelMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadRecords();
+    loadFieldMeta();
   }, [templateId]);
+
+  const loadFieldMeta = async () => {
+    try {
+      const { data } = await dataAdapter.getApprovalFormFields(templateId);
+      if (data && Array.isArray(data)) {
+        const map: Record<string, string> = {};
+        (data as FieldMeta[]).forEach(f => { map[f.field_name] = f.field_label; });
+        setFieldLabelMap(map);
+      }
+    } catch (e) { /* ignore */ }
+  };
 
   const loadRecords = async () => {
     setLoading(true);
@@ -46,6 +64,18 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
       console.error("加载记录失败:", e);
     }
     setLoading(false);
+  };
+
+  const getInitiatorName = (record: Instance): string => {
+    return (record as any).contacts?.name
+      || (record as any).initiator?.name
+      || (record as any).initiator_name
+      || record.form_data?.contact_id_name
+      || record.initiator_id;
+  };
+
+  const getFieldLabel = (fieldName: string): string => {
+    return fieldLabelMap[fieldName] || fieldName;
   };
 
   const getStatusBadge = (status: string) => {
@@ -76,7 +106,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
             <TableBody>
               {records.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell>{(record as any).contacts?.name || (record as any).initiator?.name || (record as any).initiator_name || record.initiator_id}</TableCell>
+                  <TableCell>{getInitiatorName(record)}</TableCell>
                   <TableCell>{getStatusBadge(record.status)}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(record.created_at).toLocaleString()}
@@ -103,7 +133,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-muted-foreground">申请人</span>
-                    <p className="font-medium">{(selectedRecord as any).contacts?.name || (selectedRecord as any).initiator?.name || (selectedRecord as any).initiator_name || selectedRecord.initiator_id}</p>
+                    <p className="font-medium">{getInitiatorName(selectedRecord)}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">状态</span>
@@ -119,7 +149,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(selectedRecord.form_data).map(([key, value]) => (
                           <div key={key}>
-                            <span className="text-sm text-muted-foreground">{key}</span>
+                            <span className="text-sm text-muted-foreground">{getFieldLabel(key)}</span>
                             <p className="text-sm">{String(value ?? "-")}</p>
                           </div>
                         ))}
