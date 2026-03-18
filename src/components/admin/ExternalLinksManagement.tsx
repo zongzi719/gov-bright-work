@@ -133,7 +133,7 @@ const ExternalLinksManagement = () => {
               <TableHead className="w-16 whitespace-nowrap">排序</TableHead>
               <TableHead>名称</TableHead>
               <TableHead>链接地址</TableHead>
-              <TableHead>图标地址</TableHead>
+              <TableHead className="whitespace-nowrap">图标</TableHead>
               <TableHead className="w-20">状态</TableHead>
               <TableHead className="w-24">操作</TableHead>
             </TableRow>
