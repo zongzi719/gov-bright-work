@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ExternalLink, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Upload } from "lucide-react";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
+import { isOfflineMode } from "@/lib/offlineApi";
 
 interface ExternalLinkItem {
   id: string;
@@ -29,11 +30,23 @@ interface ExternalLinkItem {
   is_active: boolean;
 }
 
+// 解析图标URL - 离线模式下拼接API基地址
+const resolveIconUrl = (iconUrl: string): string => {
+  if (!iconUrl) return '';
+  if (iconUrl.startsWith('http://') || iconUrl.startsWith('https://') || iconUrl.startsWith('data:')) return iconUrl;
+  if (isOfflineMode()) {
+    const baseUrl = (window as any).GOV_CONFIG?.API_BASE_URL || 'http://localhost:3001';
+    return `${baseUrl}${iconUrl}`;
+  }
+  return iconUrl;
+};
+
 const ExternalLinksManagement = () => {
   const [links, setLinks] = useState<ExternalLinkItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ExternalLinkItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const iconFileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     title: "",
     url: "",
@@ -41,6 +54,28 @@ const ExternalLinksManagement = () => {
     sort_order: 0,
     is_active: true,
   });
+
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const baseUrl = (window as any).GOV_CONFIG?.API_BASE_URL || 'http://localhost:3001';
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await fetch(`${baseUrl}/api/upload/external-links`, {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await resp.json();
+      if (result.url) {
+        setForm(f => ({ ...f, icon_url: result.url }));
+        toast.success("图标上传成功");
+      }
+    } catch {
+      toast.error("图标上传失败");
+    }
+    if (iconFileRef.current) iconFileRef.current.value = '';
+  };
 
   useEffect(() => {
     fetchLinks();
@@ -129,10 +164,10 @@ const ExternalLinksManagement = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">排序</TableHead>
+              <TableHead className="w-16 whitespace-nowrap">排序</TableHead>
               <TableHead>名称</TableHead>
               <TableHead>链接地址</TableHead>
-              <TableHead>图标地址</TableHead>
+              <TableHead className="whitespace-nowrap">图标</TableHead>
               <TableHead className="w-20">状态</TableHead>
               <TableHead className="w-24">操作</TableHead>
             </TableRow>
@@ -150,7 +185,13 @@ const ExternalLinksManagement = () => {
                   <TableCell>{link.sort_order}</TableCell>
                   <TableCell className="font-medium">{link.title}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{link.url}</TableCell>
-                  <TableCell className="max-w-[150px] truncate text-xs text-muted-foreground">{link.icon_url || "-"}</TableCell>
+                  <TableCell>
+                    {link.icon_url ? (
+                      <img src={resolveIconUrl(link.icon_url)} alt="" className="w-8 h-8 object-contain rounded" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={link.is_active ? "default" : "secondary"}>
                       {link.is_active ? "启用" : "禁用"}
@@ -189,8 +230,24 @@ const ExternalLinksManagement = () => {
               <Input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://www.example.com" />
             </div>
             <div className="space-y-2">
-              <Label>图标地址（可选）</Label>
-              <Input value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="图标图片URL，留空使用默认图标" />
+              <Label>图标（可选）</Label>
+              <div className="flex gap-2 items-center">
+                <Input value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="图标URL或上传图片，留空使用默认" className="flex-1" />
+                {isOfflineMode() && (
+                  <>
+                    <input ref={iconFileRef} type="file" accept="image/*" className="hidden" onChange={handleIconUpload} />
+                    <Button type="button" variant="outline" size="icon" onClick={() => iconFileRef.current?.click()} title="上传图标">
+                      <Upload className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+              {form.icon_url && (
+                <div className="flex items-center gap-2 mt-1">
+                  <img src={resolveIconUrl(form.icon_url)} alt="预览" className="w-8 h-8 object-contain rounded border" />
+                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">{form.icon_url}</span>
+                </div>
+              )}
             </div>
             <div className="flex gap-4">
               <div className="space-y-2 flex-1">
