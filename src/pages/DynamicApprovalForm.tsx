@@ -252,15 +252,15 @@ const DynamicApprovalForm = () => {
     switch (field.field_type) {
       case "user":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>{field.field_label}</Label>
             <Input value={currentUser?.name || ""} disabled className="bg-muted mt-1" />
-          </div>
+          </>
         );
 
       case "text":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -271,12 +271,12 @@ const DynamicApprovalForm = () => {
               placeholder={field.placeholder || `请输入${field.field_label}`}
               className="mt-1"
             />
-          </div>
+          </>
         );
 
       case "textarea":
         return (
-          <div key={field.id} className="col-span-2">
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -287,13 +287,13 @@ const DynamicApprovalForm = () => {
               placeholder={field.placeholder || `请输入${field.field_label}`}
               className="mt-1 min-h-[80px]"
             />
-          </div>
+          </>
         );
 
       case "number":
       case "money":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -306,13 +306,13 @@ const DynamicApprovalForm = () => {
               className="mt-1"
               step={field.field_type === "money" ? "0.01" : "1"}
             />
-          </div>
+          </>
         );
 
       case "date": {
         const dateValue = value ? new Date(value) : undefined;
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -336,14 +336,14 @@ const DynamicApprovalForm = () => {
                 />
               </PopoverContent>
             </Popover>
-          </div>
+          </>
         );
       }
 
       case "datetime": {
         const dtValue = value ? new Date(value) : undefined;
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -354,13 +354,13 @@ const DynamicApprovalForm = () => {
               onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
               className="mt-1"
             />
-          </div>
+          </>
         );
       }
 
       case "select":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -375,12 +375,12 @@ const DynamicApprovalForm = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </>
         );
 
       case "radio":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -393,12 +393,12 @@ const DynamicApprovalForm = () => {
                 </div>
               ))}
             </RadioGroup>
-          </div>
+          </>
         );
 
       case "checkbox":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -421,12 +421,12 @@ const DynamicApprovalForm = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </>
         );
 
       default:
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -437,7 +437,7 @@ const DynamicApprovalForm = () => {
               placeholder={field.placeholder || ""}
               className="mt-1"
             />
-          </div>
+          </>
         );
     }
   };
@@ -499,23 +499,27 @@ const DynamicApprovalForm = () => {
 
       {/* 新建表单对话框 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
-          <DialogHeader className="px-6 py-4 border-b bg-background">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b bg-background flex-shrink-0">
             <DialogTitle>
               <span className="mr-2">{template.icon}</span>
               新建{template.name}
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="px-6 py-4">
+          <ScrollArea className="px-6 py-4 flex-1 min-h-0">
             {fields.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <p>该审批模板尚未配置表单字段</p>
                 <p className="text-sm mt-1">请在管理后台的审批设置中配置表单</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {fields.map(renderField)}
+              <div className="flex flex-wrap -mx-2">
+                {fields.map((field) => (
+                  <div key={field.id} className={cn("px-2 mb-4", field.col_span === 2 || field.field_type === "textarea" ? "w-full" : "w-full md:w-1/2")}>
+                    {renderField(field)}
+                  </div>
+                ))}
               </div>
             )}
           </ScrollArea>
@@ -534,8 +538,8 @@ const DynamicApprovalForm = () => {
 
       {/* 详情对话框 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] !grid !grid-rows-[auto_1fr] p-0 gap-0">
-          <DialogHeader className="px-6 py-4 border-b bg-background">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b bg-background flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <span>{template.icon}</span>
               {template.name}详情
@@ -547,15 +551,15 @@ const DynamicApprovalForm = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="px-6 py-4">
+          <ScrollArea className="px-6 py-4 flex-1 min-h-0">
             {selectedRecord && (
               <div className="space-y-4">
                 {/* 表单数据展示 */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-wrap -mx-2">
                   {fields.map(field => {
                     const val = selectedRecord.form_data?.[field.field_name];
                     return (
-                      <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+                      <div key={field.id} className={cn("px-2 mb-4", field.col_span === 2 ? "w-full" : "w-full md:w-1/2")}>
                         <Label className="text-sm text-muted-foreground">{field.field_label}</Label>
                         <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md text-sm min-h-[40px] flex items-center">
                           {Array.isArray(val) ? val.join(", ") : (val || "-")}
