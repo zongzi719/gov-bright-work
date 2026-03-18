@@ -58,6 +58,16 @@ function safeDateStr(val) {
   return null;
 }
 
+// 安全解析 JSON 字符串，MariaDB 中的数组字段存储为 TEXT/JSON
+function safeJsonParse(val, defaultVal) {
+  if (!val) return defaultVal;
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch (e) { return defaultVal; }
+  }
+  return defaultVal;
+}
+
 // 数据库连接池
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -1873,15 +1883,44 @@ app.delete('/api/canteen-menus/:id', async (req, res) => {
 // 获取审批模板列表
 app.get('/api/approval-templates', async (req, res) => {
   try {
-    const { include_inactive } = req.query;
+    const { include_inactive, business_type } = req.query;
     let sql = 'SELECT * FROM approval_templates';
+    const conditions = [];
+    const params = [];
+    
     if (!include_inactive || include_inactive !== 'true') {
-      sql += ' WHERE is_active = 1';
+      conditions.push('is_active = 1');
+    }
+    
+    // 支持按 business_type 筛选（可多个）
+    const btValues = Array.isArray(business_type) ? business_type : (business_type ? [business_type] : []);
+    if (btValues.length > 0) {
+      conditions.push(`business_type IN (${btValues.map(() => '?').join(',')})`);
+      params.push(...btValues);
+    }
+    
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
     }
     sql += ' ORDER BY created_at DESC';
     
-    const [rows] = await pool.execute(sql);
-    res.json(rows);
+    const [rows] = await pool.execute(sql, params);
+    
+    // 转换 MariaDB 数据类型
+    const result = rows.map(row => ({
+      ...row,
+      is_active: !!row.is_active,
+      show_in_nav: !!row.show_in_nav,
+      allow_withdraw: !!row.allow_withdraw,
+      allow_transfer: !!row.allow_transfer,
+      notify_initiator: !!row.notify_initiator,
+      notify_approver: !!row.notify_approver,
+      nav_visible_org_ids: safeJsonParse(row.nav_visible_org_ids, []),
+      nav_visible_role_names: safeJsonParse(row.nav_visible_role_names, []),
+      nav_visible_user_ids: safeJsonParse(row.nav_visible_user_ids, []),
+    }));
+    
+    res.json(result);
   } catch (error) {
     console.error('Get approval templates error:', error);
     res.status(500).json({ error: '获取审批模板失败' });
@@ -1923,6 +1962,20 @@ app.put('/api/approval-templates/:id', async (req, res) => {
     if (updates.icon !== undefined) { fields.push('icon = ?'); values.push(updates.icon); }
     if (updates.business_type !== undefined) { fields.push('business_type = ?'); values.push(updates.business_type); }
     if (updates.is_active !== undefined) { fields.push('is_active = ?'); values.push(updates.is_active ? 1 : 0); }
+    if (updates.show_in_nav !== undefined) { fields.push('show_in_nav = ?'); values.push(updates.show_in_nav ? 1 : 0); }
+    if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category); }
+    if (updates.nav_visible_scope !== undefined) { fields.push('nav_visible_scope = ?'); values.push(updates.nav_visible_scope); }
+    if (updates.nav_visible_org_ids !== undefined) { fields.push('nav_visible_org_ids = ?'); values.push(JSON.stringify(updates.nav_visible_org_ids || [])); }
+    if (updates.nav_visible_role_names !== undefined) { fields.push('nav_visible_role_names = ?'); values.push(JSON.stringify(updates.nav_visible_role_names || [])); }
+    if (updates.nav_visible_user_ids !== undefined) { fields.push('nav_visible_user_ids = ?'); values.push(JSON.stringify(updates.nav_visible_user_ids || [])); }
+    if (updates.allow_withdraw !== undefined) { fields.push('allow_withdraw = ?'); values.push(updates.allow_withdraw ? 1 : 0); }
+    if (updates.allow_transfer !== undefined) { fields.push('allow_transfer = ?'); values.push(updates.allow_transfer ? 1 : 0); }
+    if (updates.notify_initiator !== undefined) { fields.push('notify_initiator = ?'); values.push(updates.notify_initiator ? 1 : 0); }
+    if (updates.notify_approver !== undefined) { fields.push('notify_approver = ?'); values.push(updates.notify_approver ? 1 : 0); }
+    if (updates.callback_url !== undefined) { fields.push('callback_url = ?'); values.push(updates.callback_url || null); }
+    if (updates.auto_approve_timeout !== undefined) { fields.push('auto_approve_timeout = ?'); values.push(updates.auto_approve_timeout || null); }
+    if (updates.current_version_id !== undefined) { fields.push('current_version_id = ?'); values.push(updates.current_version_id || null); }
+    if (updates.last_process_saved_at !== undefined) { fields.push('last_process_saved_at = ?'); values.push(updates.last_process_saved_at || null); }
     
     if (fields.length === 0) {
       return res.json({ success: true });
@@ -1952,11 +2005,15 @@ app.get('/api/approval-templates/:id', async (req, res) => {
     const row = rows[0];
     res.json({
       ...row,
-      is_active: row.is_active === 1 || row.is_active === true,
-      allow_withdraw: row.allow_withdraw === 1 || row.allow_withdraw === true,
-      allow_transfer: row.allow_transfer === 1 || row.allow_transfer === true,
-      notify_initiator: row.notify_initiator === 1 || row.notify_initiator === true,
-      notify_approver: row.notify_approver === 1 || row.notify_approver === true,
+      is_active: !!row.is_active,
+      show_in_nav: !!row.show_in_nav,
+      allow_withdraw: !!row.allow_withdraw,
+      allow_transfer: !!row.allow_transfer,
+      notify_initiator: !!row.notify_initiator,
+      notify_approver: !!row.notify_approver,
+      nav_visible_org_ids: safeJsonParse(row.nav_visible_org_ids, []),
+      nav_visible_role_names: safeJsonParse(row.nav_visible_role_names, []),
+      nav_visible_user_ids: safeJsonParse(row.nav_visible_user_ids, []),
     });
   } catch (error) {
     console.error('获取审批模板详情失败:', error.message);
