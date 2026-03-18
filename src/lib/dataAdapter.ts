@@ -3070,6 +3070,79 @@ export async function getSupplyRequisitionItemsById(requisitionId: string) {
   return { data, error };
 }
 
+// ==================== External Links ====================
+
+export async function getExternalLinks(params?: { is_active?: boolean }) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    if (params?.is_active !== undefined) searchParams.set('is_active', String(params.is_active));
+    const query = searchParams.toString();
+    return offlineRequest<any[]>(`/api/external-links${query ? `?${query}` : ''}`);
+  }
+  
+  let query = supabase.from("external_links").select("*");
+  if (params?.is_active !== undefined) query = query.eq("is_active", params.is_active);
+  const { data, error } = await query.order("sort_order").order("created_at");
+  return { data, error };
+}
+
+export async function createExternalLink(link: {
+  title: string;
+  url: string;
+  icon_url?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/external-links', {
+      method: 'POST',
+      body: JSON.stringify(link),
+    });
+  }
+  
+  const { data, error } = await supabase
+    .from("external_links")
+    .insert(link as any)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateExternalLink(id: string, updates: {
+  title?: string;
+  url?: string;
+  icon_url?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/external-links/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await supabase
+    .from("external_links")
+    .update(updates as any)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function deleteExternalLink(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/external-links/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await supabase
+    .from("external_links")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
