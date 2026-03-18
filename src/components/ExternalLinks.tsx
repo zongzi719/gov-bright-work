@@ -56,7 +56,7 @@ const ExternalLinks = () => {
         >
           <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
             {link.icon_url ? (
-              <img src={link.icon_url} alt={link.title} className="w-full h-full object-contain" />
+              <img src={resolveIconUrl(link.icon_url)} alt={link.title} className="w-full h-full object-contain" />
             ) : link.id === 'default' ? (
               <img src={peopleLogo} alt={link.title} className="w-full h-full object-contain" />
             ) : (
