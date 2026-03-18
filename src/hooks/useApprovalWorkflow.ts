@@ -83,6 +83,10 @@ export const useApprovalWorkflow = () => {
     return approverType === 'direct_supervisor' || approverType === 'supervisor';
   };
 
+  const isSelfApproverType = (approverType: string): boolean => {
+    return approverType === 'self';
+  };
+
   /**
    * 根据发起人获取动态审批人（直接主管、部门负责人）
    */
