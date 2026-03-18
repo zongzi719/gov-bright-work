@@ -36,6 +36,8 @@ interface ApprovalTemplate {
   is_active: boolean;
   nav_visible_scope?: string;
   nav_visible_org_ids?: string[];
+  nav_visible_role_names?: string[];
+  nav_visible_user_ids?: string[];
   created_at: string;
 }
 
@@ -51,6 +53,17 @@ interface OrgOption {
   name: string;
 }
 
+interface ContactOption {
+  id: string;
+  name: string;
+  department?: string;
+}
+
+interface RoleOption {
+  name: string;
+  label: string;
+}
+
 const categoryOptions = [
   { value: "外出管理", label: "外出管理" },
   { value: "办公用品", label: "办公用品" },
@@ -60,6 +73,8 @@ const visibilityScopeOptions = [
   { value: "all", label: "所有人可见" },
   { value: "leader_only", label: "仅领导可见" },
   { value: "specific_orgs", label: "指定单位可见" },
+  { value: "specific_roles", label: "指定角色可见" },
+  { value: "specific_users", label: "指定人员可见" },
 ];
 
 const ApprovalBasicSettings = ({ 
@@ -77,9 +92,14 @@ const ApprovalBasicSettings = ({
     is_active: true,
     nav_visible_scope: "all",
     nav_visible_org_ids: [] as string[],
+    nav_visible_role_names: [] as string[],
+    nav_visible_user_ids: [] as string[],
   });
   const [saving, setSaving] = useState(false);
   const [organizations, setOrganizations] = useState<OrgOption[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [contactSearch, setContactSearch] = useState("");
 
   useEffect(() => {
     if (template) {
@@ -92,6 +112,8 @@ const ApprovalBasicSettings = ({
         is_active: template.is_active,
         nav_visible_scope: template.nav_visible_scope || "all",
         nav_visible_org_ids: template.nav_visible_org_ids || [],
+        nav_visible_role_names: template.nav_visible_role_names || [],
+        nav_visible_user_ids: template.nav_visible_user_ids || [],
       });
     } else {
       setFormData({
@@ -103,18 +125,36 @@ const ApprovalBasicSettings = ({
         is_active: true,
         nav_visible_scope: "all",
         nav_visible_org_ids: [],
+        nav_visible_role_names: [],
+        nav_visible_user_ids: [],
       });
     }
   }, [template]);
 
   useEffect(() => {
     loadOrganizations();
+    loadRoles();
+    loadContacts();
   }, []);
 
   const loadOrganizations = async () => {
     const { data } = await dataAdapter.getOrganizations();
     if (data) {
       setOrganizations((data as any[]).map(o => ({ id: o.id, name: o.name })));
+    }
+  };
+
+  const loadRoles = async () => {
+    const { data } = await dataAdapter.getRoles();
+    if (data) {
+      setRoles((data as any[]).map(r => ({ name: r.name, label: r.label })));
+    }
+  };
+
+  const loadContacts = async () => {
+    const { data } = await dataAdapter.getContactsWithOrg();
+    if (data) {
+      setContacts((data as any[]).map(c => ({ id: c.id, name: c.name, department: c.department })));
     }
   };
 
@@ -146,6 +186,8 @@ const ApprovalBasicSettings = ({
       is_active: formData.is_active,
       nav_visible_scope: formData.nav_visible_scope,
       nav_visible_org_ids: formData.nav_visible_org_ids,
+      nav_visible_role_names: formData.nav_visible_role_names,
+      nav_visible_user_ids: formData.nav_visible_user_ids,
     };
 
     if (isOfflineMode()) {
@@ -266,6 +308,28 @@ const ApprovalBasicSettings = ({
     }));
   };
 
+  const toggleRoleName = (roleName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      nav_visible_role_names: prev.nav_visible_role_names.includes(roleName)
+        ? prev.nav_visible_role_names.filter(r => r !== roleName)
+        : [...prev.nav_visible_role_names, roleName],
+    }));
+  };
+
+  const toggleUserId = (userId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      nav_visible_user_ids: prev.nav_visible_user_ids.includes(userId)
+        ? prev.nav_visible_user_ids.filter(id => id !== userId)
+        : [...prev.nav_visible_user_ids, userId],
+    }));
+  };
+
+  const filteredContacts = contactSearch
+    ? contacts.filter(c => c.name.includes(contactSearch) || (c.department && c.department.includes(contactSearch)))
+    : contacts;
+
   return (
     <Card>
       <CardHeader>
@@ -385,6 +449,81 @@ const ApprovalBasicSettings = ({
                         className="rounded"
                       />
                       <span className="text-sm">{org.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {formData.nav_visible_scope === "specific_roles" && (
+            <div className="space-y-2">
+              <Label>选择可见角色</Label>
+              <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-1">
+                {roles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">暂无角色数据</p>
+                ) : (
+                  roles.map(role => (
+                    <label key={role.name} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.nav_visible_role_names.includes(role.name)}
+                        onChange={() => toggleRoleName(role.name)}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{role.label}</span>
+                      <span className="text-xs text-muted-foreground">({role.name})</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {formData.nav_visible_scope === "specific_users" && (
+            <div className="space-y-2">
+              <Label>选择可见人员</Label>
+              <Input
+                placeholder="搜索姓名或部门..."
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                className="mb-2"
+              />
+              {formData.nav_visible_user_ids.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {formData.nav_visible_user_ids.map(uid => {
+                    const c = contacts.find(ct => ct.id === uid);
+                    return (
+                      <span key={uid} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded">
+                        {c?.name || uid}
+                        <button
+                          type="button"
+                          className="hover:text-destructive"
+                          onClick={() => toggleUserId(uid)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-1">
+                {filteredContacts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">暂无匹配人员</p>
+                ) : (
+                  filteredContacts.map(contact => (
+                    <label key={contact.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.nav_visible_user_ids.includes(contact.id)}
+                        onChange={() => toggleUserId(contact.id)}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{contact.name}</span>
+                      {contact.department && (
+                        <span className="text-xs text-muted-foreground">{contact.department}</span>
+                      )}
                     </label>
                   ))
                 )}

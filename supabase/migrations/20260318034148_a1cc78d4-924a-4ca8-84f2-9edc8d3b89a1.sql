@@ -1,0 +1,2 @@
+ALTER TABLE public.approval_templates ADD COLUMN IF NOT EXISTS nav_visible_role_names text[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.approval_templates ADD COLUMN IF NOT EXISTS nav_visible_user_ids uuid[] NOT NULL DEFAULT '{}';

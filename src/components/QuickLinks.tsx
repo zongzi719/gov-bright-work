@@ -33,6 +33,8 @@ interface CustomTemplate {
   code: string;
   nav_visible_scope?: string;
   nav_visible_org_ids?: string[];
+  nav_visible_role_names?: string[];
+  nav_visible_user_ids?: string[];
 }
 
 const QuickLinks = () => {
@@ -40,10 +42,12 @@ const QuickLinks = () => {
   const [hasLeaderSchedulePermission, setHasLeaderSchedulePermission] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
   const [allTemplates, setAllTemplates] = useState<CustomTemplate[]>([]);
+  const [userRoleNames, setUserRoleNames] = useState<string[]>([]);
 
   useEffect(() => {
     checkLeaderSchedulePermission();
     loadTemplates();
+    loadUserRoles();
   }, []);
 
   const getCurrentUser = () => {
@@ -53,6 +57,18 @@ const QuickLinks = () => {
       return JSON.parse(storedUser);
     } catch {
       return null;
+    }
+  };
+  const loadUserRoles = async () => {
+    const user = getCurrentUser();
+    if (!user?.id) return;
+    try {
+      const { data } = await dataAdapter.getUserRoles(user.id);
+      if (data) {
+        setUserRoleNames((data as any[]).map(r => r.role));
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -107,42 +123,38 @@ const QuickLinks = () => {
     }
   };
 
-  // 检查模块是否对当前用户可见
-  const isModuleVisible = (businessType: string): boolean => {
+  // 通用可见性检查
+  const checkVisibility = (scope: string, tpl: CustomTemplate): boolean => {
     const user = getCurrentUser();
-    if (!user) return true; // 未登录时显示所有
-
-    // 查找该业务类型对应的模板
-    const template = allTemplates.find(t => t.business_type === businessType && t.is_active);
-    if (!template) return true; // 没有模板配置则默认显示
-
-    const scope = template.nav_visible_scope || "all";
+    if (!user) return true;
 
     if (scope === "all") return true;
     if (scope === "leader_only") return !!user.is_leader;
     if (scope === "specific_orgs") {
-      const orgIds = template.nav_visible_org_ids || [];
+      const orgIds = tpl.nav_visible_org_ids || [];
       return orgIds.length === 0 || orgIds.includes(user.organization_id);
     }
-
+    if (scope === "specific_roles") {
+      const roleNames = tpl.nav_visible_role_names || [];
+      return roleNames.length === 0 || roleNames.some(r => userRoleNames.includes(r));
+    }
+    if (scope === "specific_users") {
+      const userIds = tpl.nav_visible_user_ids || [];
+      return userIds.length === 0 || userIds.includes(user.id);
+    }
     return true;
+  };
+
+  // 检查模块是否对当前用户可见
+  const isModuleVisible = (businessType: string): boolean => {
+    const template = allTemplates.find(t => t.business_type === businessType && t.is_active);
+    if (!template) return true;
+    return checkVisibility(template.nav_visible_scope || "all", template);
   };
 
   // 检查自定义模块是否对当前用户可见
   const isCustomModuleVisible = (template: CustomTemplate): boolean => {
-    const user = getCurrentUser();
-    if (!user) return true;
-
-    const scope = template.nav_visible_scope || "all";
-
-    if (scope === "all") return true;
-    if (scope === "leader_only") return !!user.is_leader;
-    if (scope === "specific_orgs") {
-      const orgIds = template.nav_visible_org_ids || [];
-      return orgIds.length === 0 || orgIds.includes(user.organization_id);
-    }
-
-    return true;
+    return checkVisibility(template.nav_visible_scope || "all", template);
   };
 
   const baseModules = [

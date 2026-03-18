@@ -1210,6 +1210,8 @@ export async function updateApprovalTemplate(id: string, updates: {
   show_in_nav?: boolean;
   nav_visible_scope?: string;
   nav_visible_org_ids?: string[];
+  nav_visible_role_names?: string[];
+  nav_visible_user_ids?: string[];
   category?: string;
 }) {
   if (isOfflineMode()) {
@@ -3146,6 +3148,33 @@ export async function deleteExternalLink(id: string) {
   return { data: null, error };
 }
 
+// ==================== Roles (角色) ====================
+
+export async function getRoles() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/roles');
+  }
+  
+  const { data, error } = await supabase
+    .from("roles")
+    .select("name, label, is_active")
+    .eq("is_active", true)
+    .order("sort_order");
+  return { data, error };
+}
+
+export async function getUserRoles(userId: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>(`/api/user-roles?user_id=${userId}`);
+  }
+  
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  return { data, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
@@ -3310,8 +3339,9 @@ export const dataAdapter = {
   createExternalLink,
   updateExternalLink,
   deleteExternalLink,
+  // Roles
+  getRoles,
+  getUserRoles,
   // Utilities
   isOfflineMode,
 };
-
-export default dataAdapter;
