@@ -30,11 +30,23 @@ interface ExternalLinkItem {
   is_active: boolean;
 }
 
+// 解析图标URL - 离线模式下拼接API基地址
+const resolveIconUrl = (iconUrl: string): string => {
+  if (!iconUrl) return '';
+  if (iconUrl.startsWith('http://') || iconUrl.startsWith('https://') || iconUrl.startsWith('data:')) return iconUrl;
+  if (isOfflineMode()) {
+    const baseUrl = (window as any).GOV_CONFIG?.API_BASE_URL || 'http://localhost:3001';
+    return `${baseUrl}${iconUrl}`;
+  }
+  return iconUrl;
+};
+
 const ExternalLinksManagement = () => {
   const [links, setLinks] = useState<ExternalLinkItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ExternalLinkItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const iconFileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     title: "",
     url: "",
@@ -42,6 +54,28 @@ const ExternalLinksManagement = () => {
     sort_order: 0,
     is_active: true,
   });
+
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const baseUrl = (window as any).GOV_CONFIG?.API_BASE_URL || 'http://localhost:3001';
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await fetch(`${baseUrl}/api/upload/external-links`, {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await resp.json();
+      if (result.url) {
+        setForm(f => ({ ...f, icon_url: result.url }));
+        toast.success("图标上传成功");
+      }
+    } catch {
+      toast.error("图标上传失败");
+    }
+    if (iconFileRef.current) iconFileRef.current.value = '';
+  };
 
   useEffect(() => {
     fetchLinks();
