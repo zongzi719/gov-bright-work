@@ -82,6 +82,7 @@ interface ContactInfo {
 interface ApprovalTimelineProps {
   businessId: string;
   businessType: string;
+  instanceId?: string; // 直接传入实例ID，跳过 business_id 查找
 }
 
 const nodeTypeIcons: Record<string, any> = {
