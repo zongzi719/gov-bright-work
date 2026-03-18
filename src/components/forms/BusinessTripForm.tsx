@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PersonPickerDialog from "@/components/PersonPickerDialog";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ type TimeOfDay = "am" | "pm";
 const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormProps) => {
   const { startApproval } = useApprovalWorkflow();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [companionPickerOpen, setCompanionPickerOpen] = useState(false);
   const [form, setForm] = useState({
     reason: "",
     destination: "",
@@ -455,20 +457,14 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
           {/* 同行人员 */}
           <div className="space-y-2">
             <Label>同行人员</Label>
-            <Select onValueChange={handleAddCompanion} value="">
-              <SelectTrigger>
-                <SelectValue placeholder="选择同行人员" />
-              </SelectTrigger>
-              <SelectContent>
-                {contacts
-                  .filter(c => c.id !== currentUser?.id && !form.companions.includes(c.id))
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} {c.department ? `(${c.department})` : ""}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-start text-muted-foreground font-normal"
+              onClick={() => setCompanionPickerOpen(true)}
+            >
+              选择同行人员
+            </Button>
             {form.companions.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {form.companions.map((id) => (
@@ -486,6 +482,13 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
                 ))}
               </div>
             )}
+            <PersonPickerDialog
+              open={companionPickerOpen}
+              onOpenChange={setCompanionPickerOpen}
+              onSelect={(contact) => handleAddCompanion(contact.id)}
+              excludeIds={[...(currentUser?.id ? [currentUser.id] : []), ...form.companions]}
+              title="选择同行人员"
+            />
           </div>
 
           {/* 预计费用 */}
