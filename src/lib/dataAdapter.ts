@@ -3146,6 +3146,21 @@ export async function deleteExternalLink(id: string) {
   return { data: null, error };
 }
 
+// ==================== Roles (角色) ====================
+
+export async function getRoles() {
+  if (isOfflineMode()) {
+    return offlineRequest<any[]>('/api/roles');
+  }
+  
+  const { data, error } = await supabase
+    .from("roles")
+    .select("name, label, is_active")
+    .eq("is_active", true)
+    .order("sort_order");
+  return { data, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
