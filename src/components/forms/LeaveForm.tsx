@@ -15,6 +15,7 @@ import { format, differenceInCalendarDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
+import PersonPickerDialog from "@/components/PersonPickerDialog";
 
 interface Contact {
   id: string;
