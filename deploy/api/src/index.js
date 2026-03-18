@@ -4723,6 +4723,90 @@ app.get('/api/audit-logs', async (req, res) => {
   }
 });
 
+// ==================== 外部链接管理 ====================
+
+app.get('/api/external-links', async (req, res) => {
+  try {
+    const { is_active } = req.query;
+    let sql = 'SELECT * FROM external_links WHERE 1=1';
+    const params = [];
+    
+    if (is_active !== undefined) {
+      sql += ' AND is_active = ?';
+      params.push(is_active === 'true' ? 1 : 0);
+    }
+    
+    sql += ' ORDER BY sort_order ASC, created_at ASC';
+    const [rows] = await pool.execute(sql, params);
+    
+    const formatted = rows.map(row => ({
+      ...row,
+      is_active: !!row.is_active
+    }));
+    
+    res.json(formatted);
+  } catch (error) {
+    console.error('Get external links error:', error);
+    res.status(500).json({ error: '获取外部链接失败' });
+  }
+});
+
+app.post('/api/external-links', async (req, res) => {
+  try {
+    const { title, url, icon_url, sort_order, is_active } = req.body;
+    const id = uuidv4();
+    await pool.execute(
+      `INSERT INTO external_links (id, title, url, icon_url, sort_order, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [id, title, url, icon_url || null, sort_order || 0, is_active !== false ? 1 : 0]
+    );
+    res.json({ id });
+  } catch (error) {
+    console.error('Create external link error:', error);
+    res.status(500).json({ error: '添加外部链接失败' });
+  }
+});
+
+app.put('/api/external-links/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, url, icon_url, sort_order, is_active } = req.body;
+    
+    const fields = [];
+    const params = [];
+    
+    if (title !== undefined) { fields.push('title = ?'); params.push(title); }
+    if (url !== undefined) { fields.push('url = ?'); params.push(url); }
+    if (icon_url !== undefined) { fields.push('icon_url = ?'); params.push(icon_url || null); }
+    if (sort_order !== undefined) { fields.push('sort_order = ?'); params.push(sort_order); }
+    if (is_active !== undefined) { fields.push('is_active = ?'); params.push(is_active ? 1 : 0); }
+    
+    if (fields.length === 0) {
+      return res.status(400).json({ error: '没有需要更新的字段' });
+    }
+    
+    fields.push('updated_at = NOW()');
+    params.push(id);
+    
+    await pool.execute(`UPDATE external_links SET ${fields.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update external link error:', error);
+    res.status(500).json({ error: '更新外部链接失败' });
+  }
+});
+
+app.delete('/api/external-links/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM external_links WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete external link error:', error);
+    res.status(500).json({ error: '删除外部链接失败' });
+  }
+});
+
 // ==================== 健康检查 ====================
 
 app.get('/api/health', async (req, res) => {
