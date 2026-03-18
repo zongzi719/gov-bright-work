@@ -538,8 +538,8 @@ const DynamicApprovalForm = () => {
 
       {/* 详情对话框 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] !grid !grid-rows-[auto_1fr] p-0 gap-0">
-          <DialogHeader className="px-6 py-4 border-b bg-background">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b bg-background flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <span>{template.icon}</span>
               {template.name}详情
@@ -551,15 +551,15 @@ const DynamicApprovalForm = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="px-6 py-4">
+          <ScrollArea className="px-6 py-4 flex-1 min-h-0">
             {selectedRecord && (
               <div className="space-y-4">
                 {/* 表单数据展示 */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-wrap -mx-2">
                   {fields.map(field => {
                     const val = selectedRecord.form_data?.[field.field_name];
                     return (
-                      <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+                      <div key={field.id} className={cn("px-2 mb-4", field.col_span === 2 ? "w-full" : "w-full md:w-1/2")}>
                         <Label className="text-sm text-muted-foreground">{field.field_label}</Label>
                         <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md text-sm min-h-[40px] flex items-center">
                           {Array.isArray(val) ? val.join(", ") : (val || "-")}
