@@ -43,6 +43,7 @@ type TimeOfDay = "am" | "pm";
 const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormProps) => {
   const { startApproval } = useApprovalWorkflow();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [companionPickerOpen, setCompanionPickerOpen] = useState(false);
   const [form, setForm] = useState({
     reason: "",
     destination: "",
