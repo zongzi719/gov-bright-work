@@ -436,6 +436,7 @@ const Requisition = () => {
                             <TableRow className="bg-muted/30">
                               <TableHead>物品名称</TableHead>
                               <TableHead>规格</TableHead>
+                              <TableHead>单位</TableHead>
                               <TableHead>数量</TableHead>
                             </TableRow>
                           </TableHeader>
