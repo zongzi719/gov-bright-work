@@ -36,6 +36,8 @@ interface ApprovalTemplate {
   is_active: boolean;
   nav_visible_scope?: string;
   nav_visible_org_ids?: string[];
+  nav_visible_role_names?: string[];
+  nav_visible_user_ids?: string[];
   created_at: string;
 }
 
@@ -51,6 +53,17 @@ interface OrgOption {
   name: string;
 }
 
+interface ContactOption {
+  id: string;
+  name: string;
+  department?: string;
+}
+
+interface RoleOption {
+  name: string;
+  label: string;
+}
+
 const categoryOptions = [
   { value: "外出管理", label: "外出管理" },
   { value: "办公用品", label: "办公用品" },
@@ -60,6 +73,8 @@ const visibilityScopeOptions = [
   { value: "all", label: "所有人可见" },
   { value: "leader_only", label: "仅领导可见" },
   { value: "specific_orgs", label: "指定单位可见" },
+  { value: "specific_roles", label: "指定角色可见" },
+  { value: "specific_users", label: "指定人员可见" },
 ];
 
 const ApprovalBasicSettings = ({ 
