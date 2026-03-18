@@ -42,6 +42,7 @@ const QuickLinks = () => {
   const [hasLeaderSchedulePermission, setHasLeaderSchedulePermission] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
   const [allTemplates, setAllTemplates] = useState<CustomTemplate[]>([]);
+  const [userRoleNames, setUserRoleNames] = useState<string[]>([]);
 
   useEffect(() => {
     checkLeaderSchedulePermission();
