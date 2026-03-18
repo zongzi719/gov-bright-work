@@ -17,12 +17,6 @@ import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
 import PersonPickerDialog from "@/components/PersonPickerDialog";
 
-interface Contact {
-  id: string;
-  name: string;
-  department: string | null;
-}
-
 interface LeaveBalance {
   annual_leave_total: number;
   annual_leave_used: number;
