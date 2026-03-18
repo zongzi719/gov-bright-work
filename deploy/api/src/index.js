@@ -1873,15 +1873,44 @@ app.delete('/api/canteen-menus/:id', async (req, res) => {
 // 获取审批模板列表
 app.get('/api/approval-templates', async (req, res) => {
   try {
-    const { include_inactive } = req.query;
+    const { include_inactive, business_type } = req.query;
     let sql = 'SELECT * FROM approval_templates';
+    const conditions = [];
+    const params = [];
+    
     if (!include_inactive || include_inactive !== 'true') {
-      sql += ' WHERE is_active = 1';
+      conditions.push('is_active = 1');
+    }
+    
+    // 支持按 business_type 筛选（可多个）
+    const btValues = Array.isArray(business_type) ? business_type : (business_type ? [business_type] : []);
+    if (btValues.length > 0) {
+      conditions.push(`business_type IN (${btValues.map(() => '?').join(',')})`);
+      params.push(...btValues);
+    }
+    
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
     }
     sql += ' ORDER BY created_at DESC';
     
-    const [rows] = await pool.execute(sql);
-    res.json(rows);
+    const [rows] = await pool.execute(sql, params);
+    
+    // 转换 MariaDB 数据类型
+    const result = rows.map(row => ({
+      ...row,
+      is_active: !!row.is_active,
+      show_in_nav: !!row.show_in_nav,
+      allow_withdraw: !!row.allow_withdraw,
+      allow_transfer: !!row.allow_transfer,
+      notify_initiator: !!row.notify_initiator,
+      notify_approver: !!row.notify_approver,
+      nav_visible_org_ids: safeJsonParse(row.nav_visible_org_ids, []),
+      nav_visible_role_names: safeJsonParse(row.nav_visible_role_names, []),
+      nav_visible_user_ids: safeJsonParse(row.nav_visible_user_ids, []),
+    }));
+    
+    res.json(result);
   } catch (error) {
     console.error('Get approval templates error:', error);
     res.status(500).json({ error: '获取审批模板失败' });
