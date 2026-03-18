@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ExternalLink } from "lucide-react";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { isOfflineMode } from "@/lib/offlineApi";
 import peopleLogo from "@/assets/people-logo.webp";
 
 interface ExternalLinkItem {
@@ -11,6 +12,16 @@ interface ExternalLinkItem {
   sort_order: number;
   is_active: boolean;
 }
+
+const resolveIconUrl = (iconUrl: string): string => {
+  if (!iconUrl) return '';
+  if (iconUrl.startsWith('http://') || iconUrl.startsWith('https://') || iconUrl.startsWith('data:')) return iconUrl;
+  if (isOfflineMode()) {
+    const baseUrl = (window as any).GOV_CONFIG?.API_BASE_URL || 'http://localhost:3001';
+    return `${baseUrl}${iconUrl}`;
+  }
+  return iconUrl;
+};
 
 const ExternalLinks = () => {
   const [links, setLinks] = useState<ExternalLinkItem[]>([]);
