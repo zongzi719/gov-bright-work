@@ -223,6 +223,8 @@ const Requisition = () => {
           return {
             supply_id: item.supply_id,
             supply_name: supply?.name,
+            specification: supply?.specification || null,
+            unit: supply?.unit || "",
             quantity: item.quantity,
           };
         }),
