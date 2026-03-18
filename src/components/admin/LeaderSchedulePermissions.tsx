@@ -354,6 +354,7 @@ const LeaderSchedulePermissions = ({ leaders }: LeaderSchedulePermissionsProps) 
                             <Checkbox
                               checked={formData.selected_leader_ids.includes(leader.id)}
                               onCheckedChange={() => toggleLeaderSelection(leader.id)}
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <div>
                               <div className="font-medium text-sm">{leader.name}</div>
