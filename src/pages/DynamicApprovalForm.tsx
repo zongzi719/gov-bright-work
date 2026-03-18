@@ -213,6 +213,25 @@ const DynamicApprovalForm = () => {
       templateId: template!.id,
     });
 
+    // 如果审批流成功但没有创建实例（无发布版本），则直接创建实例记录
+    if (approvalResult.success && !approvalResult.instanceId) {
+      try {
+        await dataAdapter.createApprovalInstance({
+          template_id: template!.id,
+          version_id: "none",
+          version_number: 0,
+          business_type: template!.business_type,
+          business_id: businessId,
+          initiator_id: currentUser?.id || "",
+          status: "approved",
+          current_node_index: 0,
+          form_data: formData,
+        });
+      } catch (e) {
+        console.warn("Fallback instance creation failed:", e);
+      }
+    }
+
     setSubmitting(false);
 
     if (approvalResult.success) {
@@ -224,9 +243,10 @@ const DynamicApprovalForm = () => {
         target_name: title,
         detail: formData,
       });
-      toast.success("申请已提交，审批流程已启动");
+      toast.success("申请已提交" + (approvalResult.instanceId ? "，审批流程已启动" : ""));
       setFormOpen(false);
-      void fetchRecords();
+      // 延迟刷新确保数据已写入
+      setTimeout(() => void fetchRecords(), 300);
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
     }
