@@ -252,10 +252,10 @@ const DynamicApprovalForm = () => {
     switch (field.field_type) {
       case "user":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>{field.field_label}</Label>
             <Input value={currentUser?.name || ""} disabled className="bg-muted mt-1" />
-          </div>
+          </>
         );
 
       case "text":
