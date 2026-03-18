@@ -186,6 +186,8 @@ const ApprovalBasicSettings = ({
       is_active: formData.is_active,
       nav_visible_scope: formData.nav_visible_scope,
       nav_visible_org_ids: formData.nav_visible_org_ids,
+      nav_visible_role_names: formData.nav_visible_role_names,
+      nav_visible_user_ids: formData.nav_visible_user_ids,
     };
 
     if (isOfflineMode()) {
