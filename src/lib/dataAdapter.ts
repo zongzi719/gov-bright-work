@@ -1210,6 +1210,8 @@ export async function updateApprovalTemplate(id: string, updates: {
   show_in_nav?: boolean;
   nav_visible_scope?: string;
   nav_visible_org_ids?: string[];
+  nav_visible_role_names?: string[];
+  nav_visible_user_ids?: string[];
   category?: string;
 }) {
   if (isOfflineMode()) {
