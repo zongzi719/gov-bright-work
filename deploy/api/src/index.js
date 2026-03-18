@@ -58,6 +58,16 @@ function safeDateStr(val) {
   return null;
 }
 
+// 安全解析 JSON 字符串，MariaDB 中的数组字段存储为 TEXT/JSON
+function safeJsonParse(val, defaultVal) {
+  if (!val) return defaultVal;
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch (e) { return defaultVal; }
+  }
+  return defaultVal;
+}
+
 // 数据库连接池
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
