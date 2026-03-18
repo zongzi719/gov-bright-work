@@ -118,16 +118,17 @@ const getSeasonTimeOptions = (season: SeasonType): string[] => {
 
 const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const { startApproval } = useApprovalWorkflow();
-  const [contacts, setContacts] = useState<Contact[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
   const [season, setSeason] = useState<SeasonType>(() => getSeasonByDate(new Date()));
+  const [personPickerOpen, setPersonPickerOpen] = useState(false);
+  const [handoverPersonName, setHandoverPersonName] = useState("");
   const [form, setForm] = useState({
     leave_type: "",
     reason: "",
     start_date: undefined as Date | undefined,
-    start_hour: "10:00", // 开始时间，默认10点
+    start_hour: "10:00",
     end_date: undefined as Date | undefined,
-    end_hour: "19:30", // 结束时间，默认冬季下班时间
+    end_hour: "19:30",
     handover_person_id: "",
     handover_notes: "",
     notes: "",
