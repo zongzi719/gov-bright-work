@@ -92,9 +92,14 @@ const ApprovalBasicSettings = ({
     is_active: true,
     nav_visible_scope: "all",
     nav_visible_org_ids: [] as string[],
+    nav_visible_role_names: [] as string[],
+    nav_visible_user_ids: [] as string[],
   });
   const [saving, setSaving] = useState(false);
   const [organizations, setOrganizations] = useState<OrgOption[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [contactSearch, setContactSearch] = useState("");
 
   useEffect(() => {
     if (template) {
@@ -107,6 +112,8 @@ const ApprovalBasicSettings = ({
         is_active: template.is_active,
         nav_visible_scope: template.nav_visible_scope || "all",
         nav_visible_org_ids: template.nav_visible_org_ids || [],
+        nav_visible_role_names: template.nav_visible_role_names || [],
+        nav_visible_user_ids: template.nav_visible_user_ids || [],
       });
     } else {
       setFormData({
@@ -118,18 +125,36 @@ const ApprovalBasicSettings = ({
         is_active: true,
         nav_visible_scope: "all",
         nav_visible_org_ids: [],
+        nav_visible_role_names: [],
+        nav_visible_user_ids: [],
       });
     }
   }, [template]);
 
   useEffect(() => {
     loadOrganizations();
+    loadRoles();
+    loadContacts();
   }, []);
 
   const loadOrganizations = async () => {
     const { data } = await dataAdapter.getOrganizations();
     if (data) {
       setOrganizations((data as any[]).map(o => ({ id: o.id, name: o.name })));
+    }
+  };
+
+  const loadRoles = async () => {
+    const { data } = await dataAdapter.getRoles();
+    if (data) {
+      setRoles((data as any[]).map(r => ({ name: r.name, label: r.label })));
+    }
+  };
+
+  const loadContacts = async () => {
+    const { data } = await dataAdapter.getContacts();
+    if (data) {
+      setContacts((data as any[]).map(c => ({ id: c.id, name: c.name, department: c.department })));
     }
   };
 
