@@ -3080,7 +3080,7 @@ export async function getExternalLinks(params?: { is_active?: boolean }) {
     return offlineRequest<any[]>(`/api/external-links${query ? `?${query}` : ''}`);
   }
   
-  let query = supabase.from("external_links").select("*");
+  let query = (supabase as any).from("external_links").select("*");
   if (params?.is_active !== undefined) query = query.eq("is_active", params.is_active);
   const { data, error } = await query.order("sort_order").order("created_at");
   return { data, error };
@@ -3100,9 +3100,9 @@ export async function createExternalLink(link: {
     });
   }
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("external_links")
-    .insert(link as any)
+    .insert(link)
     .select("id")
     .single();
   return { data, error };
@@ -3122,9 +3122,9 @@ export async function updateExternalLink(id: string, updates: {
     });
   }
   
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("external_links")
-    .update(updates as any)
+    .update(updates)
     .eq("id", id);
   return { data: null, error };
 }
@@ -3136,7 +3136,7 @@ export async function deleteExternalLink(id: string) {
     });
   }
   
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("external_links")
     .delete()
     .eq("id", id);
