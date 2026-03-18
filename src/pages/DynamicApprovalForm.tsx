@@ -203,6 +203,14 @@ const DynamicApprovalForm = () => {
     const titleValue = titleField ? formData[titleField.field_name] : "";
     const title = `${template!.name} - ${titleValue || currentUser?.name || ""}`.substring(0, 60);
 
+    // 先检查是否有已发布的审批流程版本
+    const { data: versionData } = await dataAdapter.getApprovalProcessVersions(template!.id, true);
+    if (!versionData || (Array.isArray(versionData) && versionData.length === 0) || (!Array.isArray(versionData) && !versionData?.id)) {
+      setSubmitting(false);
+      toast.error("该审批模板尚未发布流程版本，请在管理后台的审批设置中发布流程");
+      return;
+    }
+
     const approvalResult = await startApproval({
       businessType: template!.business_type,
       businessId,
@@ -212,25 +220,6 @@ const DynamicApprovalForm = () => {
       formData,
       templateId: template!.id,
     });
-
-    // 如果审批流成功但没有创建实例（无发布版本），则直接创建实例记录
-    if (approvalResult.success && !approvalResult.instanceId) {
-      try {
-        await dataAdapter.createApprovalInstance({
-          template_id: template!.id,
-          version_id: "none",
-          version_number: 0,
-          business_type: template!.business_type,
-          business_id: businessId,
-          initiator_id: currentUser?.id || "",
-          status: "approved",
-          current_node_index: 0,
-          form_data: formData,
-        });
-      } catch (e) {
-        console.warn("Fallback instance creation failed:", e);
-      }
-    }
 
     setSubmitting(false);
 
@@ -243,7 +232,7 @@ const DynamicApprovalForm = () => {
         target_name: title,
         detail: formData,
       });
-      toast.success("申请已提交" + (approvalResult.instanceId ? "，审批流程已启动" : ""));
+      toast.success("申请已提交，审批流程已启动");
       setFormOpen(false);
       // 延迟刷新确保数据已写入
       setTimeout(() => void fetchRecords(), 300);
