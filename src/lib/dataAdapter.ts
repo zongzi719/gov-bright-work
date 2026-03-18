@@ -277,17 +277,25 @@ export async function getSupplyRequisitions(params: { requisition_by: string }) 
 }
 
 export async function getAllSupplyRequisitions() {
-  if (isOfflineMode()) {
-    const result = await offlineRequest<any[]>('/api/supply-requisitions');
-    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
-    return result;
+  const sourceResult = isOfflineMode()
+    ? await (async () => {
+        const result = await offlineRequest<any[]>('/api/supply-requisitions');
+        if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+        return result;
+      })()
+    : await supabase
+        .from("supply_requisitions")
+        .select("*, office_supplies(*)")
+        .order("created_at", { ascending: false });
+
+  if (sourceResult.error || !sourceResult.data?.length) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_requisitions")
-    .select("*, office_supplies(*)")
-    .order("created_at", { ascending: false });
-  return { data, error };
+
+  return {
+    data: await mergeApprovalStatuses(sourceResult.data, "supply_requisition"),
+    error: sourceResult.error,
+  };
 }
 
 export async function createSupplyRequisition(requisition: {

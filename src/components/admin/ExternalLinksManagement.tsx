@@ -1,0 +1,230 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, ExternalLink, GripVertical } from "lucide-react";
+import * as dataAdapter from "@/lib/dataAdapter";
+import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
+
+interface ExternalLinkItem {
+  id: string;
+  title: string;
+  url: string;
+  icon_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+const ExternalLinksManagement = () => {
+  const [links, setLinks] = useState<ExternalLinkItem[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingLink, setEditingLink] = useState<ExternalLinkItem | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    url: "",
+    icon_url: "",
+    sort_order: 0,
+    is_active: true,
+  });
+
+  useEffect(() => {
+    fetchLinks();
+  }, []);
+
+  const fetchLinks = async () => {
+    const { data, error } = await dataAdapter.getExternalLinks();
+    if (error) {
+      toast.error("获取外部链接失败");
+      return;
+    }
+    setLinks(data || []);
+  };
+
+  const handleAdd = () => {
+    setEditingLink(null);
+    setForm({ title: "", url: "", icon_url: "", sort_order: 0, is_active: true });
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (link: ExternalLinkItem) => {
+    setEditingLink(link);
+    setForm({
+      title: link.title,
+      url: link.url,
+      icon_url: link.icon_url || "",
+      sort_order: link.sort_order,
+      is_active: link.is_active,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.url.trim()) {
+      toast.error("请填写名称和链接地址");
+      return;
+    }
+
+    const payload = {
+      title: form.title.trim(),
+      url: form.url.trim(),
+      icon_url: form.icon_url.trim() || null,
+      sort_order: form.sort_order,
+      is_active: form.is_active,
+    };
+
+    if (editingLink) {
+      const { error } = await dataAdapter.updateExternalLink(editingLink.id, payload);
+      if (error) { toast.error("更新失败"); return; }
+      toast.success("更新成功");
+      await logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.SYSTEM, target_type: '外部链接', target_id: editingLink.id, target_name: form.title });
+    } else {
+      const { error } = await dataAdapter.createExternalLink(payload);
+      if (error) { toast.error("添加失败"); return; }
+      toast.success("添加成功");
+      await logAudit({ action: AUDIT_ACTIONS.CREATE, module: AUDIT_MODULES.SYSTEM, target_type: '外部链接', target_name: form.title });
+    }
+
+    setDialogOpen(false);
+    fetchLinks();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const { error } = await dataAdapter.deleteExternalLink(deleteId);
+    if (error) { toast.error("删除失败"); return; }
+    toast.success("删除成功");
+    const link = links.find(l => l.id === deleteId);
+    await logAudit({ action: AUDIT_ACTIONS.DELETE, module: AUDIT_MODULES.SYSTEM, target_type: '外部链接', target_id: deleteId, target_name: link?.title });
+    setDeleteId(null);
+    fetchLinks();
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between py-4">
+        <CardTitle className="text-base flex items-center gap-2">
+          <ExternalLink className="w-5 h-5" />
+          外部链接管理
+        </CardTitle>
+        <Button size="sm" onClick={handleAdd}>
+          <Plus className="w-4 h-4 mr-1" /> 添加链接
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">排序</TableHead>
+              <TableHead>名称</TableHead>
+              <TableHead>链接地址</TableHead>
+              <TableHead>图标地址</TableHead>
+              <TableHead className="w-20">状态</TableHead>
+              <TableHead className="w-24">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {links.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  暂无外部链接，点击"添加链接"创建
+                </TableCell>
+              </TableRow>
+            ) : (
+              links.map((link) => (
+                <TableRow key={link.id}>
+                  <TableCell>{link.sort_order}</TableCell>
+                  <TableCell className="font-medium">{link.title}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{link.url}</TableCell>
+                  <TableCell className="max-w-[150px] truncate text-xs text-muted-foreground">{link.icon_url || "-"}</TableCell>
+                  <TableCell>
+                    <Badge variant={link.is_active ? "default" : "secondary"}>
+                      {link.is_active ? "启用" : "禁用"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(link)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(link.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+
+      {/* 编辑/新增弹窗 */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingLink ? "编辑链接" : "添加链接"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>名称 *</Label>
+              <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="如：人民网资料库" />
+            </div>
+            <div className="space-y-2">
+              <Label>链接地址 *</Label>
+              <Input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://www.example.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>图标地址（可选）</Label>
+              <Input value={form.icon_url} onChange={e => setForm(f => ({ ...f, icon_url: e.target.value }))} placeholder="图标图片URL，留空使用默认图标" />
+            </div>
+            <div className="flex gap-4">
+              <div className="space-y-2 flex-1">
+                <Label>排序（数字越小越靠前）</Label>
+                <Input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} />
+              </div>
+              <div className="space-y-2 flex items-end gap-2 pb-1">
+                <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
+                <Label>{form.is_active ? "启用" : "禁用"}</Label>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+              <Button onClick={handleSave}>保存</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认 */}
+      <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>确定要删除该外部链接吗？此操作不可撤销。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>删除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
+  );
+};
+
+export default ExternalLinksManagement;
