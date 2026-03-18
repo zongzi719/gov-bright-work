@@ -499,23 +499,27 @@ const DynamicApprovalForm = () => {
 
       {/* 新建表单对话框 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] !grid !grid-rows-[auto_1fr_auto] p-0 gap-0">
-          <DialogHeader className="px-6 py-4 border-b bg-background">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b bg-background flex-shrink-0">
             <DialogTitle>
               <span className="mr-2">{template.icon}</span>
               新建{template.name}
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="px-6 py-4">
+          <ScrollArea className="px-6 py-4 flex-1 min-h-0">
             {fields.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <p>该审批模板尚未配置表单字段</p>
                 <p className="text-sm mt-1">请在管理后台的审批设置中配置表单</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {fields.map(renderField)}
+              <div className="flex flex-wrap -mx-2">
+                {fields.map((field) => (
+                  <div key={field.id} className={cn("px-2 mb-4", field.col_span === 2 || field.field_type === "textarea" ? "w-full" : "w-full md:w-1/2")}>
+                    {renderField(field)}
+                  </div>
+                ))}
               </div>
             )}
           </ScrollArea>
