@@ -343,7 +343,7 @@ const DynamicApprovalForm = () => {
       case "datetime": {
         const dtValue = value ? new Date(value) : undefined;
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -354,7 +354,7 @@ const DynamicApprovalForm = () => {
               onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
               className="mt-1"
             />
-          </div>
+          </>
         );
       }
 
