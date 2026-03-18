@@ -1930,18 +1930,47 @@ app.get('/api/approval-templates', async (req, res) => {
 // 创建审批模板
 app.post('/api/approval-templates', async (req, res) => {
   try {
-    const { name, code, description, icon, business_type, is_active = true } = req.body;
+    const { 
+      name, code, description, icon, 
+      business_type = 'absence', 
+      is_active = true,
+      category = '外出管理',
+      show_in_nav = false,
+      nav_visible_scope = 'all',
+      nav_visible_org_ids = [],
+      nav_visible_role_names = [],
+      nav_visible_user_ids = [],
+    } = req.body;
     const id = uuidv4();
     
     await pool.execute(
-      `INSERT INTO approval_templates (id, name, code, description, icon, business_type, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [id, name, code, description || null, icon || '📋', business_type, is_active ? 1 : 0]
+      `INSERT INTO approval_templates (id, name, code, description, icon, business_type, is_active, category, show_in_nav, nav_visible_scope, nav_visible_org_ids, nav_visible_role_names, nav_visible_user_ids, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        id, name, code, description || null, icon || '📋', 
+        business_type, is_active ? 1 : 0, category, show_in_nav ? 1 : 0,
+        nav_visible_scope,
+        JSON.stringify(nav_visible_org_ids || []),
+        JSON.stringify(nav_visible_role_names || []),
+        JSON.stringify(nav_visible_user_ids || []),
+      ]
     );
     
     // 返回创建的模板完整信息
     const [rows] = await pool.execute('SELECT * FROM approval_templates WHERE id = ?', [id]);
-    res.json(rows[0]);
+    const row = rows[0];
+    res.json({
+      ...row,
+      is_active: !!row.is_active,
+      show_in_nav: !!row.show_in_nav,
+      allow_withdraw: !!row.allow_withdraw,
+      allow_transfer: !!row.allow_transfer,
+      notify_initiator: !!row.notify_initiator,
+      notify_approver: !!row.notify_approver,
+      nav_visible_org_ids: safeJsonParse(row.nav_visible_org_ids, []),
+      nav_visible_role_names: safeJsonParse(row.nav_visible_role_names, []),
+      nav_visible_user_ids: safeJsonParse(row.nav_visible_user_ids, []),
+    });
   } catch (error) {
     console.error('Create approval template error:', error);
     res.status(500).json({ error: '创建审批模板失败' });
