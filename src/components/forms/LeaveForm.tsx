@@ -630,21 +630,43 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           {/* 工作交接人 */}
           <div className="space-y-2">
             <Label>工作交接人</Label>
-            <Select value={form.handover_person_id} onValueChange={(v) => setForm({ ...form, handover_person_id: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="请选择工作交接人" />
-              </SelectTrigger>
-              <SelectContent>
-                {contacts
-                  .filter(c => c.id !== currentUser?.id)
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} {c.department ? `(${c.department})` : ""}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 justify-start font-normal"
+                onClick={() => setPersonPickerOpen(true)}
+              >
+                {handoverPersonName || (
+                  <span className="text-muted-foreground">点击选择工作交接人</span>
+                )}
+              </Button>
+              {form.handover_person_id && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setForm({ ...form, handover_person_id: "" });
+                    setHandoverPersonName("");
+                  }}
+                  className="text-muted-foreground"
+                >
+                  ×
+                </Button>
+              )}
+            </div>
           </div>
+          <PersonPickerDialog
+            open={personPickerOpen}
+            onOpenChange={setPersonPickerOpen}
+            onSelect={(contact) => {
+              setForm({ ...form, handover_person_id: contact.id });
+              setHandoverPersonName(`${contact.name}${contact.department ? ` (${contact.department})` : ""}`);
+            }}
+            excludeIds={currentUser?.id ? [currentUser.id] : []}
+            title="选择工作交接人"
+          />
 
           {/* 交接事项 */}
           <div className="space-y-2">
