@@ -149,7 +149,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(selectedRecord.form_data).map(([key, value]) => (
                           <div key={key}>
-                            <span className="text-sm text-muted-foreground">{key}</span>
+                            <span className="text-sm text-muted-foreground">{getFieldLabel(key)}</span>
                             <p className="text-sm">{String(value ?? "-")}</p>
                           </div>
                         ))}
