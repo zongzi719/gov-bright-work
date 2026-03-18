@@ -32,6 +32,7 @@ interface StartApprovalParams {
   initiatorName: string;     // 发起人姓名
   title: string;             // 待办标题
   formData?: Record<string, unknown>; // 表单数据快照
+  templateId?: string;       // 直接指定模板ID（自定义审批用，跳过 business_type 查找）
 }
 
 interface StartApprovalResult {
@@ -343,11 +344,17 @@ export const useApprovalWorkflow = () => {
    * 启动审批流程
    */
   const startApproval = async (params: StartApprovalParams): Promise<StartApprovalResult> => {
-    const { businessType, businessId, initiatorId, initiatorName, title, formData } = params;
+    const { businessType, businessId, initiatorId, initiatorName, title, formData, templateId: specificTemplateId } = params;
 
     try {
-      // 1. 查找对应的审批模版
-      const template = await findTemplateByBusinessType(businessType);
+      // 1. 查找对应的审批模版（优先使用指定的templateId）
+      let template: ApprovalTemplate | null = null;
+      if (specificTemplateId) {
+        const { data } = await dataAdapter.getApprovalTemplates();
+        template = (data as any[])?.find((t: any) => t.id === specificTemplateId && t.is_active !== false) || null;
+      } else {
+        template = await findTemplateByBusinessType(businessType);
+      }
       if (!template) {
         console.log(`No active template found for business type: ${businessType}`);
         // 如果没有配置审批模版，不阻止业务提交

@@ -183,6 +183,7 @@ const DynamicApprovalForm = () => {
       initiatorName: currentUser?.name || "未知用户",
       title,
       formData,
+      templateId: template!.id,
     });
 
     setSubmitting(false);
