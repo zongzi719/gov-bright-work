@@ -3657,9 +3657,10 @@ app.get('/api/leader-schedule-permissions', async (req, res) => {
     
     const [rows] = await pool.execute(sql, params);
     
-    // 转换为前端期望的格式
+    // 转换为前端期望的格式，确保 can_view_all 为布尔值
     const result = rows.map(row => ({
       ...row,
+      can_view_all: !!row.can_view_all,
       leader: row.leader_name ? { name: row.leader_name } : null
     }));
     
