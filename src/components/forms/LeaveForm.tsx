@@ -149,15 +149,10 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
   useEffect(() => {
     if (open && currentUser?.id) {
-      fetchContacts();
       fetchLeaveBalance();
+      setHandoverPersonName("");
     }
   }, [open, currentUser?.id]);
-
-  const fetchContacts = async () => {
-    const { data } = await dataAdapter.getContacts({ is_active: true });
-    if (data) setContacts(data);
-  };
 
   const fetchLeaveBalance = async () => {
     if (!currentUser?.id) return;
