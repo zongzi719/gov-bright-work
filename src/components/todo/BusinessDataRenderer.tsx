@@ -22,8 +22,6 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     data.items = businessData.items;
   }
 
-  // 格式化日期时间 - 使用共享的 parseTime
-
   const formatDateTime = (value: string | null | undefined) => {
     if (!value) return "-";
     try {
@@ -33,7 +31,6 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     }
   };
 
-  // 格式化日期 + 上午/下午（出差专用）
   const formatDateAmPm = (value: string | null | undefined) => {
     if (!value) return "-";
     try {
@@ -53,13 +50,11 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     }
   };
 
-  // 格式化金额
   const formatMoney = (value: number | null | undefined) => {
     if (value === null || value === undefined) return "-";
     return `¥${Number(value).toFixed(2)}`;
   };
 
-  // 渲染单个字段
   const renderField = (label: string, value: any, colSpan: 1 | 2 = 1) => (
     <div className={colSpan === 2 ? "col-span-2" : "col-span-1"}>
       <Label className="text-xs text-muted-foreground font-normal">{label}</Label>
@@ -67,10 +62,77 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     </div>
   );
 
-  // 采购申请 (purchase_request)
+  const mergeSupplyRequisitionItems = () => {
+    const businessItems = Array.isArray(businessData?.items) ? businessData.items : [];
+    const formItems = Array.isArray(formData?.items) ? formData.items : [];
+    const sourceItems = businessItems.length > 0 ? businessItems : formItems;
+
+    return sourceItems.map((item: any, index: number) => {
+      const fallbackItem =
+        formItems[index] ||
+        formItems.find((candidate: any) => candidate?.supply_id && candidate.supply_id === item?.supply_id) ||
+        {};
+
+      const officeSupply =
+        item?.office_supplies ||
+        item?.supply ||
+        fallbackItem?.office_supplies ||
+        fallbackItem?.supply ||
+        null;
+
+      return {
+        ...fallbackItem,
+        ...item,
+        office_supplies: officeSupply || item?.supply_name || fallbackItem?.supply_name || item?.item_name || fallbackItem?.item_name
+          ? {
+              name:
+                officeSupply?.name ||
+                item?.office_supplies?.name ||
+                fallbackItem?.office_supplies?.name ||
+                item?.supply_name ||
+                fallbackItem?.supply_name ||
+                item?.item_name ||
+                fallbackItem?.item_name ||
+                "",
+              specification:
+                officeSupply?.specification ??
+                item?.office_supplies?.specification ??
+                fallbackItem?.office_supplies?.specification ??
+                item?.specification ??
+                fallbackItem?.specification ??
+                null,
+              unit:
+                officeSupply?.unit ||
+                item?.office_supplies?.unit ||
+                fallbackItem?.office_supplies?.unit ||
+                item?.unit ||
+                fallbackItem?.unit ||
+                "",
+            }
+          : null,
+        specification:
+          item?.office_supplies?.specification ??
+          item?.supply?.specification ??
+          item?.specification ??
+          fallbackItem?.office_supplies?.specification ??
+          fallbackItem?.supply?.specification ??
+          fallbackItem?.specification ??
+          null,
+        unit:
+          item?.office_supplies?.unit ||
+          item?.supply?.unit ||
+          item?.unit ||
+          fallbackItem?.office_supplies?.unit ||
+          fallbackItem?.supply?.unit ||
+          fallbackItem?.unit ||
+          "",
+      };
+    });
+  };
+
   if (businessType === "purchase_request") {
     const items = data.items || [];
-    
+
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -143,10 +205,9 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  // 办公用品采购 (supply_purchase)
   if (businessType === "supply_purchase") {
     const items = data.items || [];
-    
+
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -201,10 +262,9 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  // 领用申请 (supply_requisition)
   if (businessType === "supply_requisition") {
-    const items = data.items || [];
-    
+    const items = mergeSupplyRequisitionItems();
+
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -243,7 +303,6 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  // 请假/外出/出差 (absence, leave, out, business_trip)
   if (businessType === "absence" || businessType === "leave" || businessType === "out" || businessType === "business_trip") {
     const contactName = data.contacts?.name || data.contact_name || "-";
     const contactDept = data.contacts?.department || data.department || "-";
@@ -255,20 +314,12 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {renderField("所属部门", contactDept)}
           {renderField("开始时间", businessType === "business_trip" ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time))}
           {renderField("结束时间", businessType === "business_trip" ? formatDateAmPm(data.end_time) : formatDateTime(data.end_time))}
-          
-          {/* 请假类型 - 仅请假显示 */}
           {data.leave_type && renderField("请假类型", getLeaveTypeLabel(data.leave_type))}
-          
-          {/* 出差相关字段 */}
           {data.destination && renderField("出差目的地", data.destination)}
           {data.transport_type && renderField("交通方式", getTransportTypeLabel(data.transport_type))}
           {data.duration_days != null && !data.leave_type && renderField("出差天数", `${data.duration_days} 天`)}
           {data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
-          
-          {/* 请假相关字段 - 显示小时和换算天数 */}
           {data.leave_type && data.duration_hours && renderField("请假时长", `${data.duration_hours} 小时（${data.duration_days || (data.duration_hours / 8)} 天）`)}
-          
-          {/* 外出相关字段 */}
           {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
           {data.out_location && renderField("外出地点", data.out_location)}
           {data.contact_phone && renderField("联系电话", data.contact_phone)}
@@ -291,20 +342,18 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  // 默认渲染 - 显示所有非系统字段
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
       {Object.entries(data)
-        .filter(([key]) => !['id', 'created_at', 'updated_at', 'status', 'items', 'contacts', 'supply'].includes(key))
+        .filter(([key]) => !["id", "created_at", "updated_at", "status", "items", "contacts", "supply"].includes(key))
         .map(([key, value]) => {
-          if (typeof value === 'object' && value !== null) return null;
-          return renderField(key, String(value ?? '-'));
+          if (typeof value === "object" && value !== null) return null;
+          return renderField(key, String(value ?? "-"));
         })}
     </div>
   );
 };
 
-// 辅助函数 - 资金来源标签
 const getFundingSourceLabel = (source: string | null | undefined, detail: string | null | undefined) => {
   if (!source) return "-";
   const sourceLabels: Record<string, string> = {
@@ -316,7 +365,6 @@ const getFundingSourceLabel = (source: string | null | undefined, detail: string
   return detail ? `${label}（${detail}）` : label;
 };
 
-// 辅助函数 - 请假类型标签（完整9种假种）
 const getLeaveTypeLabel = (type: string | null | undefined) => {
   if (!type) return "-";
   const labels: Record<string, string> = {
@@ -333,7 +381,6 @@ const getLeaveTypeLabel = (type: string | null | undefined) => {
   return labels[type] || type;
 };
 
-// 辅助函数 - 外出类型标签
 const getOutTypeLabel = (type: string | null | undefined) => {
   if (!type) return "-";
   const labels: Record<string, string> = {
@@ -345,7 +392,6 @@ const getOutTypeLabel = (type: string | null | undefined) => {
   return labels[type] || type;
 };
 
-// 辅助函数 - 交通方式标签
 const getTransportTypeLabel = (type: string | null | undefined) => {
   if (!type) return "-";
   const labels: Record<string, string> = {
