@@ -530,6 +530,7 @@ const ApprovalBasicSettings = ({
               </div>
             </div>
           )}
+        </div>
 
         <div className="flex items-center justify-between">
           <div>
