@@ -2840,19 +2840,8 @@ app.get('/api/leader-schedule-permissions/check', async (req, res) => {
   }
 });
 
-app.get('/api/leader-schedule-permissions', async (req, res) => {
-  try {
-    const { user_id } = req.query;
-    const [rows] = await pool.execute(
-      'SELECT * FROM leader_schedule_permissions WHERE user_id = ?',
-      [user_id]
-    );
-    res.json(rows);
-  } catch (error) {
-    console.error('Get leader schedule permissions error:', error);
-    res.status(500).json({ error: '获取权限失败' });
-  }
-});
+// 注意：此路由已移至下方"领导日程权限管理"区块（带 LEFT JOIN 和可选 user_id 过滤）
+// 旧的简单查询已移除，避免重复路由遮蔽
 
 // ==================== 日程管理 CRUD ====================
 
@@ -3668,9 +3657,10 @@ app.get('/api/leader-schedule-permissions', async (req, res) => {
     
     const [rows] = await pool.execute(sql, params);
     
-    // 转换为前端期望的格式
+    // 转换为前端期望的格式，确保 can_view_all 为布尔值
     const result = rows.map(row => ({
       ...row,
+      can_view_all: !!row.can_view_all,
       leader: row.leader_name ? { name: row.leader_name } : null
     }));
     

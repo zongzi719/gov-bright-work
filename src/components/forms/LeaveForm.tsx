@@ -15,12 +15,7 @@ import { format, differenceInCalendarDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useApprovalWorkflow } from "@/hooks/useApprovalWorkflow";
-
-interface Contact {
-  id: string;
-  name: string;
-  department: string | null;
-}
+import PersonPickerDialog from "@/components/PersonPickerDialog";
 
 interface LeaveBalance {
   annual_leave_total: number;
@@ -117,16 +112,17 @@ const getSeasonTimeOptions = (season: SeasonType): string[] => {
 
 const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const { startApproval } = useApprovalWorkflow();
-  const [contacts, setContacts] = useState<Contact[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
   const [season, setSeason] = useState<SeasonType>(() => getSeasonByDate(new Date()));
+  const [personPickerOpen, setPersonPickerOpen] = useState(false);
+  const [handoverPersonName, setHandoverPersonName] = useState("");
   const [form, setForm] = useState({
     leave_type: "",
     reason: "",
     start_date: undefined as Date | undefined,
-    start_hour: "10:00", // 开始时间，默认10点
+    start_hour: "10:00",
     end_date: undefined as Date | undefined,
-    end_hour: "19:30", // 结束时间，默认冬季下班时间
+    end_hour: "19:30",
     handover_person_id: "",
     handover_notes: "",
     notes: "",
@@ -147,15 +143,10 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
   useEffect(() => {
     if (open && currentUser?.id) {
-      fetchContacts();
       fetchLeaveBalance();
+      setHandoverPersonName("");
     }
   }, [open, currentUser?.id]);
-
-  const fetchContacts = async () => {
-    const { data } = await dataAdapter.getContacts({ is_active: true });
-    if (data) setContacts(data);
-  };
 
   const fetchLeaveBalance = async () => {
     if (!currentUser?.id) return;
@@ -630,21 +621,43 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           {/* 工作交接人 */}
           <div className="space-y-2">
             <Label>工作交接人</Label>
-            <Select value={form.handover_person_id} onValueChange={(v) => setForm({ ...form, handover_person_id: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="请选择工作交接人" />
-              </SelectTrigger>
-              <SelectContent>
-                {contacts
-                  .filter(c => c.id !== currentUser?.id)
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} {c.department ? `(${c.department})` : ""}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 justify-start font-normal"
+                onClick={() => setPersonPickerOpen(true)}
+              >
+                {handoverPersonName || (
+                  <span className="text-muted-foreground">点击选择工作交接人</span>
+                )}
+              </Button>
+              {form.handover_person_id && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setForm({ ...form, handover_person_id: "" });
+                    setHandoverPersonName("");
+                  }}
+                  className="text-muted-foreground"
+                >
+                  ×
+                </Button>
+              )}
+            </div>
           </div>
+          <PersonPickerDialog
+            open={personPickerOpen}
+            onOpenChange={setPersonPickerOpen}
+            onSelect={(contact) => {
+              setForm({ ...form, handover_person_id: contact.id });
+              setHandoverPersonName(`${contact.name}${contact.department ? ` (${contact.department})` : ""}`);
+            }}
+            excludeIds={currentUser?.id ? [currentUser.id] : []}
+            title="选择工作交接人"
+          />
 
           {/* 交接事项 */}
           <div className="space-y-2">
