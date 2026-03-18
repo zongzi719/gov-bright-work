@@ -443,14 +443,15 @@ const Requisition = () => {
                           <TableBody>
                             {selectedItems.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={3} className="text-center text-muted-foreground">暂无明细</TableCell>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground">暂无明细</TableCell>
                               </TableRow>
                             ) : (
                               selectedItems.map((item) => (
                                 <TableRow key={item.id}>
                                   <TableCell>{item.office_supplies?.name || item.supply_name || item.item_name || "-"}</TableCell>
                                   <TableCell>{item.office_supplies?.specification || item.specification || "-"}</TableCell>
-                                  <TableCell>{item.quantity} {item.office_supplies?.unit || item.unit || ""}</TableCell>
+                                  <TableCell>{item.office_supplies?.unit || item.unit || "-"}</TableCell>
+                                  <TableCell>{item.quantity}</TableCell>
                                 </TableRow>
                               ))
                             )}
