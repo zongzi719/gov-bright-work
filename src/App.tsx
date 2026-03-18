@@ -60,7 +60,7 @@ const App = () => (
           <Route path="/procurement" element={<ProcurementApplication />} />
           <Route path="/schedule-list" element={<ScheduleList />} />
           <Route path="/ukey-required" element={<MissLogin />} />
-          <Route path="/approval/:templateId" element={<DynamicApprovalForm />} />
+          <Route path="/approval/:templateId/*" element={<DynamicApprovalForm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
