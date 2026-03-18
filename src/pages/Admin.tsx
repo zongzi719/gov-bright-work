@@ -20,6 +20,7 @@ import ApprovalSettings from "@/components/admin/ApprovalSettings";
 import AdminPasswordChangeDialog from "@/components/admin/AdminPasswordChangeDialog";
 import AuditLogManagement from "@/components/admin/AuditLogManagement";
 import SessionLockScreen from "@/components/admin/SessionLockScreen";
+import ExternalLinksManagement from "@/components/admin/ExternalLinksManagement";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { isOfflineMode } from "@/lib/offlineApi";
 
