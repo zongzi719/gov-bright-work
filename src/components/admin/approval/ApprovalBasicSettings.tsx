@@ -152,7 +152,7 @@ const ApprovalBasicSettings = ({
   };
 
   const loadContacts = async () => {
-    const { data } = await dataAdapter.getContacts();
+    const { data } = await dataAdapter.getContactsWithOrg();
     if (data) {
       setContacts((data as any[]).map(c => ({ id: c.id, name: c.name, department: c.department })));
     }
