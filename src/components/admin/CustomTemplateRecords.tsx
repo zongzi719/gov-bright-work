@@ -103,7 +103,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-muted-foreground">申请人</span>
-                    <p className="font-medium">{(selectedRecord as any).contacts?.name || selectedRecord.initiator_id}</p>
+                    <p className="font-medium">{(selectedRecord as any).contacts?.name || (selectedRecord as any).initiator?.name || (selectedRecord as any).initiator_name || selectedRecord.initiator_id}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">状态</span>
