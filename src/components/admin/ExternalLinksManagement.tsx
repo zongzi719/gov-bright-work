@@ -151,7 +151,13 @@ const ExternalLinksManagement = () => {
                   <TableCell>{link.sort_order}</TableCell>
                   <TableCell className="font-medium">{link.title}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">{link.url}</TableCell>
-                  <TableCell className="max-w-[150px] truncate text-xs text-muted-foreground">{link.icon_url || "-"}</TableCell>
+                  <TableCell>
+                    {link.icon_url ? (
+                      <img src={resolveIconUrl(link.icon_url)} alt="" className="w-8 h-8 object-contain rounded" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={link.is_active ? "default" : "secondary"}>
                       {link.is_active ? "启用" : "禁用"}
