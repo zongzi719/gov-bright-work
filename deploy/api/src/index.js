@@ -1952,6 +1952,20 @@ app.put('/api/approval-templates/:id', async (req, res) => {
     if (updates.icon !== undefined) { fields.push('icon = ?'); values.push(updates.icon); }
     if (updates.business_type !== undefined) { fields.push('business_type = ?'); values.push(updates.business_type); }
     if (updates.is_active !== undefined) { fields.push('is_active = ?'); values.push(updates.is_active ? 1 : 0); }
+    if (updates.show_in_nav !== undefined) { fields.push('show_in_nav = ?'); values.push(updates.show_in_nav ? 1 : 0); }
+    if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category); }
+    if (updates.nav_visible_scope !== undefined) { fields.push('nav_visible_scope = ?'); values.push(updates.nav_visible_scope); }
+    if (updates.nav_visible_org_ids !== undefined) { fields.push('nav_visible_org_ids = ?'); values.push(JSON.stringify(updates.nav_visible_org_ids || [])); }
+    if (updates.nav_visible_role_names !== undefined) { fields.push('nav_visible_role_names = ?'); values.push(JSON.stringify(updates.nav_visible_role_names || [])); }
+    if (updates.nav_visible_user_ids !== undefined) { fields.push('nav_visible_user_ids = ?'); values.push(JSON.stringify(updates.nav_visible_user_ids || [])); }
+    if (updates.allow_withdraw !== undefined) { fields.push('allow_withdraw = ?'); values.push(updates.allow_withdraw ? 1 : 0); }
+    if (updates.allow_transfer !== undefined) { fields.push('allow_transfer = ?'); values.push(updates.allow_transfer ? 1 : 0); }
+    if (updates.notify_initiator !== undefined) { fields.push('notify_initiator = ?'); values.push(updates.notify_initiator ? 1 : 0); }
+    if (updates.notify_approver !== undefined) { fields.push('notify_approver = ?'); values.push(updates.notify_approver ? 1 : 0); }
+    if (updates.callback_url !== undefined) { fields.push('callback_url = ?'); values.push(updates.callback_url || null); }
+    if (updates.auto_approve_timeout !== undefined) { fields.push('auto_approve_timeout = ?'); values.push(updates.auto_approve_timeout || null); }
+    if (updates.current_version_id !== undefined) { fields.push('current_version_id = ?'); values.push(updates.current_version_id || null); }
+    if (updates.last_process_saved_at !== undefined) { fields.push('last_process_saved_at = ?'); values.push(updates.last_process_saved_at || null); }
     
     if (fields.length === 0) {
       return res.json({ success: true });
