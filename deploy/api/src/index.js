@@ -2108,7 +2108,7 @@ app.post('/api/approval-templates/seed', async (req, res) => {
 
 app.get('/api/approval-instances', async (req, res) => {
   try {
-    const { business_id, business_type } = req.query;
+    const { business_id, business_type, template_id, initiator_id } = req.query;
     // 联合查询获取 initiator 信息
     let sql = `SELECT ai.*, c.name as initiator_name, COALESCE(o.name, c.department) as initiator_department
                FROM approval_instances ai
@@ -2124,6 +2124,14 @@ app.get('/api/approval-instances', async (req, res) => {
     if (business_type) {
       sql += ' AND ai.business_type = ?';
       params.push(business_type);
+    }
+    if (template_id) {
+      sql += ' AND ai.template_id = ?';
+      params.push(template_id);
+    }
+    if (initiator_id) {
+      sql += ' AND ai.initiator_id = ?';
+      params.push(initiator_id);
     }
     
     sql += ' ORDER BY ai.created_at DESC';
