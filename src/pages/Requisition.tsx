@@ -313,52 +313,59 @@ const Requisition = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="w-[50%]">办公用品</TableHead>
-                      <TableHead className="w-[30%]">领用数量</TableHead>
+                      <TableHead className="w-[40%]">办公用品</TableHead>
+                      <TableHead className="w-[20%]">规格</TableHead>
+                      <TableHead className="w-[20%]">领用数量</TableHead>
                       <TableHead className="w-[20%]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {formItems.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="p-2">
-                          <Select
-                            value={item.supply_id}
-                            onValueChange={(v) => handleItemChange(index, "supply_id", v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="选择办公用品" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {supplies.filter(s => s.current_stock > 0).map((supply) => (
-                                <SelectItem key={supply.id} value={supply.id}>
-                                  {supply.name}{supply.specification ? ` (${supply.specification})` : ""} - 库存: {supply.current_stock}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
-                          />
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveItem(index)}
-                            disabled={formItems.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {formItems.map((item, index) => {
+                      const selectedSupply = supplies.find(s => s.id === item.supply_id);
+                      return (
+                        <TableRow key={index}>
+                          <TableCell className="p-2">
+                            <Select
+                              value={item.supply_id}
+                              onValueChange={(v) => handleItemChange(index, "supply_id", v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="选择办公用品" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {supplies.filter(s => s.current_stock > 0).map((supply) => (
+                                  <SelectItem key={supply.id} value={supply.id}>
+                                    {supply.name}{supply.specification ? ` (${supply.specification})` : ""} - 库存: {supply.current_stock}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-2 text-sm text-muted-foreground">
+                            {selectedSupply?.specification || "-"}
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Input
+                              type="number"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                            />
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveItem(index)}
+                              disabled={formItems.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
