@@ -102,7 +102,7 @@ const statusConfig: Record<string, { color: string; label: string; icon: any }> 
   processing: { color: "bg-blue-100 text-blue-800", label: "处理中", icon: Clock },
 };
 
-const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) => {
+const ApprovalTimeline = ({ businessId, businessType, instanceId }: ApprovalTimelineProps) => {
   const [loading, setLoading] = useState(true);
   const [instance, setInstance] = useState<ApprovalInstance | null>(null);
   const [records, setRecords] = useState<ApprovalRecord[]>([]);
