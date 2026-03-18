@@ -407,15 +407,21 @@ export async function getSupplyPurchases(params: { applicant_name: string }) {
 }
 
 export async function getAllSupplyPurchases() {
-  if (isOfflineMode()) {
-    return offlineRequest<any[]>('/api/supply-purchases');
+  const sourceResult = isOfflineMode()
+    ? await offlineRequest<any[]>('/api/supply-purchases')
+    : await supabase
+        .from("supply_purchases")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+  if (sourceResult.error || !sourceResult.data?.length) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_purchases")
-    .select("*")
-    .order("created_at", { ascending: false });
-  return { data, error };
+
+  return {
+    data: await mergeApprovalStatuses(sourceResult.data, "supply_purchase"),
+    error: sourceResult.error,
+  };
 }
 
 export async function createSupplyPurchase(purchase: {
