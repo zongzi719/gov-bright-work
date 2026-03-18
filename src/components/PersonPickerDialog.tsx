@@ -64,12 +64,15 @@ const PersonPickerDialog = ({
     ]);
     if (orgsResult.data) setOrganizations(orgsResult.data);
     if (contactsResult.data) setContacts(contactsResult.data);
-    // Auto-expand first level
+    // Auto-expand ALL levels
     if (orgsResult.data) {
-      const rootIds = orgsResult.data
-        .filter((o: Organization) => !o.parent_id)
-        .map((o: Organization) => o.id);
-      setExpandedIds(new Set(rootIds));
+      const allIds = orgsResult.data.map((o: Organization) => o.id);
+      setExpandedIds(new Set(allIds));
+      // Auto-select first root org so right side shows its people
+      const firstRoot = orgsResult.data.find((o: Organization) => !o.parent_id);
+      if (firstRoot) {
+        setSelectedOrgId(firstRoot.id);
+      }
     }
     setLoading(false);
   };
