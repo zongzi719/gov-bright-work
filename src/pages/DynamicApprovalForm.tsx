@@ -52,6 +52,8 @@ interface ApprovalTemplate {
 
 interface SubmissionRecord {
   id: string;
+  business_id: string;
+  business_type: string;
   status: string;
   form_data: Record<string, any>;
   created_at: string;
