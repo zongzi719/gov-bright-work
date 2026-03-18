@@ -32,6 +32,7 @@ interface StartApprovalParams {
   initiatorName: string;     // 发起人姓名
   title: string;             // 待办标题
   formData?: Record<string, unknown>; // 表单数据快照
+  templateId?: string;       // 直接指定模板ID（自定义审批用，跳过 business_type 查找）
 }
 
 interface StartApprovalResult {
