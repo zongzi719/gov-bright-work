@@ -3310,8 +3310,11 @@ export const dataAdapter = {
   createExternalLink,
   updateExternalLink,
   deleteExternalLink,
+  // Roles
+  getRoles,
   // Utilities
   isOfflineMode,
+};
 };
 
 export default dataAdapter;
