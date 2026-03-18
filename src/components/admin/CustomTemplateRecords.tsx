@@ -76,7 +76,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
             <TableBody>
               {records.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell>{(record as any).contacts?.name || record.initiator_id}</TableCell>
+                  <TableCell>{(record as any).contacts?.name || (record as any).initiator?.name || (record as any).initiator_name || record.initiator_id}</TableCell>
                   <TableCell>{getStatusBadge(record.status)}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(record.created_at).toLocaleString()}
@@ -103,7 +103,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-muted-foreground">申请人</span>
-                    <p className="font-medium">{(selectedRecord as any).contacts?.name || selectedRecord.initiator_id}</p>
+                    <p className="font-medium">{(selectedRecord as any).contacts?.name || (selectedRecord as any).initiator?.name || (selectedRecord as any).initiator_name || selectedRecord.initiator_id}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">状态</span>

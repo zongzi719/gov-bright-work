@@ -203,6 +203,14 @@ const DynamicApprovalForm = () => {
     const titleValue = titleField ? formData[titleField.field_name] : "";
     const title = `${template!.name} - ${titleValue || currentUser?.name || ""}`.substring(0, 60);
 
+    // 先检查是否有已发布的审批流程版本
+    const { data: versionData } = await dataAdapter.getApprovalProcessVersions(template!.id, true);
+    if (!versionData || (Array.isArray(versionData) && versionData.length === 0) || (!Array.isArray(versionData) && !versionData?.id)) {
+      setSubmitting(false);
+      toast.error("该审批模板尚未发布流程版本，请在管理后台的审批设置中发布流程");
+      return;
+    }
+
     const approvalResult = await startApproval({
       businessType: template!.business_type,
       businessId,
@@ -226,7 +234,8 @@ const DynamicApprovalForm = () => {
       });
       toast.success("申请已提交，审批流程已启动");
       setFormOpen(false);
-      void fetchRecords();
+      // 延迟刷新确保数据已写入
+      setTimeout(() => void fetchRecords(), 300);
     } else {
       toast.error(approvalResult.error || "启动审批流程失败");
     }
