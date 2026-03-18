@@ -223,6 +223,7 @@ const Admin = () => {
       case 'leader-schedule': return <LeaderScheduleManagement />;
       case 'approval': return <ApprovalSettings />;
       case 'system': return <SystemManagement />;
+      case 'external-links': return <ExternalLinksManagement />;
       case 'audit': return <AuditLogManagement />;
       default: return null;
     }

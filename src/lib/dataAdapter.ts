@@ -3302,6 +3302,11 @@ export const dataAdapter = {
   getOfficeSupplyById,
   getContactById,
   getOrganizationApprovers,
+  // External Links
+  getExternalLinks,
+  createExternalLink,
+  updateExternalLink,
+  deleteExternalLink,
   // Utilities
   isOfflineMode,
 };
