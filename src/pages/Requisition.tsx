@@ -312,10 +312,11 @@ const Requisition = () => {
               <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[40%]">办公用品</TableHead>
-                      <TableHead className="w-[20%]">规格</TableHead>
-                      <TableHead className="w-[20%]">领用数量</TableHead>
+                     <TableRow className="bg-muted/50">
+                      <TableHead className="w-[35%]">办公用品</TableHead>
+                      <TableHead className="w-[15%]">规格</TableHead>
+                      <TableHead className="w-[15%]">单位</TableHead>
+                      <TableHead className="w-[15%]">领用数量</TableHead>
                       <TableHead className="w-[20%]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
