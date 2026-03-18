@@ -293,7 +293,7 @@ const DynamicApprovalForm = () => {
       case "number":
       case "money":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -306,7 +306,7 @@ const DynamicApprovalForm = () => {
               className="mt-1"
               step={field.field_type === "money" ? "0.01" : "1"}
             />
-          </div>
+          </>
         );
 
       case "date": {
