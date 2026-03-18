@@ -429,6 +429,8 @@ export type Database = {
           is_active: boolean
           last_process_saved_at: string | null
           name: string
+          nav_visible_org_ids: string[]
+          nav_visible_scope: string
           notify_approver: boolean
           notify_initiator: boolean
           show_in_nav: boolean
@@ -450,6 +452,8 @@ export type Database = {
           is_active?: boolean
           last_process_saved_at?: string | null
           name: string
+          nav_visible_org_ids?: string[]
+          nav_visible_scope?: string
           notify_approver?: boolean
           notify_initiator?: boolean
           show_in_nav?: boolean
@@ -471,6 +475,8 @@ export type Database = {
           is_active?: boolean
           last_process_saved_at?: string | null
           name?: string
+          nav_visible_org_ids?: string[]
+          nav_visible_scope?: string
           notify_approver?: boolean
           notify_initiator?: boolean
           show_in_nav?: boolean

@@ -1,0 +1,2 @@
+ALTER TABLE public.approval_templates ADD COLUMN IF NOT EXISTS nav_visible_scope text NOT NULL DEFAULT 'all';
+ALTER TABLE public.approval_templates ADD COLUMN IF NOT EXISTS nav_visible_org_ids uuid[] NOT NULL DEFAULT '{}';

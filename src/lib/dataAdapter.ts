@@ -1208,6 +1208,9 @@ export async function updateApprovalTemplate(id: string, updates: {
   business_type?: string;
   is_active?: boolean;
   show_in_nav?: boolean;
+  nav_visible_scope?: string;
+  nav_visible_org_ids?: string[];
+  category?: string;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ success: boolean }>(`/api/approval-templates/${id}`, {

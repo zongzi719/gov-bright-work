@@ -13,6 +13,16 @@ const BUILTIN_TEMPLATE_CODES = [
   "PROC_MKYO60ON", // 办公采购
 ];
 
+// 内置模块对应的 business_type，用于匹配模板的可见性设置
+const BASE_MODULE_BUSINESS_TYPES: Record<string, string> = {
+  "1": "business_trip",
+  "2": "leave",
+  "3": "out",
+  "4": "supply_requisition",
+  "5": "purchase_request",
+  "6": "supply_purchase",
+};
+
 interface CustomTemplate {
   id: string;
   name: string;
@@ -21,30 +31,35 @@ interface CustomTemplate {
   is_active: boolean;
   show_in_nav: boolean;
   code: string;
+  nav_visible_scope?: string;
+  nav_visible_org_ids?: string[];
 }
 
 const QuickLinks = () => {
   const navigate = useNavigate();
   const [hasLeaderSchedulePermission, setHasLeaderSchedulePermission] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+  const [allTemplates, setAllTemplates] = useState<CustomTemplate[]>([]);
 
   useEffect(() => {
     checkLeaderSchedulePermission();
-    loadCustomTemplates();
+    loadTemplates();
   }, []);
+
+  const getCurrentUser = () => {
+    try {
+      const storedUser = localStorage.getItem("frontendUser");
+      if (!storedUser) return null;
+      return JSON.parse(storedUser);
+    } catch {
+      return null;
+    }
+  };
 
   const checkLeaderSchedulePermission = async () => {
     try {
-      const storedUser = localStorage.getItem("frontendUser");
-      if (!storedUser) {
-        setHasLeaderSchedulePermission(false);
-        return;
-      }
-
-      const user = JSON.parse(storedUser);
-      const userId = user.id;
-
-      if (!userId) {
+      const user = getCurrentUser();
+      if (!user?.id) {
         setHasLeaderSchedulePermission(false);
         return;
       }
@@ -54,7 +69,7 @@ const QuickLinks = () => {
         return;
       }
 
-      const { data, error } = await dataAdapter.checkLeaderSchedulePermission(userId);
+      const { data, error } = await dataAdapter.checkLeaderSchedulePermission(user.id);
 
       if (error) {
         console.error("查询权限失败:", error);
@@ -74,19 +89,60 @@ const QuickLinks = () => {
     }
   };
 
-  const loadCustomTemplates = async () => {
+  const loadTemplates = async () => {
     try {
       const { data, error } = await dataAdapter.getApprovalTemplates();
       if (error || !data) return;
 
+      const templates = data as CustomTemplate[];
+      setAllTemplates(templates);
+
       // 只显示启用了"显示在首页导航"且非内置模板的自定义流程
-      const custom = (data as CustomTemplate[]).filter(
+      const custom = templates.filter(
         t => t.is_active && t.show_in_nav && !BUILTIN_TEMPLATE_CODES.includes(t.code)
       );
       setCustomTemplates(custom);
     } catch (e) {
       console.error("加载自定义审批模板失败:", e);
     }
+  };
+
+  // 检查模块是否对当前用户可见
+  const isModuleVisible = (businessType: string): boolean => {
+    const user = getCurrentUser();
+    if (!user) return true; // 未登录时显示所有
+
+    // 查找该业务类型对应的模板
+    const template = allTemplates.find(t => t.business_type === businessType && t.is_active);
+    if (!template) return true; // 没有模板配置则默认显示
+
+    const scope = template.nav_visible_scope || "all";
+
+    if (scope === "all") return true;
+    if (scope === "leader_only") return !!user.is_leader;
+    if (scope === "specific_orgs") {
+      const orgIds = template.nav_visible_org_ids || [];
+      return orgIds.length === 0 || orgIds.includes(user.organization_id);
+    }
+
+    return true;
+  };
+
+  // 检查自定义模块是否对当前用户可见
+  const isCustomModuleVisible = (template: CustomTemplate): boolean => {
+    const user = getCurrentUser();
+    if (!user) return true;
+
+    const scope = template.nav_visible_scope || "all";
+
+    if (scope === "all") return true;
+    if (scope === "leader_only") return !!user.is_leader;
+    if (scope === "specific_orgs") {
+      const orgIds = template.nav_visible_org_ids || [];
+      return orgIds.length === 0 || orgIds.includes(user.organization_id);
+    }
+
+    return true;
   };
 
   const baseModules = [
@@ -149,30 +205,37 @@ const QuickLinks = () => {
     path: "/leader-schedule",
   };
 
-  // 动态生成自定义模板入口
-  const customModules = customTemplates.map(t => ({
-    id: `custom-${t.id}`,
-    name: t.name,
-    color: "bg-indigo-500",
-    icon: FileText,
-    path: `/approval/${t.id}`,
-    emoji: t.icon,
-  }));
+  // 过滤基础模块（通讯录和领导日程不受模板控制）
+  const visibleBaseModules = baseModules.filter(m => {
+    const bt = BASE_MODULE_BUSINESS_TYPES[m.id];
+    if (!bt) return true; // 通讯录等没有业务类型的模块始终显示
+    return isModuleVisible(bt);
+  });
+
+  // 过滤自定义模块
+  const visibleCustomModules = customTemplates
+    .filter(t => isCustomModuleVisible(t))
+    .map(t => ({
+      id: `custom-${t.id}`,
+      name: t.name,
+      color: "bg-indigo-500",
+      icon: FileText,
+      path: `/approval/${t.id}`,
+      emoji: t.icon,
+    }));
 
   const allModules = [
-    ...baseModules,
+    ...visibleBaseModules,
     ...(hasLeaderSchedulePermission ? [leaderScheduleModule] : []),
-    ...customModules,
+    ...visibleCustomModules,
   ];
 
   return (
     <div className="gov-card h-full flex flex-col">
-      {/* 标题栏 */}
       <div className="px-3 md:px-4 py-2 md:py-3 border-b border-border">
         <h2 className="gov-card-title text-sm md:text-base">应用导航</h2>
       </div>
 
-      {/* 模块网格 */}
       <div className="p-3 md:p-4 flex-1 flex items-center justify-center">
         <div className="w-full flex flex-wrap -mx-1.5 md:-mx-2">
           {allModules.map((module) => (

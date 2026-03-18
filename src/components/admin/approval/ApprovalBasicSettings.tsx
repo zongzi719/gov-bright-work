@@ -22,6 +22,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import EmojiIconPicker from "./EmojiIconPicker";
+import * as dataAdapter from "@/lib/dataAdapter";
 
 interface ApprovalTemplate {
   id: string;
@@ -32,6 +34,8 @@ interface ApprovalTemplate {
   business_type: string;
   category: string;
   is_active: boolean;
+  nav_visible_scope?: string;
+  nav_visible_org_ids?: string[];
   created_at: string;
 }
 
@@ -42,9 +46,20 @@ interface ApprovalBasicSettingsProps {
   onTemplateUpdated: (template: ApprovalTemplate) => void;
 }
 
+interface OrgOption {
+  id: string;
+  name: string;
+}
+
 const categoryOptions = [
   { value: "外出管理", label: "外出管理" },
   { value: "办公用品", label: "办公用品" },
+];
+
+const visibilityScopeOptions = [
+  { value: "all", label: "所有人可见" },
+  { value: "leader_only", label: "仅领导可见" },
+  { value: "specific_orgs", label: "指定单位可见" },
 ];
 
 const ApprovalBasicSettings = ({ 
@@ -57,10 +72,14 @@ const ApprovalBasicSettings = ({
     name: "",
     code: "",
     description: "",
+    icon: "📋",
     category: "外出管理",
     is_active: true,
+    nav_visible_scope: "all",
+    nav_visible_org_ids: [] as string[],
   });
   const [saving, setSaving] = useState(false);
+  const [organizations, setOrganizations] = useState<OrgOption[]>([]);
 
   useEffect(() => {
     if (template) {
@@ -68,19 +87,36 @@ const ApprovalBasicSettings = ({
         name: template.name,
         code: template.code,
         description: template.description || "",
+        icon: template.icon || "📋",
         category: template.category || "外出管理",
         is_active: template.is_active,
+        nav_visible_scope: template.nav_visible_scope || "all",
+        nav_visible_org_ids: template.nav_visible_org_ids || [],
       });
     } else {
       setFormData({
         name: "",
         code: "",
         description: "",
+        icon: "📋",
         category: "外出管理",
         is_active: true,
+        nav_visible_scope: "all",
+        nav_visible_org_ids: [],
       });
     }
   }, [template]);
+
+  useEffect(() => {
+    loadOrganizations();
+  }, []);
+
+  const loadOrganizations = async () => {
+    const { data } = await dataAdapter.getOrganizations();
+    if (data) {
+      setOrganizations((data as any[]).map(o => ({ id: o.id, name: o.name })));
+    }
+  };
 
   const generateCode = () => {
     const timestamp = Date.now().toString(36).toUpperCase();
@@ -102,6 +138,16 @@ const ApprovalBasicSettings = ({
 
     setSaving(true);
 
+    const updatePayload = {
+      name: formData.name,
+      description: formData.description,
+      icon: formData.icon,
+      category: formData.category,
+      is_active: formData.is_active,
+      nav_visible_scope: formData.nav_visible_scope,
+      nav_visible_org_ids: formData.nav_visible_org_ids,
+    };
+
     if (isOfflineMode()) {
       try {
         const baseUrl = getApiBaseUrl();
@@ -109,12 +155,7 @@ const ApprovalBasicSettings = ({
           const response = await fetch(`${baseUrl}/api/approval-templates/${template.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: formData.name,
-              description: formData.description,
-              category: formData.category,
-              is_active: formData.is_active,
-            }),
+            body: JSON.stringify(updatePayload),
           });
           if (!response.ok) throw new Error('更新失败');
           const data = await response.json();
@@ -126,13 +167,7 @@ const ApprovalBasicSettings = ({
           const response = await fetch(`${baseUrl}/api/approval-templates`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: formData.name,
-              code,
-              description: formData.description,
-              category: formData.category,
-              is_active: formData.is_active,
-            }),
+            body: JSON.stringify({ ...updatePayload, code }),
           });
           if (!response.ok) throw new Error('创建失败');
           const data = await response.json();
@@ -150,12 +185,7 @@ const ApprovalBasicSettings = ({
     if (template) {
       const { data, error } = await supabase
         .from("approval_templates" as any)
-        .update({
-          name: formData.name,
-          description: formData.description,
-          category: formData.category,
-          is_active: formData.is_active,
-        })
+        .update(updatePayload)
         .eq("id", template.id)
         .select()
         .single();
@@ -166,19 +196,13 @@ const ApprovalBasicSettings = ({
         return;
       }
       toast.success("保存成功");
-      void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: formData.name, detail: { fields: ['name', 'description', 'category', 'is_active'] } });
+      void logAudit({ action: AUDIT_ACTIONS.UPDATE, module: AUDIT_MODULES.APPROVAL, target_type: '审批模板', target_id: template.id, target_name: formData.name });
       onTemplateUpdated(data as unknown as ApprovalTemplate);
     } else {
       const code = generateCode();
       const { data, error } = await supabase
         .from("approval_templates" as any)
-        .insert({
-          name: formData.name,
-          code,
-          description: formData.description,
-          category: formData.category,
-          is_active: formData.is_active,
-        })
+        .insert({ ...updatePayload, code })
         .select()
         .single();
 
@@ -233,6 +257,15 @@ const ApprovalBasicSettings = ({
     }
   };
 
+  const toggleOrgId = (orgId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      nav_visible_org_ids: prev.nav_visible_org_ids.includes(orgId)
+        ? prev.nav_visible_org_ids.filter(id => id !== orgId)
+        : [...prev.nav_visible_org_ids, orgId],
+    }));
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -240,6 +273,20 @@ const ApprovalBasicSettings = ({
         <CardDescription>配置审批模板的基本信息</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* 图标选择 */}
+        <div>
+          <Label className="mb-2 block">图标</Label>
+          <div className="flex items-center gap-4">
+            <EmojiIconPicker
+              value={formData.icon}
+              onChange={(icon) => setFormData({ ...formData, icon })}
+            />
+            <p className="text-sm text-muted-foreground">
+              点击选择图标，将显示在审批列表和首页导航中
+            </p>
+          </div>
+        </div>
+
         <div>
           <Label>审批名称 <span className="text-destructive">*</span></Label>
           <Input
@@ -288,7 +335,6 @@ const ApprovalBasicSettings = ({
           </div>
         )}
 
-
         <div>
           <Label>描述</Label>
           <Textarea
@@ -297,6 +343,54 @@ const ApprovalBasicSettings = ({
             placeholder="审批流程的用途说明"
             rows={3}
           />
+        </div>
+
+        {/* 导航可见范围 */}
+        <div className="border rounded-lg p-4 space-y-4">
+          <div>
+            <Label className="text-base font-semibold">首页导航可见范围</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              控制哪些用户可以在首页应用导航中看到此模块
+            </p>
+          </div>
+          <Select
+            value={formData.nav_visible_scope}
+            onValueChange={(value) => setFormData({ ...formData, nav_visible_scope: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {visibilityScopeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {formData.nav_visible_scope === "specific_orgs" && (
+            <div className="space-y-2">
+              <Label>选择可见单位</Label>
+              <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-1">
+                {organizations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">暂无单位数据</p>
+                ) : (
+                  organizations.map(org => (
+                    <label key={org.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.nav_visible_org_ids.includes(org.id)}
+                        onChange={() => toggleOrgId(org.id)}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{org.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
