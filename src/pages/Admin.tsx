@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck, FileSearch, KeyRound, User } from "lucide-react";
+import { LogOut, Image, Bell, Utensils, BookUser, CalendarClock, Package, Calendar, Settings, Star, CalendarDays, ClipboardCheck, FileSearch, KeyRound, User, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import BannerManagement from "@/components/admin/BannerManagement";
 import NoticeManagement from "@/components/admin/NoticeManagement";
@@ -20,6 +20,7 @@ import ApprovalSettings from "@/components/admin/ApprovalSettings";
 import AdminPasswordChangeDialog from "@/components/admin/AdminPasswordChangeDialog";
 import AuditLogManagement from "@/components/admin/AuditLogManagement";
 import SessionLockScreen from "@/components/admin/SessionLockScreen";
+import ExternalLinksManagement from "@/components/admin/ExternalLinksManagement";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { isOfflineMode } from "@/lib/offlineApi";
 
@@ -51,6 +52,7 @@ const TAB_CONFIG: TabConfig[] = [
   { value: 'leader-schedule', label: '领导日程', icon: Star, roles: ['admin', 'sys_admin'] },
   { value: 'approval', label: '审批设置', icon: ClipboardCheck, roles: ['admin', 'security_admin'] },
   { value: 'system', label: '系统管理', icon: Settings, roles: ['admin', 'security_admin'] },
+  { value: 'external-links', label: '外部链接', icon: ExternalLink, roles: ['admin', 'sys_admin'] },
   { value: 'audit', label: '操作日志', icon: FileSearch, roles: ['admin', 'security_admin', 'audit_admin'] },
 ];
 
@@ -221,6 +223,7 @@ const Admin = () => {
       case 'leader-schedule': return <LeaderScheduleManagement />;
       case 'approval': return <ApprovalSettings />;
       case 'system': return <SystemManagement />;
+      case 'external-links': return <ExternalLinksManagement />;
       case 'audit': return <AuditLogManagement />;
       default: return null;
     }

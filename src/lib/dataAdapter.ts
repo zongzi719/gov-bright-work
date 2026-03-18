@@ -277,17 +277,25 @@ export async function getSupplyRequisitions(params: { requisition_by: string }) 
 }
 
 export async function getAllSupplyRequisitions() {
-  if (isOfflineMode()) {
-    const result = await offlineRequest<any[]>('/api/supply-requisitions');
-    if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
-    return result;
+  const sourceResult = isOfflineMode()
+    ? await (async () => {
+        const result = await offlineRequest<any[]>('/api/supply-requisitions');
+        if (result.data) result.data = normalizeOfflineSupplyFields(result.data);
+        return result;
+      })()
+    : await supabase
+        .from("supply_requisitions")
+        .select("*, office_supplies(*)")
+        .order("created_at", { ascending: false });
+
+  if (sourceResult.error || !sourceResult.data?.length) {
+    return sourceResult;
   }
-  
-  const { data, error } = await supabase
-    .from("supply_requisitions")
-    .select("*, office_supplies(*)")
-    .order("created_at", { ascending: false });
-  return { data, error };
+
+  return {
+    data: await mergeApprovalStatuses(sourceResult.data, "supply_requisition"),
+    error: sourceResult.error,
+  };
 }
 
 export async function createSupplyRequisition(requisition: {
@@ -3062,6 +3070,79 @@ export async function getSupplyRequisitionItemsById(requisitionId: string) {
   return { data, error };
 }
 
+// ==================== External Links ====================
+
+export async function getExternalLinks(params?: { is_active?: boolean }) {
+  if (isOfflineMode()) {
+    const searchParams = new URLSearchParams();
+    if (params?.is_active !== undefined) searchParams.set('is_active', String(params.is_active));
+    const query = searchParams.toString();
+    return offlineRequest<any[]>(`/api/external-links${query ? `?${query}` : ''}`);
+  }
+  
+  let query = (supabase as any).from("external_links").select("*");
+  if (params?.is_active !== undefined) query = query.eq("is_active", params.is_active);
+  const { data, error } = await query.order("sort_order").order("created_at");
+  return { data, error };
+}
+
+export async function createExternalLink(link: {
+  title: string;
+  url: string;
+  icon_url?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ id: string }>('/api/external-links', {
+      method: 'POST',
+      body: JSON.stringify(link),
+    });
+  }
+  
+  const { data, error } = await (supabase as any)
+    .from("external_links")
+    .insert(link)
+    .select("id")
+    .single();
+  return { data, error };
+}
+
+export async function updateExternalLink(id: string, updates: {
+  title?: string;
+  url?: string;
+  icon_url?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/external-links/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+  
+  const { error } = await (supabase as any)
+    .from("external_links")
+    .update(updates)
+    .eq("id", id);
+  return { data: null, error };
+}
+
+export async function deleteExternalLink(id: string) {
+  if (isOfflineMode()) {
+    return offlineRequest<{ success: boolean }>(`/api/external-links/${id}`, {
+      method: 'DELETE',
+    });
+  }
+  
+  const { error } = await (supabase as any)
+    .from("external_links")
+    .delete()
+    .eq("id", id);
+  return { data: null, error };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
@@ -3221,6 +3302,11 @@ export const dataAdapter = {
   getOfficeSupplyById,
   getContactById,
   getOrganizationApprovers,
+  // External Links
+  getExternalLinks,
+  createExternalLink,
+  updateExternalLink,
+  deleteExternalLink,
   // Utilities
   isOfflineMode,
 };
