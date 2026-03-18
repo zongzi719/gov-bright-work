@@ -380,7 +380,7 @@ const DynamicApprovalForm = () => {
 
       case "radio":
         return (
-          <div key={field.id} className={field.col_span === 2 ? "col-span-2" : ""}>
+          <>
             <Label>
               {field.field_label}
               {field.is_required && <span className="text-destructive ml-1">*</span>}
@@ -393,7 +393,7 @@ const DynamicApprovalForm = () => {
                 </div>
               ))}
             </RadioGroup>
-          </div>
+          </>
         );
 
       case "checkbox":
