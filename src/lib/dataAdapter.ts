@@ -3315,6 +3315,3 @@ export const dataAdapter = {
   // Utilities
   isOfflineMode,
 };
-};
-
-export default dataAdapter;
