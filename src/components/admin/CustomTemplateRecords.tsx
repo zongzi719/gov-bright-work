@@ -129,7 +129,7 @@ const CustomTemplateRecords = ({ templateId, templateName }: CustomTemplateRecor
                 )}
 
                 <Separator />
-                <ApprovalTimeline businessId={selectedRecord.business_id} businessType={selectedRecord.business_type} />
+                <ApprovalTimeline businessId={selectedRecord.business_id} businessType={selectedRecord.business_type} instanceId={selectedRecord.id} />
               </div>
             </DialogContent>
           </Dialog>

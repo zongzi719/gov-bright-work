@@ -82,6 +82,7 @@ interface ContactInfo {
 interface ApprovalTimelineProps {
   businessId: string;
   businessType: string;
+  instanceId?: string; // 直接传入实例ID，跳过 business_id 查找
 }
 
 const nodeTypeIcons: Record<string, any> = {
@@ -101,7 +102,7 @@ const statusConfig: Record<string, { color: string; label: string; icon: any }> 
   processing: { color: "bg-blue-100 text-blue-800", label: "处理中", icon: Clock },
 };
 
-const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) => {
+const ApprovalTimeline = ({ businessId, businessType, instanceId }: ApprovalTimelineProps) => {
   const [loading, setLoading] = useState(true);
   const [instance, setInstance] = useState<ApprovalInstance | null>(null);
   const [records, setRecords] = useState<ApprovalRecord[]>([]);
@@ -290,19 +291,33 @@ const ApprovalTimeline = ({ businessId, businessType }: ApprovalTimelineProps) =
   };
 
   useEffect(() => {
-    if (businessId && businessType) {
+    if ((instanceId) || (businessId && businessType)) {
       fetchApprovalData();
     }
-  }, [businessId, businessType]);
+  }, [businessId, businessType, instanceId]);
 
   const fetchApprovalData = async () => {
     setLoading(true);
     
     try {
-      // 获取审批实例 - 使用 dataAdapter
-      const { data: instanceData, error: instanceError } = await dataAdapter.getApprovalInstanceByBusinessId(businessId, businessType);
+      // 优先使用 instanceId 直接查找，否则通过 business_id + business_type 查找
+      let instanceData: any = null;
+      
+      if (instanceId) {
+        const { data, error } = await dataAdapter.getApprovalInstanceById(instanceId);
+        if (!error && data) {
+          instanceData = data;
+        }
+      }
+      
+      if (!instanceData) {
+        const { data, error } = await dataAdapter.getApprovalInstanceByBusinessId(businessId, businessType);
+        if (!error && data) {
+          instanceData = data;
+        }
+      }
 
-      if (instanceError || !instanceData) {
+      if (!instanceData) {
         setLoading(false);
         return;
       }
