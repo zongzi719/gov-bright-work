@@ -36,13 +36,16 @@ const Index = () => {
 
           {/* 右侧：日程管理 + 常用链接 + 食堂菜谱 - 30% */}
           <div className="w-[30%] flex flex-col overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-hidden mb-3">
+            {/* 日程管理占据约55%高度 */}
+            <div style={{ flex: '0 0 55%' }} className="min-h-0 overflow-hidden mb-2">
               <SchedulePanel />
             </div>
-            <div className="flex-shrink-0 mb-3">
+            {/* 外部链接 - 限制最大高度，超出可滚动 */}
+            <div className="flex-shrink-0 mb-2 overflow-auto" style={{ maxHeight: '120px' }}>
               <ExternalLinks />
             </div>
-            <div className="flex-shrink-0">
+            {/* 食堂菜谱 - 填充剩余空间 */}
+            <div className="flex-1 min-h-0 overflow-hidden">
               <CanteenMenu />
             </div>
           </div>
