@@ -291,19 +291,33 @@ const ApprovalTimeline = ({ businessId, businessType, instanceId }: ApprovalTime
   };
 
   useEffect(() => {
-    if (businessId && businessType) {
+    if ((instanceId) || (businessId && businessType)) {
       fetchApprovalData();
     }
-  }, [businessId, businessType]);
+  }, [businessId, businessType, instanceId]);
 
   const fetchApprovalData = async () => {
     setLoading(true);
     
     try {
-      // 获取审批实例 - 使用 dataAdapter
-      const { data: instanceData, error: instanceError } = await dataAdapter.getApprovalInstanceByBusinessId(businessId, businessType);
+      // 优先使用 instanceId 直接查找，否则通过 business_id + business_type 查找
+      let instanceData: any = null;
+      
+      if (instanceId) {
+        const { data, error } = await dataAdapter.getApprovalInstanceById(instanceId);
+        if (!error && data) {
+          instanceData = data;
+        }
+      }
+      
+      if (!instanceData) {
+        const { data, error } = await dataAdapter.getApprovalInstanceByBusinessId(businessId, businessType);
+        if (!error && data) {
+          instanceData = data;
+        }
+      }
 
-      if (instanceError || !instanceData) {
+      if (!instanceData) {
         setLoading(false);
         return;
       }
