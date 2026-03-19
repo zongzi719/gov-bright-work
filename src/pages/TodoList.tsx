@@ -279,6 +279,8 @@ const TodoList = () => {
         <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
           <span className="text-primary/80">{sourceLabel}</span>
           <span>·</span>
+          <span>{item.initiator?.department || item.source_department || "未知部门"}</span>
+          <span>·</span>
           <span>
             {item.processed_at
               ? format(parseTime(item.processed_at), "yyyy-MM-dd HH:mm", { locale: zhCN })
