@@ -3868,10 +3868,12 @@ app.get('/api/admin/absence-records', async (req, res) => {
       SELECT ar.*,
              c.id as contact_id_ref, c.name as contact_name, c.department as contact_department,
              c.position as contact_position,
-             o.name as org_name
+             o.name as org_name,
+             hp.name as handover_person_name
       FROM absence_records ar
       LEFT JOIN contacts c ON ar.contact_id = c.id
       LEFT JOIN organizations o ON c.organization_id = o.id
+      LEFT JOIN contacts hp ON ar.handover_person_id = hp.id
       WHERE ar.type = ?
       ORDER BY ar.created_at DESC
     `;
@@ -3886,6 +3888,10 @@ app.get('/api/admin/absence-records', async (req, res) => {
         department: row.contact_department,
         position: row.contact_position,
         organization: row.org_name ? { name: row.org_name } : null
+      } : null,
+      handover_person: row.handover_person_name ? {
+        id: null,
+        name: row.handover_person_name
       } : null
     }));
     res.json(formatted);

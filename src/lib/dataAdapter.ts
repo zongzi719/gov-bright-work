@@ -792,6 +792,10 @@ export async function getAdminAbsenceRecords(type: 'out' | 'leave' | 'business_t
         department,
         position,
         organization:organizations!contacts_organization_id_fkey (name)
+      ),
+      handover_person:contacts!absence_records_handover_person_id_fkey (
+        id,
+        name
       )
     `)
     .eq("type", type)
