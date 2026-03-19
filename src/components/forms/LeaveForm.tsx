@@ -402,6 +402,16 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
       };
       
+      // 上传诊断证明书（病假时）
+      let medicalCertUrl: string | null = null;
+      if (form.leave_type === "sick" && medicalCertFile) {
+        medicalCertUrl = await uploadMedicalCert();
+        if (!medicalCertUrl) {
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "leave",
@@ -414,6 +424,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         duration_hours: duration.hours,
         duration_days: duration.days,
         notes: form.notes || null,
+        medical_certificate_url: medicalCertUrl,
         status: "pending",
       });
 
