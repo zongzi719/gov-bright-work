@@ -3367,19 +3367,20 @@ app.post('/api/absence-records', async (req, res) => {
     const id = uuidv4();
     const {
       contact_id, type, reason, start_time, end_time,
-      leave_type, out_type, out_location, destination, transport_type,
+      leave_type, out_type, out_location, destination, transport_type, return_transport_type,
       companions, estimated_cost, duration_hours, duration_days,
-      handover_person_id, handover_notes, contact_phone, notes, status = 'pending'
+      handover_person_id, handover_notes, contact_phone, notes, status = 'pending', departure_time
     } = req.body;
     
     // 转换日期格式为 MySQL 格式
     const formattedStartTime = formatDateForMySQL(start_time);
     const formattedEndTime = formatDateForMySQL(end_time);
+    const formattedDepartureTime = departure_time ? formatDateForMySQL(departure_time) : null;
     
     await pool.execute(
-      `INSERT INTO absence_records (id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, companions, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, contact_id, type, reason, formattedStartTime, formattedEndTime, leave_type, out_type, out_location, destination, transport_type, companions ? JSON.stringify(companions) : null, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status]
+      `INSERT INTO absence_records (id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, return_transport_type, companions, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status, departure_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, contact_id, type, reason, formattedStartTime, formattedEndTime, leave_type, out_type, out_location, destination, transport_type, return_transport_type || null, companions ? JSON.stringify(companions) : null, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status, formattedDepartureTime]
     );
     
     res.json({ id });
