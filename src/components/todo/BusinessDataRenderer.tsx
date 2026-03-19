@@ -25,7 +25,7 @@ const pickDisplayValue = (...values: any[]) => values.find(hasDisplayValue);
 
 const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorName }: BusinessDataRendererProps) => {
   // 合并业务数据和表单数据：保留审批表单中的补充字段，同时避免空值覆盖业务详情中的真实 JOIN 数据
-  const data = {
+  const data: Record<string, any> = {
     ...businessData,
     ...formData,
     handover_person:
@@ -35,7 +35,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     handover_person_name:
       pickDisplayValue(formData?.handover_person_name, businessData?.handover_person_name, businessData?.handover_person?.name) ?? null,
     handover_notes:
-      pickDisplayValue(formData?.handover_notes, businessData?.handover_notes) ?? null,
+      pickDisplayValue(formData?.handover_notes, businessData?.handoover_notes) ?? null,
   };
   if (businessData?.items?.length) {
     data.items = businessData.items;
