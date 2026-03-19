@@ -155,10 +155,11 @@ const BusinessTrip = () => {
 
   const detailFields = selectedRecord ? [
     { label: "目的地", value: selectedRecord.destination },
-    { label: "出差天数", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
     { label: "出差事由", value: selectedRecord.reason, fullWidth: true },
     { label: "计划开始时间", value: formatBusinessTripDateAmPm(selectedRecord.start_time) },
     { label: "计划结束时间", value: formatBusinessTripDateAmPm(selectedRecord.end_time) },
+    { label: "出差时长", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
+    { label: "", value: "", spacer: true },
     { label: "去程交通方式", value: selectedRecord.transport_type ? transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type : null },
     { label: "返程交通方式", value: selectedRecord.return_transport_type ? transportTypeLabels[selectedRecord.return_transport_type] || selectedRecord.return_transport_type : null },
     { label: "同行人员", value: getCompanionNamesStr(selectedRecord.companions) },
