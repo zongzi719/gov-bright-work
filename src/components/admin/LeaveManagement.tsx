@@ -488,6 +488,20 @@ const LeaveManagement = () => {
                     </div>
                   </div>
                 )}
+                {/* 病假诊断证明书 */}
+                {selectedRecord.leave_type === "sick" && selectedRecord.medical_certificate_url && (
+                  <div className="col-span-2">
+                    <Label className="text-sm text-muted-foreground">诊断证明书</Label>
+                    <div className="mt-1">
+                      <img
+                        src={selectedRecord.medical_certificate_url}
+                        alt="诊断证明书"
+                        className="max-h-60 rounded-md border cursor-pointer"
+                        onClick={() => window.open(selectedRecord.medical_certificate_url!, '_blank')}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div>
                   <Label className="text-sm text-muted-foreground">申请时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
