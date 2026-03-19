@@ -359,7 +359,6 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {renderField("申请人", contactName)}
           {renderField("所属部门", contactDept)}
           {businessType === "business_trip" && data.destination && renderField("出差目的地", data.destination)}
-          {data.duration_days != null && !data.leave_type && renderField("出差天数", `${data.duration_days} 天`)}
         </div>
 
         {businessType === "business_trip" && data.reason && (
@@ -373,6 +372,8 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {renderField(businessType === "business_trip" ? "计划开始时间" : "计划开始时间", businessType === "business_trip" ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time))}
           {renderField(businessType === "business_trip" ? "计划结束时间" : "计划结束时间", businessType === "business_trip" ? formatDateAmPm(data.end_time) : formatDateTime(data.end_time))}
           {data.leave_type && renderField("请假类型", getLeaveTypeLabel(data.leave_type))}
+          {data.duration_days != null && !data.leave_type && renderField("出差时长", `${data.duration_days} 天`)}
+          {data.duration_days != null && !data.leave_type && <div />}
           {data.transport_type && renderField(businessType === "business_trip" ? "去程交通方式" : "交通方式", getTransportTypeLabel(data.transport_type))}
           {businessType === "business_trip" && renderField("返程交通方式", getTransportTypeLabel(data.return_transport_type))}
           {data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
