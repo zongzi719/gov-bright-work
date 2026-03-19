@@ -12,6 +12,7 @@ interface DetailField {
   label: string;
   value: React.ReactNode;
   fullWidth?: boolean;
+  spacer?: boolean;
 }
 
 interface StatusConfig {
