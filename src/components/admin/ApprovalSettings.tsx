@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Settings, FileText, GitBranch, Cog, Plus, ArrowLeft, Copy, Eye, FileQuestion, ClipboardList, RefreshCw } from "lucide-react";
+import { Plus, ArrowLeft, Copy, Eye, FileQuestion, ClipboardList, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import ApprovalBasicSettings from "./approval/ApprovalBasicSettings";
 import ApprovalFormDesign from "./approval/ApprovalFormDesign";
