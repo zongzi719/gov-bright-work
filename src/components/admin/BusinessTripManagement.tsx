@@ -246,9 +246,22 @@ const BusinessTripManagement = () => {
   const openDetailDialog = async (record: AbsenceRecord) => {
     setSelectedRecord(record);
     setApprovalInstanceStatus(null);
+    setAdminCompanionNames(null);
     setIsDetailDialogOpen(true);
     void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '出差申请', target_id: record.id, target_name: record.reason });
-    
+
+    // Resolve companion names
+    if (record.companions && record.companions.length > 0) {
+      dataAdapter.getContactsByIds(record.companions).then(({ data: contactsData }) => {
+        if (contactsData) {
+          const nameMap: Record<string, string> = {};
+          contactsData.forEach((c: any) => { nameMap[c.id] = c.name; });
+          setAdminCompanionNames(record.companions!.map(id => nameMap[id] || id).join("、"));
+        } else {
+          setAdminCompanionNames(record.companions!.join("、"));
+        }
+      });
+    }
     // 获取审批实例的真实状态
     const { data: instanceData } = await dataAdapter.getApprovalInstanceForDetail(record.id, "business_trip");
     
