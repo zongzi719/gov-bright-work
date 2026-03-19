@@ -36,6 +36,8 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
       pickDisplayValue(formData?.handover_person_name, businessData?.handover_person_name, businessData?.handover_person?.name) ?? null,
     handover_notes:
       pickDisplayValue(formData?.handover_notes, businessData?.handoover_notes) ?? null,
+    // Preserve pre-resolved companion names from businessData
+    companion_names: pickDisplayValue(businessData?.companion_names, formData?.companion_names) ?? null,
   };
   if (businessData?.items?.length) {
     data.items = businessData.items;
