@@ -323,6 +323,8 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
           {data.out_location && renderField("外出地点", data.out_location)}
           {data.contact_phone && renderField("联系电话", data.contact_phone)}
+          {(data.handover_person?.name || data.handover_person_name) && renderField("工作交接人", data.handover_person?.name || data.handover_person_name)}
+          {data.handover_notes && renderField("交接事项", data.handover_notes)}
         </div>
 
         {data.reason && (

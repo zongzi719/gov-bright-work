@@ -383,6 +383,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           start_time: formatLocalDateTime(startTime),
           end_time: formatLocalDateTime(endTime),
           handover_person_id: form.handover_person_id,
+          handover_person_name: handoverPersonName || null,
           handover_notes: form.handover_notes,
           notes: form.notes,
           duration_hours: duration.hours,
