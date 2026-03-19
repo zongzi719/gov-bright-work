@@ -982,6 +982,7 @@ app.post('/api/absence-records', async (req, res) => {
     if (duration_days !== undefined && duration_days !== null) fieldValues.duration_days = duration_days;
     if (destination !== undefined && destination !== null) fieldValues.destination = destination;
     if (transport_type !== undefined && transport_type !== null) fieldValues.transport_type = transport_type;
+    if (return_transport_type !== undefined && return_transport_type !== null) fieldValues.return_transport_type = return_transport_type;
     if (estimated_cost !== undefined && estimated_cost !== null) fieldValues.estimated_cost = estimated_cost;
     if (companions !== undefined && companions !== null) fieldValues.companions = JSON.stringify(companions);
     if (handover_person_id !== undefined && handover_person_id !== null && handover_person_id !== '') fieldValues.handover_person_id = handover_person_id;
@@ -991,6 +992,7 @@ app.post('/api/absence-records', async (req, res) => {
     if (out_location !== undefined && out_location !== null) fieldValues.out_location = out_location;
     if (notes !== undefined && notes !== null) fieldValues.notes = notes;
     if (status !== undefined && status !== null) fieldValues.status = status;
+    if (departure_time !== undefined && departure_time !== null) fieldValues.departure_time = formatDateForMySQL(departure_time);
     
     const fields = Object.keys(fieldValues);
     const values = Object.values(fieldValues);
