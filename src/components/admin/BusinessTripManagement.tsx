@@ -537,6 +537,8 @@ const BusinessTripManagement = () => {
                     </div>
                   </div>
                 )}
+                {/* spacer to keep 出差时长 alone on its row */}
+                {selectedRecord.duration_days && <div />}
                 <div>
                   <Label className="text-sm text-muted-foreground">去程交通方式</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
