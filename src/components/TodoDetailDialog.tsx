@@ -333,12 +333,39 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         const result = await dataAdapter.getAbsenceRecordById(businessId);
         data = result.data;
         // Resolve companion names for business trips
-        if (businessType === "business_trip" && data?.companions && Array.isArray(data.companions) && data.companions.length > 0) {
-          const { data: contactsData } = await dataAdapter.getContactsByIds(data.companions);
-          if (contactsData) {
-            const nameMap: Record<string, string> = {};
-            contactsData.forEach((c: any) => { nameMap[c.id] = c.name; });
-            data.companion_names = data.companions.map((id: string) => nameMap[id] || id).join("、");
+        if (businessType === "business_trip" && data) {
+          const normalizedCompanions = Array.isArray(data.companions)
+            ? data.companions
+            : typeof data.companions === "string"
+              ? (() => {
+                  try {
+                    const parsed = JSON.parse(data.companions);
+                    return Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    return [];
+                  }
+                })()
+              : [];
+
+          data.companions = normalizedCompanions;
+
+          if (!data.companion_names && normalizedCompanions.length > 0) {
+            const unresolvedIds = normalizedCompanions.filter(
+              (value: unknown): value is string =>
+                typeof value === "string" &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+            );
+
+            if (unresolvedIds.length > 0) {
+              const { data: contactsData } = await dataAdapter.getContactsByIds(unresolvedIds);
+              if (contactsData) {
+                const nameMap: Record<string, string> = {};
+                contactsData.forEach((c: any) => { nameMap[c.id] = c.name; });
+                data.companion_names = normalizedCompanions.map((value: string) => nameMap[value] || value).join("、");
+              }
+            } else {
+              data.companion_names = normalizedCompanions.join("、");
+            }
           }
         }
       } else if (businessType === "supply_requisition") {

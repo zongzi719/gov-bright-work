@@ -1069,7 +1069,7 @@ app.get('/api/absence-records/:id', async (req, res) => {
     const { id } = req.params;
     const [rows] = await pool.execute(
       `SELECT ar.*, 
-              c.id as contact_id, c.name as contact_name, 
+              c.id as contact_id_ref, c.name as contact_name, 
               COALESCE(o.name, c.department) as contact_department,
               hp.name as handover_person_name
        FROM absence_records ar
@@ -1085,12 +1085,33 @@ app.get('/api/absence-records/:id', async (req, res) => {
     }
     
     const row = rows[0];
+    const parsedCompanions = safeJsonParse(row.companions, null);
+    let companionNames = null;
+
+    if (Array.isArray(parsedCompanions) && parsedCompanions.length > 0) {
+      const placeholders = parsedCompanions.map(() => '?').join(',');
+      const [companionRows] = await pool.execute(
+        `SELECT id, name FROM contacts WHERE id IN (${placeholders})`,
+        parsedCompanions
+      );
+
+      const companionNameMap = {};
+      companionRows.forEach((contact) => {
+        companionNameMap[contact.id] = contact.name;
+      });
+
+      companionNames = parsedCompanions
+        .map((companionId) => companionNameMap[companionId] || companionId)
+        .join('、');
+    }
     
     // 格式化返回数据，模拟 Supabase 的关联数据结构
     const result = {
       ...row,
-      contacts: row.contact_id ? {
-        id: row.contact_id,
+      companions: parsedCompanions,
+      companion_names: companionNames,
+      contacts: row.contact_id_ref ? {
+        id: row.contact_id_ref,
         name: row.contact_name,
         department: row.contact_department
       } : null,
@@ -1100,6 +1121,7 @@ app.get('/api/absence-records/:id', async (req, res) => {
     };
     
     // 删除冗余字段
+    delete result.contact_id_ref;
     delete result.contact_name;
     delete result.contact_department;
     delete result.handover_person_name;
