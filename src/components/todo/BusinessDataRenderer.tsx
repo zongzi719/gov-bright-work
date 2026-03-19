@@ -1,4 +1,5 @@
 import { Label } from "@/components/ui/label";
+import LeaveHistorySummary from "@/components/todo/LeaveHistorySummary";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
