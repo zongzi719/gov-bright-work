@@ -681,24 +681,19 @@ const SupplyManagement = () => {
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
-            <TabsTrigger value="inventory" className="gap-2">
-              <Package className="w-4 h-4" />
+            <TabsTrigger value="inventory">
               库存管理
             </TabsTrigger>
-            <TabsTrigger value="purchase" className="gap-2">
-              <ShoppingCart className="w-4 h-4" />
+            <TabsTrigger value="purchase">
               采购需求
             </TabsTrigger>
-            <TabsTrigger value="requisition" className="gap-2">
-              <ClipboardList className="w-4 h-4" />
+            <TabsTrigger value="requisition">
               领用管理
             </TabsTrigger>
-            <TabsTrigger value="office-purchase" className="gap-2">
-              <ShoppingCart className="w-4 h-4" />
+            <TabsTrigger value="office-purchase">
               办公采购
             </TabsTrigger>
-            <TabsTrigger value="stock-history" className="gap-2">
-              <ClipboardList className="w-4 h-4" />
+            <TabsTrigger value="stock-history">
               库存变动
             </TabsTrigger>
           </TabsList>
