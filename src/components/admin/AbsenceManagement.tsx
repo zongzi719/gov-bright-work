@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Briefcase, CalendarOff, LogOut, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import BusinessTripManagement from "./BusinessTripManagement";
 import LeaveManagement from "./LeaveManagement";
 import OutManagement from "./OutManagement";
