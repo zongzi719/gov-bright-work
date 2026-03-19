@@ -277,7 +277,7 @@ const AbsenceApplication = () => {
     { label: "计划开始时间", value: formatBusinessTripDateAmPm(selectedTrip.start_time) },
     { label: "计划结束时间", value: formatBusinessTripDateAmPm(selectedTrip.end_time) },
     { label: "出差时长", value: selectedTrip.duration_days ? `${selectedTrip.duration_days} 天` : null },
-    { label: "", value: "", hidden: true },
+    { label: "", value: "", spacer: true },
     { label: "去程交通方式", value: selectedTrip.transport_type ? transportTypeLabels[selectedTrip.transport_type] || selectedTrip.transport_type : null },
     { label: "返程交通方式", value: selectedTrip.return_transport_type ? transportTypeLabels[selectedTrip.return_transport_type] || selectedTrip.return_transport_type : null },
     { label: "同行人员", value: getTripCompanionNames(selectedTrip.companions) },
