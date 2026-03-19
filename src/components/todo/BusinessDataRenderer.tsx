@@ -15,9 +15,28 @@ interface BusinessDataRendererProps {
  * 业务数据渲染组件 - 根据业务类型渲染对应的表单数据
  * 确保提交表单和审批详情展示一致
  */
+const hasDisplayValue = (value: any) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  return true;
+};
+
+const pickDisplayValue = (...values: any[]) => values.find(hasDisplayValue);
+
 const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorName }: BusinessDataRendererProps) => {
-  // 合并业务数据和表单数据（表单数据优先，但 items 优先用 businessData 中经过 JOIN 的数据）
-  const data = { ...businessData, ...formData };
+  // 合并业务数据和表单数据：保留审批表单中的补充字段，同时避免空值覆盖业务详情中的真实 JOIN 数据
+  const data: Record<string, any> = {
+    ...businessData,
+    ...formData,
+    handover_person:
+      (hasDisplayValue(formData?.handover_person?.name) ? formData?.handover_person : null) ||
+      (hasDisplayValue(businessData?.handover_person?.name) ? businessData?.handover_person : null) ||
+      null,
+    handover_person_name:
+      pickDisplayValue(formData?.handover_person_name, businessData?.handover_person_name, businessData?.handover_person?.name) ?? null,
+    handover_notes:
+      pickDisplayValue(formData?.handover_notes, businessData?.handoover_notes) ?? null,
+  };
   if (businessData?.items?.length) {
     data.items = businessData.items;
   }
@@ -306,6 +325,18 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
   if (businessType === "absence" || businessType === "leave" || businessType === "out" || businessType === "business_trip") {
     const contactName = data.contacts?.name || data.contact_name || "-";
     const contactDept = data.contacts?.department || data.department || "-";
+    const handoverPersonName =
+      pickDisplayValue(
+        data.handover_person?.name,
+        data.handover_person_name,
+        businessData?.handover_person?.name,
+        businessData?.handover_person_name,
+        formData?.handover_person?.name,
+        formData?.handover_person_name
+      ) ?? null;
+    const handoverNotes =
+      pickDisplayValue(data.handover_notes, businessData?.handover_notes, formData?.handover_notes) ?? null;
+    const shouldShowLeaveHandover = businessType === "leave" || (businessType === "absence" && !!data.leave_type);
 
     return (
       <div className="space-y-4">
@@ -323,8 +354,8 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
           {data.out_location && renderField("外出地点", data.out_location)}
           {data.contact_phone && renderField("联系电话", data.contact_phone)}
-          {(data.handover_person?.name || data.handover_person_name) && renderField("工作交接人", data.handover_person?.name || data.handover_person_name)}
-          {data.handover_notes && renderField("交接事项", data.handover_notes)}
+          {shouldShowLeaveHandover && renderField("工作交接人", handoverPersonName)}
+          {shouldShowLeaveHandover && renderField("交接事项说明", handoverNotes)}
         </div>
 
         {data.reason && (
