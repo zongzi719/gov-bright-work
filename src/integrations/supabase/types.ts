@@ -24,6 +24,7 @@ export type Database = {
           contact_id: string
           contact_phone: string | null
           created_at: string
+          departure_time: string | null
           destination: string | null
           duration_days: number | null
           duration_hours: number | null
@@ -37,6 +38,7 @@ export type Database = {
           out_location: string | null
           out_type: string | null
           reason: string
+          return_transport_type: string | null
           start_time: string
           status: Database["public"]["Enums"]["absence_status"]
           transport_type: string | null
@@ -52,6 +54,7 @@ export type Database = {
           contact_id: string
           contact_phone?: string | null
           created_at?: string
+          departure_time?: string | null
           destination?: string | null
           duration_days?: number | null
           duration_hours?: number | null
@@ -65,6 +68,7 @@ export type Database = {
           out_location?: string | null
           out_type?: string | null
           reason: string
+          return_transport_type?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["absence_status"]
           transport_type?: string | null
@@ -80,6 +84,7 @@ export type Database = {
           contact_id?: string
           contact_phone?: string | null
           created_at?: string
+          departure_time?: string | null
           destination?: string | null
           duration_days?: number | null
           duration_hours?: number | null
@@ -93,6 +98,7 @@ export type Database = {
           out_location?: string | null
           out_type?: string | null
           reason?: string
+          return_transport_type?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["absence_status"]
           transport_type?: string | null

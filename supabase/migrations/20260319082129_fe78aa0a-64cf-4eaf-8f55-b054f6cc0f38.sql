@@ -1,0 +1,2 @@
+ALTER TABLE public.absence_records ADD COLUMN IF NOT EXISTS return_transport_type text DEFAULT NULL;
+ALTER TABLE public.absence_records ADD COLUMN IF NOT EXISTS departure_time timestamptz DEFAULT NULL;
