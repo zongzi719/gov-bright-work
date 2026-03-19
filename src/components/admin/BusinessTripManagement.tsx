@@ -356,8 +356,8 @@ const BusinessTripManagement = () => {
                   <TableHead>人员</TableHead>
                   <TableHead>单位/部门</TableHead>
                   <TableHead>事由</TableHead>
-                  <TableHead>开始时间</TableHead>
-                  <TableHead>结束时间</TableHead>
+                  <TableHead>计划开始时间</TableHead>
+                  <TableHead>计划结束时间</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
