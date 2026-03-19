@@ -23,6 +23,7 @@ interface AbsenceRecord {
   handover_person_id: string | null;
   handover_notes: string | null;
   handover_person_name?: string | null;
+  medical_certificate_url?: string | null;
   notes: string | null;
   created_at: string;
   contacts: {
