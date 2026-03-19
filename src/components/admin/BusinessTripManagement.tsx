@@ -540,14 +540,12 @@ const BusinessTripManagement = () => {
                     </div>
                   </div>
                 )}
-                {selectedRecord.notes && (
-                  <div className="col-span-2">
-                    <Label className="text-sm text-muted-foreground">备注</Label>
-                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                      {selectedRecord.notes}
-                    </div>
+                <div className="col-span-2">
+                  <Label className="text-sm text-muted-foreground">备注</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.notes || <span className="text-muted-foreground">-</span>}
                   </div>
-                )}
+                </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">申请时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
