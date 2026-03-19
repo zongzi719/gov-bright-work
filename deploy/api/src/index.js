@@ -3892,20 +3892,31 @@ app.get('/api/admin/absence-records', async (req, res) => {
     const [rows] = await pool.execute(sql, [type]);
     
     // 格式化为前端期望的嵌套结构
-    const formatted = rows.map(row => ({
-      ...row,
-      contacts: row.contact_id_ref ? {
-        id: row.contact_id_ref,
-        name: row.contact_name,
-        department: row.contact_department,
-        position: row.contact_position,
-        organization: row.org_name ? { name: row.org_name } : null
-      } : null,
-      handover_person: row.handover_person_name ? {
-        id: null,
-        name: row.handover_person_name
-      } : null
-    }));
+    const formatted = rows.map(row => {
+      // 解析 companions JSON
+      let parsedCompanions = null;
+      if (row.companions) {
+        try {
+          parsedCompanions = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+        } catch (e) { parsedCompanions = null; }
+      }
+      
+      return {
+        ...row,
+        companions: parsedCompanions,
+        contacts: row.contact_id_ref ? {
+          id: row.contact_id_ref,
+          name: row.contact_name,
+          department: row.contact_department,
+          position: row.contact_position,
+          organization: row.org_name ? { name: row.org_name } : null
+        } : null,
+        handover_person: row.handover_person_name ? {
+          id: null,
+          name: row.handover_person_name
+        } : null
+      };
+    });
     res.json(formatted);
   } catch (error) {
     console.error('Get admin absence records error:', error);
