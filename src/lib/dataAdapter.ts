@@ -3197,6 +3197,29 @@ export async function getUserRoles(userId: string) {
   return { data, error };
 }
 
+// ==================== File Upload ====================
+
+export async function uploadFile(file: File, type: string = 'misc'): Promise<{ data: { url: string } | null; error: Error | null }> {
+  if (isOfflineMode()) {
+    const baseUrl = getApiBaseUrl();
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await fetch(`${baseUrl}/api/upload/${type}`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) throw new Error('上传失败');
+      const data = await response.json();
+      return { data: { url: data.url || data.path }, error: null };
+    } catch (error) {
+      return { data: null, error: error as Error };
+    }
+  }
+  // 在线模式不使用此方法，各组件直接调用 supabase.storage
+  return { data: null, error: new Error('在线模式请使用 Supabase Storage') };
+}
+
 // 导出统一接口
 export const dataAdapter = {
   // Office Supplies
