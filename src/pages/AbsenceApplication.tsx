@@ -101,7 +101,7 @@ const AbsenceApplication = () => {
   const [tripFormOpen, setTripFormOpen] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<BusinessTripRecord | null>(null);
   const [tripDetailOpen, setTripDetailOpen] = useState(false);
-
+  const [tripCompanionNames, setTripCompanionNames] = useState<Record<string, string>>({});
   // Leave states
   const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
   const [leaveLoading, setLeaveLoading] = useState(true);
