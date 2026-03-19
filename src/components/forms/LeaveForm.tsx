@@ -309,6 +309,48 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     return requested <= remaining;
   };
 
+  const handleMedicalCertChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/png", "image/jpeg", "image/jpg"];
+    if (!allowed.includes(file.type)) {
+      toast.error("仅支持 PNG、JPG、JPEG 格式的图片");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("图片大小不能超过 5MB");
+      return;
+    }
+    setMedicalCertFile(file);
+    setMedicalCertPreview(URL.createObjectURL(file));
+  };
+
+  const removeMedicalCert = () => {
+    setMedicalCertFile(null);
+    if (medicalCertPreview) URL.revokeObjectURL(medicalCertPreview);
+    setMedicalCertPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadMedicalCert = async (): Promise<string | null> => {
+    if (!medicalCertFile || !currentUser?.id) return null;
+    setUploadingCert(true);
+    try {
+      const ext = medicalCertFile.name.split(".").pop() || "jpg";
+      const filePath = `${currentUser.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("medical-certificates").upload(filePath, medicalCertFile);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("medical-certificates").getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("上传诊断证明书失败:", err);
+      toast.error("上传诊断证明书失败");
+      return null;
+    } finally {
+      setUploadingCert(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!currentUser?.id || !form.leave_type || !form.reason || !form.start_date || !form.end_date) {
       toast.error("请填写必填项");
