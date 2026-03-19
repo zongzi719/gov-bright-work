@@ -272,13 +272,6 @@ const AbsenceApplication = () => {
           <div className="w-36 border-r border-border bg-muted/30 flex-shrink-0">
             <TabsList className="flex flex-col h-auto w-full bg-transparent p-2 gap-1">
               <TabsTrigger 
-                value="business-trip" 
-                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Briefcase className="w-4 h-4" />
-                出差申请
-              </TabsTrigger>
-              <TabsTrigger 
                 value="leave" 
                 className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
@@ -291,6 +284,13 @@ const AbsenceApplication = () => {
               >
                 <LogOut className="w-4 h-4" />
                 外出申请
+              </TabsTrigger>
+              <TabsTrigger 
+                value="business-trip" 
+                className="w-full justify-start gap-2 px-3 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Briefcase className="w-4 h-4" />
+                出差申请
               </TabsTrigger>
             </TabsList>
           </div>
