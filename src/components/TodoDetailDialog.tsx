@@ -332,6 +332,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       if (businessType === "business_trip" || businessType === "leave" || businessType === "out" || businessType === "absence") {
         const result = await dataAdapter.getAbsenceRecordById(businessId);
         data = result.data;
+        // Resolve companion names for business trips
+        if (businessType === "business_trip" && data?.companions && Array.isArray(data.companions) && data.companions.length > 0) {
+          const { data: contactsData } = await dataAdapter.getContactsByIds(data.companions);
+          if (contactsData) {
+            const nameMap: Record<string, string> = {};
+            contactsData.forEach((c: any) => { nameMap[c.id] = c.name; });
+            data.companion_names = data.companions.map((id: string) => nameMap[id] || id).join("、");
+          }
+        }
       } else if (businessType === "supply_requisition") {
         // 领用申请 - 获取主表和明细表数据
         const result = await dataAdapter.getSupplyRequisitionById(businessId);
