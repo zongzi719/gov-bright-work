@@ -178,9 +178,13 @@ const TodoList = () => {
     fetchAllItems();
   }, [currentUser?.id]);
 
-  const extractReason = (title: string): string => {
-    const match = title.match(/^[^-]+\s*-\s*(.+)$/);
-    return match ? match[1] : title;
+  // 获取待办项的显示标题：统一显示申请人姓名
+  const getDisplayTitle = (item: TodoItem): string => {
+    if (item.initiator?.name) {
+      return item.initiator.name;
+    }
+    const match = item.title.match(/^([^-\s]+)/);
+    return match ? match[1] : item.title;
   };
 
   const getSourceLabel = (item: TodoItem): string => {
@@ -229,7 +233,7 @@ const TodoList = () => {
   };
 
   const renderPendingItem = (item: TodoItem) => {
-    const reason = extractReason(item.title);
+    const reason = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
     const isRead = isItemRead(item.id);
 
@@ -255,7 +259,7 @@ const TodoList = () => {
 
   const renderCompletedItem = (item: TodoItem) => {
     const { label, color } = statusToDisplay(item.status, item.process_result);
-    const reason = extractReason(item.title);
+    const reason = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
 
     return (
@@ -285,7 +289,7 @@ const TodoList = () => {
 
   const renderCCItem = (item: TodoItem) => {
     const isRead = item.status !== "pending";
-    const reason = extractReason(item.title.replace(/^\[抄送\]\s*/, ""));
+    const reason = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
 
     return (
