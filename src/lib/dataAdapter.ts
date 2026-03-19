@@ -1639,6 +1639,7 @@ export async function createAbsenceRecord(record: {
   out_location?: string | null;
   destination?: string | null;
   transport_type?: string | null;
+  return_transport_type?: string | null;
   companions?: string[] | null;
   estimated_cost?: number | null;
   duration_hours?: number | null;
@@ -1648,6 +1649,7 @@ export async function createAbsenceRecord(record: {
   contact_phone?: string | null;
   notes?: string | null;
   status?: string;
+  departure_time?: string | null;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ id: string }>('/api/absence-records', {
