@@ -243,9 +243,7 @@ const TodoList = () => {
         className="px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border"
         onClick={() => handleItemClick(item)}
       >
-        <h3 className={`text-sm leading-tight mb-1 ${
-          isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
-        }`}>
+        <h3 className="text-sm font-bold leading-tight mb-1 text-foreground">
           {reason}
         </h3>
         <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
@@ -271,7 +269,7 @@ const TodoList = () => {
         onClick={() => handleItemClick(item)}
       >
         <div className="flex items-center gap-2 mb-1">
-          <h3 className="text-sm font-normal leading-tight text-muted-foreground flex-1">
+          <h3 className="text-sm font-bold leading-tight text-foreground flex-1">
             {reason}
           </h3>
           <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${color}`}>{label}</span>
@@ -303,7 +301,7 @@ const TodoList = () => {
         onClick={() => handleItemClick(item)}
       >
         <div className="flex items-center gap-2 mb-1">
-          <h3 className={`text-sm leading-tight flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
+          <h3 className="text-sm font-bold leading-tight flex-1 text-foreground">
             {reason}
           </h3>
           <span
