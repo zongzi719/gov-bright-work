@@ -243,9 +243,7 @@ const TodoList = () => {
         className="px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border"
         onClick={() => handleItemClick(item)}
       >
-        <h3 className={`text-sm leading-tight mb-1 ${
-          isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
-        }`}>
+        <h3 className="text-sm font-bold leading-tight mb-1 text-foreground">
           {reason}
         </h3>
         <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
