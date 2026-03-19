@@ -26,7 +26,7 @@ const BUILTIN_CODES = [
 const ABSENCE_GROUP_BUSINESS_TYPES = ["business_trip", "leave", "out", "absence"];
 
 const AbsenceManagement = () => {
-  const [activeTab, setActiveTab] = useState("business-trip");
+  const [activeTab, setActiveTab] = useState("leave-request");
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
 
   useEffect(() => {
@@ -59,10 +59,6 @@ const AbsenceManagement = () => {
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={`grid w-full max-w-2xl`} style={{ gridTemplateColumns: `repeat(${3 + customTemplates.length}, minmax(0, 1fr))` }}>
-          <TabsTrigger value="business-trip" className="gap-2">
-            <Briefcase className="w-4 h-4" />
-            出差申请
-          </TabsTrigger>
           <TabsTrigger value="leave-request" className="gap-2">
             <CalendarOff className="w-4 h-4" />
             请假申请
@@ -70,6 +66,10 @@ const AbsenceManagement = () => {
           <TabsTrigger value="out-request" className="gap-2">
             <LogOut className="w-4 h-4" />
             外出申请
+          </TabsTrigger>
+          <TabsTrigger value="business-trip" className="gap-2">
+            <Briefcase className="w-4 h-4" />
+            出差申请
           </TabsTrigger>
           {customTemplates.map(t => (
             <TabsTrigger key={t.id} value={`custom-${t.id}`} className="gap-2">
@@ -79,16 +79,16 @@ const AbsenceManagement = () => {
           ))}
         </TabsList>
 
-        <TabsContent value="business-trip" className="mt-4">
-          <BusinessTripManagement />
-        </TabsContent>
-
         <TabsContent value="leave-request" className="mt-4">
           <LeaveManagement />
         </TabsContent>
 
         <TabsContent value="out-request" className="mt-4">
           <OutManagement />
+        </TabsContent>
+
+        <TabsContent value="business-trip" className="mt-4">
+          <BusinessTripManagement />
         </TabsContent>
 
         {customTemplates.map(t => (
