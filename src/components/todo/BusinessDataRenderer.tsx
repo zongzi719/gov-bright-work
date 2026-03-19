@@ -354,14 +354,19 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
           {data.out_location && renderField("外出地点", data.out_location)}
           {data.contact_phone && renderField("联系电话", data.contact_phone)}
-          {shouldShowLeaveHandover && renderField("工作交接人", handoverPersonName)}
-          {shouldShowLeaveHandover && renderField("交接事项说明", handoverNotes)}
         </div>
 
         {data.reason && (
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground font-normal">事由</Label>
             <div className="text-sm whitespace-pre-wrap">{data.reason}</div>
+          </div>
+        )}
+
+        {shouldShowLeaveHandover && (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {renderField("工作交接人", handoverPersonName)}
+            {renderField("工作交接说明", handoverNotes)}
           </div>
         )}
 

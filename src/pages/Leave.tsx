@@ -127,9 +127,9 @@ const Leave = () => {
       : (selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null) },
     { label: "开始日期", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd", { locale: zhCN }) },
     { label: "结束日期", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd", { locale: zhCN }) : null },
-    { label: "工作交接人", value: selectedRecord.handover_person?.name || selectedRecord.handover_person_name },
-    { label: "交接事项说明", value: selectedRecord.handover_notes },
     { label: "请假事由", value: selectedRecord.reason, fullWidth: true },
+    { label: "工作交接人", value: selectedRecord.handover_person?.name || selectedRecord.handover_person_name },
+    { label: "工作交接说明", value: selectedRecord.handover_notes },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
     { label: "申请时间", value: format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];
