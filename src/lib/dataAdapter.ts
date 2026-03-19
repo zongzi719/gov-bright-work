@@ -3364,6 +3364,8 @@ export const dataAdapter = {
   // Roles
   getRoles,
   getUserRoles,
+  // File Upload
+  uploadFile,
   // Utilities
   isOfflineMode,
 };

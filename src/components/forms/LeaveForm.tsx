@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Upload, X, FileImage } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
