@@ -23,6 +23,7 @@ interface AbsenceRecord {
   handover_person_id: string | null;
   handover_notes: string | null;
   handover_person_name?: string | null;
+  medical_certificate_url?: string | null;
   notes: string | null;
   created_at: string;
   contacts: {
@@ -130,6 +131,18 @@ const Leave = () => {
     { label: "请假事由", value: selectedRecord.reason, fullWidth: true },
     { label: "工作交接人", value: selectedRecord.handover_person?.name || selectedRecord.handover_person_name },
     { label: "工作交接说明", value: selectedRecord.handover_notes },
+    ...(selectedRecord.leave_type === "sick" && selectedRecord.medical_certificate_url ? [{
+      label: "诊断证明书",
+      value: (
+        <img
+          src={selectedRecord.medical_certificate_url}
+          alt="诊断证明书"
+          className="max-h-48 rounded-md border cursor-pointer"
+          onClick={() => window.open(selectedRecord.medical_certificate_url!, '_blank')}
+        />
+      ),
+      fullWidth: true,
+    }] : []),
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
     { label: "申请时间", value: format(parseTime(selectedRecord.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];

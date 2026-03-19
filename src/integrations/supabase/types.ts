@@ -34,6 +34,7 @@ export type Database = {
           handover_person_id: string | null
           id: string
           leave_type: Database["public"]["Enums"]["leave_type"] | null
+          medical_certificate_url: string | null
           notes: string | null
           out_location: string | null
           out_type: string | null
@@ -64,6 +65,7 @@ export type Database = {
           handover_person_id?: string | null
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"] | null
+          medical_certificate_url?: string | null
           notes?: string | null
           out_location?: string | null
           out_type?: string | null
@@ -94,6 +96,7 @@ export type Database = {
           handover_person_id?: string | null
           id?: string
           leave_type?: Database["public"]["Enums"]["leave_type"] | null
+          medical_certificate_url?: string | null
           notes?: string | null
           out_location?: string | null
           out_type?: string | null

@@ -80,6 +80,7 @@ interface AbsenceRecord {
   handover_person_id: string | null;
   handover_notes: string | null;
   handover_person?: { name: string } | null;
+  medical_certificate_url?: string | null;
   // 关联的审批实例状态
   approval_status?: string;
 }
@@ -485,6 +486,20 @@ const LeaveManagement = () => {
                     <Label className="text-sm text-muted-foreground">备注</Label>
                     <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                       {selectedRecord.notes}
+                    </div>
+                  </div>
+                )}
+                {/* 病假诊断证明书 */}
+                {selectedRecord.leave_type === "sick" && selectedRecord.medical_certificate_url && (
+                  <div className="col-span-2">
+                    <Label className="text-sm text-muted-foreground">诊断证明书</Label>
+                    <div className="mt-1">
+                      <img
+                        src={selectedRecord.medical_certificate_url}
+                        alt="诊断证明书"
+                        className="max-h-60 rounded-md border cursor-pointer"
+                        onClick={() => window.open(selectedRecord.medical_certificate_url!, '_blank')}
+                      />
                     </div>
                   </div>
                 )}

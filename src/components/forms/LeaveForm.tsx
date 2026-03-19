@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Upload, X, FileImage } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import * as dataAdapter from "@/lib/dataAdapter";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays } from "date-fns";
@@ -130,6 +131,10 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [medicalCertFile, setMedicalCertFile] = useState<File | null>(null);
+  const [medicalCertPreview, setMedicalCertPreview] = useState<string | null>(null);
+  const [uploadingCert, setUploadingCert] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 季节变化时更新默认结束时间
   useEffect(() => {
@@ -304,6 +309,48 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     return requested <= remaining;
   };
 
+  const handleMedicalCertChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/png", "image/jpeg", "image/jpg"];
+    if (!allowed.includes(file.type)) {
+      toast.error("仅支持 PNG、JPG、JPEG 格式的图片");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("图片大小不能超过 5MB");
+      return;
+    }
+    setMedicalCertFile(file);
+    setMedicalCertPreview(URL.createObjectURL(file));
+  };
+
+  const removeMedicalCert = () => {
+    setMedicalCertFile(null);
+    if (medicalCertPreview) URL.revokeObjectURL(medicalCertPreview);
+    setMedicalCertPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadMedicalCert = async (): Promise<string | null> => {
+    if (!medicalCertFile || !currentUser?.id) return null;
+    setUploadingCert(true);
+    try {
+      const ext = medicalCertFile.name.split(".").pop() || "jpg";
+      const filePath = `${currentUser.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("medical-certificates").upload(filePath, medicalCertFile);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("medical-certificates").getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("上传诊断证明书失败:", err);
+      toast.error("上传诊断证明书失败");
+      return null;
+    } finally {
+      setUploadingCert(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!currentUser?.id || !form.leave_type || !form.reason || !form.start_date || !form.end_date) {
       toast.error("请填写必填项");
@@ -322,6 +369,12 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     
     if (remaining !== null && requested > remaining) {
       toast.error(`${leaveTypes.find(t => t.value === form.leave_type)?.label}剩余 ${remaining} ${unit}，不足 ${requested} ${unit}`);
+      return;
+    }
+
+    // 病假必须上传诊断证明书
+    if (form.leave_type === "sick" && !medicalCertFile) {
+      toast.error("病假需上传医院开具的诊断证明书");
       return;
     }
 
@@ -349,6 +402,16 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
       };
       
+      // 上传诊断证明书（病假时）
+      let medicalCertUrl: string | null = null;
+      if (form.leave_type === "sick" && medicalCertFile) {
+        medicalCertUrl = await uploadMedicalCert();
+        if (!medicalCertUrl) {
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
         type: "leave",
@@ -361,6 +424,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
         duration_hours: duration.hours,
         duration_days: duration.days,
         notes: form.notes || null,
+        medical_certificate_url: medicalCertUrl,
         status: "pending",
       });
 
@@ -388,6 +452,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           notes: form.notes,
           duration_hours: duration.hours,
           duration_days: duration.days,
+          medical_certificate_url: medicalCertUrl,
         },
       });
 
@@ -413,6 +478,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           handover_notes: "",
           notes: "",
         });
+        removeMedicalCert();
         onOpenChange(false);
       } else {
         toast.error(approvalResult.error || "启动审批流程失败");
@@ -469,7 +535,44 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
             )}
           </div>
 
-          {/* 季节选择 */}
+          {/* 诊断证明书上传（仅病假显示） */}
+          {form.leave_type === "sick" && (
+            <div className="space-y-2">
+              <Label>上传诊断证明书 <span className="text-destructive">*</span></Label>
+              <p className="text-xs text-muted-foreground">病假需附带医院开具的3日以内疾病诊断证明书，仅支持 PNG、JPG、JPEG 格式</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".png,.jpg,.jpeg"
+                className="hidden"
+                onChange={handleMedicalCertChange}
+              />
+              {medicalCertPreview ? (
+                <div className="relative inline-block">
+                  <img src={medicalCertPreview} alt="诊断证明书" className="max-h-40 rounded-md border" />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={removeMedicalCert}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-20 border-dashed flex flex-col gap-1"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">点击上传诊断证明书</span>
+                </Button>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label>工作时间制度</Label>
             <Select value={season} onValueChange={(v: SeasonType) => setSeason(v)}>
