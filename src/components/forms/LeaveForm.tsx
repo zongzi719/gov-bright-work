@@ -535,7 +535,44 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
             )}
           </div>
 
-          {/* 季节选择 */}
+          {/* 诊断证明书上传（仅病假显示） */}
+          {form.leave_type === "sick" && (
+            <div className="space-y-2">
+              <Label>上传诊断证明书 <span className="text-destructive">*</span></Label>
+              <p className="text-xs text-muted-foreground">病假需附带医院开具的3日以内疾病诊断证明书，仅支持 PNG、JPG、JPEG 格式</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".png,.jpg,.jpeg"
+                className="hidden"
+                onChange={handleMedicalCertChange}
+              />
+              {medicalCertPreview ? (
+                <div className="relative inline-block">
+                  <img src={medicalCertPreview} alt="诊断证明书" className="max-h-40 rounded-md border" />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={removeMedicalCert}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-20 border-dashed flex flex-col gap-1"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">点击上传诊断证明书</span>
+                </Button>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label>工作时间制度</Label>
             <Select value={season} onValueChange={(v: SeasonType) => setSeason(v)}>
