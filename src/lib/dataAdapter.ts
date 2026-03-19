@@ -880,7 +880,7 @@ export async function getAbsenceRecordById(id: string) {
   
   const { data, error } = await supabase
     .from("absence_records")
-    .select("*, contacts!absence_records_contact_id_fkey(id, name, department)")
+    .select("*, contacts!absence_records_contact_id_fkey(id, name, department), handover_person:contacts!absence_records_handover_person_id_fkey(id, name)")
     .eq("id", id)
     .maybeSingle();
   return { data, error };
