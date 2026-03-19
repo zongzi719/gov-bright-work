@@ -487,15 +487,33 @@ const BusinessTripManagement = () => {
                 <div>
                   <Label className="text-sm text-muted-foreground">开始时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {(() => { const t = selectedRecord.start_time; const d = t && !t.endsWith('Z') && !t.match(/[+-]\d{2}:\d{2}$/) ? (() => { const p = t.replace('T',' ').split(/[- :]/); return new Date(+p[0],+p[1]-1,+p[2],+p[3]||0,+p[4]||0); })() : new Date(t); return format(d, "yyyy-MM-dd HH:mm", { locale: zhCN }); })()}
+                    {(() => {
+                      const value = selectedRecord.start_time;
+                      if (!value) return "-";
+                      const hasTimezone = /Z$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value);
+                      const d = hasTimezone ? new Date(value) : parseTime(value);
+                      const year = hasTimezone ? d.getUTCFullYear() : d.getFullYear();
+                      const month = String((hasTimezone ? d.getUTCMonth() : d.getMonth()) + 1).padStart(2, "0");
+                      const day = String(hasTimezone ? d.getUTCDate() : d.getDate()).padStart(2, "0");
+                      const isAm = hasTimezone ? d.getUTCHours() < 12 : d.getHours() < 12;
+                      return `${year}-${month}-${day} ${isAm ? "上午" : "下午"}`;
+                    })()}
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">结束时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {selectedRecord.end_time 
-                      ? (() => { const t = selectedRecord.end_time; const d = t && !t.endsWith('Z') && !t.match(/[+-]\d{2}:\d{2}$/) ? (() => { const p = t.replace('T',' ').split(/[- :]/); return new Date(+p[0],+p[1]-1,+p[2],+p[3]||0,+p[4]||0); })() : new Date(t); return format(d, "yyyy-MM-dd HH:mm", { locale: zhCN }); })()
-                      : "-"}
+                    {(() => {
+                      const value = selectedRecord.end_time;
+                      if (!value) return "-";
+                      const hasTimezone = /Z$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value);
+                      const d = hasTimezone ? new Date(value) : parseTime(value);
+                      const year = hasTimezone ? d.getUTCFullYear() : d.getFullYear();
+                      const month = String((hasTimezone ? d.getUTCMonth() : d.getMonth()) + 1).padStart(2, "0");
+                      const day = String(hasTimezone ? d.getUTCDate() : d.getDate()).padStart(2, "0");
+                      const isAm = hasTimezone ? d.getUTCHours() < 12 : d.getHours() < 12;
+                      return `${year}-${month}-${day} ${isAm ? "上午" : "下午"}`;
+                    })()}
                   </div>
                 </div>
                 {selectedRecord.duration_days && (

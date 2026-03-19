@@ -53,8 +53,13 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
   const formatDateAmPm = (value: string | null | undefined) => {
     if (!value) return "-";
     try {
-      const d = parseTime(value);
-      return `${format(d, "yyyy-MM-dd")} ${d.getHours() < 12 ? "上午" : "下午"}`;
+      const hasTimezone = /Z$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value);
+      const d = hasTimezone ? new Date(value) : parseTime(value);
+      const year = hasTimezone ? d.getUTCFullYear() : d.getFullYear();
+      const month = String((hasTimezone ? d.getUTCMonth() : d.getMonth()) + 1).padStart(2, "0");
+      const day = String(hasTimezone ? d.getUTCDate() : d.getDate()).padStart(2, "0");
+      const isAm = hasTimezone ? d.getUTCHours() < 12 : d.getHours() < 12;
+      return `${year}-${month}-${day} ${isAm ? "上午" : "下午"}`;
     } catch {
       return value;
     }
