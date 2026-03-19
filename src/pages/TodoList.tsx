@@ -259,7 +259,7 @@ const TodoList = () => {
 
   const renderCompletedItem = (item: TodoItem) => {
     const { label, color } = statusToDisplay(item.status, item.process_result);
-    const reason = extractReason(item.title);
+    const reason = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
 
     return (
