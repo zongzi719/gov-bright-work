@@ -372,6 +372,12 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
       return;
     }
 
+    // 病假必须上传诊断证明书
+    if (form.leave_type === "sick" && !medicalCertFile) {
+      toast.error("病假需上传医院开具的诊断证明书");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
