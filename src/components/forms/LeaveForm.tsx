@@ -452,6 +452,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           notes: form.notes,
           duration_hours: duration.hours,
           duration_days: duration.days,
+          medical_certificate_url: medicalCertUrl,
         },
       });
 
