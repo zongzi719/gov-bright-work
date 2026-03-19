@@ -478,6 +478,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
           handover_notes: "",
           notes: "",
         });
+        removeMedicalCert();
         onOpenChange(false);
       } else {
         toast.error(approvalResult.error || "启动审批流程失败");
