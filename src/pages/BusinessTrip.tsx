@@ -109,11 +109,22 @@ const BusinessTrip = () => {
   };
 
   // 详情字段
+  const formatBusinessTripDateAmPm = (value: string | null | undefined) => {
+    if (!value) return null;
+    const hasTimezone = /Z$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value);
+    const d = hasTimezone ? new Date(value) : parseTime(value);
+    const year = hasTimezone ? d.getUTCFullYear() : d.getFullYear();
+    const month = String((hasTimezone ? d.getUTCMonth() : d.getMonth()) + 1).padStart(2, "0");
+    const day = String(hasTimezone ? d.getUTCDate() : d.getDate()).padStart(2, "0");
+    const isAm = hasTimezone ? d.getUTCHours() < 12 : d.getHours() < 12;
+    return `${year}-${month}-${day} ${isAm ? "上午" : "下午"}`;
+  };
+
   const detailFields = selectedRecord ? [
     { label: "目的地", value: selectedRecord.destination },
     { label: "出差天数", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
-    { label: "开始时间", value: (() => { const d = parseTime(selectedRecord.start_time); return `${format(d, "yyyy-MM-dd", { locale: zhCN })} ${d.getHours() < 12 ? "上午" : "下午"}`; })() },
-    { label: "结束时间", value: selectedRecord.end_time ? (() => { const d = parseTime(selectedRecord.end_time); return `${format(d, "yyyy-MM-dd", { locale: zhCN })} ${d.getHours() < 12 ? "上午" : "下午"}`; })() : null },
+    { label: "开始时间", value: formatBusinessTripDateAmPm(selectedRecord.start_time) },
+    { label: "结束时间", value: formatBusinessTripDateAmPm(selectedRecord.end_time) },
     { label: "交通方式", value: selectedRecord.transport_type ? transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type : null },
     { label: "预计费用", value: selectedRecord.estimated_cost ? `¥${selectedRecord.estimated_cost}` : null },
     { label: "出差事由", value: selectedRecord.reason, fullWidth: true },
