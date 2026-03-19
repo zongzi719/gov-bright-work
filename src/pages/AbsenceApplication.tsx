@@ -24,7 +24,10 @@ interface BusinessTripRecord {
   status: string;
   duration_days: number | null;
   transport_type: string | null;
+  return_transport_type: string | null;
   estimated_cost: number | null;
+  companions: string[] | null;
+  departure_time: string | null;
   notes: string | null;
   created_at: string;
 }
