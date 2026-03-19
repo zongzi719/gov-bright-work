@@ -145,7 +145,7 @@ const BusinessTripManagement = () => {
   const [statusFilter, setStatusFilter] = useState<AbsenceStatus | "all">("all");
   const [deleteRecordId, setDeleteRecordId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const [adminCompanionNames, setAdminCompanionNames] = useState<string | null>(null);
   useEffect(() => {
     fetchRecords();
   }, []);
