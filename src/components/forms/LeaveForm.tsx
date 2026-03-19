@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Upload, X, FileImage } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import * as dataAdapter from "@/lib/dataAdapter";
+import { isOfflineMode } from "@/lib/offlineApi";
 import { toast } from "sonner";
 import { format, differenceInCalendarDays } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -336,12 +337,20 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     if (!medicalCertFile || !currentUser?.id) return null;
     setUploadingCert(true);
     try {
-      const ext = medicalCertFile.name.split(".").pop() || "jpg";
-      const filePath = `${currentUser.id}/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("medical-certificates").upload(filePath, medicalCertFile);
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("medical-certificates").getPublicUrl(filePath);
-      return urlData.publicUrl;
+      if (isOfflineMode()) {
+        // 离线模式：通过本地 API 上传到 resource/medical-certificates/
+        const { data, error } = await dataAdapter.uploadFile(medicalCertFile, 'medical-certificates');
+        if (error || !data?.url) throw error || new Error('上传返回为空');
+        return data.url; // 返回 /resource/medical-certificates/xxx.jpg
+      } else {
+        // 在线模式：上传到 Supabase Storage
+        const ext = medicalCertFile.name.split(".").pop() || "jpg";
+        const filePath = `${currentUser.id}/${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from("medical-certificates").upload(filePath, medicalCertFile);
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from("medical-certificates").getPublicUrl(filePath);
+        return urlData.publicUrl;
+      }
     } catch (err) {
       console.error("上传诊断证明书失败:", err);
       toast.error("上传诊断证明书失败");
