@@ -233,7 +233,7 @@ const TodoList = () => {
   };
 
   const renderPendingItem = (item: TodoItem) => {
-    const reason = extractReason(item.title);
+    const reason = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
     const isRead = isItemRead(item.id);
 
