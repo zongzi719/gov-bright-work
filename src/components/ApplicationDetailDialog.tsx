@@ -112,22 +112,25 @@ const ApplicationDetailDialog = ({
 const DetailFieldsGrid = ({ fields }: { fields: DetailField[] }) => {
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-      {fields.map((field, index) => (
-        <div
-          key={index}
-          className={cn(
-            "space-y-1.5",
-            field.fullWidth && "col-span-2"
-          )}
-        >
-          <Label className="text-xs text-muted-foreground font-normal">
-            {field.label}
-          </Label>
-          <div className="text-sm text-foreground">
-            {field.value || <span className="text-muted-foreground">-</span>}
+      {fields.map((field, index) => {
+        if (field.spacer) return <div key={index} />;
+        return (
+          <div
+            key={index}
+            className={cn(
+              "space-y-1.5",
+              field.fullWidth && "col-span-2"
+            )}
+          >
+            <Label className="text-xs text-muted-foreground font-normal">
+              {field.label}
+            </Label>
+            <div className="text-sm text-foreground">
+              {field.value || <span className="text-muted-foreground">-</span>}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
