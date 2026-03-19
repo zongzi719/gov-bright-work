@@ -52,13 +52,16 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
     end_date: undefined as Date | undefined,
     end_time_of_day: "pm" as TimeOfDay,
     transport_type: "",
+    return_transport_type: "",
     companions: [] as string[],
+    departure_date: undefined as Date | undefined,
     estimated_cost: "",
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [departureDateOpen, setDepartureDateOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -156,6 +159,13 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
         const seconds = "00";
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
       };
+
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}T00:00:00`;
+      };
       
       const { data: record, error } = await dataAdapter.createAbsenceRecord({
         contact_id: currentUser.id,
@@ -165,7 +175,9 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
         start_time: formatLocalDateTime(startTime),
         end_time: formatLocalDateTime(endTime),
         transport_type: form.transport_type || null,
+        return_transport_type: form.return_transport_type || null,
         companions: form.companions.length > 0 ? form.companions : null,
+        departure_time: form.departure_date ? formatLocalDate(form.departure_date) : null,
         estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
         duration_hours: durationData ? durationData.halfDays * 4 : null,
         duration_days: durationData?.days || null,
@@ -193,7 +205,9 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
           start_time_of_day: form.start_time_of_day,
           end_time_of_day: form.end_time_of_day,
           transport_type: form.transport_type,
+          return_transport_type: form.return_transport_type,
           companions: form.companions,
+          departure_time: form.departure_date ? formatLocalDate(form.departure_date) : null,
           estimated_cost: form.estimated_cost,
           notes: form.notes,
         },
@@ -217,7 +231,9 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
           end_date: undefined,
           end_time_of_day: "pm",
           transport_type: "",
+          return_transport_type: "",
           companions: [],
+          departure_date: undefined,
           estimated_cost: "",
           notes: "",
         });
@@ -287,9 +303,9 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
             />
           </div>
 
-          {/* 开始时间选择 */}
+          {/* 计划开始时间选择 */}
           <div className="space-y-2">
-            <Label>开始时间 <span className="text-destructive">*</span></Label>
+            <Label>计划开始时间 <span className="text-destructive">*</span></Label>
             <div className="flex gap-2">
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
@@ -356,9 +372,9 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
             </div>
           </div>
 
-          {/* 结束时间选择 */}
+          {/* 计划结束时间选择 */}
           <div className="space-y-2">
-            <Label>结束时间 <span className="text-destructive">*</span></Label>
+            <Label>计划结束时间 <span className="text-destructive">*</span></Label>
             <div className="flex gap-2">
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
@@ -437,12 +453,29 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
             </div>
           )}
 
-          {/* 交通方式 */}
+          {/* 去程交通方式 */}
           <div className="space-y-2">
-            <Label>交通方式</Label>
+            <Label>去程交通方式</Label>
             <Select value={form.transport_type} onValueChange={(v) => setForm({ ...form, transport_type: v })}>
               <SelectTrigger>
-                <SelectValue placeholder="请选择交通方式" />
+                <SelectValue placeholder="请选择去程交通方式" />
+              </SelectTrigger>
+              <SelectContent>
+                {transportTypes.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 返程交通方式 */}
+          <div className="space-y-2">
+            <Label>返程交通方式</Label>
+            <Select value={form.return_transport_type} onValueChange={(v) => setForm({ ...form, return_transport_type: v })}>
+              <SelectTrigger>
+                <SelectValue placeholder="请选择返程交通方式" />
               </SelectTrigger>
               <SelectContent>
                 {transportTypes.map((t) => (
@@ -489,6 +522,39 @@ const BusinessTripForm = ({ open, onOpenChange, currentUser }: BusinessTripFormP
               excludeIds={[...(currentUser?.id ? [currentUser.id] : []), ...form.companions]}
               title="选择同行人员"
             />
+          </div>
+
+          {/* 出发时间 */}
+          <div className="space-y-2">
+            <Label>出发时间</Label>
+            <Popover open={departureDateOpen} onOpenChange={setDepartureDateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !form.departure_date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {form.departure_date
+                    ? format(form.departure_date, "yyyy-MM-dd", { locale: zhCN })
+                    : "选择出发日期"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.departure_date}
+                  onSelect={(date) => {
+                    setForm({ ...form, departure_date: date });
+                    setDepartureDateOpen(false);
+                  }}
+                  locale={zhCN}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* 预计费用 */}
