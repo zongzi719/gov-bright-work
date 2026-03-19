@@ -468,22 +468,18 @@ const LeaveManagement = () => {
                       : "-"}
                   </div>
                 </div>
-                {selectedRecord.handover_person && (
-                  <div>
-                    <Label className="text-sm text-muted-foreground">工作交接人</Label>
-                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                      {selectedRecord.handover_person.name}
-                    </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">工作交接人</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.handover_person?.name || "-"}
                   </div>
-                )}
-                {selectedRecord.handover_notes && (
-                  <div className="col-span-2">
-                    <Label className="text-sm text-muted-foreground">交接事项</Label>
-                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                      {selectedRecord.handover_notes}
-                    </div>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-sm text-muted-foreground">交接事项</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.handover_notes || "-"}
                   </div>
-                )}
+                </div>
                 {selectedRecord.notes && (
                   <div className="col-span-2">
                     <Label className="text-sm text-muted-foreground">备注</Label>
