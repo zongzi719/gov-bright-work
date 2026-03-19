@@ -417,6 +417,11 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
             <div className="text-sm whitespace-pre-wrap">{data.notes}</div>
           </div>
         ) : null}
+
+        {/* 请假类型：显示年度请假汇总和剩余假期 */}
+        {shouldShowLeaveHandover && data.contact_id && (
+          <LeaveHistorySummary contactId={data.contact_id} />
+        )}
       </div>
     );
   }
