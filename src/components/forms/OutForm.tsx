@@ -24,7 +24,6 @@ interface OutFormProps {
 
 const outTypes = [
   { value: "meeting", label: "外出开会" },
-  { value: "client", label: "拜访客户" },
   { value: "errand", label: "外出办事" },
   { value: "other", label: "其他" },
 ];

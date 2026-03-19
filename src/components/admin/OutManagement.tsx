@@ -84,7 +84,6 @@ interface AbsenceRecord {
 
 const outTypeLabels: Record<string, string> = {
   meeting: "外出开会",
-  client: "拜访客户",
   errand: "外出办事",
   other: "其他",
 };
