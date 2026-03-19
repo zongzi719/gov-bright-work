@@ -1234,6 +1234,43 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
+// 管理员密码验证（锁屏解锁用）
+app.post('/api/admin/verify-password', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: '缺少参数' });
+    }
+
+    // 超级管理员硬编码检查
+    if (email === 'admin@gov.cn' && password === 'admin123456') {
+      return res.json({ success: true });
+    }
+
+    // 查找管理员账户并验证密码
+    const [rows] = await pool.execute(
+      `SELECT c.id
+       FROM contacts c
+       LEFT JOIN user_roles ur ON ur.user_id = c.id AND ur.role = 'admin'
+       WHERE (c.email = ? OR c.mobile = ?)
+         AND c.password_hash = ?
+         AND c.is_active = 1
+         AND (ur.id IS NOT NULL OR c.is_leader = 1)
+       LIMIT 1`,
+      [email, email, password]
+    );
+
+    if (rows.length > 0) {
+      return res.json({ success: true });
+    }
+
+    res.status(401).json({ error: '密码错误' });
+  } catch (error) {
+    console.error('Verify password error:', error);
+    res.status(500).json({ error: '验证失败' });
+  }
+});
+
 // ==================== 办公用品 ====================
 
 app.get('/api/office-supplies', async (req, res) => {
