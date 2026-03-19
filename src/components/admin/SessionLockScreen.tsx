@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { isOfflineMode } from "@/lib/offlineApi";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 
+const LOCK_STORAGE_KEY = "admin_session_locked";
+
 interface SessionLockScreenProps {
   userName: string;
   timeoutMinutes?: number;
@@ -16,11 +18,21 @@ interface SessionLockScreenProps {
 }
 
 const SessionLockScreen = ({ userName, timeoutMinutes = 15, onUnlock, onForceLogout }: SessionLockScreenProps) => {
-  const [locked, setLocked] = useState(false);
+  // Initialize locked state from sessionStorage so refresh doesn't bypass lock
+  const [locked, setLocked] = useState(() => sessionStorage.getItem(LOCK_STORAGE_KEY) === "true");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const lastActivityRef = useRef(Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval>>();
+
+  // Persist locked state to sessionStorage
+  useEffect(() => {
+    if (locked) {
+      sessionStorage.setItem(LOCK_STORAGE_KEY, "true");
+    } else {
+      sessionStorage.removeItem(LOCK_STORAGE_KEY);
+    }
+  }, [locked]);
 
   const resetTimer = useCallback(() => {
     lastActivityRef.current = Date.now();
@@ -108,6 +120,11 @@ const SessionLockScreen = ({ userName, timeoutMinutes = 15, onUnlock, onForceLog
     }
   };
 
+  const handleForceLogout = () => {
+    sessionStorage.removeItem(LOCK_STORAGE_KEY);
+    onForceLogout();
+  };
+
   if (!locked) return null;
 
   return (
@@ -143,7 +160,7 @@ const SessionLockScreen = ({ userName, timeoutMinutes = 15, onUnlock, onForceLog
             <Button type="submit" className="w-full" disabled={loading || !password}>
               {loading ? "验证中..." : "解锁"}
             </Button>
-            <Button type="button" variant="ghost" className="w-full text-muted-foreground" onClick={onForceLogout}>
+            <Button type="button" variant="ghost" className="w-full text-muted-foreground" onClick={handleForceLogout}>
               切换账号登录
             </Button>
           </form>
