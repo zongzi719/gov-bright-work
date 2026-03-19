@@ -3891,13 +3891,36 @@ app.get('/api/admin/absence-records', async (req, res) => {
     `;
     const [rows] = await pool.execute(sql, [type]);
     
+    // 收集所有 companion IDs 用于批量查询名称
+    const allCompanionIds = new Set();
+    rows.forEach(row => {
+      if (row.companions) {
+        try {
+          const ids = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+          if (Array.isArray(ids)) ids.forEach(id => allCompanionIds.add(id));
+        } catch (e) {}
+      }
+    });
+    
+    // 批量查询同行人员姓名
+    let companionNameMap = {};
+    if (allCompanionIds.size > 0) {
+      const idArr = [...allCompanionIds];
+      const ph = idArr.map(() => '?').join(',');
+      const [cRows] = await pool.execute(`SELECT id, name FROM contacts WHERE id IN (${ph})`, idArr);
+      cRows.forEach(c => { companionNameMap[c.id] = c.name; });
+    }
+    
     // 格式化为前端期望的嵌套结构
     const formatted = rows.map(row => {
-      // 解析 companions JSON
+      // 解析 companions JSON 并转为姓名
       let parsedCompanions = null;
       if (row.companions) {
         try {
-          parsedCompanions = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+          const ids = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+          if (Array.isArray(ids)) {
+            parsedCompanions = ids.map(id => companionNameMap[id] || id);
+          }
         } catch (e) { parsedCompanions = null; }
       }
       
