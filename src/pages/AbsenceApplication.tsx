@@ -172,6 +172,22 @@ const AbsenceApplication = () => {
     fetchOutRecords();
   }, [currentUser?.id]);
 
+  // Resolve companion names for selected trip
+  useEffect(() => {
+    if (selectedTrip?.companions?.length) {
+      const unknownIds = selectedTrip.companions.filter(id => !tripCompanionNames[id]);
+      if (unknownIds.length > 0) {
+        dataAdapter.getContactsByIds(unknownIds).then(({ data }) => {
+          if (data) {
+            const nameMap: Record<string, string> = { ...tripCompanionNames };
+            data.forEach((c: any) => { nameMap[c.id] = c.name; });
+            setTripCompanionNames(nameMap);
+          }
+        });
+      }
+    }
+  }, [selectedTrip]);
+
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab && ["business-trip", "leave", "out"].includes(tab)) {
