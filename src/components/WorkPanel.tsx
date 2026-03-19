@@ -396,7 +396,7 @@ const WorkPanel = () => {
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
-            <h3 className={`text-sm leading-tight line-clamp-1 flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
+            <h3 className="text-sm font-bold leading-tight line-clamp-1 flex-1 text-foreground">
               {displayTitle}
             </h3>
             <span

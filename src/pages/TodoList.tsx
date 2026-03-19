@@ -301,7 +301,7 @@ const TodoList = () => {
         onClick={() => handleItemClick(item)}
       >
         <div className="flex items-center gap-2 mb-1">
-          <h3 className={`text-sm leading-tight flex-1 ${isRead ? "font-normal text-muted-foreground" : "font-semibold text-foreground"}`}>
+          <h3 className="text-sm font-bold leading-tight flex-1 text-foreground">
             {reason}
           </h3>
           <span
