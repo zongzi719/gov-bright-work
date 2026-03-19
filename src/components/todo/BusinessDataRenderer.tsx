@@ -332,7 +332,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
         businessData?.handover_person?.name,
         businessData?.handover_person_name,
         formData?.handover_person?.name,
-        formData?.handoover_person_name
+        formData?.handover_person_name
       ) ?? null;
     const handoverNotes =
       pickDisplayValue(data.handover_notes, businessData?.handover_notes, formData?.handover_notes) ?? null;
