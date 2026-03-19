@@ -325,6 +325,18 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
   if (businessType === "absence" || businessType === "leave" || businessType === "out" || businessType === "business_trip") {
     const contactName = data.contacts?.name || data.contact_name || "-";
     const contactDept = data.contacts?.department || data.department || "-";
+    const handoverPersonName =
+      pickDisplayValue(
+        data.handover_person?.name,
+        data.handover_person_name,
+        businessData?.handover_person?.name,
+        businessData?.handover_person_name,
+        formData?.handover_person?.name,
+        formData?.handoover_person_name
+      ) ?? null;
+    const handoverNotes =
+      pickDisplayValue(data.handover_notes, businessData?.handover_notes, formData?.handover_notes) ?? null;
+    const shouldShowLeaveHandover = businessType === "leave" || (businessType === "absence" && !!data.leave_type);
 
     return (
       <div className="space-y-4">
@@ -342,8 +354,8 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
           {data.out_location && renderField("外出地点", data.out_location)}
           {data.contact_phone && renderField("联系电话", data.contact_phone)}
-          {(data.handover_person?.name || data.handover_person_name) && renderField("工作交接人", data.handover_person?.name || data.handover_person_name)}
-          {data.handover_notes && renderField("交接事项", data.handover_notes)}
+          {shouldShowLeaveHandover && renderField("工作交接人", handoverPersonName)}
+          {shouldShowLeaveHandover && renderField("交接事项说明", handoverNotes)}
         </div>
 
         {data.reason && (
