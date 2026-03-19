@@ -43,6 +43,7 @@ interface LeaveRecord {
   notes: string | null;
   created_at: string;
   handover_person: { name: string } | null;
+  handover_person_name?: string | null;
 }
 
 // 外出记录

@@ -22,6 +22,7 @@ interface AbsenceRecord {
   duration_hours: number | null;
   handover_person_id: string | null;
   handover_notes: string | null;
+  handover_person_name?: string | null;
   notes: string | null;
   created_at: string;
   contacts: {
