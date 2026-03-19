@@ -178,9 +178,13 @@ const TodoList = () => {
     fetchAllItems();
   }, [currentUser?.id]);
 
-  const extractReason = (title: string): string => {
-    const match = title.match(/^[^-]+\s*-\s*(.+)$/);
-    return match ? match[1] : title;
+  // 获取待办项的显示标题：统一显示申请人姓名
+  const getDisplayTitle = (item: TodoItem): string => {
+    if (item.initiator?.name) {
+      return item.initiator.name;
+    }
+    const match = item.title.match(/^([^-\s]+)/);
+    return match ? match[1] : item.title;
   };
 
   const getSourceLabel = (item: TodoItem): string => {

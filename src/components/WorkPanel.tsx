@@ -257,17 +257,18 @@ const WorkPanel = () => {
     return { system, department };
   };
 
-  // 获取待办项的显示标题
+  // 获取待办项的显示标题：统一显示申请人姓名
   const getDisplayTitle = (item: TodoItem): string => {
-    // 请假申请：显示"请假类型 + 申请人 + 事由"
-    if (item._absenceInfo) {
-      const leaveTypeName = item._absenceInfo.leaveType 
-        ? leaveTypeLabels[item._absenceInfo.leaveType] || item._absenceInfo.leaveType
-        : "请假";
-      return `${leaveTypeName} ${item._absenceInfo.applicantName} ${item._absenceInfo.reason}`;
+    // 优先使用 initiator.name
+    if (item.initiator?.name) {
+      return item.initiator.name;
     }
-    // 其他类型：从标题提取事由
-    const match = item.title.match(/^[^-]+\s*-\s*(.+)$/);
+    // 请假申请回退到 _absenceInfo 中的申请人
+    if (item._absenceInfo?.applicantName) {
+      return item._absenceInfo.applicantName;
+    }
+    // 最终回退：从标题提取
+    const match = item.title.match(/^([^-\s]+)/);
     return match ? match[1] : item.title;
   };
 
