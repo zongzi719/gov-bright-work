@@ -59,21 +59,17 @@ const AbsenceManagement = () => {
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={`grid w-full max-w-2xl`} style={{ gridTemplateColumns: `repeat(${3 + customTemplates.length}, minmax(0, 1fr))` }}>
-          <TabsTrigger value="leave-request" className="gap-2">
-            <CalendarOff className="w-4 h-4" />
+          <TabsTrigger value="leave-request">
             请假申请
           </TabsTrigger>
-          <TabsTrigger value="out-request" className="gap-2">
-            <LogOut className="w-4 h-4" />
+          <TabsTrigger value="out-request">
             外出申请
           </TabsTrigger>
-          <TabsTrigger value="business-trip" className="gap-2">
-            <Briefcase className="w-4 h-4" />
+          <TabsTrigger value="business-trip">
             出差申请
           </TabsTrigger>
           {customTemplates.map(t => (
-            <TabsTrigger key={t.id} value={`custom-${t.id}`} className="gap-2">
-              {t.icon ? <span>{t.icon}</span> : <FileText className="w-4 h-4" />}
+            <TabsTrigger key={t.id} value={`custom-${t.id}`}>
               {t.name}
             </TabsTrigger>
           ))}

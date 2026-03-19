@@ -252,20 +252,16 @@ const ApprovalSettings = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basic" className="gap-2">
-              <Settings className="w-4 h-4" />
+            <TabsTrigger value="basic">
               基础设置
             </TabsTrigger>
-            <TabsTrigger value="form" className="gap-2" disabled={isCreating && !selectedTemplate}>
-              <FileText className="w-4 h-4" />
+            <TabsTrigger value="form" disabled={isCreating && !selectedTemplate}>
               表单设计
             </TabsTrigger>
-            <TabsTrigger value="process" className="gap-2" disabled={isCreating && !selectedTemplate}>
-              <GitBranch className="w-4 h-4" />
+            <TabsTrigger value="process" disabled={isCreating && !selectedTemplate}>
               流程设计
             </TabsTrigger>
-            <TabsTrigger value="advanced" className="gap-2" disabled={isCreating && !selectedTemplate}>
-              <Cog className="w-4 h-4" />
+            <TabsTrigger value="advanced" disabled={isCreating && !selectedTemplate}>
               高级设置
             </TabsTrigger>
           </TabsList>
