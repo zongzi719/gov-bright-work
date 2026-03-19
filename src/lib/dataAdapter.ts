@@ -1650,6 +1650,7 @@ export async function createAbsenceRecord(record: {
   notes?: string | null;
   status?: string;
   departure_time?: string | null;
+  medical_certificate_url?: string | null;
 }) {
   if (isOfflineMode()) {
     return offlineRequest<{ id: string }>('/api/absence-records', {

@@ -131,6 +131,10 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [medicalCertFile, setMedicalCertFile] = useState<File | null>(null);
+  const [medicalCertPreview, setMedicalCertPreview] = useState<string | null>(null);
+  const [uploadingCert, setUploadingCert] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 季节变化时更新默认结束时间
   useEffect(() => {
