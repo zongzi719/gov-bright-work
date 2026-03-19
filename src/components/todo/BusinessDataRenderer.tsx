@@ -330,6 +330,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
   }
 
   if (businessType === "absence" || businessType === "leave" || businessType === "out" || businessType === "business_trip") {
+    const isBusinessTrip = businessType === "business_trip";
     const contactName = data.contacts?.name || data.contact_name || "-";
     const contactDept = data.contacts?.department || data.department || "-";
     const handoverPersonName =
@@ -345,14 +346,13 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
       pickDisplayValue(data.handover_notes, businessData?.handover_notes, formData?.handover_notes) ?? null;
     const shouldShowLeaveHandover = businessType === "leave" || (businessType === "absence" && !!data.leave_type);
 
-    // Resolve companion names
     const companionDisplay = (() => {
-      if (businessType !== "business_trip") return null;
-      const companions = data.companions;
-      if (!companions || !Array.isArray(companions) || companions.length === 0) return null;
-      // If companion_names is available (pre-resolved), use it
-      if (data.companion_names) return data.companion_names;
-      return companions.join("、");
+      if (!isBusinessTrip) return null;
+      const companionNames = pickDisplayValue(data.companion_names, businessData?.companion_names, formData?.companion_names);
+      if (companionNames) return companionNames;
+      const companions = Array.isArray(data.companions) ? data.companions : [];
+      if (companions.length > 0) return companions.join("、");
+      return "-";
     })();
 
     return (
@@ -360,39 +360,43 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {renderField("申请人", contactName)}
           {renderField("所属部门", contactDept)}
-          {businessType === "business_trip" && data.destination && renderField("出差目的地", data.destination)}
+          {isBusinessTrip && renderField("出差目的地", data.destination)}
         </div>
 
-        {businessType === "business_trip" && data.reason && (
+        {isBusinessTrip ? (
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground font-normal">出差事由</Label>
-            <div className="text-sm whitespace-pre-wrap">{data.reason}</div>
+            <div className="text-sm whitespace-pre-wrap">{data.reason || "-"}</div>
           </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {renderField(businessType === "business_trip" ? "计划开始时间" : "计划开始时间", businessType === "business_trip" ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time))}
-          {renderField(businessType === "business_trip" ? "计划结束时间" : "计划结束时间", businessType === "business_trip" ? formatDateAmPm(data.end_time) : formatDateTime(data.end_time))}
-          {data.leave_type && renderField("请假类型", getLeaveTypeLabel(data.leave_type))}
-          {data.duration_days != null && !data.leave_type && renderField("出差时长", `${data.duration_days} 天`)}
-          {data.duration_days != null && !data.leave_type && <div />}
-          {data.transport_type && renderField(businessType === "business_trip" ? "去程交通方式" : "交通方式", getTransportTypeLabel(data.transport_type))}
-          {businessType === "business_trip" && renderField("返程交通方式", getTransportTypeLabel(data.return_transport_type))}
-          {data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
-          {data.leave_type && data.duration_hours && renderField("请假时长", `${data.duration_hours} 小时（${data.duration_days || (data.duration_hours / 8)} 天）`)}
-          {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
-          {data.out_location && renderField("外出地点", data.out_location)}
-          {data.contact_phone && renderField("联系电话", data.contact_phone)}
-          {businessType === "business_trip" && companionDisplay && renderField("同行人员", companionDisplay)}
-          {businessType === "business_trip" && renderField("出发时间", data.departure_time ? formatDate(data.departure_time) : "-")}
-        </div>
-
-        {businessType !== "business_trip" && data.reason && (
+        ) : data.reason ? (
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground font-normal">事由</Label>
             <div className="text-sm whitespace-pre-wrap">{data.reason}</div>
           </div>
-        )}
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          {renderField("计划开始时间", isBusinessTrip ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time))}
+          {renderField("计划结束时间", isBusinessTrip ? formatDateAmPm(data.end_time) : formatDateTime(data.end_time))}
+          {data.leave_type && renderField("请假类型", getLeaveTypeLabel(data.leave_type))}
+          {isBusinessTrip
+            ? renderField("出差时长", data.duration_days != null ? `${data.duration_days} 天` : "-")
+            : data.duration_days != null && !data.leave_type && renderField("出差时长", `${data.duration_days} 天`)}
+          {isBusinessTrip ? <div /> : data.duration_days != null && !data.leave_type && <div />}
+          {isBusinessTrip
+            ? renderField("去程交通方式", getTransportTypeLabel(data.transport_type))
+            : data.transport_type && renderField("交通方式", getTransportTypeLabel(data.transport_type))}
+          {isBusinessTrip && renderField("返程交通方式", getTransportTypeLabel(data.return_transport_type))}
+          {isBusinessTrip
+            ? renderField("预计费用", data.estimated_cost != null ? formatMoney(data.estimated_cost) : "-")
+            : data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
+          {data.leave_type && data.duration_hours && renderField("请假时长", `${data.duration_hours} 小时（${data.duration_days || (data.duration_hours / 8)} 天）`)}
+          {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
+          {data.out_location && renderField("外出地点", data.out_location)}
+          {data.contact_phone && renderField("联系电话", data.contact_phone)}
+          {isBusinessTrip && renderField("同行人员", companionDisplay)}
+          {isBusinessTrip && renderField("出发时间", data.departure_time ? formatDate(data.departure_time) : "-")}
+        </div>
 
         {shouldShowLeaveHandover && (
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -401,12 +405,17 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           </div>
         )}
 
-        {data.notes && (
+        {isBusinessTrip ? (
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground font-normal">备注</Label>
+            <div className="text-sm whitespace-pre-wrap">{data.notes || "-"}</div>
+          </div>
+        ) : data.notes ? (
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground font-normal">备注</Label>
             <div className="text-sm whitespace-pre-wrap">{data.notes}</div>
           </div>
-        )}
+        ) : null}
       </div>
     );
   }
