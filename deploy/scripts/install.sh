@@ -21,7 +21,7 @@ fi
 # 创建目录结构
 echo "[1/6] 创建目录结构..."
 mkdir -p $INSTALL_DIR/{api,web,uploads,logs}
-mkdir -p $INSTALL_DIR/uploads/{banners,file-transfers,misc}
+mkdir -p $INSTALL_DIR/uploads/{banners,file-transfers,medical-certificates,misc}
 
 # 检查Node.js
 echo "[2/6] 检查Node.js..."
