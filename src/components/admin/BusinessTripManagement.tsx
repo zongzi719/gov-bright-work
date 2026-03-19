@@ -356,8 +356,8 @@ const BusinessTripManagement = () => {
                   <TableHead>人员</TableHead>
                   <TableHead>单位/部门</TableHead>
                   <TableHead>事由</TableHead>
-                  <TableHead>开始时间</TableHead>
-                  <TableHead>结束时间</TableHead>
+                  <TableHead>计划开始时间</TableHead>
+                  <TableHead>计划结束时间</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
@@ -485,7 +485,7 @@ const BusinessTripManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">开始时间</Label>
+                  <Label className="text-sm text-muted-foreground">计划开始时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {(() => {
                       const value = selectedRecord.start_time;
@@ -501,7 +501,7 @@ const BusinessTripManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm text-muted-foreground">结束时间</Label>
+                  <Label className="text-sm text-muted-foreground">计划结束时间</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
                     {(() => {
                       const value = selectedRecord.end_time;
@@ -524,14 +524,43 @@ const BusinessTripManagement = () => {
                     </div>
                   </div>
                 )}
-                {selectedRecord.transport_type && (
-                  <div>
-                    <Label className="text-sm text-muted-foreground">交通方式</Label>
-                    <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                      {transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type}
-                    </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">去程交通方式</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {selectedRecord.transport_type ? (transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type) : <span className="text-muted-foreground">-</span>}
                   </div>
-                )}
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">返程交通方式</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {(selectedRecord as any).return_transport_type ? (transportTypeLabels[(selectedRecord as any).return_transport_type] || (selectedRecord as any).return_transport_type) : <span className="text-muted-foreground">-</span>}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-sm text-muted-foreground">同行人员</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {(() => {
+                      const companions = selectedRecord.companions;
+                      if (!companions || companions.length === 0) return <span className="text-muted-foreground">-</span>;
+                      // companions可能是字符串数组(ID)或已解析的名称
+                      return companions.join("、");
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">出发时间</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
+                    {(() => {
+                      const value = (selectedRecord as any).departure_time;
+                      if (!value) return <span className="text-muted-foreground">-</span>;
+                      try {
+                        return format(parseTime(value), "yyyy-MM-dd", { locale: zhCN });
+                      } catch {
+                        return value;
+                      }
+                    })()}
+                  </div>
+                </div>
                 {selectedRecord.estimated_cost && (
                   <div>
                     <Label className="text-sm text-muted-foreground">预计费用</Label>

@@ -930,10 +930,19 @@ app.get('/api/absence-records', async (req, res) => {
         console.log(`[DEBUG-v5] Record ${row.id}: NO MATCH found (normalized: ${normalizedRowId})`);
       }
       
+      // 解析 companions JSON
+      let parsedCompanions = null;
+      if (row.companions) {
+        try {
+          parsedCompanions = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+        } catch (e) { parsedCompanions = null; }
+      }
+      
       return {
         ...row,
         // 使用审批实例的真实状态覆盖业务表状态
         status: displayStatus,
+        companions: parsedCompanions,
         contacts: row.contact_id ? {
           name: row.contact_name,
           department: row.contact_department
@@ -959,8 +968,8 @@ app.post('/api/absence-records', async (req, res) => {
     const { 
       contact_id, type, reason, start_time, end_time,
       leave_type, duration_hours, duration_days, destination,
-      transport_type, estimated_cost, companions, handover_person_id,
-      handover_notes, contact_phone, out_type, out_location, notes, status
+      transport_type, return_transport_type, estimated_cost, companions, handover_person_id,
+      handover_notes, contact_phone, out_type, out_location, notes, status, departure_time
     } = req.body;
     
     // 日志记录请求体，便于调试
@@ -982,6 +991,7 @@ app.post('/api/absence-records', async (req, res) => {
     if (duration_days !== undefined && duration_days !== null) fieldValues.duration_days = duration_days;
     if (destination !== undefined && destination !== null) fieldValues.destination = destination;
     if (transport_type !== undefined && transport_type !== null) fieldValues.transport_type = transport_type;
+    if (return_transport_type !== undefined && return_transport_type !== null) fieldValues.return_transport_type = return_transport_type;
     if (estimated_cost !== undefined && estimated_cost !== null) fieldValues.estimated_cost = estimated_cost;
     if (companions !== undefined && companions !== null) fieldValues.companions = JSON.stringify(companions);
     if (handover_person_id !== undefined && handover_person_id !== null && handover_person_id !== '') fieldValues.handover_person_id = handover_person_id;
@@ -991,6 +1001,7 @@ app.post('/api/absence-records', async (req, res) => {
     if (out_location !== undefined && out_location !== null) fieldValues.out_location = out_location;
     if (notes !== undefined && notes !== null) fieldValues.notes = notes;
     if (status !== undefined && status !== null) fieldValues.status = status;
+    if (departure_time !== undefined && departure_time !== null) fieldValues.departure_time = formatDateForMySQL(departure_time);
     
     const fields = Object.keys(fieldValues);
     const values = Object.values(fieldValues);
@@ -3365,19 +3376,20 @@ app.post('/api/absence-records', async (req, res) => {
     const id = uuidv4();
     const {
       contact_id, type, reason, start_time, end_time,
-      leave_type, out_type, out_location, destination, transport_type,
+      leave_type, out_type, out_location, destination, transport_type, return_transport_type,
       companions, estimated_cost, duration_hours, duration_days,
-      handover_person_id, handover_notes, contact_phone, notes, status = 'pending'
+      handover_person_id, handover_notes, contact_phone, notes, status = 'pending', departure_time
     } = req.body;
     
     // 转换日期格式为 MySQL 格式
     const formattedStartTime = formatDateForMySQL(start_time);
     const formattedEndTime = formatDateForMySQL(end_time);
+    const formattedDepartureTime = departure_time ? formatDateForMySQL(departure_time) : null;
     
     await pool.execute(
-      `INSERT INTO absence_records (id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, companions, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, contact_id, type, reason, formattedStartTime, formattedEndTime, leave_type, out_type, out_location, destination, transport_type, companions ? JSON.stringify(companions) : null, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status]
+      `INSERT INTO absence_records (id, contact_id, type, reason, start_time, end_time, leave_type, out_type, out_location, destination, transport_type, return_transport_type, companions, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status, departure_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, contact_id, type, reason, formattedStartTime, formattedEndTime, leave_type, out_type, out_location, destination, transport_type, return_transport_type || null, companions ? JSON.stringify(companions) : null, estimated_cost, duration_hours, duration_days, handover_person_id, handover_notes, contact_phone, notes, status, formattedDepartureTime]
     );
     
     res.json({ id });
@@ -3879,21 +3891,55 @@ app.get('/api/admin/absence-records', async (req, res) => {
     `;
     const [rows] = await pool.execute(sql, [type]);
     
+    // 收集所有 companion IDs 用于批量查询名称
+    const allCompanionIds = new Set();
+    rows.forEach(row => {
+      if (row.companions) {
+        try {
+          const ids = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+          if (Array.isArray(ids)) ids.forEach(id => allCompanionIds.add(id));
+        } catch (e) {}
+      }
+    });
+    
+    // 批量查询同行人员姓名
+    let companionNameMap = {};
+    if (allCompanionIds.size > 0) {
+      const idArr = [...allCompanionIds];
+      const ph = idArr.map(() => '?').join(',');
+      const [cRows] = await pool.execute(`SELECT id, name FROM contacts WHERE id IN (${ph})`, idArr);
+      cRows.forEach(c => { companionNameMap[c.id] = c.name; });
+    }
+    
     // 格式化为前端期望的嵌套结构
-    const formatted = rows.map(row => ({
-      ...row,
-      contacts: row.contact_id_ref ? {
-        id: row.contact_id_ref,
-        name: row.contact_name,
-        department: row.contact_department,
-        position: row.contact_position,
-        organization: row.org_name ? { name: row.org_name } : null
-      } : null,
-      handover_person: row.handover_person_name ? {
-        id: null,
-        name: row.handover_person_name
-      } : null
-    }));
+    const formatted = rows.map(row => {
+      // 解析 companions JSON 并转为姓名
+      let parsedCompanions = null;
+      if (row.companions) {
+        try {
+          const ids = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+          if (Array.isArray(ids)) {
+            parsedCompanions = ids.map(id => companionNameMap[id] || id);
+          }
+        } catch (e) { parsedCompanions = null; }
+      }
+      
+      return {
+        ...row,
+        companions: parsedCompanions,
+        contacts: row.contact_id_ref ? {
+          id: row.contact_id_ref,
+          name: row.contact_name,
+          department: row.contact_department,
+          position: row.contact_position,
+          organization: row.org_name ? { name: row.org_name } : null
+        } : null,
+        handover_person: row.handover_person_name ? {
+          id: null,
+          name: row.handover_person_name
+        } : null
+      };
+    });
     res.json(formatted);
   } catch (error) {
     console.error('Get admin absence records error:', error);

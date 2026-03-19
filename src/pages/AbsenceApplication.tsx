@@ -24,7 +24,10 @@ interface BusinessTripRecord {
   status: string;
   duration_days: number | null;
   transport_type: string | null;
+  return_transport_type: string | null;
   estimated_cost: number | null;
+  companions: string[] | null;
+  departure_time: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -238,12 +241,24 @@ const AbsenceApplication = () => {
     return `${year}-${month}-${day} ${isAm ? "上午" : "下午"}`;
   };
 
+  const formatDateOnly = (value: string | null | undefined) => {
+    if (!value) return null;
+    try {
+      return format(parseTime(value), "yyyy-MM-dd", { locale: zhCN });
+    } catch {
+      return value;
+    }
+  };
+
   const tripDetailFields = selectedTrip ? [
     { label: "目的地", value: selectedTrip.destination },
     { label: "出差天数", value: selectedTrip.duration_days ? `${selectedTrip.duration_days} 天` : null },
-    { label: "开始时间", value: formatBusinessTripDateAmPm(selectedTrip.start_time) },
-    { label: "结束时间", value: formatBusinessTripDateAmPm(selectedTrip.end_time) },
-    { label: "交通方式", value: selectedTrip.transport_type ? transportTypeLabels[selectedTrip.transport_type] || selectedTrip.transport_type : null },
+    { label: "计划开始时间", value: formatBusinessTripDateAmPm(selectedTrip.start_time) },
+    { label: "计划结束时间", value: formatBusinessTripDateAmPm(selectedTrip.end_time) },
+    { label: "去程交通方式", value: selectedTrip.transport_type ? transportTypeLabels[selectedTrip.transport_type] || selectedTrip.transport_type : null },
+    { label: "返程交通方式", value: (selectedTrip as any).return_transport_type ? transportTypeLabels[(selectedTrip as any).return_transport_type] || (selectedTrip as any).return_transport_type : null },
+    { label: "同行人员", value: (selectedTrip as any).companions?.length > 0 ? (selectedTrip as any).companions.join("、") : null },
+    { label: "出发时间", value: formatDateOnly((selectedTrip as any).departure_time) },
     { label: "预计费用", value: selectedTrip.estimated_cost ? `¥${selectedTrip.estimated_cost}` : null },
     { label: "出差事由", value: selectedTrip.reason, fullWidth: true },
     { label: "备注", value: selectedTrip.notes, fullWidth: true },
