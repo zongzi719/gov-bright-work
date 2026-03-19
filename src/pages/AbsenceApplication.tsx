@@ -297,24 +297,6 @@ const AbsenceApplication = () => {
 
           {/* 右侧内容区 */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <TabsContent value="business-trip" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
-              <ApplicationList
-                title="出差申请"
-                items={tripListItems}
-                loading={tripLoading}
-                search={tripSearch}
-                onSearchChange={setTripSearch}
-                onAddClick={() => setTripFormOpen(true)}
-                onItemClick={(item) => {
-                  const record = tripRecords.find(r => r.id === item.id);
-                  if (record) { setSelectedTrip(record); setTripDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '出差申请', target_id: record.id, target_name: record.reason }); }
-                }}
-                searchPlaceholder="搜索目的地或事由..."
-                emptyText="暂无出差记录"
-                hideTitle
-              />
-            </TabsContent>
-
             <TabsContent value="leave" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
               <ApplicationList
                 title="请假申请"
@@ -334,6 +316,24 @@ const AbsenceApplication = () => {
             </TabsContent>
 
             <TabsContent value="out" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
+              <ApplicationList
+                title="外出申请"
+                items={outListItems}
+                loading={outLoading}
+                search={outSearch}
+                onSearchChange={setOutSearch}
+                onAddClick={() => setOutFormOpen(true)}
+                onItemClick={(item) => {
+                  const record = outRecords.find(r => r.id === item.id);
+                  if (record) { setSelectedOut(record); setOutDetailOpen(true); void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '外出申请', target_id: record.id, target_name: record.reason }); }
+                }}
+                searchPlaceholder="搜索外出类型、地点或事由..."
+                emptyText="暂无外出记录"
+                hideTitle
+              />
+            </TabsContent>
+
+            <TabsContent value="business-trip" className="flex-1 m-0 overflow-auto data-[state=inactive]:hidden">
               <ApplicationList
                 title="外出申请"
                 items={outListItems}

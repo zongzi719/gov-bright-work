@@ -79,16 +79,16 @@ const AbsenceManagement = () => {
           ))}
         </TabsList>
 
-        <TabsContent value="business-trip" className="mt-4">
-          <BusinessTripManagement />
-        </TabsContent>
-
         <TabsContent value="leave-request" className="mt-4">
           <LeaveManagement />
         </TabsContent>
 
         <TabsContent value="out-request" className="mt-4">
           <OutManagement />
+        </TabsContent>
+
+        <TabsContent value="business-trip" className="mt-4">
+          <BusinessTripManagement />
         </TabsContent>
 
         {customTemplates.map(t => (

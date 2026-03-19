@@ -159,13 +159,6 @@ const QuickLinks = () => {
 
   const baseModules = [
     {
-      id: "1",
-      name: "出差申请",
-      color: "bg-primary",
-      icon: Briefcase,
-      path: "/absence?tab=business-trip",
-    },
-    {
       id: "2",
       name: "请假申请",
       color: "bg-orange-500",
@@ -178,6 +171,13 @@ const QuickLinks = () => {
       color: "bg-purple-500",
       icon: LogOutIcon,
       path: "/absence?tab=out",
+    },
+    {
+      id: "1",
+      name: "出差申请",
+      color: "bg-primary",
+      icon: Briefcase,
+      path: "/absence?tab=business-trip",
     },
     {
       id: "4",
