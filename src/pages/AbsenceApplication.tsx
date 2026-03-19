@@ -89,7 +89,7 @@ const outTypeLabels: Record<string, string> = {
 
 const AbsenceApplication = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const defaultTab = searchParams.get("tab") || "business-trip";
+  const defaultTab = searchParams.get("tab") || "leave";
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   // Business Trip states

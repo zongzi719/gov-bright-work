@@ -26,7 +26,7 @@ const BUILTIN_CODES = [
 const ABSENCE_GROUP_BUSINESS_TYPES = ["business_trip", "leave", "out", "absence"];
 
 const AbsenceManagement = () => {
-  const [activeTab, setActiveTab] = useState("business-trip");
+  const [activeTab, setActiveTab] = useState("leave-request");
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
 
   useEffect(() => {
