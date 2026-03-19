@@ -959,8 +959,8 @@ app.post('/api/absence-records', async (req, res) => {
     const { 
       contact_id, type, reason, start_time, end_time,
       leave_type, duration_hours, duration_days, destination,
-      transport_type, estimated_cost, companions, handover_person_id,
-      handover_notes, contact_phone, out_type, out_location, notes, status
+      transport_type, return_transport_type, estimated_cost, companions, handover_person_id,
+      handover_notes, contact_phone, out_type, out_location, notes, status, departure_time
     } = req.body;
     
     // 日志记录请求体，便于调试

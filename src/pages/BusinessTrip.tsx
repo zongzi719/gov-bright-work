@@ -3,7 +3,7 @@ import PageLayout from "@/components/PageLayout";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
 import ApplicationList, { ApplicationItem } from "@/components/ApplicationList";
 import ApplicationDetailDialog from "@/components/ApplicationDetailDialog";
-import { getAbsenceRecords } from "@/lib/dataAdapter";
+import { getAbsenceRecords, getContactsByIds } from "@/lib/dataAdapter";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { parseTime } from "@/lib/utils";
@@ -18,8 +18,10 @@ interface AbsenceRecord {
   status: string;
   duration_days: number | null;
   transport_type: string | null;
+  return_transport_type: string | null;
   estimated_cost: number | null;
   companions: string[] | null;
+  departure_time: string | null;
   notes: string | null;
   created_at: string;
   contacts: {
@@ -42,6 +44,7 @@ const BusinessTrip = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AbsenceRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [companionNames, setCompanionNames] = useState<Record<string, string>>({});
 
   const getCurrentUser = () => {
     try {
@@ -73,6 +76,22 @@ const BusinessTrip = () => {
   useEffect(() => {
     fetchRecords();
   }, [currentUser?.id]);
+
+  // 当选中记录有同行人员时，获取同行人员姓名
+  useEffect(() => {
+    if (selectedRecord?.companions?.length) {
+      const unknownIds = selectedRecord.companions.filter(id => !companionNames[id]);
+      if (unknownIds.length > 0) {
+        getContactsByIds(unknownIds).then(({ data }) => {
+          if (data) {
+            const nameMap: Record<string, string> = { ...companionNames };
+            data.forEach((c: any) => { nameMap[c.id] = c.name; });
+            setCompanionNames(nameMap);
+          }
+        });
+      }
+    }
+  }, [selectedRecord]);
 
   const filteredRecords = records.filter(r =>
     r.destination?.includes(search) ||
@@ -120,12 +139,29 @@ const BusinessTrip = () => {
     return `${year}-${month}-${day} ${isAm ? "上午" : "下午"}`;
   };
 
+  const formatDateOnly = (value: string | null | undefined) => {
+    if (!value) return null;
+    try {
+      return format(parseTime(value), "yyyy-MM-dd", { locale: zhCN });
+    } catch {
+      return value;
+    }
+  };
+
+  const getCompanionNamesStr = (ids: string[] | null) => {
+    if (!ids || ids.length === 0) return null;
+    return ids.map(id => companionNames[id] || id).join("、");
+  };
+
   const detailFields = selectedRecord ? [
     { label: "目的地", value: selectedRecord.destination },
     { label: "出差天数", value: selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null },
-    { label: "开始时间", value: formatBusinessTripDateAmPm(selectedRecord.start_time) },
-    { label: "结束时间", value: formatBusinessTripDateAmPm(selectedRecord.end_time) },
-    { label: "交通方式", value: selectedRecord.transport_type ? transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type : null },
+    { label: "计划开始时间", value: formatBusinessTripDateAmPm(selectedRecord.start_time) },
+    { label: "计划结束时间", value: formatBusinessTripDateAmPm(selectedRecord.end_time) },
+    { label: "去程交通方式", value: selectedRecord.transport_type ? transportTypeLabels[selectedRecord.transport_type] || selectedRecord.transport_type : null },
+    { label: "返程交通方式", value: selectedRecord.return_transport_type ? transportTypeLabels[selectedRecord.return_transport_type] || selectedRecord.return_transport_type : null },
+    { label: "同行人员", value: getCompanionNamesStr(selectedRecord.companions) },
+    { label: "出发时间", value: formatDateOnly(selectedRecord.departure_time) },
     { label: "预计费用", value: selectedRecord.estimated_cost ? `¥${selectedRecord.estimated_cost}` : null },
     { label: "出差事由", value: selectedRecord.reason, fullWidth: true },
     { label: "备注", value: selectedRecord.notes, fullWidth: true },
