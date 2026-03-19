@@ -101,7 +101,7 @@ const AbsenceApplication = () => {
   const [tripFormOpen, setTripFormOpen] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<BusinessTripRecord | null>(null);
   const [tripDetailOpen, setTripDetailOpen] = useState(false);
-
+  const [tripCompanionNames, setTripCompanionNames] = useState<Record<string, string>>({});
   // Leave states
   const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([]);
   const [leaveLoading, setLeaveLoading] = useState(true);
@@ -171,6 +171,22 @@ const AbsenceApplication = () => {
     fetchLeaveRecords();
     fetchOutRecords();
   }, [currentUser?.id]);
+
+  // Resolve companion names for selected trip
+  useEffect(() => {
+    if (selectedTrip?.companions?.length) {
+      const unknownIds = selectedTrip.companions.filter(id => !tripCompanionNames[id]);
+      if (unknownIds.length > 0) {
+        dataAdapter.getContactsByIds(unknownIds).then(({ data }) => {
+          if (data) {
+            const nameMap: Record<string, string> = { ...tripCompanionNames };
+            data.forEach((c: any) => { nameMap[c.id] = c.name; });
+            setTripCompanionNames(nameMap);
+          }
+        });
+      }
+    }
+  }, [selectedTrip]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -250,17 +266,22 @@ const AbsenceApplication = () => {
     }
   };
 
+  const getTripCompanionNames = (ids: string[] | null) => {
+    if (!ids || ids.length === 0) return null;
+    return ids.map(id => tripCompanionNames[id] || id).join("、");
+  };
+
   const tripDetailFields = selectedTrip ? [
     { label: "目的地", value: selectedTrip.destination },
     { label: "出差天数", value: selectedTrip.duration_days ? `${selectedTrip.duration_days} 天` : null },
+    { label: "出差事由", value: selectedTrip.reason, fullWidth: true },
     { label: "计划开始时间", value: formatBusinessTripDateAmPm(selectedTrip.start_time) },
     { label: "计划结束时间", value: formatBusinessTripDateAmPm(selectedTrip.end_time) },
     { label: "去程交通方式", value: selectedTrip.transport_type ? transportTypeLabels[selectedTrip.transport_type] || selectedTrip.transport_type : null },
-    { label: "返程交通方式", value: (selectedTrip as any).return_transport_type ? transportTypeLabels[(selectedTrip as any).return_transport_type] || (selectedTrip as any).return_transport_type : null },
-    { label: "同行人员", value: (selectedTrip as any).companions?.length > 0 ? (selectedTrip as any).companions.join("、") : null },
-    { label: "出发时间", value: formatDateOnly((selectedTrip as any).departure_time) },
+    { label: "返程交通方式", value: selectedTrip.return_transport_type ? transportTypeLabels[selectedTrip.return_transport_type] || selectedTrip.return_transport_type : null },
+    { label: "同行人员", value: getTripCompanionNames(selectedTrip.companions) },
+    { label: "出发时间", value: formatDateOnly(selectedTrip.departure_time) },
     { label: "预计费用", value: selectedTrip.estimated_cost ? `¥${selectedTrip.estimated_cost}` : null },
-    { label: "出差事由", value: selectedTrip.reason, fullWidth: true },
     { label: "备注", value: selectedTrip.notes, fullWidth: true },
     { label: "申请时间", value: format(parseTime(selectedTrip.created_at), "yyyy-MM-dd HH:mm", { locale: zhCN }) },
   ] : [];

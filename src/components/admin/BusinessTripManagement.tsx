@@ -145,7 +145,7 @@ const BusinessTripManagement = () => {
   const [statusFilter, setStatusFilter] = useState<AbsenceStatus | "all">("all");
   const [deleteRecordId, setDeleteRecordId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const [adminCompanionNames, setAdminCompanionNames] = useState<string | null>(null);
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -246,9 +246,22 @@ const BusinessTripManagement = () => {
   const openDetailDialog = async (record: AbsenceRecord) => {
     setSelectedRecord(record);
     setApprovalInstanceStatus(null);
+    setAdminCompanionNames(null);
     setIsDetailDialogOpen(true);
     void logAudit({ action: AUDIT_ACTIONS.VIEW, module: AUDIT_MODULES.ABSENCE, target_type: '出差申请', target_id: record.id, target_name: record.reason });
-    
+
+    // Resolve companion names
+    if (record.companions && record.companions.length > 0) {
+      dataAdapter.getContactsByIds(record.companions).then(({ data: contactsData }) => {
+        if (contactsData) {
+          const nameMap: Record<string, string> = {};
+          contactsData.forEach((c: any) => { nameMap[c.id] = c.name; });
+          setAdminCompanionNames(record.companions!.map(id => nameMap[id] || id).join("、"));
+        } else {
+          setAdminCompanionNames(record.companions!.join("、"));
+        }
+      });
+    }
     // 获取审批实例的真实状态
     const { data: instanceData } = await dataAdapter.getApprovalInstanceForDetail(record.id, "business_trip");
     
@@ -536,15 +549,10 @@ const BusinessTripManagement = () => {
                     {(selectedRecord as any).return_transport_type ? (transportTypeLabels[(selectedRecord as any).return_transport_type] || (selectedRecord as any).return_transport_type) : <span className="text-muted-foreground">-</span>}
                   </div>
                 </div>
-                <div className="col-span-2">
+                <div>
                   <Label className="text-sm text-muted-foreground">同行人员</Label>
                   <div className="mt-1 px-3 py-2 bg-muted/50 rounded-md">
-                    {(() => {
-                      const companions = selectedRecord.companions;
-                      if (!companions || companions.length === 0) return <span className="text-muted-foreground">-</span>;
-                      // companions可能是字符串数组(ID)或已解析的名称
-                      return companions.join("、");
-                    })()}
+                    {adminCompanionNames || <span className="text-muted-foreground">-</span>}
                   </div>
                 </div>
                 <div>
