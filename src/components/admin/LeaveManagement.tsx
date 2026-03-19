@@ -80,6 +80,7 @@ interface AbsenceRecord {
   handover_person_id: string | null;
   handover_notes: string | null;
   handover_person?: { name: string } | null;
+  medical_certificate_url?: string | null;
   // 关联的审批实例状态
   approval_status?: string;
 }

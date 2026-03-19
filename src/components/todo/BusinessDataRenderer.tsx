@@ -406,6 +406,21 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           </div>
         )}
 
+        {/* 病假诊断证明书 */}
+        {data.leave_type === "sick" && (data.medical_certificate_url || formData?.medical_certificate_url) && (
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground font-normal">诊断证明书</Label>
+            <div className="mt-1">
+              <img
+                src={data.medical_certificate_url || formData?.medical_certificate_url}
+                alt="诊断证明书"
+                className="max-h-60 rounded-md border cursor-pointer"
+                onClick={() => window.open(data.medical_certificate_url || formData?.medical_certificate_url, '_blank')}
+              />
+            </div>
+          </div>
+        )}
+
         {isBusinessTrip ? (
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground font-normal">备注</Label>
