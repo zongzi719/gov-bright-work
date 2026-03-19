@@ -930,10 +930,19 @@ app.get('/api/absence-records', async (req, res) => {
         console.log(`[DEBUG-v5] Record ${row.id}: NO MATCH found (normalized: ${normalizedRowId})`);
       }
       
+      // 解析 companions JSON
+      let parsedCompanions = null;
+      if (row.companions) {
+        try {
+          parsedCompanions = typeof row.companions === 'string' ? JSON.parse(row.companions) : row.companions;
+        } catch (e) { parsedCompanions = null; }
+      }
+      
       return {
         ...row,
         // 使用审批实例的真实状态覆盖业务表状态
         status: displayStatus,
+        companions: parsedCompanions,
         contacts: row.contact_id ? {
           name: row.contact_name,
           department: row.contact_department
