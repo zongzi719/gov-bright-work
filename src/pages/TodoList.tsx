@@ -289,7 +289,7 @@ const TodoList = () => {
 
   const renderCCItem = (item: TodoItem) => {
     const isRead = item.status !== "pending";
-    const reason = extractReason(item.title.replace(/^\[抄送\]\s*/, ""));
+    const reason = getDisplayTitle(item);
     const sourceLabel = getSourceLabel(item);
 
     return (
