@@ -350,7 +350,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
       ) ?? null;
     const handoverNotes =
       pickDisplayValue(data.handover_notes, businessData?.handover_notes, formData?.handover_notes) ?? null;
-    const shouldShowLeaveHandover = businessType === "leave" || (businessType === "absence" && !!data.leave_type);
+    const shouldShowLeaveHandover = effectiveBusinessType === "leave" || (effectiveBusinessType === "absence" && !!data.leave_type);
 
     const companionDisplay = (() => {
       if (!isBusinessTrip) return null;
