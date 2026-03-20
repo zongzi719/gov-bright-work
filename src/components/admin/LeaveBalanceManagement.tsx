@@ -68,8 +68,8 @@ interface LeaveBalance {
   bereavement_leave_used: number;
   maternity_leave_total: number;
   maternity_leave_used: number;
-  nursing_leave_total: number;
-  nursing_leave_used: number;
+  family_visit_leave_total: number;
+  family_visit_leave_used: number;
   marriage_leave_total: number;
   marriage_leave_used: number;
   compensatory_leave_total: number;
