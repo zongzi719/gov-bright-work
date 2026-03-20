@@ -2636,7 +2636,7 @@ app.put('/api/leave-balances/:id', async (req, res) => {
     const allowedFields = [
       'annual_leave_total', 'sick_leave_total', 'personal_leave_total',
       'paternity_leave_total', 'bereavement_leave_total', 'maternity_leave_total',
-      'nursing_leave_total', 'marriage_leave_total', 'compensatory_leave_total'
+      'nursing_leave_total', 'family_visit_leave_total', 'marriage_leave_total', 'compensatory_leave_total'
     ];
     
     for (const field of allowedFields) {
