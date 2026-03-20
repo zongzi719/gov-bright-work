@@ -201,7 +201,7 @@ const LeaveBalanceManagement = () => {
       paternity_leave_total: formData.paternity_leave_total,
       bereavement_leave_total: formData.bereavement_leave_total,
       maternity_leave_total: formData.maternity_leave_total,
-      nursing_leave_total: formData.nursing_leave_total,
+      family_visit_leave_total: formData.family_visit_leave_total,
       marriage_leave_total: formData.marriage_leave_total,
       compensatory_leave_total: formData.compensatory_leave_total,
     };
