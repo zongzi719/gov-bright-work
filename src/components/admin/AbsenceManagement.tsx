@@ -43,7 +43,7 @@ const AbsenceManagement = () => {
 
       const custom = (data as CustomTemplate[])
         .filter((template) => {
-          if (!template.is_active || BUILTIN_CODES.includes(template.code)) return false;
+          if (!template.is_active || BUILTIN_CODES.includes(template.code) || BUILTIN_BUSINESS_TYPES.includes(template.business_type)) return false;
           return template.category === "外出管理" || ABSENCE_GROUP_BUSINESS_TYPES.includes(template.business_type);
         })
         .map((template) => ({
