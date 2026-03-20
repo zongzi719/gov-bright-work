@@ -702,7 +702,7 @@ const LeaveBalanceTable = ({
               (balance.marriage_leave_total || 0) > 0 ||
               (balance.maternity_leave_total || 0) > 0 ||
               (balance.paternity_leave_total || 0) > 0 ||
-              (balance.nursing_leave_total || 0) > 0 ||
+              (balance.family_visit_leave_total || 0) > 0 ||
               (balance.bereavement_leave_total || 0) > 0;
             
             return (
