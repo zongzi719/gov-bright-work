@@ -545,20 +545,20 @@ const LeaveBalanceManagement = () => {
                         <p className="text-xs text-muted-foreground">各地15-30天不等</p>
                       </div>
                       <div className="space-y-2">
-                        <Label>哺乳假(小时)</Label>
+                        <Label>探亲假(天)</Label>
                         <Input
                           type="number"
                           min="0"
                           step="1"
-                          value={formData.nursing_leave_total}
+                          value={formData.family_visit_leave_total}
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              nursing_leave_total: parseFloat(e.target.value) || 0,
+                              family_visit_leave_total: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
-                        <p className="text-xs text-muted-foreground">每天1小时至婴儿1岁</p>
+                        <p className="text-xs text-muted-foreground">未婚20天/已婚4年一次20天</p>
                       </div>
                       <div className="space-y-2">
                         <Label>丧假(天)</Label>
