@@ -314,7 +314,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
       // 获取业务数据
       if (todoItem.business_id && todoItem.business_type) {
-        await fetchBusinessData(todoItem.business_type, todoItem.business_id);
+        await fetchBusinessData(todoItem.business_type, todoItem.business_id, instanceData as unknown as ApprovalInstance);
       }
 
     } catch (error) {
