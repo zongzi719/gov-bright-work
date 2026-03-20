@@ -194,14 +194,16 @@ const handleLeaveBalanceDeduction = async (
     
     // 只有当是真正的请假类型（type = 'leave'）时才扣减
     if (record && record.type === 'leave' && record.leave_type && record.contact_id) {
-      console.log(`Processing leave balance deduction for ${record.leave_type}: ${record.duration_days} days / ${record.duration_hours} hours`);
+      const dh = record.duration_hours;
+      const dd = record.duration_days;
+      console.log(`Processing leave balance deduction for ${record.leave_type}: duration_days=${dd}, duration_hours=${dh}`);
       
       // 调用扣减假期函数
       const { data, error } = await dataAdapter.deductLeaveBalance(
         record.contact_id,
         record.leave_type,
-        record.duration_hours,
-        record.duration_days
+        dh,
+        dd
       );
       
       if (error) {
@@ -210,7 +212,7 @@ const handleLeaveBalanceDeduction = async (
         console.log(`Leave balance deducted successfully for ${record.leave_type}, result:`, data);
       }
     } else if (record) {
-      console.log(`Skipping leave balance deduction - not a leave record (type: ${record.type}, leave_type: ${record.leave_type})`);
+      console.log(`Skipping leave balance deduction - type=${record.type}, leave_type=${record.leave_type}, contact_id=${record.contact_id}`);
     } else {
       console.log(`No absence record found for businessId: ${businessId}`);
     }

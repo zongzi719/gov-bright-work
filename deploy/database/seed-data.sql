@@ -226,7 +226,7 @@ INSERT INTO `approval_form_fields` (`id`, `template_id`, `field_type`, `field_na
 -- 请假申请表单字段
 INSERT INTO `approval_form_fields` (`id`, `template_id`, `field_type`, `field_name`, `field_label`, `placeholder`, `is_required`, `field_options`, `sort_order`, `col_span`) VALUES
 ('ef20b1bb-aa49-42c8-ba3a-2d606180af43', 'f10358da-16d3-491b-bfde-ce95fcd1b5bc', 'user', 'contact_id', '申请人', '自动获取当前用户', 1, NULL, 1, 2),
-('b2c3d4e5-f6a7-48b9-c0d1-e2f3a4b5c6d7', 'f10358da-16d3-491b-bfde-ce95fcd1b5bc', 'select', 'leave_type', '请假类型', '请选择请假类型', 1, '["annual","sick","personal","paternity","bereavement","maternity","nursing","marriage","compensatory"]', 2, 2),
+('b2c3d4e5-f6a7-48b9-c0d1-e2f3a4b5c6d7', 'f10358da-16d3-491b-bfde-ce95fcd1b5bc', 'select', 'leave_type', '请假类型', '请选择请假类型', 1, '["annual","sick","personal","paternity","bereavement","maternity","family_visit","marriage","compensatory"]', 2, 2),
 ('c3d4e5f6-a7b8-49c0-d1e2-f3a4b5c6d7e8', 'f10358da-16d3-491b-bfde-ce95fcd1b5bc', 'textarea', 'reason', '请假事由', '请输入请假事由', 1, NULL, 3, 2),
 ('d4e5f6a7-b8c9-4ad0-e1f2-a3b4c5d6e7f8', 'f10358da-16d3-491b-bfde-ce95fcd1b5bc', 'datetime', 'start_time', '开始时间', '请选择开始时间', 1, NULL, 4, 1),
 ('e5f6a7b8-c9d0-4be1-f2a3-b4c5d6e7f8a9', 'f10358da-16d3-491b-bfde-ce95fcd1b5bc', 'datetime', 'end_time', '结束时间', '请选择结束时间', 0, NULL, 5, 1),
