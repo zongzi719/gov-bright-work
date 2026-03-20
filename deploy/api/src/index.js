@@ -2712,8 +2712,16 @@ app.post('/api/leave-balances/batch', async (req, res) => {
 // 扣减假期余额
 app.post('/api/leave-balances/deduct', async (req, res) => {
   try {
-    const { contactId, leaveType, durationHours, durationDays } = req.body;
+    const { contactId, leaveType } = req.body;
+    const durationHours = parseFloat(req.body.durationHours) || 0;
+    const durationDays = parseFloat(req.body.durationDays) || 0;
     const currentYear = new Date().getFullYear();
+    
+    console.log(`[LEAVE-DEDUCT] Request: contactId=${contactId}, leaveType=${leaveType}, hours=${durationHours}, days=${durationDays}`);
+    
+    if (!contactId || !leaveType) {
+      return res.status(400).json({ error: '缺少必填参数 contactId 或 leaveType' });
+    }
     
     // 根据假期类型确定扣减字段和值
     let fieldUsed = '';
