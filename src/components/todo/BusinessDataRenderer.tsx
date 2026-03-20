@@ -336,7 +336,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     : businessType;
 
   if (effectiveBusinessType === "absence" || effectiveBusinessType === "leave" || effectiveBusinessType === "out" || effectiveBusinessType === "business_trip") {
-    const isBusinessTrip = businessType === "business_trip";
+    const isBusinessTrip = effectiveBusinessType === "business_trip";
     const contactName = data.contacts?.name || data.contact_name || "-";
     const contactDept = data.contacts?.department || data.department || "-";
     const handoverPersonName =
