@@ -2598,9 +2598,10 @@ app.post('/api/leave-balances', async (req, res) => {
         bereavement_leave_total, bereavement_leave_used,
         maternity_leave_total, maternity_leave_used,
         nursing_leave_total, nursing_leave_used,
+        family_visit_leave_total, family_visit_leave_used,
         marriage_leave_total, marriage_leave_used,
         compensatory_leave_total, compensatory_leave_used
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, balance.contact_id, balance.year,
         balance.annual_leave_total || 0, balance.annual_leave_used || 0,
@@ -2610,6 +2611,7 @@ app.post('/api/leave-balances', async (req, res) => {
         balance.bereavement_leave_total || 0, balance.bereavement_leave_used || 0,
         balance.maternity_leave_total || 0, balance.maternity_leave_used || 0,
         balance.nursing_leave_total || 0, balance.nursing_leave_used || 0,
+        balance.family_visit_leave_total || 0, balance.family_visit_leave_used || 0,
         balance.marriage_leave_total || 0, balance.marriage_leave_used || 0,
         balance.compensatory_leave_total || 0, balance.compensatory_leave_used || 0
       ]
