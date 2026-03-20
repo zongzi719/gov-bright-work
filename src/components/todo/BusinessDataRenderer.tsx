@@ -294,7 +294,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  if (businessType === "supply_requisition") {
+  if (effectiveBusinessType === "supply_requisition") {
     const items = mergeSupplyRequisitionItems();
 
     return (
