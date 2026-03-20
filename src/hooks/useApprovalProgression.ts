@@ -575,6 +575,18 @@ export const useApprovalProgression = () => {
     currentNodeName: string
   ): Promise<{ success: boolean; completed?: boolean; error?: string }> => {
     try {
+      const { data: instanceData } = await dataAdapter.getApprovalInstanceById(instanceId);
+      const effectiveBusinessType = instanceData?.business_type || businessType;
+      const effectiveBusinessId = instanceData?.business_id || businessId;
+
+      if (instanceData?.business_type && instanceData.business_type !== businessType) {
+        console.warn("Business type mismatch detected, using instance business_type instead:", {
+          passedBusinessType: businessType,
+          instanceBusinessType: instanceData.business_type,
+          instanceId,
+        });
+      }
+
       const flatNodes = flattenNodesForExecution(nodesSnapshot, formData, initiatorId);
       
       console.log("Flat nodes for progression:", flatNodes.map(n => n.node_name));
@@ -636,8 +648,8 @@ export const useApprovalProgression = () => {
           console.log(`Skipping CC node "${nextNode.node_name}", processing notifications...`);
           await processCCNode(
             instanceId,
-            businessId,
-            businessType,
+            effectiveBusinessId,
+            effectiveBusinessType,
             initiatorId,
             initiatorName,
             title,
@@ -659,9 +671,9 @@ export const useApprovalProgression = () => {
           current_node_index: flatNodes.length - 1,
         });
         
-        await updateBusinessAndContactStatus(businessType, businessId, "approved");
-        await handleStockUpdate(businessType, businessId, initiatorName);
-        await handleLeaveBalanceDeduction(businessType, businessId);
+        await updateBusinessAndContactStatus(effectiveBusinessType, effectiveBusinessId, "approved");
+        await handleStockUpdate(effectiveBusinessType, effectiveBusinessId, initiatorName);
+        await handleLeaveBalanceDeduction(effectiveBusinessType, effectiveBusinessId);
         
         return { success: true, completed: true };
       }
@@ -674,17 +686,17 @@ export const useApprovalProgression = () => {
 
       // 使用动态解析审批人（支持直接主管、部门负责人等）
       const approverIds = await resolveNodeApproverIds(nextNode, initiatorId);
-      const todoBusinessType = resolveTodoBusinessType(businessType);
+      const todoBusinessType = resolveTodoBusinessType(effectiveBusinessType);
 
-      console.log("Creating todos for approvers:", approverIds, "approver_type:", nextNode.approver_type);
+      console.log("Creating todos for approvers:", approverIds, "approver_type:", nextNode.approver_type, "business_type:", effectiveBusinessType);
 
       if (approverIds.length === 0) {
         console.warn("No approvers resolved for node, skipping to next node");
         // 如果没有审批人，递归推进到下一个节点
         return advanceToNextNode(
           instanceId,
-          businessId,
-          businessType,
+          effectiveBusinessId,
+          effectiveBusinessType,
           initiatorId,
           initiatorName,
           title,
@@ -712,7 +724,7 @@ export const useApprovalProgression = () => {
         const { error: todoError } = await dataAdapter.createTodoItem({
           source: "internal",
           business_type: todoBusinessType,
-          business_id: businessId,
+          business_id: effectiveBusinessId,
           title: title,
           description: `${initiatorName} 发起的申请 - ${nextNode.node_name}`,
           priority: "normal",
