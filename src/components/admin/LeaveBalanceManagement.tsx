@@ -101,7 +101,7 @@ interface LeaveFormData {
   paternity_leave_total: number;
   bereavement_leave_total: number;
   maternity_leave_total: number;
-  nursing_leave_total: number;
+  family_visit_leave_total: number;
   marriage_leave_total: number;
   compensatory_leave_total: number;
 }
@@ -117,7 +117,7 @@ const defaultFormData: LeaveFormData = {
   paternity_leave_total: 0,
   bereavement_leave_total: 0,
   maternity_leave_total: 0,
-  nursing_leave_total: 0,
+  family_visit_leave_total: 0,
   marriage_leave_total: 0,
   compensatory_leave_total: 0,
 };
