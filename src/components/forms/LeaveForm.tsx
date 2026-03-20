@@ -524,15 +524,14 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
               </SelectTrigger>
               <SelectContent>
                 {leaveTypes.map((t) => {
-                  const remaining = getLeaveRemaining(t.value);
-                  const hasBalance = remaining !== null && remaining > 0;
+                  const used = getLeaveUsed(t.value);
                   return (
                     <SelectItem key={t.value} value={t.value}>
                       <div className="flex items-center justify-between w-full gap-4">
                         <span>{t.label}</span>
-                        {remaining !== null && (
-                          <span className={`text-xs ${hasBalance ? 'text-muted-foreground' : 'text-destructive'}`}>
-                            剩余{remaining}{t.unit}
+                        {used !== null && (
+                          <span className={`text-xs ${used > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            已用{used}{t.unit}
                           </span>
                         )}
                       </div>
