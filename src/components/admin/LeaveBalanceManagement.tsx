@@ -513,7 +513,7 @@ const LeaveBalanceManagement = () => {
                         <p className="text-xs text-muted-foreground">法定3天+晚婚奖励</p>
                       </div>
                       <div className="space-y-2">
-                        <Label>产假(天)</Label>
+                       <Label>生育假(天)</Label>
                         <Input
                           type="number"
                           min="0"
