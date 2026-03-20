@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, Briefcase, Heart, Gift, Baby, Smile, Coffee } from "lucide-react";
+import { Calendar, Clock, Briefcase, Heart, Gift, Baby, Smile, Coffee, MapPin } from "lucide-react";
 import { getLeaveBalance } from "@/lib/dataAdapter";
 
 interface LeaveBalance {
@@ -20,8 +20,8 @@ interface LeaveBalance {
   bereavement_leave_used: number;
   maternity_leave_total: number;
   maternity_leave_used: number;
-  nursing_leave_total: number;
-  nursing_leave_used: number;
+  family_visit_leave_total: number;
+  family_visit_leave_used: number;
   marriage_leave_total: number;
   marriage_leave_used: number;
   compensatory_leave_total: number;
@@ -82,7 +82,7 @@ const leaveTypeConfigs = [
   },
   {
     key: "maternity",
-    label: "产假",
+    label: "生育假",
     icon: Baby,
     unit: "天",
     description: "手动发放",
@@ -101,13 +101,13 @@ const leaveTypeConfigs = [
     color: "bg-indigo-500",
   },
   {
-    key: "nursing",
-    label: "哺乳假",
-    icon: Baby,
-    unit: "小时",
+    key: "family_visit",
+    label: "探亲假",
+    icon: MapPin,
+    unit: "天",
     description: "手动发放",
-    totalField: "nursing_leave_total",
-    usedField: "nursing_leave_used",
+    totalField: "family_visit_leave_total",
+    usedField: "family_visit_leave_used",
     color: "bg-fuchsia-500",
   },
   {
@@ -183,7 +183,6 @@ const MyLeaveBalance = ({ contactId, compact = false }: MyLeaveBalanceProps) => 
   });
 
   if (compact) {
-    // 紧凑模式：只显示年假、病假、事假
     const mainLeaveTypes = leaveTypeConfigs.filter((c) =>
       ["annual", "sick", "personal", "compensatory"].includes(c.key)
     );

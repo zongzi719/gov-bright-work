@@ -240,7 +240,7 @@ const LeaveBalanceManagement = () => {
         family_visit_leave_used: 0,
         marriage_leave_used: 0,
         compensatory_leave_used: 0,
-      });
+      } as any);
 
       if (error) {
         toast.error("添加失败");
