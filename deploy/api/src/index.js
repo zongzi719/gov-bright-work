@@ -2598,9 +2598,10 @@ app.post('/api/leave-balances', async (req, res) => {
         bereavement_leave_total, bereavement_leave_used,
         maternity_leave_total, maternity_leave_used,
         nursing_leave_total, nursing_leave_used,
+        family_visit_leave_total, family_visit_leave_used,
         marriage_leave_total, marriage_leave_used,
         compensatory_leave_total, compensatory_leave_used
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, balance.contact_id, balance.year,
         balance.annual_leave_total || 0, balance.annual_leave_used || 0,
@@ -2610,6 +2611,7 @@ app.post('/api/leave-balances', async (req, res) => {
         balance.bereavement_leave_total || 0, balance.bereavement_leave_used || 0,
         balance.maternity_leave_total || 0, balance.maternity_leave_used || 0,
         balance.nursing_leave_total || 0, balance.nursing_leave_used || 0,
+        balance.family_visit_leave_total || 0, balance.family_visit_leave_used || 0,
         balance.marriage_leave_total || 0, balance.marriage_leave_used || 0,
         balance.compensatory_leave_total || 0, balance.compensatory_leave_used || 0
       ]
@@ -2634,7 +2636,7 @@ app.put('/api/leave-balances/:id', async (req, res) => {
     const allowedFields = [
       'annual_leave_total', 'sick_leave_total', 'personal_leave_total',
       'paternity_leave_total', 'bereavement_leave_total', 'maternity_leave_total',
-      'nursing_leave_total', 'marriage_leave_total', 'compensatory_leave_total'
+      'nursing_leave_total', 'family_visit_leave_total', 'marriage_leave_total', 'compensatory_leave_total'
     ];
     
     for (const field of allowedFields) {
@@ -2680,9 +2682,10 @@ app.post('/api/leave-balances/batch', async (req, res) => {
           bereavement_leave_total, bereavement_leave_used,
           maternity_leave_total, maternity_leave_used,
           nursing_leave_total, nursing_leave_used,
+          family_visit_leave_total, family_visit_leave_used,
           marriage_leave_total, marriage_leave_used,
           compensatory_leave_total, compensatory_leave_used
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, balance.contact_id, balance.year,
           balance.annual_leave_total || 0, balance.annual_leave_used || 0,
@@ -2692,6 +2695,7 @@ app.post('/api/leave-balances/batch', async (req, res) => {
           balance.bereavement_leave_total || 0, balance.bereavement_leave_used || 0,
           balance.maternity_leave_total || 0, balance.maternity_leave_used || 0,
           balance.nursing_leave_total || 0, balance.nursing_leave_used || 0,
+          balance.family_visit_leave_total || 0, balance.family_visit_leave_used || 0,
           balance.marriage_leave_total || 0, balance.marriage_leave_used || 0,
           balance.compensatory_leave_total || 0, balance.compensatory_leave_used || 0
         ]
@@ -2743,6 +2747,10 @@ app.post('/api/leave-balances/deduct', async (req, res) => {
       case 'nursing':
         fieldUsed = 'nursing_leave_used';
         deductValue = durationHours || (durationDays * 8);
+        break;
+      case 'family_visit':
+        fieldUsed = 'family_visit_leave_used';
+        deductValue = durationDays || (durationHours / 8);
         break;
       case 'marriage':
         fieldUsed = 'marriage_leave_used';
