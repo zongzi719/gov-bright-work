@@ -23,6 +23,9 @@ const BUILTIN_CODES = [
   "PROC_MKXWIEG6", "PROC_MKXVX9VE", "PROC_MKYO60ON",
 ];
 
+// 已有专属标签页的内置业务类型，不再作为自定义标签重复显示
+const BUILTIN_BUSINESS_TYPES = ["business_trip", "leave", "out"];
+
 const ABSENCE_GROUP_BUSINESS_TYPES = ["business_trip", "leave", "out", "absence"];
 
 const AbsenceManagement = () => {
