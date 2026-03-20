@@ -403,8 +403,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       }
 
       // 对于自定义审批表单，使用 approval_instances.form_data 作为业务数据
-      if (!data && instance?.form_data) {
-        data = instance.form_data as Record<string, any>;
+      if (!data && inst?.form_data) {
+        data = inst.form_data as Record<string, any>;
       }
 
       // 保存推断出的实际业务类型，供 BusinessDataRenderer 使用
