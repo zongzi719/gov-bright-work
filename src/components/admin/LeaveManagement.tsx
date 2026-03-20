@@ -134,8 +134,8 @@ const leaveTypeLabels: Record<string, string> = {
   personal: "事假",
   paternity: "陪产假",
   bereavement: "丧假",
-  maternity: "产假",
-  nursing: "哺乳假",
+  maternity: "生育假",
+  family_visit: "探亲假",
   marriage: "婚假",
   compensatory: "调休",
 };

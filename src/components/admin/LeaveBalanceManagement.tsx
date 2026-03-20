@@ -741,7 +741,7 @@ const LeaveBalanceTable = ({
                       )}
                       {(balance.maternity_leave_total || 0) > 0 && (
                         <Badge variant="outline" className="text-xs">
-                          产{balance.maternity_leave_total - (balance.maternity_leave_used || 0)}天
+                          育{balance.maternity_leave_total - (balance.maternity_leave_used || 0)}天
                         </Badge>
                       )}
                       {(balance.paternity_leave_total || 0) > 0 && (

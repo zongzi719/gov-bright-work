@@ -290,7 +290,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
       case "paternity": return (leaveBalance.paternity_leave_total || 0) - (leaveBalance.paternity_leave_used || 0);
       case "bereavement": return (leaveBalance.bereavement_leave_total || 0) - (leaveBalance.bereavement_leave_used || 0);
       case "maternity": return (leaveBalance.maternity_leave_total || 0) - (leaveBalance.maternity_leave_used || 0);
-      case "nursing": return (leaveBalance.nursing_leave_total || 0) - (leaveBalance.nursing_leave_used || 0);
+      case "family_visit": return (leaveBalance.family_visit_leave_total || 0) - (leaveBalance.family_visit_leave_used || 0);
       case "marriage": return (leaveBalance.marriage_leave_total || 0) - (leaveBalance.marriage_leave_used || 0);
       case "compensatory": return (leaveBalance.compensatory_leave_total || 0) - (leaveBalance.compensatory_leave_used || 0);
       default: return null;
