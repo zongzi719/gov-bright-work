@@ -16,7 +16,7 @@ const Index = () => {
       {/* 主体内容区域 */}
       <main className="flex-1 p-2 md:p-3 overflow-hidden">
         {/* 移动端：垂直滚动布局 | 桌面端：三栏布局 */}
-        
+
         {/* 桌面端三栏布局 - 兼容旧版浏览器，避免 CSS Grid 导致内容被 hidden */}
         <div className="hidden lg:flex h-full">
           {/* 左侧：工作事项 - 20% */}
@@ -37,11 +37,11 @@ const Index = () => {
           {/* 右侧：日程管理 + 常用链接 + 食堂菜谱 - 30% */}
           <div className="w-[30%] flex flex-col overflow-hidden">
             {/* 日程管理占据约55%高度 */}
-            <div style={{ flex: '0 0 55%' }} className="min-h-0 overflow-hidden mb-2">
+            <div style={{ flex: "0 0 55%" }} className="min-h-0 overflow-hidden mb-2">
               <SchedulePanel />
             </div>
             {/* 外部链接 - 限制最大高度，超出可滚动 */}
-            <div className="flex-shrink-0 mb-2 overflow-auto" style={{ maxHeight: '120px' }}>
+            <div className="flex-shrink-0 mb-2 overflow-auto" style={{ maxHeight: "120px" }}>
               <ExternalLinks />
             </div>
             {/* 食堂菜谱 - 填充剩余空间 */}
