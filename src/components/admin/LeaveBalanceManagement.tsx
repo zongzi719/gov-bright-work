@@ -68,8 +68,8 @@ interface LeaveBalance {
   bereavement_leave_used: number;
   maternity_leave_total: number;
   maternity_leave_used: number;
-  nursing_leave_total: number;
-  nursing_leave_used: number;
+  family_visit_leave_total: number;
+  family_visit_leave_used: number;
   marriage_leave_total: number;
   marriage_leave_used: number;
   compensatory_leave_total: number;
@@ -86,9 +86,9 @@ const leaveTypeConfigs = [
   { key: "personal", label: "事假", unit: "天", description: "个人事务" },
   { key: "compensatory", label: "调休", unit: "小时", description: "加班累积" },
   { key: "marriage", label: "婚假", unit: "天", description: "手动发放" },
-  { key: "maternity", label: "产假", unit: "天", description: "手动发放" },
+  { key: "maternity", label: "生育假", unit: "天", description: "手动发放" },
   { key: "paternity", label: "陪产假", unit: "天", description: "手动发放" },
-  { key: "nursing", label: "哺乳假", unit: "小时", description: "手动发放" },
+  { key: "family_visit", label: "探亲假", unit: "天", description: "手动发放" },
   { key: "bereavement", label: "丧假", unit: "天", description: "手动发放" },
 ];
 
@@ -101,7 +101,7 @@ interface LeaveFormData {
   paternity_leave_total: number;
   bereavement_leave_total: number;
   maternity_leave_total: number;
-  nursing_leave_total: number;
+  family_visit_leave_total: number;
   marriage_leave_total: number;
   compensatory_leave_total: number;
 }
@@ -117,7 +117,7 @@ const defaultFormData: LeaveFormData = {
   paternity_leave_total: 0,
   bereavement_leave_total: 0,
   maternity_leave_total: 0,
-  nursing_leave_total: 0,
+  family_visit_leave_total: 0,
   marriage_leave_total: 0,
   compensatory_leave_total: 0,
 };
@@ -201,7 +201,7 @@ const LeaveBalanceManagement = () => {
       paternity_leave_total: formData.paternity_leave_total,
       bereavement_leave_total: formData.bereavement_leave_total,
       maternity_leave_total: formData.maternity_leave_total,
-      nursing_leave_total: formData.nursing_leave_total,
+      family_visit_leave_total: formData.family_visit_leave_total,
       marriage_leave_total: formData.marriage_leave_total,
       compensatory_leave_total: formData.compensatory_leave_total,
     };
@@ -237,10 +237,10 @@ const LeaveBalanceManagement = () => {
         paternity_leave_used: 0,
         bereavement_leave_used: 0,
         maternity_leave_used: 0,
-        nursing_leave_used: 0,
+        family_visit_leave_used: 0,
         marriage_leave_used: 0,
         compensatory_leave_used: 0,
-      });
+      } as any);
 
       if (error) {
         toast.error("添加失败");
@@ -267,7 +267,7 @@ const LeaveBalanceManagement = () => {
       paternity_leave_total: balance.paternity_leave_total || 0,
       bereavement_leave_total: balance.bereavement_leave_total || 0,
       maternity_leave_total: balance.maternity_leave_total || 0,
-      nursing_leave_total: balance.nursing_leave_total || 0,
+      family_visit_leave_total: balance.family_visit_leave_total || 0,
       marriage_leave_total: balance.marriage_leave_total || 0,
       compensatory_leave_total: balance.compensatory_leave_total || 0,
     });
@@ -307,8 +307,8 @@ const LeaveBalanceManagement = () => {
       bereavement_leave_used: 0,
       maternity_leave_total: 0,
       maternity_leave_used: 0,
-      nursing_leave_total: 0,
-      nursing_leave_used: 0,
+      family_visit_leave_total: 0,
+      family_visit_leave_used: 0,
       marriage_leave_total: 0,
       marriage_leave_used: 0,
       compensatory_leave_total: 0,
@@ -513,7 +513,7 @@ const LeaveBalanceManagement = () => {
                         <p className="text-xs text-muted-foreground">法定3天+晚婚奖励</p>
                       </div>
                       <div className="space-y-2">
-                        <Label>产假(天)</Label>
+                       <Label>生育假(天)</Label>
                         <Input
                           type="number"
                           min="0"
@@ -545,20 +545,20 @@ const LeaveBalanceManagement = () => {
                         <p className="text-xs text-muted-foreground">各地15-30天不等</p>
                       </div>
                       <div className="space-y-2">
-                        <Label>哺乳假(小时)</Label>
+                        <Label>探亲假(天)</Label>
                         <Input
                           type="number"
                           min="0"
                           step="1"
-                          value={formData.nursing_leave_total}
+                          value={formData.family_visit_leave_total}
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              nursing_leave_total: parseFloat(e.target.value) || 0,
+                              family_visit_leave_total: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
-                        <p className="text-xs text-muted-foreground">每天1小时至婴儿1岁</p>
+                        <p className="text-xs text-muted-foreground">未婚20天/已婚4年一次20天</p>
                       </div>
                       <div className="space-y-2">
                         <Label>丧假(天)</Label>
@@ -702,7 +702,7 @@ const LeaveBalanceTable = ({
               (balance.marriage_leave_total || 0) > 0 ||
               (balance.maternity_leave_total || 0) > 0 ||
               (balance.paternity_leave_total || 0) > 0 ||
-              (balance.nursing_leave_total || 0) > 0 ||
+              (balance.family_visit_leave_total || 0) > 0 ||
               (balance.bereavement_leave_total || 0) > 0;
             
             return (
@@ -741,7 +741,7 @@ const LeaveBalanceTable = ({
                       )}
                       {(balance.maternity_leave_total || 0) > 0 && (
                         <Badge variant="outline" className="text-xs">
-                          产{balance.maternity_leave_total - (balance.maternity_leave_used || 0)}天
+                          育{balance.maternity_leave_total - (balance.maternity_leave_used || 0)}天
                         </Badge>
                       )}
                       {(balance.paternity_leave_total || 0) > 0 && (

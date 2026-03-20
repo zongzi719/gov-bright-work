@@ -32,8 +32,8 @@ interface LeaveBalance {
   bereavement_leave_used: number;
   maternity_leave_total: number;
   maternity_leave_used: number;
-  nursing_leave_total: number;
-  nursing_leave_used: number;
+  family_visit_leave_total: number;
+  family_visit_leave_used: number;
   marriage_leave_total: number;
   marriage_leave_used: number;
   compensatory_leave_total: number;
@@ -52,8 +52,8 @@ const leaveTypes = [
   { value: "paternity", label: "陪产假", unit: "天", description: "手动发放" },
   { value: "annual", label: "年假", unit: "小时", description: "每年1月1日自动发放，按工龄配额" },
   { value: "bereavement", label: "丧假", unit: "天", description: "手动发放" },
-  { value: "maternity", label: "产假", unit: "天", description: "手动发放" },
-  { value: "nursing", label: "哺乳假", unit: "小时", description: "手动发放" },
+  { value: "maternity", label: "生育假", unit: "天", description: "手动发放" },
+  { value: "family_visit", label: "探亲假", unit: "天", description: "手动发放" },
   { value: "marriage", label: "婚假", unit: "天", description: "手动发放" },
   { value: "compensatory", label: "调休", unit: "小时", description: "加班时长自动计入调休余额" },
   { value: "personal", label: "事假", unit: "天", description: "个人事务" },
@@ -274,7 +274,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
       case "paternity": return leaveBalance.paternity_leave_used || 0;
       case "bereavement": return leaveBalance.bereavement_leave_used || 0;
       case "maternity": return leaveBalance.maternity_leave_used || 0;
-      case "nursing": return leaveBalance.nursing_leave_used || 0;
+      case "family_visit": return leaveBalance.family_visit_leave_used || 0;
       case "marriage": return leaveBalance.marriage_leave_used || 0;
       case "compensatory": return leaveBalance.compensatory_leave_used || 0;
       default: return null;
@@ -290,7 +290,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
       case "paternity": return (leaveBalance.paternity_leave_total || 0) - (leaveBalance.paternity_leave_used || 0);
       case "bereavement": return (leaveBalance.bereavement_leave_total || 0) - (leaveBalance.bereavement_leave_used || 0);
       case "maternity": return (leaveBalance.maternity_leave_total || 0) - (leaveBalance.maternity_leave_used || 0);
-      case "nursing": return (leaveBalance.nursing_leave_total || 0) - (leaveBalance.nursing_leave_used || 0);
+      case "family_visit": return (leaveBalance.family_visit_leave_total || 0) - (leaveBalance.family_visit_leave_used || 0);
       case "marriage": return (leaveBalance.marriage_leave_total || 0) - (leaveBalance.marriage_leave_used || 0);
       case "compensatory": return (leaveBalance.compensatory_leave_total || 0) - (leaveBalance.compensatory_leave_used || 0);
       default: return null;
