@@ -665,11 +665,13 @@ const LeaveBalanceTable = ({
   const pagination = usePagination(balances);
 
   const renderLeaveCell = (used: number, total: number, unit: string) => {
-    const remaining = total - used;
+    const remaining = parseFloat((total - used).toFixed(2));
+    const usedDisplay = parseFloat(Number(used).toFixed(2));
+    const totalDisplay = parseFloat(Number(total).toFixed(2));
     return (
       <div className="space-y-1 min-w-[120px]">
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">{used}/{total}{unit}</span>
+          <span className="text-muted-foreground">{usedDisplay}/{totalDisplay}{unit}</span>
           <Badge
             variant={remaining <= 0 ? "destructive" : "secondary"}
             className="text-xs"
