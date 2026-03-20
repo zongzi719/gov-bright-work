@@ -46,6 +46,7 @@ const businessTypeToTodoType: Record<string, TodoBusinessType> = {
   business_trip: "business_trip",
   leave: "absence",
   out: "absence",
+  absence: "absence",
   supply_requisition: "supply_requisition",
   purchase_request: "purchase_request",
   supply_purchase: "supply_purchase",
