@@ -237,7 +237,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  if (businessType === "supply_purchase") {
+  if (effectiveBusinessType === "supply_purchase") {
     const items = data.items || [];
 
     return (
