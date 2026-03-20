@@ -329,24 +329,11 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     try {
       let data = null;
       
-      // 对于 custom_approval，先从 form_data 推断实际业务类型
-      let effectiveType = businessType;
-      if (businessType === "custom_approval" && instance?.form_data) {
-        const fd = instance.form_data as Record<string, any>;
-        if (fd.leave_type || fd.type === "leave") {
-          effectiveType = "leave";
-        } else if (fd.type === "business_trip") {
-          effectiveType = "business_trip";
-        } else if (fd.type === "out") {
-          effectiveType = "out";
-        }
-      }
-
-      if (effectiveType === "business_trip" || effectiveType === "leave" || effectiveType === "out" || effectiveType === "absence") {
+      if (businessType === "business_trip" || businessType === "leave" || businessType === "out" || businessType === "absence") {
         const result = await dataAdapter.getAbsenceRecordById(businessId);
         data = result.data;
         // Resolve companion names for business trips
-        if (effectiveType === "business_trip" && data) {
+        if (businessType === "business_trip" && data) {
           const normalizedCompanions = Array.isArray(data.companions)
             ? data.companions
             : typeof data.companions === "string"
@@ -381,21 +368,33 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
             }
           }
         }
-      } else if (effectiveType === "supply_requisition") {
+      } else if (businessType === "supply_requisition") {
+        // 领用申请 - 获取主表和明细表数据
         const result = await dataAdapter.getSupplyRequisitionById(businessId);
+        
+        // 获取领用明细
         const { data: itemsData } = await dataAdapter.getSupplyRequisitionItems(businessId);
+        
         if (result.data) {
           data = { ...result.data, items: itemsData || [] };
         }
-      } else if (effectiveType === "purchase_request") {
+      } else if (businessType === "purchase_request") {
+        // 采购申请 - 获取主表和明细表数据
         const result = await dataAdapter.getPurchaseRequestById(businessId);
+        
+        // 获取采购明细
         const { data: itemsData } = await dataAdapter.getPurchaseRequestItems(businessId);
+        
         if (result.data) {
           data = { ...result.data, items: itemsData || [] };
         }
-      } else if (effectiveType === "supply_purchase") {
+      } else if (businessType === "supply_purchase") {
+        // 办公用品采购 - 获取主表和明细表数据
         const result = await dataAdapter.getSupplyPurchaseById(businessId);
+        
+        // 获取采购明细
         const { data: itemsData } = await dataAdapter.getSupplyPurchaseItems(businessId);
+        
         if (result.data) {
           data = { ...result.data, items: itemsData || [] };
         }
@@ -404,11 +403,6 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       // 对于自定义审批表单，使用 approval_instances.form_data 作为业务数据
       if (!data && instance?.form_data) {
         data = instance.form_data as Record<string, any>;
-      }
-
-      // 保存推断出的实际业务类型，供 BusinessDataRenderer 使用
-      if (data && businessType === "custom_approval" && effectiveType !== "custom_approval") {
-        data._effectiveBusinessType = effectiveType;
       }
 
       if (data) {
