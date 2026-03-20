@@ -1,10 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,27 +18,18 @@ import * as dataAdapter from "@/lib/dataAdapter";
 const formatLocalNow = (): string => {
   const d = new Date();
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hour = String(d.getHours()).padStart(2, '0');
-  const minute = String(d.getMinutes()).padStart(2, '0');
-  const second = String(d.getSeconds()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hour = String(d.getHours()).padStart(2, "0");
+  const minute = String(d.getMinutes()).padStart(2, "0");
+  const second = String(d.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
 };
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { parseTime } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  User,
-  UserCheck,
-  Send,
-  CheckCircle,
-  XCircle,
-  Clock,
-  RotateCcw,
-  ChevronDown,
-} from "lucide-react";
+import { User, UserCheck, Send, CheckCircle, XCircle, Clock, RotateCcw, ChevronDown } from "lucide-react";
 import { useApprovalProgression } from "@/hooks/useApprovalProgression";
 import BusinessDataRenderer from "@/components/todo/BusinessDataRenderer";
 import { logAudit, AUDIT_ACTIONS, AUDIT_MODULES } from "@/hooks/useAuditLog";
@@ -159,11 +145,11 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const [approverContacts, setApproverContacts] = useState<Map<string, ContactInfo>>(new Map());
   const [versionNumber, setVersionNumber] = useState<number>(1);
 
-  const { 
-    advanceToNextNode, 
-    getInitiatorInfo, 
-    returnToInitiatorCurrentNode, 
-    returnToInitiatorRestart, 
+  const {
+    advanceToNextNode,
+    getInitiatorInfo,
+    returnToInitiatorCurrentNode,
+    returnToInitiatorRestart,
     returnToPreviousNode,
     withdrawApplication,
     checkCanWithdraw,
@@ -200,16 +186,16 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   // 标记抄送为已阅
   const markCCAsRead = async () => {
     if (!todoItem || !currentUser?.id) return;
-    
+
     // 检查是否是抄送待办（通过标题前缀或process_result判断）
     const isCCItem = todoItem.title?.startsWith("[抄送]");
     if (!isCCItem) return;
-    
+
     // 检查待办状态是否为pending（未阅）
     if (todoItem.status !== "pending") return;
-    
+
     console.log("Marking CC item as read:", todoItem.id);
-    
+
     try {
       // 更新待办状态为已完成
       await dataAdapter.updateTodoItem(todoItem.id, {
@@ -217,11 +203,11 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         processed_at: formatLocalNow(),
         processed_by: currentUser.id,
       });
-      
+
       // 更新审批记录状态为已阅
       // 注意：这里的批量条件更新在离线模式下可能需要特殊处理
       // 暂时忽略审批记录更新，因为 dataAdapter 不支持条件更新
-      
+
       console.log("CC item marked as read successfully");
       // 通知父组件刷新列表
       onApprovalComplete?.();
@@ -246,7 +232,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const collectApproverIds = (nodes: ApprovalNode[]): string[] => {
     const ids: string[] = [];
     const traverse = (nodeList: ApprovalNode[]) => {
-      nodeList.forEach(node => {
+      nodeList.forEach((node) => {
         if (node.approver_ids) {
           ids.push(...node.approver_ids);
         }
@@ -262,9 +248,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   // 获取审批人信息
   const fetchApproverContacts = async (approverIds: string[]) => {
     if (approverIds.length === 0) return;
-    
+
     const { data } = await dataAdapter.getContactsByIds(approverIds);
-    
+
     if (data) {
       const contactMap = new Map<string, ContactInfo>();
       data.forEach((c: any) => contactMap.set(c.id, c));
@@ -274,12 +260,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   const fetchApprovalDetails = async () => {
     if (!todoItem?.approval_instance_id) return;
-    
+
     setLoading(true);
-    
+
     try {
       // 获取审批实例
-      const { data: instanceData, error: instanceError } = await dataAdapter.getApprovalInstanceById(todoItem.approval_instance_id);
+      const { data: instanceData, error: instanceError } = await dataAdapter.getApprovalInstanceById(
+        todoItem.approval_instance_id,
+      );
 
       if (instanceError) throw instanceError;
       setInstance(instanceData as unknown as ApprovalInstance);
@@ -289,11 +277,11 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       let nodes: ApprovalNode[] = [];
       if (instanceData?.version_id) {
         const { data: versionData } = await dataAdapter.getApprovalProcessVersionById(instanceData.version_id);
-        
+
         if (versionData?.nodes_snapshot) {
           nodes = versionData.nodes_snapshot as unknown as ApprovalNode[];
           setNodesSnapshot(nodes);
-          
+
           // 获取所有审批人信息
           const approverIds = collectApproverIds(nodes);
           await fetchApproverContacts(approverIds);
@@ -314,9 +302,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
       // 获取业务数据
       if (todoItem.business_id && todoItem.business_type) {
-        await fetchBusinessData(todoItem.business_type, todoItem.business_id, instanceData as unknown as ApprovalInstance);
+        await fetchBusinessData(todoItem.business_type, todoItem.business_id);
       }
-
     } catch (error) {
       console.error("Failed to fetch approval details:", error);
       toast.error("加载审批详情失败");
@@ -325,29 +312,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     }
   };
 
-  const fetchBusinessData = async (businessType: string, businessId: string, currentInstance?: ApprovalInstance | null) => {
+  const fetchBusinessData = async (businessType: string, businessId: string) => {
     try {
       let data = null;
-      const inst = currentInstance || instance;
-      
-      // 对于 custom_approval，先从 form_data 推断实际业务类型
-      let effectiveType = businessType;
-      if (businessType === "custom_approval" && inst?.form_data) {
-        const fd = inst.form_data as Record<string, any>;
-        if (fd.leave_type || fd.type === "leave") {
-          effectiveType = "leave";
-        } else if (fd.type === "business_trip") {
-          effectiveType = "business_trip";
-        } else if (fd.type === "out") {
-          effectiveType = "out";
-        }
-      }
 
-      if (effectiveType === "business_trip" || effectiveType === "leave" || effectiveType === "out" || effectiveType === "absence") {
+      if (
+        businessType === "business_trip" ||
+        businessType === "leave" ||
+        businessType === "out" ||
+        businessType === "absence"
+      ) {
         const result = await dataAdapter.getAbsenceRecordById(businessId);
         data = result.data;
         // Resolve companion names for business trips
-        if (effectiveType === "business_trip" && data) {
+        if (businessType === "business_trip" && data) {
           const normalizedCompanions = Array.isArray(data.companions)
             ? data.companions
             : typeof data.companions === "string"
@@ -367,14 +345,16 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
             const unresolvedIds = normalizedCompanions.filter(
               (value: unknown): value is string =>
                 typeof value === "string" &&
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
             );
 
             if (unresolvedIds.length > 0) {
               const { data: contactsData } = await dataAdapter.getContactsByIds(unresolvedIds);
               if (contactsData) {
                 const nameMap: Record<string, string> = {};
-                contactsData.forEach((c: any) => { nameMap[c.id] = c.name; });
+                contactsData.forEach((c: any) => {
+                  nameMap[c.id] = c.name;
+                });
                 data.companion_names = normalizedCompanions.map((value: string) => nameMap[value] || value).join("、");
               }
             } else {
@@ -382,34 +362,41 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
             }
           }
         }
-      } else if (effectiveType === "supply_requisition") {
+      } else if (businessType === "supply_requisition") {
+        // 领用申请 - 获取主表和明细表数据
         const result = await dataAdapter.getSupplyRequisitionById(businessId);
+
+        // 获取领用明细
         const { data: itemsData } = await dataAdapter.getSupplyRequisitionItems(businessId);
+
         if (result.data) {
           data = { ...result.data, items: itemsData || [] };
         }
-      } else if (effectiveType === "purchase_request") {
+      } else if (businessType === "purchase_request") {
+        // 采购申请 - 获取主表和明细表数据
         const result = await dataAdapter.getPurchaseRequestById(businessId);
+
+        // 获取采购明细
         const { data: itemsData } = await dataAdapter.getPurchaseRequestItems(businessId);
+
         if (result.data) {
           data = { ...result.data, items: itemsData || [] };
         }
-      } else if (effectiveType === "supply_purchase") {
+      } else if (businessType === "supply_purchase") {
+        // 办公用品采购 - 获取主表和明细表数据
         const result = await dataAdapter.getSupplyPurchaseById(businessId);
+
+        // 获取采购明细
         const { data: itemsData } = await dataAdapter.getSupplyPurchaseItems(businessId);
+
         if (result.data) {
           data = { ...result.data, items: itemsData || [] };
         }
       }
 
       // 对于自定义审批表单，使用 approval_instances.form_data 作为业务数据
-      if (!data && inst?.form_data) {
-        data = inst.form_data as Record<string, any>;
-      }
-
-      // 保存推断出的实际业务类型，供 BusinessDataRenderer 使用
-      if (data && businessType === "custom_approval" && effectiveType !== "custom_approval") {
-        data._effectiveBusinessType = effectiveType;
+      if (!data && instance?.form_data) {
+        data = instance.form_data as Record<string, any>;
       }
 
       if (data) {
@@ -423,7 +410,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   // 获取当前节点的字段权限
   const getCurrentNodePermissions = (): Record<string, string> => {
     if (!instance || nodesSnapshot.length === 0) return {};
-    
+
     const currentNode = nodesSnapshot[instance.current_node_index];
     return currentNode?.field_permissions || {};
   };
@@ -446,23 +433,27 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const renderFormField = (field: FormField) => {
     // 如果是被退回需要修改的状态，发起人可以编辑表单
     const canEditForm = isReturnedForModification;
-    
+
     const permissions = getCurrentNodePermissions();
     let permission = permissions[field.field_name] || "readonly";
-    
+
     // 如果是被退回状态且是发起人，允许编辑（除了申请人字段）
     if (canEditForm && field.field_name !== "contact_id" && field.field_label !== "申请人") {
       permission = "editable";
     }
-    
+
     if (permission === "hidden") return null;
 
-    let value = editableFormData[field.field_name] ?? businessData[field.field_name] ?? instance?.form_data?.[field.field_name] ?? "";
+    let value =
+      editableFormData[field.field_name] ??
+      businessData[field.field_name] ??
+      instance?.form_data?.[field.field_name] ??
+      "";
     const isEditable = permission === "editable" && canEditForm;
 
     // 格式化值
     let displayValue = value;
-    
+
     // 处理申请人字段 - 显示名称而不是UUID
     if (field.field_name === "contact_id" || field.field_label === "申请人") {
       displayValue = getApplicantName(field.field_name, value);
@@ -476,9 +467,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
     // 处理可编辑字段的值变更
     const handleFieldChange = (newValue: string) => {
-      setEditableFormData(prev => ({
+      setEditableFormData((prev) => ({
         ...prev,
-        [field.field_name]: newValue
+        [field.field_name]: newValue,
       }));
     };
 
@@ -516,29 +507,31 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const evaluateCondition = (condition: any, formData: Record<string, any>): boolean => {
     // 如果没有条件表达式，或者没有groups，或者groups为空，则默认匹配
     if (!condition) return true;
-    
+
     const groups = condition.groups || condition.condition_groups;
     if (!groups || groups.length === 0) return true;
-    
+
     try {
       // 组之间是 OR 关系
       return groups.some((group: any) => {
         const conditions = group.conditions || [];
         if (conditions.length === 0) return true;
-        
+
         // 条件之间是 AND 关系
         return conditions.every((cond: any) => {
           const field = cond.field;
           let value = formData[field];
           const targetValue = cond.value;
-          
+
           // 特殊处理申请人字段 - 可能存储为 contact_id
           if (field === "contact_id" || field === "申请人" || field === "applicant") {
             value = formData["contact_id"] || formData["申请人"] || formData["applicant"] || value;
           }
-          
-          console.log(`[TodoDetailDialog] Evaluating condition: field=${field}, operator=${cond.operator}, value=${value}, target=${targetValue}`);
-          
+
+          console.log(
+            `[TodoDetailDialog] Evaluating condition: field=${field}, operator=${cond.operator}, value=${value}, target=${targetValue}`,
+          );
+
           switch (cond.operator) {
             case "equals":
             case "等于":
@@ -573,78 +566,85 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   };
 
   // 扁平化节点列表，处理条件分支 - 使用与管理后台一致的逻辑
-  const flattenNodesForDisplay = (nodes: ApprovalNode[], formData: Record<string, any>, initiatorId?: string): ApprovalNode[] => {
+  const flattenNodesForDisplay = (
+    nodes: ApprovalNode[],
+    formData: Record<string, any>,
+    initiatorId?: string,
+  ): ApprovalNode[] => {
     const result: ApprovalNode[] = [];
-    
+
     // 将 initiator_id 注入到 formData 中用于条件评估
     const enrichedFormData = {
       ...formData,
       contact_id: initiatorId || formData.contact_id,
     };
-    
+
     console.log("[TodoDetailDialog] Flattening nodes with enrichedFormData:", enrichedFormData);
-    
+
     // 构建节点ID到节点的映射
     const nodeMap = new Map<string, ApprovalNode>();
-    nodes.forEach(node => nodeMap.set(node.id, node));
-    
+    nodes.forEach((node) => nodeMap.set(node.id, node));
+
     // 找出所有属于某个分支的子节点ID
     const branchChildIds = new Set<string>();
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (node.node_type === "condition_branch" && node.condition_expression?.child_nodes) {
         node.condition_expression.child_nodes.forEach((id: string) => branchChildIds.add(id));
       }
     });
-    
+
     // 找出所有分支节点的ID（属于条件节点的分支）
     const branchNodeIds = new Set<string>();
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (node.node_type === "condition" && node.condition_expression?.branches) {
         node.condition_expression.branches.forEach((id: string) => branchNodeIds.add(id));
       }
     });
-    
+
     // 按 sort_order 排序主流程节点（不属于任何分支内部的节点）
     const mainNodes = nodes
-      .filter(n => !branchChildIds.has(n.id) && !branchNodeIds.has(n.id))
+      .filter((n) => !branchChildIds.has(n.id) && !branchNodeIds.has(n.id))
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-    
+
     const processNode = (node: ApprovalNode) => {
       console.log(`[TodoDetailDialog] Processing node: ${node.node_name}, type: ${node.node_type}`);
-      
+
       if (node.node_type === "condition") {
         // 条件节点 - 获取其分支并评估
         const branchIds = node.condition_expression?.branches || [];
         const branches = branchIds.map((id: string) => nodeMap.get(id)).filter(Boolean) as ApprovalNode[];
-        
+
         console.log(`[TodoDetailDialog] Condition node has ${branches.length} branches`);
-        
+
         // 按 sort_order 排序分支
         branches.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-        
+
         let matchedBranch: ApprovalNode | null = null;
         for (const branch of branches) {
           // 分支的 condition_expression.condition_groups 包含该分支的条件
           const branchCondition = branch.condition_expression;
           const matches = evaluateCondition(branchCondition, enrichedFormData);
-          console.log(`[TodoDetailDialog] Branch ${branch.node_name} conditions:`, branch.condition_expression?.condition_groups);
+          console.log(
+            `[TodoDetailDialog] Branch ${branch.node_name} conditions:`,
+            branch.condition_expression?.condition_groups,
+          );
           console.log(`[TodoDetailDialog] Branch ${branch.node_name} matches: ${matches}`);
-          
+
           if (matches) {
             matchedBranch = branch;
             break; // 只走第一个匹配的分支
           }
         }
-        
+
         // 如果找到匹配的分支，处理其子节点
         if (matchedBranch) {
           console.log(`[TodoDetailDialog] Using matched branch: ${matchedBranch.node_name}`);
           const childIds = matchedBranch.condition_expression?.child_nodes || [];
           const childNodes = childIds.map((id: string) => nodeMap.get(id)).filter(Boolean) as ApprovalNode[];
           childNodes.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-          
+
           // 递归处理子节点
-          childNodes.forEach(child => processNode(child));
+          childNodes.forEach((child) => processNode(child));
         }
       } else if (node.node_type === "condition_branch") {
         // 分支节点本身不加入结果（不应该在主流程中单独出现）
@@ -653,11 +653,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         result.push(node);
       }
     };
-    
+
     // 处理主流程节点
-    mainNodes.forEach(node => processNode(node));
-    
-    console.log(`[TodoDetailDialog] Final execution path has ${result.length} nodes:`, result.map(n => n.node_name));
+    mainNodes.forEach((node) => processNode(node));
+
+    console.log(
+      `[TodoDetailDialog] Final execution path has ${result.length} nodes:`,
+      result.map((n) => n.node_name),
+    );
     return result;
   };
 
@@ -665,7 +668,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const getApproverNames = (approverIds: string[] | null): string => {
     if (!approverIds || approverIds.length === 0) return "";
     return approverIds
-      .map(id => approverContacts.get(id)?.name || "")
+      .map((id) => approverContacts.get(id)?.name || "")
       .filter(Boolean)
       .join("、");
   };
@@ -698,11 +701,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       // 重要：同时更新审批记录状态为已通过
       // 找到当前用户在当前节点的待处理审批记录并更新
       const currentApprovalRecord = records.find(
-        r => r.node_name === currentNodeName && 
-             r.approver_id === currentUser.id && 
-             r.status === "pending"
+        (r) => r.node_name === currentNodeName && r.approver_id === currentUser.id && r.status === "pending",
       );
-      
+
       if (currentApprovalRecord) {
         await dataAdapter.updateApprovalRecord(currentApprovalRecord.id, {
           status: "approved",
@@ -726,7 +727,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         nodesSnapshot,
         formData,
         versionNumber,
-        currentNodeName
+        currentNodeName,
       );
 
       if (!progressResult.success) {
@@ -736,10 +737,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       await logAudit({
         action: AUDIT_ACTIONS.APPROVE,
         module: AUDIT_MODULES.TODO,
-        target_type: '待办审批',
+        target_type: "待办审批",
         target_id: todoItem.id,
         target_name: todoItem.title,
-        detail: { instance_id: todoItem.approval_instance_id, comment: comment.trim() || null, completed: progressResult.completed },
+        detail: {
+          instance_id: todoItem.approval_instance_id,
+          comment: comment.trim() || null,
+          completed: progressResult.completed,
+        },
       });
 
       if (progressResult.completed) {
@@ -747,11 +752,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       } else {
         toast.success("审批已通过");
       }
-      
+
       onOpenChange(false);
       onApprovalComplete?.();
       window.dispatchEvent(new Event("todo-count-refresh"));
-
     } catch (error) {
       console.error("Failed to submit approval:", error);
       toast.error("提交审批失败");
@@ -781,7 +785,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
             todoItem.title,
             versionNumber,
             instance.current_node_index,
-            comment.trim()
+            comment.trim(),
           );
           toastMessage = "已退回发起人，发起人修改后由当前节点继续审批";
           break;
@@ -793,7 +797,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
             instance.initiator_id || "",
             todoItem.title,
             versionNumber,
-            comment.trim()
+            comment.trim(),
           );
           toastMessage = "已退回发起人，发起人修改后需重新走完整审批流程";
           break;
@@ -810,7 +814,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
             formData,
             versionNumber,
             instance.current_node_index,
-            comment.trim()
+            comment.trim(),
           );
           toastMessage = "已退回至上一节点";
           break;
@@ -833,17 +837,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       await logAudit({
         action: AUDIT_ACTIONS.REJECT,
         module: AUDIT_MODULES.TODO,
-        target_type: '待办退回',
+        target_type: "待办退回",
         target_id: todoItem.id,
         target_name: todoItem.title,
-        detail: { instance_id: todoItem.approval_instance_id, return_type: returnType, comment: comment.trim() || null },
+        detail: {
+          instance_id: todoItem.approval_instance_id,
+          return_type: returnType,
+          comment: comment.trim() || null,
+        },
       });
 
       toast.success(toastMessage);
       onOpenChange(false);
       onApprovalComplete?.();
       window.dispatchEvent(new Event("todo-count-refresh"));
-
     } catch (error) {
       console.error("Failed to return approval:", error);
       toast.error(error instanceof Error ? error.message : "退回失败");
@@ -862,7 +869,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       const result = await withdrawApplication(
         todoItem.approval_instance_id,
         instance?.initiator_id || "",
-        currentUser.id
+        currentUser.id,
       );
 
       if (!result.success) {
@@ -873,7 +880,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       await logAudit({
         action: AUDIT_ACTIONS.UPDATE,
         module: AUDIT_MODULES.TODO,
-        target_type: '撤回申请',
+        target_type: "撤回申请",
         target_id: todoItem.id,
         target_name: todoItem.title,
         detail: { instance_id: todoItem.approval_instance_id },
@@ -883,7 +890,6 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       onOpenChange(false);
       onApprovalComplete?.();
       window.dispatchEvent(new Event("todo-count-refresh"));
-
     } catch (error) {
       console.error("Failed to withdraw application:", error);
       toast.error("撤回失败");
@@ -916,7 +922,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         nodesSnapshot,
         formData,
         versionNumber,
-        todoItem.id
+        todoItem.id,
       );
 
       if (!result.success) {
@@ -927,7 +933,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       await logAudit({
         action: AUDIT_ACTIONS.FORM_SUBMIT,
         module: AUDIT_MODULES.TODO,
-        target_type: '重新提交',
+        target_type: "重新提交",
         target_id: todoItem.id,
         target_name: todoItem.title,
         detail: { instance_id: todoItem.approval_instance_id },
@@ -937,7 +943,6 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       onOpenChange(false);
       onApprovalComplete?.();
       window.dispatchEvent(new Event("todo-count-refresh"));
-
     } catch (error) {
       console.error("Failed to resubmit application:", error);
       toast.error("重新提交失败");
@@ -950,10 +955,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
   const renderTimeline = () => {
     // 获取表单数据用于条件判断，注入 initiator_id 作为 contact_id
     const formData = { ...businessData, ...instance?.form_data };
-    
+
     // 扁平化节点（跳过条件分支节点，只保留审批人和抄送人）- 使用与管理后台一致的逻辑
     const displayNodes = flattenNodesForDisplay(nodesSnapshot, formData, instance?.initiator_id);
-    
+
     // 定义时间线项类型
     type TimelineItem = {
       type: "initiator" | "record" | "node" | "resubmit" | "end";
@@ -967,9 +972,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       resubmitTime?: string;
       timestamp: number;
     };
-    
+
     const timelineItems: TimelineItem[] = [];
-    
+
     // 发起人节点
     timelineItems.push({
       type: "initiator",
@@ -979,22 +984,23 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       initiator: instance?.initiator,
       timestamp: new Date(instance?.created_at || 0).getTime(),
     });
-    
+
     // 创建节点名称到节点信息的映射
     const nodeMap = new Map<string, { node: ApprovalNode; index: number; approverNames: string }>();
     displayNodes.forEach((node, index) => {
       let approverNames = "";
-      
+
       // 处理不同的审批人类型
       if (node.approver_type === "initiator") {
         // 发起人自己 - 显示发起人名称
         approverNames = instance?.initiator?.name || "发起人";
       } else if (node.approver_type === "specific" && node.approver_ids && node.approver_ids.length > 0) {
         // 指定成员 - 显示指定人员名称
-        approverNames = node.approver_ids
-          .map(id => approverContacts.get(id)?.name || "")
-          .filter(Boolean)
-          .join("、") || "未指定";
+        approverNames =
+          node.approver_ids
+            .map((id) => approverContacts.get(id)?.name || "")
+            .filter(Boolean)
+            .join("、") || "未指定";
       } else if (node.approver_type === "self") {
         approverNames = "发起人自选";
       } else if (node.approver_type === "supervisor") {
@@ -1004,56 +1010,67 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       } else {
         approverNames = "未指定";
       }
-      
+
       nodeMap.set(node.node_name, { node, index, approverNames });
     });
-    
+
     // 获取每个节点的所有记录
     const nodeRecordsMap = new Map<string, ApprovalRecord[]>();
-    displayNodes.forEach(node => {
+    displayNodes.forEach((node) => {
       const nodeRecords = records
-        .filter(r => r.node_name === node.node_name)
-        .sort((a, b) => new Date(a.processed_at || a.created_at || 0).getTime() - 
-                        new Date(b.processed_at || b.created_at || 0).getTime());
+        .filter((r) => r.node_name === node.node_name)
+        .sort(
+          (a, b) =>
+            new Date(a.processed_at || a.created_at || 0).getTime() -
+            new Date(b.processed_at || b.created_at || 0).getTime(),
+        );
       nodeRecordsMap.set(node.node_name, nodeRecords);
     });
-    
+
     // 检查是否是"退回发起人-重审"场景且发起人尚未重新提交
     const returnInfo = (instance?.form_data as any)?._return_info;
-    const isAwaitingResubmit = returnInfo && (returnInfo.type === "return_restart" || returnInfo.type === "return_current_node");
-    
+    const isAwaitingResubmit =
+      returnInfo && (returnInfo.type === "return_restart" || returnInfo.type === "return_current_node");
+
     // 检测重新提交事件（只有"退回发起人"才需要发起人重新提交，"退回至上一节点"不需要）
     // 场景1：退回发起人当前节点继续审批（return_current_node）- 发起人修改后同节点继续审批
     // 场景2：退回发起人重新审批（return_restart）- 发起人修改后从头开始审批
     // 注意："退回至上一节点"（return_to_previous）不需要发起人重新提交！
-    const resubmitEvents: { afterRecord: ApprovalRecord; beforeRecord?: ApprovalRecord; time: string; isRestartType?: boolean }[] = [];
-    
-    records.forEach(rejectedRecord => {
+    const resubmitEvents: {
+      afterRecord: ApprovalRecord;
+      beforeRecord?: ApprovalRecord;
+      time: string;
+      isRestartType?: boolean;
+    }[] = [];
+
+    records.forEach((rejectedRecord) => {
       if (rejectedRecord.status !== "rejected" && rejectedRecord.status !== "returned_to_initiator") return;
-      
+
       // 检查是否是"退回至上一节点" - 这种情况不需要发起人重新提交
-      const isReturnToPrevious = rejectedRecord.comment?.includes("退回至上一节点") || 
-                                  rejectedRecord.comment?.includes("return_to_previous");
+      const isReturnToPrevious =
+        rejectedRecord.comment?.includes("退回至上一节点") || rejectedRecord.comment?.includes("return_to_previous");
       if (isReturnToPrevious) {
         return; // 跳过，不生成重新提交事件
       }
-      
+
       // 检查是否是"退回发起人当前节点继续"
-      const isReturnCurrentNode = rejectedRecord.comment?.includes("当前节点继续") || 
-                                   rejectedRecord.comment?.includes("return_current_node");
-      
+      const isReturnCurrentNode =
+        rejectedRecord.comment?.includes("当前节点继续") || rejectedRecord.comment?.includes("return_current_node");
+
       // 检查是否是"退回发起人重新审批"
-      const isReturnRestart = rejectedRecord.comment?.includes("重新走完整") || 
-                              rejectedRecord.comment?.includes("重审") ||
-                              rejectedRecord.comment?.includes("return_restart");
-      
+      const isReturnRestart =
+        rejectedRecord.comment?.includes("重新走完整") ||
+        rejectedRecord.comment?.includes("重审") ||
+        rejectedRecord.comment?.includes("return_restart");
+
       if (isReturnCurrentNode) {
         // 场景1：同节点同审批人有后续的已处理记录
-        const laterRecord = records.find(r => 
-          r.node_name === rejectedRecord.node_name &&
-          r.approver_id === rejectedRecord.approver_id &&
-          r.status !== "pending" && // 必须是已处理的记录
-          new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.created_at || 0).getTime()
+        const laterRecord = records.find(
+          (r) =>
+            r.node_name === rejectedRecord.node_name &&
+            r.approver_id === rejectedRecord.approver_id &&
+            r.status !== "pending" && // 必须是已处理的记录
+            new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.created_at || 0).getTime(),
         );
         if (laterRecord) {
           resubmitEvents.push({
@@ -1065,18 +1082,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       } else if (isReturnRestart) {
         // 场景2：退回发起人重新审批，检查第一个节点是否有后续记录（pending 或 已处理都算）
         // 关键：即使是 pending 状态也说明发起人已经重新提交了
-        const firstNodeRecords = records.filter(r => 
-          r.node_index === 0 &&
-          new Date(r.created_at || 0).getTime() > new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime()
+        const firstNodeRecords = records.filter(
+          (r) =>
+            r.node_index === 0 &&
+            new Date(r.created_at || 0).getTime() >
+              new Date(rejectedRecord.processed_at || rejectedRecord.created_at || 0).getTime(),
         );
-        
+
         // 只要有记录（不管是pending还是已处理），就说明发起人重新提交了
         if (firstNodeRecords.length > 0) {
           // 取最早的那条记录作为"发起人重新提交"的时间点
           const firstNodeRecord = firstNodeRecords.sort(
-            (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+            (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime(),
           )[0];
-          
+
           resubmitEvents.push({
             afterRecord: rejectedRecord,
             beforeRecord: firstNodeRecord,
@@ -1086,18 +1105,18 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         }
       }
     });
-    
+
     // 跟踪哪些节点已经有了已处理的记录
     const processedNodeNames = new Set<string>();
     const addedResubmitEvents = new Set<string>();
-    
+
     // 按时间顺序处理所有已处理的记录
     const processedRecords = records
-      .filter(r => r.status !== "pending" && r.processed_at)
+      .filter((r) => r.status !== "pending" && r.processed_at)
       .sort((a, b) => new Date(a.processed_at || 0).getTime() - new Date(b.processed_at || 0).getTime());
-    
+
     // 先处理那些 beforeRecord 是 pending 状态的重新提交事件（这些事件不会被 processedRecords 循环捕获）
-    resubmitEvents.forEach(resubmitEvent => {
+    resubmitEvents.forEach((resubmitEvent) => {
       if (resubmitEvent.beforeRecord?.status === "pending" && !addedResubmitEvents.has(resubmitEvent.afterRecord.id)) {
         addedResubmitEvents.add(resubmitEvent.afterRecord.id);
         timelineItems.push({
@@ -1111,14 +1130,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         });
       }
     });
-    
-    processedRecords.forEach(record => {
+
+    processedRecords.forEach((record) => {
       const nodeInfo = nodeMap.get(record.node_name);
       if (!nodeInfo) return;
-      
+
       // 检查是否需要在此记录前插入重新提交事件
-      const resubmitEvent = resubmitEvents.find(e => 
-        e.beforeRecord?.id === record.id && !addedResubmitEvents.has(e.afterRecord.id)
+      const resubmitEvent = resubmitEvents.find(
+        (e) => e.beforeRecord?.id === record.id && !addedResubmitEvents.has(e.afterRecord.id),
       );
       if (resubmitEvent) {
         addedResubmitEvents.add(resubmitEvent.afterRecord.id);
@@ -1132,16 +1151,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           timestamp: new Date(resubmitEvent.time).getTime() - 1,
         });
       }
-      
+
       processedNodeNames.add(record.node_name);
-      
+
       // 判断该记录的状态
       let recordStatus: "completed" | "rejected" = "completed";
-      if (record.status === "rejected" || record.status === "returned_to_initiator" || 
-          record.status === "returned_restart" || record.status === "returned_to_previous") {
+      if (
+        record.status === "rejected" ||
+        record.status === "returned_to_initiator" ||
+        record.status === "returned_restart" ||
+        record.status === "returned_to_previous"
+      ) {
         recordStatus = "rejected";
       }
-      
+
       timelineItems.push({
         type: "record",
         node: nodeInfo.node,
@@ -1153,15 +1176,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         timestamp: new Date(record.processed_at || 0).getTime(),
       });
     });
-    
+
     // 添加未处理的节点（当前节点和等待中的节点）
     const currentNodeIndex = instance?.current_node_index || 0;
-    
+
     displayNodes.forEach((node, index) => {
       const nodeRecords = nodeRecordsMap.get(node.node_name) || [];
       const nodeInfo = nodeMap.get(node.node_name);
       if (!nodeInfo) return;
-      
+
       // 获取每个审批人的最新记录
       const latestRecordsByApprover = new Map<string, ApprovalRecord>();
       for (const record of nodeRecords) {
@@ -1170,10 +1193,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           latestRecordsByApprover.set(record.approver_id, record);
         }
       }
-      
+
       const latestRecords = Array.from(latestRecordsByApprover.values());
-      const pendingRecords = latestRecords.filter(r => r.status === "pending");
-      
+      const pendingRecords = latestRecords.filter((r) => r.status === "pending");
+
       // 如果该节点有待处理的记录，添加到时间线
       if (pendingRecords.length > 0) {
         timelineItems.push({
@@ -1186,18 +1209,18 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           status: isAwaitingResubmit ? "pending" : "current",
           timestamp: Date.now() + index,
         });
-        
+
         // 如果用户已重新提交（有 pending 记录），需要显示后续所有节点
         if (!isAwaitingResubmit) {
           // 添加当前节点后面的所有等待节点
           displayNodes.slice(index + 1).forEach((futureNode, futureIdx) => {
             const futureNodeInfo = nodeMap.get(futureNode.node_name);
             if (!futureNodeInfo) return;
-            
+
             // 关键修复：检查是否已作为"等待中"节点添加（不要被历史 record 记录阻止）
             // 因为历史记录是作为 type: "record" 添加的，而等待节点是 type: "node"
             const alreadyAddedAsNode = timelineItems.some(
-              item => item.node?.node_name === futureNode.node_name && item.type === "node"
+              (item) => item.node?.node_name === futureNode.node_name && item.type === "node",
             );
             if (!alreadyAddedAsNode) {
               timelineItems.push({
@@ -1216,7 +1239,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         // 如果节点索引 >= 当前节点索引，说明是后续待处理节点
         // 关键修复：检查是否已被添加为等待节点（避免重复）
         const alreadyAddedAsNode = timelineItems.some(
-          item => item.node?.node_name === node.node_name && item.type === "node"
+          (item) => item.node?.node_name === node.node_name && item.type === "node",
         );
         if (!alreadyAddedAsNode) {
           timelineItems.push({
@@ -1232,13 +1255,13 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       } else if (isAwaitingResubmit && index < displayNodes.length) {
         // 退回重审场景且发起人尚未重新提交：显示所有后续节点为等待状态
         const alreadyInTimeline = timelineItems.some(
-          item => item.node?.node_name === node.node_name && item.type === "record"
+          (item) => item.node?.node_name === node.node_name && item.type === "record",
         );
         // 如果该节点索引 >= 当前退回的节点（退回后需要重新审批的节点）
         if (!alreadyInTimeline || (index > 0 && index >= currentNodeIndex)) {
           // 避免重复添加
           const alreadyAdded = timelineItems.some(
-            item => item.node?.node_name === node.node_name && item.type === "node"
+            (item) => item.node?.node_name === node.node_name && item.type === "node",
           );
           if (!alreadyAdded && !pendingRecords.length) {
             timelineItems.push({
@@ -1254,19 +1277,20 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         }
       }
     });
-    
+
     // 按时间戳排序
     timelineItems.sort((a, b) => a.timestamp - b.timestamp);
-    
+
     // 计算结束节点状态 - 优先使用审批实例的最终状态
     const instanceApproved = instance?.status === "approved";
     const instanceRejected = instance?.status === "rejected";
-    
-    const endStatus: "completed" | "rejected" | "pending" = 
-      instanceApproved ? "completed" : 
-      instanceRejected ? "rejected" : 
-      "pending";
-    
+
+    const endStatus: "completed" | "rejected" | "pending" = instanceApproved
+      ? "completed"
+      : instanceRejected
+        ? "rejected"
+        : "pending";
+
     // 添加结束节点
     timelineItems.push({
       type: "end",
@@ -1281,7 +1305,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         {timelineItems.map((item, index) => {
           const Icon = nodeTypeIcons[item.type] || (item.node ? nodeTypeIcons[item.node.node_type] : CheckCircle);
           const isLast = index === timelineItems.length - 1;
-          
+
           // 确定图标背景色
           let iconBgClass = "bg-muted text-muted-foreground";
           if (item.status === "completed") {
@@ -1291,7 +1315,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
           } else if (item.status === "current") {
             iconBgClass = "bg-primary/10 text-primary";
           }
-          
+
           return (
             <div key={index} className="flex gap-4">
               {/* 时间线 */}
@@ -1300,18 +1324,18 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   <Icon className="w-4 h-4" />
                 </div>
                 {!isLast && (
-                  <div className={`w-0.5 flex-1 min-h-8 ${
-                    item.status === "completed" ? "bg-green-300 dark:bg-green-700" : "bg-muted"
-                  }`} />
+                  <div
+                    className={`w-0.5 flex-1 min-h-8 ${
+                      item.status === "completed" ? "bg-green-300 dark:bg-green-700" : "bg-muted"
+                    }`}
+                  />
                 )}
               </div>
 
               {/* 内容 */}
               <div className="flex-1 pb-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">
-                    {item.name}
-                  </span>
+                  <span className="font-medium">{item.name}</span>
                   {item.status === "current" && (
                     <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
                       当前节点
@@ -1357,38 +1381,38 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                         </span>
                       )}
                     </div>
-                    {item.record.comment && (
-                      <div className="mt-1 text-muted-foreground">
-                        {item.record.comment}
-                      </div>
-                    )}
+                    {item.record.comment && <div className="mt-1 text-muted-foreground">{item.record.comment}</div>}
                   </div>
                 )}
 
                 {/* 等待中或当前节点 - 显示审批人名称 */}
                 {item.type === "node" && item.node && (
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {item.node.node_type === "cc" ? (
-                      // 抄送节点：显示每个抄送人的已阅/未阅状态
-                      item.node.approver_ids?.map((approverId, i) => {
-                        const approverContact = approverContacts.get(approverId);
-                        const record = records.find(r => 
-                          r.node_name === item.node!.node_name && r.approver_id === approverId
-                        );
-                        const hasRead = record?.status === "approved";
-                        return (
-                          <span key={approverId}>
-                            {i > 0 && "、"}
-                            {approverContact?.name || record?.approver?.name || "未知"}
-                            <span className={hasRead ? "text-green-600 dark:text-green-400" : "text-orange-500 dark:text-orange-400"}>
-                              （{hasRead ? "已阅" : "未阅"}）
+                    {item.node.node_type === "cc"
+                      ? // 抄送节点：显示每个抄送人的已阅/未阅状态
+                        item.node.approver_ids?.map((approverId, i) => {
+                          const approverContact = approverContacts.get(approverId);
+                          const record = records.find(
+                            (r) => r.node_name === item.node!.node_name && r.approver_id === approverId,
+                          );
+                          const hasRead = record?.status === "approved";
+                          return (
+                            <span key={approverId}>
+                              {i > 0 && "、"}
+                              {approverContact?.name || record?.approver?.name || "未知"}
+                              <span
+                                className={
+                                  hasRead
+                                    ? "text-green-600 dark:text-green-400"
+                                    : "text-orange-500 dark:text-orange-400"
+                                }
+                              >
+                                （{hasRead ? "已阅" : "未阅"}）
+                              </span>
                             </span>
-                          </span>
-                        );
-                      })
-                    ) : (
-                      item.approverNames || "未指定"
-                    )}
+                          );
+                        })
+                      : item.approverNames || "未指定"}
                   </div>
                 )}
               </div>
@@ -1401,14 +1425,14 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
   // 判断当前用户是否是发起人
   const isInitiator = currentUser?.id === instance?.initiator_id;
-  
+
   // 判断是否是抄送待办（只读，不需要审批）
   const isCCNotification = todoItem?.title?.startsWith("[抄送]") || todoItem?.status === "completed";
-  
+
   // 判断是否是被退回需要修改的待办
   const isReturnedForModification = useMemo(() => {
     if (!todoItem || !instance) return false;
-    
+
     // 通过标题前缀判断
     const hasReturnedPrefix = todoItem.title?.startsWith("[需修改]") || todoItem.title?.startsWith("[需修改-重审]");
     // 实例状态是 cancelled（表示被退回）
@@ -1417,10 +1441,10 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     const todoPending = todoItem.status === "pending";
     // 当前用户是发起人
     const isCurrentUserInitiator = currentUser?.id === instance.initiator_id;
-    
+
     // 检查是否有 _return_info 标记（更可靠的判断）
     const hasReturnInfo = !!(instance.form_data as any)?._return_info;
-    
+
     console.log("[isReturnedForModification] check:", {
       hasReturnedPrefix,
       instanceCancelled,
@@ -1431,36 +1455,36 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       instanceStatus: instance.status,
       todoStatus: todoItem.status,
     });
-    
+
     // 有退回信息且当前用户是发起人且待办待处理 OR 标题前缀匹配
-    return ((hasReturnInfo || hasReturnedPrefix) && instanceCancelled && todoPending && isCurrentUserInitiator);
+    return (hasReturnInfo || hasReturnedPrefix) && instanceCancelled && todoPending && isCurrentUserInitiator;
   }, [todoItem, instance, currentUser]);
 
   // 获取退回信息
   const returnInfo = useMemo(() => {
     return (instance?.form_data as any)?._return_info || null;
   }, [instance]);
-  
+
   // 判断当前用户是否可以审批
   // 待办事项列表已经按 assignee_id 过滤，只显示当前用户的待办
   // 条件: 1. 待办状态是 pending 2. 审批实例状态是 pending（流程未结束）3. 不是抄送待办 4. 不是被退回需修改的待办
   const canApprove = useMemo(() => {
     if (!currentUser || !todoItem || !instance) return false;
-    
+
     // 抄送待办不需要审批
     if (isCCNotification) return false;
-    
+
     // 被退回的待办需要走重新提交流程
     if (isReturnedForModification) return false;
-    
+
     // 待办状态必须是 pending
     const isPending = todoItem.status === "pending";
     // 审批实例状态必须是 pending（流程未结束）
     const instancePending = instance.status === "pending";
-    
+
     return isPending && instancePending;
   }, [currentUser, todoItem, instance, isCCNotification, isReturnedForModification]);
-  
+
   // 判断当前用户是否既是发起人又是审批人（需要显示所有按钮）
   const isInitiatorAndApprover = isInitiator && canApprove;
 
@@ -1479,9 +1503,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
         </DialogHeader>
 
         {loading ? (
-          <div className="py-12 text-center text-muted-foreground px-6">
-            加载中...
-          </div>
+          <div className="py-12 text-center text-muted-foreground px-6">加载中...</div>
         ) : (
           <div className="overflow-y-auto px-6 py-4 space-y-6">
             {/* 表单区域 - 使用专用业务数据渲染组件 */}
@@ -1489,7 +1511,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
               <h3 className="text-sm font-medium mb-4">申请信息</h3>
               {/* 优先使用 BusinessDataRenderer 渲染业务数据 */}
               {todoItem.business_type && (
-                <BusinessDataRenderer 
+                <BusinessDataRenderer
                   businessType={todoItem.business_type}
                   businessData={businessData}
                   formData={instance?.form_data}
@@ -1498,9 +1520,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
               )}
               {/* 如果有表单字段配置，作为补充渲染（用于审批设计器配置的额外字段） */}
               {formFields.length > 0 && Object.keys(businessData).length === 0 && (
-                <div className="grid grid-cols-2 gap-4">
-                  {formFields.map(renderFormField)}
-                </div>
+                <div className="grid grid-cols-2 gap-4">{formFields.map(renderFormField)}</div>
               )}
             </div>
 
@@ -1530,16 +1550,12 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                   <div className="flex justify-end gap-3">
                     {/* 发起人撤回按钮 - 发起人且可以撤回时显示 */}
                     {isInitiator && canWithdraw && (
-                      <Button
-                        variant="outline"
-                        onClick={handleWithdraw}
-                        disabled={submitting}
-                      >
+                      <Button variant="outline" onClick={handleWithdraw} disabled={submitting}>
                         <XCircle className="w-4 h-4 mr-2" />
                         撤回申请
                       </Button>
                     )}
-                    
+
                     {/* 退回按钮 - 无论是否是发起人，只要是审批人就显示 */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1574,12 +1590,9 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    
+
                     {/* 同意按钮 - 无论是否是发起人，只要是审批人就显示 */}
-                    <Button
-                      onClick={handleApprove}
-                      disabled={submitting}
-                    >
+                    <Button onClick={handleApprove} disabled={submitting}>
                       <CheckCircle className="w-4 h-4 mr-2" />
                       同意
                     </Button>
@@ -1601,38 +1614,32 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
                         <div>
                           <p className="font-medium text-destructive">您的申请已被退回</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {returnInfo.type === "return_restart" 
-                              ? "修改后需要重新走完整审批流程" 
+                            {returnInfo.type === "return_restart"
+                              ? "修改后需要重新走完整审批流程"
                               : "修改后将由退回节点继续审批"}
                           </p>
                           {returnInfo.comment && (
                             <p className="text-sm text-foreground mt-2">
-                              <span className="font-medium">退回意见：</span>{returnInfo.comment}
+                              <span className="font-medium">退回意见：</span>
+                              {returnInfo.comment}
                             </p>
                           )}
                         </div>
                       </div>
                     </div>
                   )}
-                  
+
                   {/* 提示 */}
                   <p className="text-sm text-muted-foreground">
                     请检查申请内容，如需修改请直接编辑相关业务表单后重新提交。
                   </p>
-                  
+
                   {/* 重新提交按钮 */}
                   <div className="flex justify-end gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => onOpenChange(false)}
-                      disabled={submitting}
-                    >
+                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
                       稍后处理
                     </Button>
-                    <Button
-                      onClick={handleResubmit}
-                      disabled={submitting}
-                    >
+                    <Button onClick={handleResubmit} disabled={submitting}>
                       <CheckCircle className="w-4 h-4 mr-2" />
                       {submitting ? "提交中..." : "重新提交"}
                     </Button>
