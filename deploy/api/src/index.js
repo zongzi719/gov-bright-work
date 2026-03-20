@@ -694,11 +694,13 @@ app.get('/api/todo-items/list', async (req, res) => {
     }
     
     let sql = `SELECT t.id, t.title, t.source_system, t.source_department, 
-               t.created_at, t.priority, t.status, t.business_type, t.business_id,
+               t.created_at, t.priority, t.status, 
+               COALESCE(ai.business_type, t.business_type) as business_type, COALESCE(ai.business_id, t.business_id) as business_id,
                t.action_url, t.approval_instance_id, t.assignee_id, 
                t.process_result, t.processed_at,
                i.name as initiator_name, COALESCE(o.name, i.department) as initiator_department
                FROM todo_items t
+               LEFT JOIN approval_instances ai ON t.approval_instance_id = ai.id
                LEFT JOIN contacts i ON t.initiator_id = i.id
                LEFT JOIN organizations o ON i.organization_id = o.id
                WHERE t.assignee_id = ?`;
