@@ -86,9 +86,9 @@ const leaveTypeConfigs = [
   { key: "personal", label: "事假", unit: "天", description: "个人事务" },
   { key: "compensatory", label: "调休", unit: "小时", description: "加班累积" },
   { key: "marriage", label: "婚假", unit: "天", description: "手动发放" },
-  { key: "maternity", label: "产假", unit: "天", description: "手动发放" },
+  { key: "maternity", label: "生育假", unit: "天", description: "手动发放" },
   { key: "paternity", label: "陪产假", unit: "天", description: "手动发放" },
-  { key: "nursing", label: "哺乳假", unit: "小时", description: "手动发放" },
+  { key: "family_visit", label: "探亲假", unit: "天", description: "手动发放" },
   { key: "bereavement", label: "丧假", unit: "天", description: "手动发放" },
 ];
 
