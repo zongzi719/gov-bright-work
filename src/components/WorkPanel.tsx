@@ -104,17 +104,11 @@ const leaveTypeLabels: Record<string, string> = {
 // 根据业务类型和标题智能判断具体申请类型
 const getApplicationLabel = (businessType: string, title: string): string => {
   if (businessType === "absence") {
+    // 根据标题关键词区分请假和外出
     if (title.includes("外出")) {
       return "外出申请";
     }
     return "请假申请";
-  }
-  if (businessType === "custom_approval") {
-    if (title.includes("外出")) return "外出申请";
-    if (title.includes("出差")) return "出差申请";
-    if (title.includes("假") || title.includes("调休")) return "请假申请";
-    if (title.includes("领用")) return "领用申请";
-    if (title.includes("采购")) return "采购申请";
   }
   return businessTypeLabels[businessType] || "内部审批";
 };

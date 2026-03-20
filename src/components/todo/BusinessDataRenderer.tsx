@@ -34,12 +34,9 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
       (hasDisplayValue(businessData?.handover_person?.name) ? businessData?.handover_person : null) ||
       null,
     handover_person_name:
-      pickDisplayValue(
-        formData?.handover_person_name,
-        businessData?.handover_person_name,
-        businessData?.handover_person?.name,
-      ) ?? null,
-    handover_notes: pickDisplayValue(formData?.handover_notes, businessData?.handoover_notes) ?? null,
+      pickDisplayValue(formData?.handover_person_name, businessData?.handover_person_name, businessData?.handover_person?.name) ?? null,
+    handover_notes:
+      pickDisplayValue(formData?.handover_notes, businessData?.handoover_notes) ?? null,
     // Preserve pre-resolved companion names from businessData
     companion_names: pickDisplayValue(businessData?.companion_names, formData?.companion_names) ?? null,
   };
@@ -104,39 +101,42 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
         {};
 
       const officeSupply =
-        item?.office_supplies || item?.supply || fallbackItem?.office_supplies || fallbackItem?.supply || null;
+        item?.office_supplies ||
+        item?.supply ||
+        fallbackItem?.office_supplies ||
+        fallbackItem?.supply ||
+        null;
 
       return {
         ...fallbackItem,
         ...item,
-        office_supplies:
-          officeSupply || item?.supply_name || fallbackItem?.supply_name || item?.item_name || fallbackItem?.item_name
-            ? {
-                name:
-                  officeSupply?.name ||
-                  item?.office_supplies?.name ||
-                  fallbackItem?.office_supplies?.name ||
-                  item?.supply_name ||
-                  fallbackItem?.supply_name ||
-                  item?.item_name ||
-                  fallbackItem?.item_name ||
-                  "",
-                specification:
-                  officeSupply?.specification ??
-                  item?.office_supplies?.specification ??
-                  fallbackItem?.office_supplies?.specification ??
-                  item?.specification ??
-                  fallbackItem?.specification ??
-                  null,
-                unit:
-                  officeSupply?.unit ||
-                  item?.office_supplies?.unit ||
-                  fallbackItem?.office_supplies?.unit ||
-                  item?.unit ||
-                  fallbackItem?.unit ||
-                  "",
-              }
-            : null,
+        office_supplies: officeSupply || item?.supply_name || fallbackItem?.supply_name || item?.item_name || fallbackItem?.item_name
+          ? {
+              name:
+                officeSupply?.name ||
+                item?.office_supplies?.name ||
+                fallbackItem?.office_supplies?.name ||
+                item?.supply_name ||
+                fallbackItem?.supply_name ||
+                item?.item_name ||
+                fallbackItem?.item_name ||
+                "",
+              specification:
+                officeSupply?.specification ??
+                item?.office_supplies?.specification ??
+                fallbackItem?.office_supplies?.specification ??
+                item?.specification ??
+                fallbackItem?.specification ??
+                null,
+              unit:
+                officeSupply?.unit ||
+                item?.office_supplies?.unit ||
+                fallbackItem?.office_supplies?.unit ||
+                item?.unit ||
+                fallbackItem?.unit ||
+                "",
+            }
+          : null,
         specification:
           item?.office_supplies?.specification ??
           item?.supply?.specification ??
@@ -209,25 +209,16 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
                         <TableCell className="text-right">{Number(item.amount || 0).toFixed(2)}</TableCell>
                         <TableCell>
                           {item.category_link ? (
-                            <a
-                              href={item.category_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
+                            <a href={item.category_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                               查看链接
                             </a>
-                          ) : (
-                            "-"
-                          )}
+                          ) : "-"}
                         </TableCell>
                         <TableCell>{item.remarks || "-"}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/30">
-                      <TableCell colSpan={5} className="text-right font-medium">
-                        合计金额
-                      </TableCell>
+                      <TableCell colSpan={5} className="text-right font-medium">合计金额</TableCell>
                       <TableCell className="text-right font-bold">{formatMoney(data.total_amount)}</TableCell>
                       <TableCell colSpan={2}></TableCell>
                     </TableRow>
@@ -285,9 +276,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/30">
-                    <TableCell colSpan={3} className="text-right font-medium">
-                      合计
-                    </TableCell>
+                    <TableCell colSpan={3} className="text-right font-medium">合计</TableCell>
                     <TableCell className="text-right font-bold">{formatMoney(data.total_amount)}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -326,12 +315,8 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
                 <TableBody>
                   {items.map((item: any, index: number) => (
                     <TableRow key={item.id || index}>
-                      <TableCell>
-                        {item.office_supplies?.name || item.supply?.name || item.supply_name || item.item_name || "-"}
-                      </TableCell>
-                      <TableCell>
-                        {item.office_supplies?.specification || item.supply?.specification || item.specification || "-"}
-                      </TableCell>
+                      <TableCell>{item.office_supplies?.name || item.supply?.name || item.supply_name || item.item_name || "-"}</TableCell>
+                      <TableCell>{item.office_supplies?.specification || item.supply?.specification || item.specification || "-"}</TableCell>
                       <TableCell>{item.office_supplies?.unit || item.supply?.unit || item.unit || "-"}</TableCell>
                       <TableCell className="text-center">{item.quantity}</TableCell>
                     </TableRow>
@@ -345,12 +330,12 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  if (
-    businessType === "absence" ||
-    businessType === "leave" ||
-    businessType === "out" ||
-    businessType === "business_trip"
-  ) {
+  // 对于 custom_approval，检查是否有推断出的实际业务类型
+  const effectiveBusinessType = (businessType === "custom_approval" && data._effectiveBusinessType)
+    ? data._effectiveBusinessType
+    : businessType;
+
+  if (effectiveBusinessType === "absence" || effectiveBusinessType === "leave" || effectiveBusinessType === "out" || effectiveBusinessType === "business_trip") {
     const isBusinessTrip = businessType === "business_trip";
     const contactName = data.contacts?.name || data.contact_name || "-";
     const contactDept = data.contacts?.department || data.department || "-";
@@ -361,7 +346,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
         businessData?.handover_person?.name,
         businessData?.handover_person_name,
         formData?.handover_person?.name,
-        formData?.handover_person_name,
+        formData?.handover_person_name
       ) ?? null;
     const handoverNotes =
       pickDisplayValue(data.handover_notes, businessData?.handover_notes, formData?.handover_notes) ?? null;
@@ -369,11 +354,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
 
     const companionDisplay = (() => {
       if (!isBusinessTrip) return null;
-      const companionNames = pickDisplayValue(
-        data.companion_names,
-        businessData?.companion_names,
-        formData?.companion_names,
-      );
+      const companionNames = pickDisplayValue(data.companion_names, businessData?.companion_names, formData?.companion_names);
       if (companionNames) return companionNames;
       const companions = Array.isArray(data.companions) ? data.companions : [];
       if (companions.length > 0) return companions.join("、");
@@ -401,10 +382,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
         ) : null}
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          {renderField(
-            "计划开始时间",
-            isBusinessTrip ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time),
-          )}
+          {renderField("计划开始时间", isBusinessTrip ? formatDateAmPm(data.start_time) : formatDateTime(data.start_time))}
           {renderField("计划结束时间", isBusinessTrip ? formatDateAmPm(data.end_time) : formatDateTime(data.end_time))}
           {data.leave_type && renderField("请假类型", getLeaveTypeLabel(data.leave_type))}
           {isBusinessTrip
@@ -418,12 +396,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
           {isBusinessTrip
             ? renderField("预计费用", data.estimated_cost != null ? formatMoney(data.estimated_cost) : "-")
             : data.estimated_cost && renderField("预计费用", formatMoney(data.estimated_cost))}
-          {data.leave_type &&
-            data.duration_hours &&
-            renderField(
-              "请假时长",
-              `${data.duration_hours} 小时（${data.duration_days || data.duration_hours / 8} 天）`,
-            )}
+          {data.leave_type && data.duration_hours && renderField("请假时长", `${data.duration_hours} 小时（${data.duration_days || (data.duration_hours / 8)} 天）`)}
           {data.out_type && renderField("外出类型", getOutTypeLabel(data.out_type))}
           {data.out_location && renderField("外出地点", data.out_location)}
           {data.contact_phone && renderField("联系电话", data.contact_phone)}
@@ -447,7 +420,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
                 src={data.medical_certificate_url || formData?.medical_certificate_url}
                 alt="诊断证明书"
                 className="max-h-60 rounded-md border cursor-pointer"
-                onClick={() => window.open(data.medical_certificate_url || formData?.medical_certificate_url, "_blank")}
+                onClick={() => window.open(data.medical_certificate_url || formData?.medical_certificate_url, '_blank')}
               />
             </div>
           </div>
@@ -466,7 +439,9 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
         ) : null}
 
         {/* 请假类型：显示年度请假汇总和剩余假期 */}
-        {shouldShowLeaveHandover && data.contact_id && <LeaveHistorySummary contactId={data.contact_id} />}
+        {shouldShowLeaveHandover && data.contact_id && (
+          <LeaveHistorySummary contactId={data.contact_id} />
+        )}
       </div>
     );
   }
@@ -486,9 +461,9 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
 const getFundingSourceLabel = (source: string | null | undefined, detail: string | null | undefined) => {
   if (!source) return "-";
   const sourceLabels: Record<string, string> = {
-    财政拨款: "财政拨款",
-    专项经费: "专项经费",
-    其他: "其他",
+    "财政拨款": "财政拨款",
+    "专项经费": "专项经费",
+    "其他": "其他",
   };
   const label = sourceLabels[source] || source;
   return detail ? `${label}（${detail}）` : label;
