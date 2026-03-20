@@ -157,7 +157,12 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     });
   };
 
-  if (businessType === "purchase_request") {
+  // 对于 custom_approval，检查是否有推断出的实际业务类型
+  const effectiveBusinessType = (businessType === "custom_approval" && data._effectiveBusinessType)
+    ? data._effectiveBusinessType
+    : businessType;
+
+  if (effectiveBusinessType === "purchase_request") {
     const items = data.items || [];
 
     return (
@@ -232,7 +237,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  if (businessType === "supply_purchase") {
+  if (effectiveBusinessType === "supply_purchase") {
     const items = data.items || [];
 
     return (
@@ -289,7 +294,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  if (businessType === "supply_requisition") {
+  if (effectiveBusinessType === "supply_requisition") {
     const items = mergeSupplyRequisitionItems();
 
     return (
@@ -330,13 +335,8 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  // 对于 custom_approval，检查是否有推断出的实际业务类型
-  const effectiveBusinessType = (businessType === "custom_approval" && data._effectiveBusinessType)
-    ? data._effectiveBusinessType
-    : businessType;
-
   if (effectiveBusinessType === "absence" || effectiveBusinessType === "leave" || effectiveBusinessType === "out" || effectiveBusinessType === "business_trip") {
-    const isBusinessTrip = businessType === "business_trip";
+    const isBusinessTrip = effectiveBusinessType === "business_trip";
     const contactName = data.contacts?.name || data.contact_name || "-";
     const contactDept = data.contacts?.department || data.department || "-";
     const handoverPersonName =
@@ -350,7 +350,7 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
       ) ?? null;
     const handoverNotes =
       pickDisplayValue(data.handover_notes, businessData?.handover_notes, formData?.handover_notes) ?? null;
-    const shouldShowLeaveHandover = businessType === "leave" || (businessType === "absence" && !!data.leave_type);
+    const shouldShowLeaveHandover = effectiveBusinessType === "leave" || (effectiveBusinessType === "absence" && !!data.leave_type);
 
     const companionDisplay = (() => {
       if (!isBusinessTrip) return null;

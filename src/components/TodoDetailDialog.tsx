@@ -314,7 +314,7 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
 
       // 获取业务数据
       if (todoItem.business_id && todoItem.business_type) {
-        await fetchBusinessData(todoItem.business_type, todoItem.business_id);
+        await fetchBusinessData(todoItem.business_type, todoItem.business_id, instanceData as unknown as ApprovalInstance);
       }
 
     } catch (error) {
@@ -325,14 +325,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     }
   };
 
-  const fetchBusinessData = async (businessType: string, businessId: string) => {
+  const fetchBusinessData = async (businessType: string, businessId: string, currentInstance?: ApprovalInstance | null) => {
     try {
       let data = null;
+      const inst = currentInstance || instance;
       
       // 对于 custom_approval，先从 form_data 推断实际业务类型
       let effectiveType = businessType;
-      if (businessType === "custom_approval" && instance?.form_data) {
-        const fd = instance.form_data as Record<string, any>;
+      if (businessType === "custom_approval" && inst?.form_data) {
+        const fd = inst.form_data as Record<string, any>;
         if (fd.leave_type || fd.type === "leave") {
           effectiveType = "leave";
         } else if (fd.type === "business_trip") {
@@ -402,8 +403,8 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
       }
 
       // 对于自定义审批表单，使用 approval_instances.form_data 作为业务数据
-      if (!data && instance?.form_data) {
-        data = instance.form_data as Record<string, any>;
+      if (!data && inst?.form_data) {
+        data = inst.form_data as Record<string, any>;
       }
 
       // 保存推断出的实际业务类型，供 BusinessDataRenderer 使用
