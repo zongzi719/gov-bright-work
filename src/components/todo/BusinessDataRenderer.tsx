@@ -157,7 +157,12 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     });
   };
 
-  if (businessType === "purchase_request") {
+  // 对于 custom_approval，检查是否有推断出的实际业务类型
+  const effectiveBusinessType = (businessType === "custom_approval" && data._effectiveBusinessType)
+    ? data._effectiveBusinessType
+    : businessType;
+
+  if (effectiveBusinessType === "purchase_request") {
     const items = data.items || [];
 
     return (
