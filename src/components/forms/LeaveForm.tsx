@@ -265,30 +265,35 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
 
   const duration = calculateDuration();
 
+  const getLeaveUsed = (type: string) => {
+    if (!leaveBalance) return null;
+    switch (type) {
+      case "annual": return leaveBalance.annual_leave_used;
+      case "sick": return leaveBalance.sick_leave_used;
+      case "personal": return leaveBalance.personal_leave_used;
+      case "paternity": return leaveBalance.paternity_leave_used || 0;
+      case "bereavement": return leaveBalance.bereavement_leave_used || 0;
+      case "maternity": return leaveBalance.maternity_leave_used || 0;
+      case "nursing": return leaveBalance.nursing_leave_used || 0;
+      case "marriage": return leaveBalance.marriage_leave_used || 0;
+      case "compensatory": return leaveBalance.compensatory_leave_used || 0;
+      default: return null;
+    }
+  };
+
   const getLeaveRemaining = (type: string) => {
     if (!leaveBalance) return null;
-    // 获取剩余额度（以小时计算的假种直接返回小时，以天计算的假种返回天）
     switch (type) {
-      case "annual":
-        return leaveBalance.annual_leave_total - leaveBalance.annual_leave_used;
-      case "sick":
-        return leaveBalance.sick_leave_total - leaveBalance.sick_leave_used;
-      case "personal":
-        return leaveBalance.personal_leave_total - leaveBalance.personal_leave_used;
-      case "paternity":
-        return (leaveBalance.paternity_leave_total || 0) - (leaveBalance.paternity_leave_used || 0);
-      case "bereavement":
-        return (leaveBalance.bereavement_leave_total || 0) - (leaveBalance.bereavement_leave_used || 0);
-      case "maternity":
-        return (leaveBalance.maternity_leave_total || 0) - (leaveBalance.maternity_leave_used || 0);
-      case "nursing":
-        return (leaveBalance.nursing_leave_total || 0) - (leaveBalance.nursing_leave_used || 0);
-      case "marriage":
-        return (leaveBalance.marriage_leave_total || 0) - (leaveBalance.marriage_leave_used || 0);
-      case "compensatory":
-        return (leaveBalance.compensatory_leave_total || 0) - (leaveBalance.compensatory_leave_used || 0);
-      default:
-        return null;
+      case "annual": return leaveBalance.annual_leave_total - leaveBalance.annual_leave_used;
+      case "sick": return leaveBalance.sick_leave_total - leaveBalance.sick_leave_used;
+      case "personal": return leaveBalance.personal_leave_total - leaveBalance.personal_leave_used;
+      case "paternity": return (leaveBalance.paternity_leave_total || 0) - (leaveBalance.paternity_leave_used || 0);
+      case "bereavement": return (leaveBalance.bereavement_leave_total || 0) - (leaveBalance.bereavement_leave_used || 0);
+      case "maternity": return (leaveBalance.maternity_leave_total || 0) - (leaveBalance.maternity_leave_used || 0);
+      case "nursing": return (leaveBalance.nursing_leave_total || 0) - (leaveBalance.nursing_leave_used || 0);
+      case "marriage": return (leaveBalance.marriage_leave_total || 0) - (leaveBalance.marriage_leave_used || 0);
+      case "compensatory": return (leaveBalance.compensatory_leave_total || 0) - (leaveBalance.compensatory_leave_used || 0);
+      default: return null;
     }
   };
 
@@ -519,15 +524,14 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
               </SelectTrigger>
               <SelectContent>
                 {leaveTypes.map((t) => {
-                  const remaining = getLeaveRemaining(t.value);
-                  const hasBalance = remaining !== null && remaining > 0;
+                  const used = getLeaveUsed(t.value);
                   return (
                     <SelectItem key={t.value} value={t.value}>
                       <div className="flex items-center justify-between w-full gap-4">
                         <span>{t.label}</span>
-                        {remaining !== null && (
-                          <span className={`text-xs ${hasBalance ? 'text-muted-foreground' : 'text-destructive'}`}>
-                            剩余{remaining}{t.unit}
+                        {used !== null && (
+                          <span className={`text-xs ${used > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            已用{used}{t.unit}
                           </span>
                         )}
                       </div>
