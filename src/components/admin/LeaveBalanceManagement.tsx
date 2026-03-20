@@ -267,7 +267,7 @@ const LeaveBalanceManagement = () => {
       paternity_leave_total: balance.paternity_leave_total || 0,
       bereavement_leave_total: balance.bereavement_leave_total || 0,
       maternity_leave_total: balance.maternity_leave_total || 0,
-      nursing_leave_total: balance.nursing_leave_total || 0,
+      family_visit_leave_total: balance.family_visit_leave_total || 0,
       marriage_leave_total: balance.marriage_leave_total || 0,
       compensatory_leave_total: balance.compensatory_leave_total || 0,
     });
