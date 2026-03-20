@@ -325,14 +325,15 @@ const TodoDetailDialog = ({ open, onOpenChange, todoItem, onApprovalComplete }: 
     }
   };
 
-  const fetchBusinessData = async (businessType: string, businessId: string) => {
+  const fetchBusinessData = async (businessType: string, businessId: string, currentInstance?: ApprovalInstance | null) => {
     try {
       let data = null;
+      const inst = currentInstance || instance;
       
       // 对于 custom_approval，先从 form_data 推断实际业务类型
       let effectiveType = businessType;
-      if (businessType === "custom_approval" && instance?.form_data) {
-        const fd = instance.form_data as Record<string, any>;
+      if (businessType === "custom_approval" && inst?.form_data) {
+        const fd = inst.form_data as Record<string, any>;
         if (fd.leave_type || fd.type === "leave") {
           effectiveType = "leave";
         } else if (fd.type === "business_trip") {
