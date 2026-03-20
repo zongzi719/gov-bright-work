@@ -2517,6 +2517,8 @@ app.get('/api/leave-balances', async (req, res) => {
         maternity_leave_used: row.maternity_leave_used,
         nursing_leave_total: row.nursing_leave_total,
         nursing_leave_used: row.nursing_leave_used,
+        family_visit_leave_total: row.family_visit_leave_total,
+        family_visit_leave_used: row.family_visit_leave_used,
         marriage_leave_total: row.marriage_leave_total,
         marriage_leave_used: row.marriage_leave_used,
         compensatory_leave_total: row.compensatory_leave_total,
