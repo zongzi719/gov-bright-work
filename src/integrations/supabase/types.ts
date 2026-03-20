@@ -912,6 +912,8 @@ export type Database = {
           compensatory_leave_used: number | null
           contact_id: string
           created_at: string
+          family_visit_leave_total: number | null
+          family_visit_leave_used: number | null
           id: string
           marriage_leave_total: number | null
           marriage_leave_used: number | null
@@ -937,6 +939,8 @@ export type Database = {
           compensatory_leave_used?: number | null
           contact_id: string
           created_at?: string
+          family_visit_leave_total?: number | null
+          family_visit_leave_used?: number | null
           id?: string
           marriage_leave_total?: number | null
           marriage_leave_used?: number | null
@@ -962,6 +966,8 @@ export type Database = {
           compensatory_leave_used?: number | null
           contact_id?: string
           created_at?: string
+          family_visit_leave_total?: number | null
+          family_visit_leave_used?: number | null
           id?: string
           marriage_leave_total?: number | null
           marriage_leave_used?: number | null
@@ -1914,6 +1920,7 @@ export type Database = {
         | "nursing"
         | "marriage"
         | "compensatory"
+        | "family_visit"
       purchase_status: "pending" | "approved" | "rejected" | "completed"
       requisition_status: "pending" | "approved" | "rejected" | "completed"
       todo_business_type:
@@ -2094,6 +2101,7 @@ export const Constants = {
         "nursing",
         "marriage",
         "compensatory",
+        "family_visit",
       ],
       purchase_status: ["pending", "approved", "rejected", "completed"],
       requisition_status: ["pending", "approved", "rejected", "completed"],
