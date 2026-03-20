@@ -2772,6 +2772,11 @@ app.post('/api/leave-balances/deduct', async (req, res) => {
         return res.status(400).json({ error: '无效的假期类型' });
     }
     
+    if (deductValue <= 0) {
+      console.warn(`[LEAVE-DEDUCT] deductValue is 0, skipping. leaveType=${leaveType}, hours=${durationHours}, days=${durationDays}`);
+      return res.json({ success: true, message: '扣减值为0，跳过' });
+    }
+    
     // 确保有假期余额记录
     const [existing] = await pool.execute(
       'SELECT id FROM leave_balances WHERE contact_id = ? AND year = ?',
@@ -2785,19 +2790,21 @@ app.post('/api/leave-balances/deduct', async (req, res) => {
         `INSERT INTO leave_balances (id, contact_id, year, ${fieldUsed}) VALUES (?, ?, ?, ?)`,
         [id, contactId, currentYear, deductValue]
       );
+      console.log(`[LEAVE-DEDUCT] Created new balance record, ${fieldUsed} = ${deductValue}`);
     } else {
       // 更新已用假期
       await pool.execute(
         `UPDATE leave_balances SET ${fieldUsed} = ${fieldUsed} + ?, updated_at = NOW() WHERE contact_id = ? AND year = ?`,
         [deductValue, contactId, currentYear]
       );
+      console.log(`[LEAVE-DEDUCT] Updated ${fieldUsed} += ${deductValue} for contact ${contactId}, year ${currentYear}`);
     }
     
-    console.log(`[LEAVE-DEDUCT] ${leaveType} deducted: ${deductValue} for contact ${contactId}`);
-    res.json({ success: true });
+    console.log(`[LEAVE-DEDUCT] SUCCESS: ${leaveType} deducted ${deductValue} for contact ${contactId}`);
+    res.json({ success: true, deductValue, fieldUsed });
   } catch (error) {
-    console.error('Deduct leave balance error:', error);
-    res.status(500).json({ error: '扣减假期余额失败' });
+    console.error('[LEAVE-DEDUCT] Error:', error);
+    res.status(500).json({ error: '扣减假期余额失败', detail: error.message });
   }
 });
 
