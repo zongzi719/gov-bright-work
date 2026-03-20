@@ -2748,6 +2748,10 @@ app.post('/api/leave-balances/deduct', async (req, res) => {
         fieldUsed = 'nursing_leave_used';
         deductValue = durationHours || (durationDays * 8);
         break;
+      case 'family_visit':
+        fieldUsed = 'family_visit_leave_used';
+        deductValue = durationDays || (durationHours / 8);
+        break;
       case 'marriage':
         fieldUsed = 'marriage_leave_used';
         deductValue = durationDays || (durationHours / 8);
