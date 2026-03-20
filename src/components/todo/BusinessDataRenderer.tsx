@@ -335,11 +335,6 @@ const BusinessDataRenderer = ({ businessType, businessData, formData, initiatorN
     );
   }
 
-  // 对于 custom_approval，检查是否有推断出的实际业务类型
-  const effectiveBusinessType = (businessType === "custom_approval" && data._effectiveBusinessType)
-    ? data._effectiveBusinessType
-    : businessType;
-
   if (effectiveBusinessType === "absence" || effectiveBusinessType === "leave" || effectiveBusinessType === "out" || effectiveBusinessType === "business_trip") {
     const isBusinessTrip = effectiveBusinessType === "business_trip";
     const contactName = data.contacts?.name || data.contact_name || "-";
