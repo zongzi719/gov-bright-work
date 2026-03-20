@@ -65,6 +65,13 @@ const getApplicationLabel = (businessType: string, title: string): string => {
     }
     return "请假申请";
   }
+  if (businessType === "custom_approval") {
+    if (title.includes("外出")) return "外出申请";
+    if (title.includes("出差")) return "出差申请";
+    if (title.includes("假") || title.includes("调休")) return "请假申请";
+    if (title.includes("领用")) return "领用申请";
+    if (title.includes("采购")) return "采购申请";
+  }
   return businessTypeLabels[businessType] || "内部审批";
 };
 
