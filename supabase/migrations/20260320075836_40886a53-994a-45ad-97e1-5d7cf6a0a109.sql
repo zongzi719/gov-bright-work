@@ -1,1 +1,0 @@
-ALTER TYPE public.todo_business_type ADD VALUE IF NOT EXISTS 'custom_approval';

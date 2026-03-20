@@ -53,16 +53,13 @@ const statusToDisplay = (status: string, processResult: string | null): { label:
 const businessTypeLabels: Record<string, string> = {
   business_trip: "出差申请",
   absence: "请假申请",
-  leave: "请假申请",
-  out: "外出申请",
   supply_requisition: "领用申请",
   purchase_request: "采购申请",
   external_approval: "外部审批",
-  custom_approval: "内部审批",
 };
 
 const getApplicationLabel = (businessType: string, title: string): string => {
-  if (businessType === "absence" || businessType === "leave") {
+  if (businessType === "absence") {
     if (title.includes("外出")) {
       return "外出申请";
     }

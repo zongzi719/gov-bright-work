@@ -148,7 +148,7 @@ const MyLeaveBalance = ({ contactId, compact = false }: MyLeaveBalanceProps) => 
   };
 
   const getRemaining = (total: number, used: number) => {
-    return parseFloat(Math.max(0, total - used).toFixed(2));
+    return Math.max(0, total - used);
   };
 
   const getProgress = (used: number, total: number) => {

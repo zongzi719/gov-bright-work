@@ -94,11 +94,6 @@ END//
 
 DELIMITER ;
 
--- 3. 更新请假审批模板的表单字段选项，加入探亲假
-UPDATE `approval_form_fields` 
-SET `field_options` = '["annual","sick","personal","paternity","bereavement","maternity","family_visit","marriage","compensatory"]'
-WHERE `field_name` = 'leave_type' AND `field_type` = 'select';
-
 -- ============================================
 -- 执行说明
 -- ============================================

@@ -66,32 +66,31 @@ const LeaveHistorySummary = ({ contactId }: LeaveHistorySummaryProps) => {
   }
 
   // 用量（换算为天）- 9种假别，顺序：年假、病假、事假、调休、婚假、生育假、陪产假、探亲假、丧假
-  const r2 = (v: number) => parseFloat(v.toFixed(2));
-  const annualDays = r2(Number(balance.annual_leave_used || 0) / 8);
-  const sickDays = r2(Number(balance.sick_leave_used || 0) / 8);
-  const personalDays = r2(Number(balance.personal_leave_used || 0));
-  const compensatoryDays = r2(Number(balance.compensatory_leave_used || 0) / 8);
-  const marriageDays = r2(Number(balance.marriage_leave_used || 0));
-  const maternityDays = r2(Number(balance.maternity_leave_used || 0));
-  const paternityDays = r2(Number(balance.paternity_leave_used || 0));
-  const familyVisitDays = r2(Number(balance.family_visit_leave_used || 0));
-  const bereavementDays = r2(Number(balance.bereavement_leave_used || 0));
+  const annualDays = Number(balance.annual_leave_used || 0) / 8;
+  const sickDays = Number(balance.sick_leave_used || 0) / 8;
+  const personalDays = Number(balance.personal_leave_used || 0);
+  const compensatoryDays = Number(balance.compensatory_leave_used || 0) / 8;
+  const marriageDays = Number(balance.marriage_leave_used || 0);
+  const maternityDays = Number(balance.maternity_leave_used || 0);
+  const paternityDays = Number(balance.paternity_leave_used || 0);
+  const familyVisitDays = Number(balance.family_visit_leave_used || 0);
+  const bereavementDays = Number(balance.bereavement_leave_used || 0);
 
-  const totalDays = r2(annualDays + sickDays + personalDays + compensatoryDays + marriageDays + maternityDays + paternityDays + familyVisitDays + bereavementDays);
+  const totalDays = annualDays + sickDays + personalDays + compensatoryDays + marriageDays + maternityDays + paternityDays + familyVisitDays + bereavementDays;
 
   // 剩余（换算为天）
-  const remaining = (total: number, used: number) => parseFloat(Math.max(0, total - used).toFixed(2));
-  const annualRemain = r2(remaining(Number(balance.annual_leave_total || 0), Number(balance.annual_leave_used || 0)) / 8);
-  const sickRemain = r2(remaining(Number(balance.sick_leave_total || 0), Number(balance.sick_leave_used || 0)) / 8);
+  const remaining = (total: number, used: number) => Math.max(0, total - used);
+  const annualRemain = remaining(Number(balance.annual_leave_total || 0), Number(balance.annual_leave_used || 0)) / 8;
+  const sickRemain = remaining(Number(balance.sick_leave_total || 0), Number(balance.sick_leave_used || 0)) / 8;
   const personalRemain = remaining(Number(balance.personal_leave_total || 0), Number(balance.personal_leave_used || 0));
-  const compensatoryRemain = r2(remaining(Number(balance.compensatory_leave_total || 0), Number(balance.compensatory_leave_used || 0)) / 8);
+  const compensatoryRemain = remaining(Number(balance.compensatory_leave_total || 0), Number(balance.compensatory_leave_used || 0)) / 8;
   const marriageRemain = remaining(Number(balance.marriage_leave_total || 0), Number(balance.marriage_leave_used || 0));
   const maternityRemain = remaining(Number(balance.maternity_leave_total || 0), Number(balance.maternity_leave_used || 0));
   const paternityRemain = remaining(Number(balance.paternity_leave_total || 0), Number(balance.paternity_leave_used || 0));
   const familyVisitRemain = remaining(Number(balance.family_visit_leave_total || 0), Number(balance.family_visit_leave_used || 0));
   const bereavementRemain = remaining(Number(balance.bereavement_leave_total || 0), Number(balance.bereavement_leave_used || 0));
 
-  const fmt = (v: number) => v % 1 === 0 ? v.toString() : v.toFixed(2);
+  const fmt = (v: number) => v % 1 === 0 ? v.toString() : v.toFixed(1);
 
   return (
     <div className="mt-4 p-3 bg-amber-50 rounded-md border border-amber-200 text-sm text-foreground leading-relaxed space-y-2">
