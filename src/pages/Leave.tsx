@@ -124,7 +124,7 @@ const Leave = () => {
   const detailFields = selectedRecord ? [
     { label: "请假类型", value: selectedRecord.leave_type ? leaveTypeLabels[selectedRecord.leave_type] || selectedRecord.leave_type : null },
     { label: "请假时长", value: selectedRecord.duration_hours 
-      ? `${selectedRecord.duration_hours} 小时（${selectedRecord.duration_days || (selectedRecord.duration_hours / 8)} 天）` 
+      ? `${selectedRecord.duration_hours} 小时（${parseFloat((selectedRecord.duration_days || (selectedRecord.duration_hours / 8)).toFixed(2))} 天）` 
       : (selectedRecord.duration_days ? `${selectedRecord.duration_days} 天` : null) },
     { label: "开始日期", value: format(parseTime(selectedRecord.start_time), "yyyy-MM-dd", { locale: zhCN }) },
     { label: "结束日期", value: selectedRecord.end_time ? format(parseTime(selectedRecord.end_time), "yyyy-MM-dd", { locale: zhCN }) : null },

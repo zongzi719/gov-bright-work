@@ -252,7 +252,7 @@ const LeaveForm = ({ open, onOpenChange, currentUser }: LeaveFormProps) => {
     totalHours = Math.round(totalHours * 2) / 2;
     
     // 等效天数（8小时=1天）
-    const equivalentDays = totalHours / 8;
+    const equivalentDays = parseFloat((totalHours / 8).toFixed(2));
     
     return { 
       hours: totalHours, 
