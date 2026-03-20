@@ -237,7 +237,7 @@ const LeaveBalanceManagement = () => {
         paternity_leave_used: 0,
         bereavement_leave_used: 0,
         maternity_leave_used: 0,
-        nursing_leave_used: 0,
+        family_visit_leave_used: 0,
         marriage_leave_used: 0,
         compensatory_leave_used: 0,
       });
